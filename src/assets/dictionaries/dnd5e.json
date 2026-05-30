@@ -1,0 +1,317 @@
+{
+  "name": "D&D 5e アイテム辞書",
+  "version": "1.0",
+  "categories": [
+    {
+      "id": "weapons",
+      "name": "武器",
+      "items": [
+        {
+          "name": "ロングソード",
+          "type": "note",
+          "description": "軍用武器/近接/1d8斬撃(versatile 1d10)"
+        },
+        {
+          "name": "ショートソード",
+          "type": "note",
+          "description": "軍用武器/近接/芬細/1d6刺突"
+        },
+        {
+          "name": "グレートソード",
+          "type": "note",
+          "description": "軍用武器/両手/重装/1d6刺突×2"
+        },
+        {
+          "name": "ショートボウ",
+          "type": "note",
+          "description": "単純武器/遠隔/両手/1d6刺突(射程80/320)"
+        },
+        {
+          "name": "ロングボウ",
+          "type": "note",
+          "description": "軍用武器/遠隔/両手/重装/1d8刺突(射程150/600)"
+        },
+        {
+          "name": "ダガー",
+          "type": "note",
+          "description": "単純武器/近接/芬細/軽装/投擲/1d4刺突(射程20/60)"
+        },
+        {
+          "name": "メイス",
+          "type": "note",
+          "description": "単純武器/近接/1d6殴打"
+        },
+        {
+          "name": "スタッフ",
+          "type": "note",
+          "description": "単純武器/近接/両手/1d6殴打"
+        },
+        {
+          "name": "クロスボウ(ライト)",
+          "type": "note",
+          "description": "単純武器/遠隔/両手/装填/1d8刺突(射程80/320)"
+        },
+        {
+          "name": "ハンドアクス",
+          "type": "note",
+          "description": "単純武器/近接/軽装/投擲/1d6斬撃(射程20/60)"
+        }
+      ]
+    },
+    {
+      "id": "armor",
+      "name": "防具",
+      "items": [
+        {
+          "name": "パデッドアーマー",
+          "type": "note",
+          "description": "軽装鎧/AC11+DEX"
+        },
+        {
+          "name": "レザーアーマー",
+          "type": "note",
+          "description": "軽装鎧/AC11+DEX"
+        },
+        {
+          "name": "ステデッドレザー",
+          "type": "note",
+          "description": "軽装鎧/AC12+DEX"
+        },
+        {
+          "name": "チェインシャツ",
+          "type": "note",
+          "description": "中装鎧/AC13+DEX(最大2)"
+        },
+        {
+          "name": "スケイルメイル",
+          "type": "note",
+          "description": "中装鎧/AC14+DEX(最大2)/隠密不利"
+        },
+        {
+          "name": "ブレストプレート",
+          "type": "note",
+          "description": "中装鎧/AC14+DEX(最大2)"
+        },
+        {
+          "name": "ハーフプレート",
+          "type": "note",
+          "description": "中装鎧/AC15+DEX(最大2)/隠密不利"
+        },
+        {
+          "name": "リングメイル",
+          "type": "note",
+          "description": "重装鎧/AC14/隠密不利"
+        },
+        {
+          "name": "チェインメイル",
+          "type": "note",
+          "description": "重装鎧/AC16/STR13必要/隠密不利"
+        },
+        {
+          "name": "スプリントメイル",
+          "type": "note",
+          "description": "重装鎧/AC17/STR15必要/隠密不利"
+        },
+        {
+          "name": "プレートアーマー",
+          "type": "note",
+          "description": "重装鎧/AC18/STR15必要/隠密不利"
+        },
+        {
+          "name": "シールド",
+          "type": "note",
+          "description": "盾/AC+2"
+        }
+      ]
+    },
+    {
+      "id": "consumables",
+      "name": "消耗品",
+      "items": [
+        {
+          "name": "ポーション・オブ・ヒーリング",
+          "type": "numberResource",
+          "description": "飲むと2d4+2HP回復"
+        },
+        {
+          "name": "アンティドート",
+          "type": "note",
+          "description": "飲むと毒状態を治療"
+        },
+        {
+          "name": "ポーション・オブ・グレーター・ヒーリング",
+          "type": "note",
+          "description": "飲むと4d4+4HP回復"
+        },
+        {
+          "name": "ポーション・オブ・スピード",
+          "type": "note",
+          "description": "飲むと1分間ダッシュボーナスアクション"
+        },
+        {
+          "name": "ポーション・オブ・インビジビリティ",
+          "type": "note",
+          "description": "飲むと1分間不可視状態"
+        }
+      ]
+    },
+    {
+      "id": "skills",
+      "name": "スキル",
+      "items": [
+        {
+          "name": "運動",
+          "type": "note",
+          "description": "STR/登はん・跳躍・水泳等"
+        },
+        {
+          "name": "隠密",
+          "type": "note",
+          "description": "DEX/気配を消す・隠れる"
+        },
+        {
+          "name": "看破",
+          "type": "note",
+          "description": "WIS/嘘を見抜く・騙しを見抜く"
+        },
+        {
+          "name": "感知",
+          "type": "note",
+          "description": "WIS/周囲を観察・捜索"
+        },
+        {
+          "name": "説得",
+          "type": "note",
+          "description": "CHA/相手を説得する"
+        },
+        {
+          "name": "威圧",
+          "type": "note",
+          "description": "CHA/脅して従わせる"
+        },
+        {
+          "name": "変装",
+          "type": "note",
+          "description": "CHA/他人になりすます"
+        },
+        {
+          "name": "薬学",
+          "type": "note",
+          "description": "INT/薬草・毒の知識"
+        },
+        {
+          "name": "歴史",
+          "type": "note",
+          "description": "INT/過去の出来事の知識"
+        },
+        {
+          "name": "神秘",
+          "type": "note",
+          "description": "INT/魔法・超自然現象の知識"
+        },
+        {
+          "name": "調査",
+          "type": "note",
+          "description": "INT/手がかりを探す・推論"
+        },
+        {
+          "name": "手先の早さ",
+          "type": "note",
+          "description": "DEX/スリ・隠す・トリック"
+        }
+      ]
+    },
+    {
+      "id": "class-features",
+      "name": "クラス特徴",
+      "items": [
+        {
+          "name": "アクションサージ",
+          "type": "note",
+          "description": "ファイター/短休息後に1ターン中に追加アクション1回"
+        },
+        {
+          "name": "セカンドウィンド",
+          "type": "note",
+          "description": "ファイター/1d10+レベルHP回復(短休息後に回復)"
+        },
+        {
+          "name": "バーバリアンレイジ",
+          "type": "note",
+          "description": "バーバリアン/1分間:近接ダメージ+2、STR判定優勢、抵抗ダメージ半減"
+        },
+        {
+          "name": "アンキャニー・ドッジ",
+          "type": "note",
+          "description": "ローグ/攻撃対象になる時に反応でダメージ半減"
+        },
+        {
+          "name": "バックスタブ",
+          "type": "note",
+          "description": "ローグ/対象の背後に有利な位置から攻撃時ダメージにサディスダイス追加"
+        },
+        {
+          "name": "インスピレーション",
+          "type": "note",
+          "description": "バード/仲間1人の攻撃ロール・セーヴ・能力判定にd6追加"
+        },
+        {
+          "name": "カウンター・スペル",
+          "type": "note",
+          "description": "ソーサラー/魔術師/3レベル以下の呪文を反応で打ち消す"
+        },
+        {
+          "name": "ワイルドシェイプ",
+          "type": "note",
+          "description": "ドルイド/挑戦度1/4以下のビーストに変身(アクション)"
+        }
+      ]
+    },
+    {
+      "id": "spells",
+      "name": "呪文",
+      "items": [
+        {
+          "name": "ファイアボール",
+          "type": "note",
+          "description": "3レベル/術策/1アクション/射程150ft/20ft半径:8d6火ダメージ(DEXセーヴ半減)"
+        },
+        {
+          "name": "マジックミサイル",
+          "type": "note",
+          "description": "1レベル/強力術/1アクション/射程120ft/自動命中:1d4+1を3本(上位スロットで+1本/レベル)"
+        },
+        {
+          "name": "ヒール",
+          "type": "note",
+          "description": "1レベル/術策/1アクション/接触/2d4+MODのHP回復(上位スロットで+1d4/レベル)"
+        },
+        {
+          "name": "シールド",
+          "type": "note",
+          "description": "1レベル/術策/1反応/自分/攻撃対象になるまでAC+5"
+        },
+        {
+          "name": "メイジアーマー",
+          "type": "note",
+          "description": "1レベル/術策/1アクション/接触/AC13+DEX(8時間)"
+        },
+        {
+          "name": "サンダーウェーブ",
+          "type": "note",
+          "description": "1レベル/術策/1アクション/自分15ft立方/2d8雷ダメージ+CONセーヴで10ft押し出し(上位+1d8/レベル)"
+        },
+        {
+          "name": "ライトニングボルト",
+          "type": "note",
+          "description": "3レベル/術策/1アクション/射程100ft直線100ft/8d6雷ダメージ(DEXセーヴ半減)"
+        },
+        {
+          "name": "カウンター・スペル",
+          "type": "note",
+          "description": "3レベル/術策/1反応/射程60ft/3レベル以下の呪文を打ち消す"
+        }
+      ]
+    }
+  ]
+}

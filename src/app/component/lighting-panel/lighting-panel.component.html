@@ -1,0 +1,15 @@
+<div class="lighting-panel">
+  <div class="top-row">
+    <button type="button" class="main-toggle" [class.on]="state.enabled" (click)="toggle('enabled')">{{ state.enabled ? '演出 ON' : '演出 OFF' }}</button>
+  </div>
+
+  <!-- PA席・プリセット・スポットライト・レーザー・炎 は無効化 -->
+
+  <section>
+    <h3>暗転</h3>
+    <label><input type="checkbox" [ngModel]="state.nightMode" (ngModelChange)="update({nightMode: $event})"> 夜/暗幕</label>
+    <div class="range-row"><span>暗さ</span><input type="range" min="0" max="1" step="0.005" [ngModel]="state.intensity" (ngModelChange)="update({intensity: +$event})"><b>{{ (state.intensity * 100) | number:'1.1-1' }}%</b></div>
+    <div class="color-row"><span>暗幕色</span><input type="color" [ngModel]="state.tint" (ngModelChange)="setColor('tint', $event)"></div>
+  </section>
+
+</div>

@@ -1,0 +1,153 @@
+<div class="flex-container">
+  <div class="flex-item no-grow">
+    <div class="table-actions">
+      <button (click)="createGameTable()">新しいテーブルを作る</button>
+      <button (click)="copySelectedTable()" [attr.disabled]="!isEditable ? '' : null">盤面そのままでコピー</button>
+    </div>
+    <div class="table-list">
+      <div *ngFor="let gameTable of getGameTables()" class="table-list-row" [class.selected]="gameTable.identifier === selectedTable?.identifier">
+        <button type="button" class="table-name-button" (click)="selectGameTable(gameTable.identifier)">{{gameTable.name}}</button>
+        <button type="button" class="table-order-button" title="上へ" (click)="moveTable(gameTable, -1)" [attr.disabled]="isFirstTable(gameTable) ? '' : null">▲</button>
+        <button type="button" class="table-order-button" title="下へ" (click)="moveTable(gameTable, 1)" [attr.disabled]="isLastTable(gameTable) ? '' : null">▼</button>
+      </div>
+    </div>
+  </div>
+  <div class="flex-item table-detail-area">
+    <ng-container *ngIf="!isEmpty || selectedTable">
+      <div class="table-setting-grid">
+        <div class="table-param-column">
+          <div>
+            <input [(ngModel)]="tableWidth" type="range" min="{{minSize}}" max="{{maxSize}}" name="tableWidth" [attr.disabled]="!isEditable ? '' : null"
+            /> Width :
+            <input class="is-caret" [(ngModel)]="tableWidth" type="number" min="{{minSize}}" max="{{maxSize}}" style="width: 5em;" [attr.disabled]="!isEditable ? '' : null">
+          </div>
+          <div>
+            <input [(ngModel)]="tableHeight" type="range" min="{{minSize}}" max="{{maxSize}}" name="tableHeight" [attr.disabled]="!isEditable ? '' : null"
+            /> Height :
+            <input class="is-caret" [(ngModel)]="tableHeight" type="number" min="{{minSize}}" max="{{maxSize}}" style="width: 5em;" [attr.disabled]="!isEditable ? '' : null">
+          </div>
+          <div>
+            グリッド:
+            <select [(ngModel)]="tableGridType" name="tableGridType" [attr.disabled]="!isEditable ? '' : null">
+              <option value="-1">なし</option>
+              <option value="0">スクエア</option>
+              <option value="1">ヘクス（縦揃え）</option>
+              <option value="2">ヘクス（横揃え）</option>
+            </select>
+            グリッド色:
+            <input type="color" [(ngModel)]="tableGridColor" name="tableGridColor"
+                   list="table-grid-color-list" [attr.disabled]="!isEditable ? '' : null">
+<!-- クローム側の更新都合による現象でリスト設定の値が正常に入らなくなったため一時的にリスト設定を辞める
+            <datalist id="table-grid-color-list">
+              <option value="#000000">
+              <option value="#dddddd">
+            </datalist>
+-->
+          </div>
+          <div>
+            背景フィルタ
+            <select [(ngModel)]="tableDistanceviewFilter" name="tableDistanceviewFilter" [attr.disabled]="!isEditable ? '' : null">
+              <option value="">なし</option>
+              <option value="white">ホワイト</option>
+              <option value="black">ブラック</option>
+            </select>
+          </div>
+          <hr/>
+          <div>
+            <label>グリッドを常に表示:
+              <input type="checkbox" [(ngModel)]="tableGridShow" name="tableGridShow" />
+            </label>
+            <label>スナップ:
+              <input type="checkbox" [(ngModel)]="tableGridSnap" name="tableGridSnap" />
+            </label>
+            <hr/>
+            <label>全員のグリッドを常時強制ON:
+              <input type="checkbox" [(ngModel)]="roomGridDispAlways" name="roomGridDispAlways" /><br>
+              ※テーブル毎の設定ではなく部屋全体の設定です。
+            </label>
+            <hr/>
+            <ng-container *ngIf="!isDeleted">
+              <button [disabled]="isSaveing" (click)="save()">
+                <div style="position: relative;">
+                  <div [ngClass]="{'is-hidden': isSaveing}">保存</div>
+                  <div *ngIf="isSaveing" class="progress">{{progresPercent}}%</div>
+                </div>
+              </button>
+              <button class="danger" (click)="delete()" [attr.disabled]="getGameTables().length <= 1 ? '' : null">削除</button>
+            </ng-container>
+            <ng-container *ngIf="isDeleted">
+              <button (click)="restore()">元に戻す</button>
+            </ng-container>
+          </div>
+        </div>
+        <div class="table-preview-column">
+          <div class="images-select">
+            <div>
+              画像
+              <div (click)="openBgImageModal()">
+                <img height="120" [src]="tableBackgroundImage.url | safe: 'resourceUrl'">
+              </div>
+            </div>
+            <div>
+              背景
+              <div *ngIf="!tableDistanceviewImage.url">
+                <button (click)="openDistanceViewImageModal()" style="height: 120px;">背景画像を追加</button>
+              </div>
+              <div *ngIf="tableDistanceviewImage.url" (click)="openDistanceViewImageModal()">
+                <img height="120" [src]="tableDistanceviewImage.url | safe: 'resourceUrl'">
+              </div>
+            </div>
+          </div>
+          <div class="table-name-row">Name :
+            <input class="is-caret" [(ngModel)]="tableName" placeholder="Name" [attr.disabled]="!isEditable ? '' : null" />
+          </div>
+          <div class="table-audio-settings">
+            <div class="table-audio-header">
+              <b>テーブルBGM/環境音</b>
+              <span class="small-note">切替時に自動再生</span>
+            </div>
+            <div class="table-audio-actions">
+              <button type="button" (click)="addTableAudioLayer('loop')" [attr.disabled]="!isEditable ? '' : null">ループ追加</button>
+              <button type="button" (click)="addTableAudioLayer('once')" [attr.disabled]="!isEditable ? '' : null">1回再生追加</button>
+              <button type="button" (click)="playSelectedTableAudioNow()" [attr.disabled]="!isEditable ? '' : null">今すぐ再生</button>
+              <button type="button" (click)="stopTableAudioNow()">停止</button>
+            </div>
+            <div *ngIf="audios.length < 1" class="small-note">音楽ファイルはジュークボックスから追加してね。</div>
+            <div *ngFor="let layer of tableAudioLayers; let i = index" class="table-audio-layer">
+              <div class="table-audio-layer-title">
+                <label><input type="checkbox" [(ngModel)]="layer.enabled" (ngModelChange)="saveTableAudioLayers()" [attr.disabled]="!isEditable ? '' : null"> 有効</label>
+                <input class="is-caret layer-name" [(ngModel)]="layer.name" (ngModelChange)="saveTableAudioLayers()" [attr.disabled]="!isEditable ? '' : null" placeholder="名前">
+                <button type="button" (click)="moveTableAudioLayer(i, -1)" [attr.disabled]="i <= 0 ? '' : null">▲</button>
+                <button type="button" (click)="moveTableAudioLayer(i, 1)" [attr.disabled]="tableAudioLayers.length <= i + 1 ? '' : null">▼</button>
+                <button type="button" class="danger" (click)="removeTableAudioLayer(i)" [attr.disabled]="!isEditable ? '' : null">×</button>
+              </div>
+              <div class="table-audio-layer-body">
+                <select [(ngModel)]="layer.audioIdentifier" (ngModelChange)="saveTableAudioLayers()" [attr.disabled]="!isEditable ? '' : null">
+                  <option value="">音声なし</option>
+                  <option *ngFor="let audio of audios" [value]="audio.identifier">{{audio.name}}</option>
+                </select>
+                <select [(ngModel)]="layer.mode" (ngModelChange)="saveTableAudioLayers()" [attr.disabled]="!isEditable ? '' : null">
+                  <option value="loop">ループ</option>
+                  <option value="once">1回だけ</option>
+                </select>
+                音量 <input [(ngModel)]="layer.volume" (ngModelChange)="saveTableAudioLayers()" type="range" min="0" max="1" step="0.01" [attr.disabled]="!isEditable ? '' : null">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+</div>
+<ng-container *ngIf="isEmpty">
+  <div style="font-size: 12px;">※テーブルが１つも作成されていません。「新しいテーブルを作る」から新しいテーブルを作成することができます。</div>
+</ng-container>
+<div>
+  <hr/>
+  標準のダイスボット(部屋接続時に選択されるダイスボットになります)。<br>
+  ※テーブル毎の設定ではなく部屋全体の設定です。
+  <ng-select class="ud-select is-caret" style="width: 15em; margin-left:.1em;" (change)="loadDiceBot($event)" [(ngModel)]="gameType"
+    [ngModelOptions]="{standalone: true}" [clearable]="false">
+    <ng-option *ngFor="let diceBotInfo of diceBotInfos" [value]="diceBotInfo.id">{{diceBotInfo.name}}</ng-option>
+  </ng-select>
+</div>

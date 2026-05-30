@@ -1,0 +1,85 @@
+<div class="background-image is-pointer-events-none" [ngClass]="[(backgroundFilterType ? 'is-filter' : ''), backgroundFilterType, isLightingActive ? 'is-night' : '']" 
+[style.background-image]="'url(' + backgroundImage.url + ')' | safe: 'style'"
+[style.--bg-darkness]="isLightingActive && !isGmMode ? currentTable.lightingIntensity : 0"></div>
+<div class="component is-fill is-perspective" [ngClass]="{'is-grabbing': isPointerDragging, 'is-flat-mode': isFlatMode}" #root>
+  <div class="component-content is-fill is-3d-2" #gameTable>
+    <div id="app-game-table" class="game-table table-image is-3d-2" [style.background-image]="'url(' + tableImage.url + ')' | safe: 'style'" #gameObjects>
+      <canvas class="grid-canvas is-fill is-pointer-events-none" #gridCanvas></canvas>
+      <ng-container *ngIf="!isTableViewResetting">
+        <div *ngIf="terrains.length > 0" class="layer">
+          <div class="dummy"></div>
+          <terrain class="is-3d will-change-transform" *ngFor="let terrain of terrains; trackBy: trackByGameObject" [terrain]="terrain"></terrain>
+        </div>
+        <game-table-mask class="is-3d will-change-transform" *ngFor="let mask of tableMasks; trackBy: trackByGameObject" [gameTableMask]="mask">
+        </game-table-mask>
+        <game-table-scratch-mask class="is-3d will-change-transform" *ngFor="let scratchMask of tableScratchMasks; trackBy: trackByGameObject" [gameTableScratchMask]="scratchMask">
+        </game-table-scratch-mask>
+        <div *ngIf="textNotes.length > 0" class="layer">
+          <div class="dummy"></div>
+          <text-note class="is-3d will-change-transform" *ngFor="let textNote of textNotes; trackBy: trackByGameObject" [textNote]="textNote" [appTooltip]="textNote" [ngStyle]="{'z-index' : textNote.zindex}"></text-note>
+        </div>
+        <card-stack class="is-3d will-change-transform" *ngFor="let cardStack of cardStacks; trackBy: trackByGameObject" [cardStack]="cardStack" [appTooltip]="cardStack" [ngStyle]="{'z-index' : cardStack.zindex, 'transform': 'translateZ(' + (cardStack.zindex * 0.001) +'px)'}"></card-stack>
+        <card class="is-3d will-change-transform" *ngFor="let card of cards; trackBy: trackByGameObject" [card]="card" [appTooltip]="card" [ngStyle]="{'z-index' : card.zindex, 'transform': 'translateZ(' + (card.zindex * 0.001) +'px)'}"></card>
+        <div class="range">
+          <div class="dummy"></div>
+          <peer-cursor class="is-3d will-change-transform" *ngFor="let cursor of peerCursors; trackBy: trackByGameObject" [cursor]="cursor"></peer-cursor>
+        </div>
+        <range class="is-3d will-change-transform" *ngFor="let range of ranges; trackBy: trackByGameObject" [range]="range"></range>
+        <div *ngIf="diceSymbols.length > 0" class="layer">
+          <div class="dummy"></div>
+          <dice-symbol class="is-3d will-change-transform" *ngFor="let diceSymbol of diceSymbols; trackBy: trackByGameObject" [diceSymbol]="diceSymbol" [appTooltip]="diceSymbol"></dice-symbol>
+        </div>
+        <div *ngIf="characters.length > 0" class="layer">
+          <div class="dummy"></div>
+          <game-character class="is-3d will-change-transform" *ngFor="let character of characters; trackBy: trackByGameObject" [gameCharacter]="character" [isSimpleView]="isCharacterSimpleMode" [isFlatMode]="isFlatMode" [isRangeSelected]="isCharacterRangeSelected(character)" [appTooltip]="isCharacterSimpleMode ? null : character"></game-character>
+        </div>
+        <div class="layer cursor-layer">
+          <div class="dummy"></div>
+          <peer-cursor class="is-3d will-change-transform" *ngFor="let cursor of peerCursors; trackBy: trackByGameObject" [cursor]="cursor"></peer-cursor>
+        </div>
+      </ng-container>
+      <canvas class="drawing-canvas is-fill" [class.is-drawing-mode]="isDrawingMode" #drawingCanvas
+        (pointerdown)="onDrawingPointerDown($event)" (pointermove)="onDrawingPointerMove($event)"></canvas>
+      <canvas class="lighting-canvas" #lightingCanvas [hidden]="!isLightingActive"></canvas>
+    </div>
+  </div>
+  <ng-container *ngIf="isSideNameLabelMode">
+    <div class="side-name-label" *ngFor="let character of characters; trackBy: trackByGameObject" [ngStyle]="getSideNameLabelStyle(character)">
+      {{character.name}}
+    </div>
+  </ng-container>
+  <div class="range-selection-box" *ngIf="isRangeSelecting" [ngStyle]="rangeSelectionStyle"></div>
+  <div class="selection-toolbar" *ngIf="selectedCharacterIds.size > 0">
+    <span>選択 {{selectedCharacterIds.size}}体</span>
+    <button type="button" (click)="setSelectedCharactersTargeted(true)">ターゲット</button>
+    <button type="button" (click)="setSelectedCharactersTargeted(false)">解除</button>
+    <button type="button" (click)="invertSelectedCharactersTargeted()">反転</button>
+    <button type="button" class="danger" (click)="moveSelectedCharactersToGraveyard()">墓場</button>
+    <button type="button" (click)="clearRangeSelection()">選択解除</button>
+  </div>
+  <div class="drawing-toolbar" [class.is-open]="isDrawingToolOpen">
+    <button type="button" class="toolbar-toggle" [class.active]="isFlatMode" (click)="toggleFlatMode()">{{isFlatMode ? '平面ON' : '平面'}}</button>
+    <ng-container *ngIf="isFlatMode">
+      <button type="button" title="縮小" (click)="zoomFlatMode(-0.1)">－</button>
+      <button type="button" title="等倍" (click)="resetFlatZoom()">{{(flatViewScale * 100) | number:'1.0-0'}}%</button>
+      <button type="button" title="拡大" (click)="zoomFlatMode(0.1)">＋</button>
+    </ng-container>
+    <button type="button" class="toolbar-toggle" (click)="toggleDrawingTool()">ペン</button>
+    <ng-container *ngIf="isDrawingToolOpen">
+      <button type="button" [class.active]="isDrawingMode" (click)="toggleDrawingMode()">{{isDrawingMode ? '描画ON' : '描画OFF'}}</button>
+      <div class="tool-group">
+        <button type="button" [class.active]="drawingTool === 'pen'" (click)="drawingTool = 'pen'">ペン</button>
+        <button type="button" [class.active]="drawingTool === 'line'" (click)="drawingTool = 'line'">直線</button>
+        <button type="button" [class.active]="drawingTool === 'rect'" (click)="drawingTool = 'rect'">四角</button>
+        <button type="button" [class.active]="drawingTool === 'ellipse'" (click)="drawingTool = 'ellipse'">円</button>
+        <button type="button" [class.active]="drawingTool === 'triangle'" (click)="drawingTool = 'triangle'">三角</button>
+      </div>
+      <label>色 <input type="color" [(ngModel)]="drawingColor"></label>
+      <label>太さ <input type="number" min="1" max="80" [(ngModel)]="drawingLineWidth"></label>
+      <label class="drawing-check"><input type="checkbox" [(ngModel)]="drawingFill">塗り</label>
+      <button type="button" [class.active]="isDrawingEraser" (click)="isDrawingEraser = !isDrawingEraser">消しゴム</button>
+      <button type="button" (click)="clearDrawing()">全消し</button>
+      <label class="drawing-check"><input type="checkbox" [(ngModel)]="currentTable.drawingAsWall">壁として扱う</label>
+    </ng-container>
+  </div>
+</div>

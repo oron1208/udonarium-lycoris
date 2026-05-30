@@ -1,0 +1,50 @@
+<div class="item-dictionary-panel">
+  <div class="dict-header">
+    <h3>📖 アイテム辞書</h3>
+    <div class="dict-tabs">
+      <button *ngFor="let dict of dictionaries"
+              class="dict-tab"
+              [class.active]="dict === selectedDictionary"
+              (click)="selectDictionary(dict)">
+        {{ dict.name }}
+      </button>
+    </div>
+  </div>
+
+  <div class="search-box">
+    <input type="text"
+           [(ngModel)]="searchTerm"
+           (input)="onSearchInput()"
+           placeholder="アイテムを検索..."
+           class="search-input" />
+  </div>
+
+  <div class="dict-categories">
+    <div *ngFor="let cat of getFilteredCategories()" class="dict-category">
+      <div class="category-header" (click)="toggleCategory(cat.id)">
+        <span class="toggle-icon">{{ isExpanded(cat.id) ? '▼' : '▶' }}</span>
+        <span class="category-name">{{ cat.name }}</span>
+        <span class="category-count">({{ cat.items.length }})</span>
+      </div>
+      <div class="category-items" *ngIf="isExpanded(cat.id) || isSearching">
+        <div *ngFor="let item of cat.items"
+             class="dict-item"
+             draggable="true"
+             (dragstart)="onDragStart($event, item)">
+          <span class="item-icon">
+            <ng-container [ngSwitch]="item.type">
+              <span *ngSwitchCase="'numberResource'">📦</span>
+              <span *ngSwitchDefault>📄</span>
+            </ng-container>
+          </span>
+          <span class="item-name">{{ item.name }}</span>
+          <span class="item-desc">{{ item.description }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dict-footer">
+    <span class="drag-hint">💡 アイテムをドラッグしてキャラクターシートにドロップ</span>
+  </div>
+</div>

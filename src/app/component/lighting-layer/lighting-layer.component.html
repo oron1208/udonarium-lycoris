@@ -1,0 +1,22 @@
+<div class="lighting-layer" [class.on]="state.enabled" [class.night]="state.nightMode" [class.pa]="state.paMode" [ngStyle]="overlayStyle">
+  <canvas #lightCanvas class="light-canvas"></canvas>
+  <div class="lighting-haze" *ngIf="state.enabled && state.haze"></div>
+
+  <div class="spotlight-field" *ngIf="state.enabled && state.spotlights">
+    <div *ngFor="let slot of spotlightSlots" class="spotlight" [class.s2]="slot === 1" [class.s3]="slot === 2" [class.s4]="slot === 3"></div>
+  </div>
+
+  <div class="laser-field" *ngIf="state.enabled && state.lasers">
+    <div class="laser l1"></div>
+    <div class="laser l2"></div>
+    <div class="laser l3"></div>
+    <div class="laser l4"></div>
+  </div>
+
+  <div class="flame-field" *ngIf="state.enabled && state.flames">
+    <div class="flame f1"></div>
+    <div class="flame f2"></div>
+    <div class="flame f3"></div>
+    <div class="flame f4"></div>
+  </div>
+</div>

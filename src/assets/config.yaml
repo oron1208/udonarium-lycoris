@@ -1,0 +1,10 @@
+backend:
+  mode: skyway2023
+  # SkyWay 2023 token backend URL. Empty means current origin.
+  url: ''
+webrtc:
+  key: ''
+  signalingUrl: ''
+app:
+  title: 'ユドナリウムリリィ'
+  mode: ''

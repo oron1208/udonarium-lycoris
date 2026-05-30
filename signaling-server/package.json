@@ -1,0 +1,13 @@
+{
+  "name": "udonarium-lily-signaling-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@skyway-sdk/token": "^2.1.3",
+    "ws": "^8.18.0"
+  }
+}

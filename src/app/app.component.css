@@ -1,0 +1,171 @@
+img {
+  height: 5px;
+  width: 5px;
+}
+
+.developer-announcement {
+  align-items: center;
+  background: rgba(255, 193, 7, 0.95);
+  border-bottom: solid 2px rgba(80, 50, 0, 0.7);
+  box-sizing: border-box;
+  color: #231800;
+  display: flex;
+  font-size: 16px;
+  font-weight: bold;
+  gap: 12px;
+  justify-content: center;
+  left: 0;
+  line-height: 1.4;
+  min-height: 38px;
+  padding: 8px 52px;
+  position: absolute;
+  right: 0;
+  text-align: center;
+  top: 0;
+  z-index: 20000;
+}
+
+.developer-announcement.danger {
+  background: rgba(211, 47, 47, 0.96);
+  border-bottom-color: rgba(80, 0, 0, 0.8);
+  color: #fff;
+}
+
+.developer-announcement button {
+  background: rgba(255, 255, 255, 0.25);
+  border: solid 1px rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  color: inherit;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: bold;
+  padding: 0 8px;
+  position: absolute;
+  right: 12px;
+}
+.dummydisp {
+  position: absolute;
+  color: rgba(30, 30, 30, 0.0);
+  font-size: 10px;
+  max-height: 5px;
+}
+
+nav ul {
+    list-style:none;
+    padding: 0px;
+    margin: 0px;
+  /*
+  border: 1px solid #bbb;
+  border-radius: 5px;
+  padding: 5px;
+  background-color: rgba(30, 30, 30, 0.8);
+  */
+}
+
+nav ul > li {
+  position: relative;
+  text-align: center;
+  padding: 5px;
+  color: #CCC;
+  color: #444;
+
+  cursor: -moz-pointer;
+  cursor: -webkit-pointer;
+  cursor: pointer;
+}
+
+nav ul > li:hover {
+  color: #CCC;
+  background-color: rgba(30, 30, 30, 0.8);
+}
+
+nav ul > li.gm-mode-active {
+  color: #fff;
+  background-color: rgba(156, 39, 176, 0.9);
+}
+
+nav ul > li.gm-mode-active:hover {
+  background-color: rgba(123, 31, 162, 0.95);
+}
+
+nav ul > li.hotbar-hidden {
+  color: #fff;
+  background-color: rgba(80, 80, 80, 0.85);
+}
+
+nav ul > li.hotbar-hidden:hover {
+  background-color: rgba(60, 60, 60, 0.95);
+}
+
+nav ul > li.vn-stage-active {
+  color: #fff;
+  background-color: rgba(25, 118, 210, 0.9);
+}
+
+nav ul > li.vn-stage-active:hover {
+  background-color: rgba(21, 101, 192, 0.95);
+}
+nav ul > li.options-active {
+  color: #fff;
+  background-color: rgba(25, 118, 210, 0.9);
+}
+nav ul > li.options-active:hover {
+  background-color: rgba(21, 101, 192, 0.95);
+}
+nav ul > li > a {
+  height: 128px;
+  width: 128px;
+  font-size: 8px;
+  user-select: none;
+}
+nav ul > li > a > label {
+  cursor: -moz-pointer;
+  cursor: -webkit-pointer;
+  cursor: pointer;
+}
+
+nav ul i {
+  font-size: 24px;
+}
+nav ul a, nav ul a:hover, nav ul a:active, nav ul a:visited {
+  text-decoration: none;
+}
+
+.icon-size {
+  font-size: 40px;
+}
+
+.side-menu {
+  top: 0px;
+  left: 0px;
+  box-sizing: border-box;
+  overflow: auto;
+  position: absolute;
+  color: #CCC;
+  background-color: rgba(30, 30, 30, 0.8);
+  border:solid 1px #999;
+  padding: 0px;
+  height: 100%;
+  width: 300px;
+}
+
+.networkIndicator {
+  display: none;
+  z-index: 9999;
+  pointer-events: none;
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  height: 30px;
+  width: 30px;
+}
+
+.vibration-amine {
+  animation: vibration 0.2s infinite;
+}
+
+@keyframes vibration {
+  0%   { transform: scale(1.0, 1.0) translate(0%, 0%); }
+  50%  { transform: scale(1.02, 0.95) translate(0%, 5%); }
+  100% { transform: scale(1.0, 1.0) translate(0%, 0%); }
+}

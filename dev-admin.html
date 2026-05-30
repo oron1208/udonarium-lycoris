@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Udonarium Developer Admin</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #11131a;
+      color: #edf0f7;
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: linear-gradient(135deg, #182133, #241832);
+      border-bottom: 1px solid #333b4f;
+      padding: 16px 20px;
+    }
+    h1 { margin: 0 0 4px; font-size: 20px; }
+    .muted { color: #aab1c2; font-size: 13px; }
+    main { max-width: 1180px; margin: 0 auto; padding: 18px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+    .card {
+      background: #191d29;
+      border: 1px solid #30374a;
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.25);
+      padding: 16px;
+    }
+    h2 { margin: 0 0 12px; font-size: 16px; }
+    label { display: block; margin: 10px 0 6px; color: #c7cdde; font-size: 13px; }
+    input, textarea, select, button {
+      box-sizing: border-box;
+      border-radius: 7px;
+      border: 1px solid #3b455d;
+      background: #0f121a;
+      color: #edf0f7;
+      font: inherit;
+      padding: 9px 10px;
+    }
+    input, textarea, select { width: 100%; }
+    textarea { min-height: 84px; resize: vertical; }
+    button {
+      cursor: pointer;
+      background: #2b63d9;
+      border-color: #4478e8;
+      font-weight: 700;
+      margin: 8px 8px 0 0;
+    }
+    button:hover { filter: brightness(1.12); }
+    button.secondary { background: #343b4d; border-color: #4b5368; }
+    button.danger { background: #b72a3a; border-color: #e05263; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .row > * { flex: 1; min-width: 160px; }
+    .status {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 7px;
+      background: #101722;
+      border: 1px solid #263149;
+      white-space: pre-wrap;
+      font-size: 13px;
+    }
+    .ok { color: #88e09f; }
+    .warn { color: #ffd166; }
+    .bad { color: #ff8b9a; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { border-bottom: 1px solid #2d3446; padding: 8px 6px; text-align: left; vertical-align: top; }
+    th { color: #aab1c2; font-weight: 700; }
+    code { background: #0e1118; border: 1px solid #30374a; border-radius: 4px; padding: 2px 4px; word-break: break-all; }
+    .table-wrap { overflow-x: auto; }
+    .pill { display: inline-block; padding: 2px 7px; border-radius: 999px; background: #263149; color: #cbd3e6; font-size: 12px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Udonarium Developer Admin</h1>
+    <div class="muted">マコちゃん環境用の開発者ログイン管理パネル。APIは DEV_ADMIN_TOKEN がある時だけ有効。</div>
+  </header>
+  <main>
+    <section class="card" id="loginCard">
+      <h2>開発者ログイン</h2>
+      <label for="token">開発者トークン</label>
+      <input id="token" type="password" autocomplete="current-password" placeholder="DEV_ADMIN_TOKEN">
+      <button id="loginButton">ログイン</button>
+      <button class="secondary" id="forgetButton">保存トークン削除</button>
+      <div class="status" id="loginStatus">未ログイン</div>
+    </section>
+
+    <section id="adminPanel" class="hidden">
+      <div class="grid">
+        <div class="card">
+          <h2>緊急アナウンス</h2>
+          <label for="announceText">表示文</label>
+          <textarea id="announceText" placeholder="例: 18:00から緊急メンテを行います。作業前に保存をお願いします。"></textarea>
+          <div class="row">
+            <div>
+              <label for="announceStartsAt">時刻表示（任意）</label>
+              <input id="announceStartsAt" placeholder="例: 18:00から">
+            </div>
+            <div>
+              <label for="announceLevel">レベル</label>
+              <select id="announceLevel">
+                <option value="warning">warning</option>
+                <option value="danger">danger</option>
+                <option value="info">info</option>
+              </select>
+            </div>
+          </div>
+          <button id="announceButton">全員に流す</button>
+          <button class="secondary" id="clearAnnouncementButton">アナウンスクリア</button>
+        </div>
+
+        <div class="card">
+          <h2>キック</h2>
+          <label for="kickIp">IP指定</label>
+          <input id="kickIp" placeholder="例: 192.0.2.10">
+          <label for="kickPeerId">peerId指定</label>
+          <input id="kickPeerId" placeholder="peerId">
+          <label for="kickRoomKey">roomKey指定（部屋全員）</label>
+          <input id="kickRoomKey" placeholder="room:...">
+          <button class="danger" id="kickButton">指定対象をキック</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <div class="row">
+          <h2 style="margin:0;">状態</h2>
+          <button class="secondary" id="refreshButton" style="flex:0 0 auto;">更新</button>
+        </div>
+        <div class="status" id="statusBox">未取得</div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <h2>部屋一覧</h2>
+        <div class="table-wrap"><table id="roomsTable"></table></div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <h2>接続一覧</h2>
+        <div class="table-wrap"><table id="peersTable"></table></div>
+      </div>
+    </section>
+  </main>
+
+<script>
+const $ = id => document.getElementById(id);
+let token = localStorage.getItem('udonarium.devAdminToken') || '';
+$('token').value = token;
+
+function setLoginStatus(text, cls = '') {
+  $('loginStatus').className = 'status ' + cls;
+  $('loginStatus').textContent = text;
+}
+function showAdmin(show) { $('adminPanel').classList.toggle('hidden', !show); }
+function escapeHtml(value) {
+  return String(value == null ? '' : value).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+function jsString(value) { return JSON.stringify(String(value == null ? '' : value)); }
+async function api(path, options = {}) {
+  token = $('token').value.trim();
+  const headers = Object.assign({'x-dev-admin-token': token}, options.headers || {});
+  if (options.body && !headers['content-type']) headers['content-type'] = 'application/json';
+  const res = await fetch(path, Object.assign({}, options, {headers}));
+  const text = await res.text();
+  let json;
+  try { json = JSON.parse(text); } catch (_) { json = {ok:false, error:text || res.statusText}; }
+  if (!res.ok || json.ok === false) throw new Error(json.message || json.error || res.statusText);
+  return json;
+}
+async function login() {
+  try {
+    const data = await api('/api/dev/status');
+    localStorage.setItem('udonarium.devAdminToken', $('token').value.trim());
+    setLoginStatus(`ログインOK / clientIp: ${data.clientIp || '-'} / 接続数: ${Array.isArray(data.peers) ? data.peers.length : data.peers}`, 'ok');
+    showAdmin(true);
+    renderStatus(data);
+  } catch (e) {
+    showAdmin(false);
+    setLoginStatus('ログイン失敗: ' + e.message, 'bad');
+  }
+}
+function renderStatus(data) {
+  $('statusBox').innerHTML = `
+    <span class="pill">rooms ${data.rooms ? data.rooms.length : 0}</span>
+    <span class="pill">peers ${data.peers ? data.peers.length : 0}</span>
+    <span class="pill">client ${escapeHtml(data.clientIp || '-')}</span>
+  `;
+  renderRooms(data.rooms || []);
+  renderPeers(data.peers || []);
+}
+function renderRooms(rooms) {
+  $('roomsTable').innerHTML = `
+    <tr><th>部屋</th><th>roomKey</th><th>peers</th><th>source</th><th>objects</th><th>events</th><th>updated</th><th>操作</th></tr>
+    ${rooms.map(room => `
+      <tr>
+        <td>${escapeHtml(room.roomName || room.roomId || '')}</td>
+        <td><code>${escapeHtml(room.roomKey)}</code></td>
+        <td>${escapeHtml(room.peers)}</td>
+        <td>${escapeHtml(room.source || '')}</td>
+        <td>${escapeHtml(room.snapshotObjects)}</td>
+        <td>${escapeHtml(room.events)}</td>
+        <td>${escapeHtml(room.updatedAt || '')}</td>
+        <td>
+          <button class="secondary room-action" data-action="select" data-room="${escapeHtml(encodeURIComponent(room.roomKey))}">選択</button>
+          <button class="room-action" data-action="join" data-room="${escapeHtml(encodeURIComponent(room.roomKey))}">開発者入室</button>
+          <button class="danger room-action" data-action="delete" data-room="${escapeHtml(encodeURIComponent(room.roomKey))}">削除</button>
+        </td>
+      </tr>`).join('')}
+  `;
+}
+function renderPeers(peers) {
+  $('peersTable').innerHTML = `
+    <tr><th>IP</th><th>peerId</th><th>roomKey</th><th>seq</th><th>操作</th></tr>
+    ${peers.map(peer => `
+      <tr>
+        <td><code>${escapeHtml(peer.ip)}</code></td>
+        <td><code>${escapeHtml(peer.peerId)}</code></td>
+        <td><code>${escapeHtml(peer.roomKey)}</code></td>
+        <td>${escapeHtml(peer.lastSeq)}</td>
+        <td>
+          <button class="secondary" onclick="fillPeer('${escapeHtml(peer.peerId)}','${escapeHtml(peer.ip)}','${escapeHtml(peer.roomKey)}')">選択</button>
+          <button class="danger" onclick="kick({peerId:'${escapeHtml(peer.peerId)}'})">キック</button>
+        </td>
+      </tr>`).join('')}
+  `;
+}
+window.fillRoom = roomKey => { $('kickRoomKey').value = roomKey; };
+window.fillPeer = (peerId, ip, roomKey) => { $('kickPeerId').value = peerId; $('kickIp').value = ip; $('kickRoomKey').value = roomKey; };
+window.deleteRoom = async roomKey => {
+  if (!confirm(`部屋を強制削除します。\n${roomKey}`)) return;
+  await api('/api/dev/delete-room', {method:'POST', body: JSON.stringify({roomKey})});
+  await refresh();
+};
+window.developerJoin = async roomKey => {
+  const joinWindow = window.open('about:blank', '_blank');
+  try {
+    const result = await api('/api/dev/create-join-room', {method:'POST', body: JSON.stringify({roomKey, developerName:'開発者'})});
+    if (joinWindow) {
+      joinWindow.location.href = result.url;
+    } else {
+      alert('新しいタブを開けませんでした。ポップアップを許可するか、次のURLを開いてください。\n' + result.url);
+    }
+  } catch (e) {
+    if (joinWindow) joinWindow.close();
+    alert('開発者入室URLの作成に失敗しました: ' + e.message);
+  }
+};
+
+$('roomsTable').addEventListener('click', event => {
+  const button = event.target.closest('.room-action');
+  if (!button) return;
+  const roomKey = decodeURIComponent(button.dataset.room || '');
+  if (!roomKey) return;
+  if (button.dataset.action === 'select') fillRoom(roomKey);
+  if (button.dataset.action === 'join') developerJoin(roomKey);
+  if (button.dataset.action === 'delete') deleteRoom(roomKey);
+});
+window.kick = async target => {
+  await api('/api/dev/kick', {method:'POST', body: JSON.stringify(target)});
+  await refresh();
+};
+async function refresh() {
+  const data = await api('/api/dev/status');
+  renderStatus(data);
+}
+$('loginButton').onclick = login;
+$('forgetButton').onclick = () => { localStorage.removeItem('udonarium.devAdminToken'); $('token').value=''; showAdmin(false); setLoginStatus('保存トークンを削除しました', 'warn'); };
+$('refreshButton').onclick = refresh;
+$('announceButton').onclick = async () => {
+  const text = $('announceText').value.trim();
+  if (!text) return alert('表示文を入力してね');
+  const result = await api('/api/dev/announce', {method:'POST', body: JSON.stringify({text, startsAt: $('announceStartsAt').value.trim() || null, level: $('announceLevel').value})});
+  alert(`送信しました: ${result.delivered}接続`);
+};
+$('clearAnnouncementButton').onclick = async () => {
+  const result = await api('/api/dev/clear-announcement', {method:'POST', body: JSON.stringify({})});
+  alert(`クリアしました: ${result.delivered}接続`);
+};
+$('kickButton').onclick = async () => {
+  const target = {ip: $('kickIp').value.trim(), peerId: $('kickPeerId').value.trim(), roomKey: $('kickRoomKey').value.trim()};
+  if (!target.ip && !target.peerId && !target.roomKey) return alert('IP / peerId / roomKey のどれかを指定してね');
+  if (!confirm('指定対象をキックします。')) return;
+  await kick(target);
+};
+if (token) login();
+</script>
+</body>
+</html>
