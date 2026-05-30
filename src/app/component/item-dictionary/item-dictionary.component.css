@@ -1,0 +1,145 @@
+.item-dictionary-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-size: 13px;
+  color: #333;
+}
+
+.dict-header h3 {
+  margin: 0 0 6px 0;
+  font-size: 14px;
+  color: #555;
+}
+
+.dict-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.dict-tab {
+  padding: 3px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #f5f5f5;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.15s;
+}
+
+.dict-tab:hover { background: #e8e8e8; }
+.dict-tab.active {
+  background: #4a90d9;
+  color: white;
+  border-color: #4a90d9;
+}
+
+.search-box {
+  margin-bottom: 8px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #4a90d9;
+}
+
+.dict-categories {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.dict-category {
+  margin-bottom: 4px;
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  padding: 4px 6px;
+  background: #f0f0f0;
+  border-radius: 3px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.category-header:hover { background: #e4e4e4; }
+
+.toggle-icon {
+  font-size: 10px;
+  width: 14px;
+  color: #888;
+}
+
+.category-name {
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.category-count {
+  margin-left: 4px;
+  font-size: 11px;
+  color: #999;
+}
+
+.category-items {
+  padding: 2px 0 2px 8px;
+}
+
+.dict-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 4px 6px;
+  border-radius: 3px;
+  cursor: grab;
+  transition: background 0.1s;
+  gap: 4px;
+}
+
+.dict-item:hover {
+  background: #e8f0fe;
+}
+
+.dict-item:active {
+  cursor: grabbing;
+  opacity: 0.6;
+}
+
+.item-icon {
+  flex-shrink: 0;
+  font-size: 13px;
+}
+
+.item-name {
+  font-weight: bold;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.item-desc {
+  font-size: 11px;
+  color: #888;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dict-footer {
+  padding: 6px 0 0 0;
+  border-top: 1px solid #eee;
+  margin-top: 4px;
+}
+
+.drag-hint {
+  font-size: 11px;
+  color: #aaa;
+}

@@ -1,0 +1,330 @@
+:host {
+  display: block;
+}
+
+.is-grabbing {
+  cursor: -moz-grabbing;
+  cursor: -webkit-grabbing;
+  cursor: grabbing;
+}
+
+.is-perspective {
+  -webkit-perspective: 1000px;
+  perspective: 1000px;
+}
+
+.is-flat-mode {
+  -webkit-perspective: none;
+  perspective: none;
+}
+
+.is-flat-mode .component-content,
+.is-flat-mode .game-table,
+.is-flat-mode .layer {
+  -webkit-transform-style: flat;
+  transform-style: flat;
+}
+
+.is-fill {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  margin: auto;
+}
+
+.is-3d {
+  -webkit-transform-style: preserve-3d;
+  transform-style: preserve-3d;
+  backface-visibility: visible;
+  position: absolute;
+}
+
+.is-3d-2 {
+  -webkit-transform-style: preserve-3d;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  position: absolute;
+}
+
+.will-change-transform {
+  /* 
+   * デスクトップChromeにおけるレンダリング速度改善のための定義.
+   * will-changeの使用は可能な限り避けるべきであり、将来的なアップデートでレンダリング速度が改善された場合は削除を検討.
+   */
+  will-change: transform;
+  backface-visibility: visible;
+}
+
+.is-pointer-events-none {
+  pointer-events: none;
+}
+
+.dummy {
+  position: absolute;
+  height: 1px;
+  width: 1px;
+  content: '';
+  will-change: opacity;
+  pointer-events: none;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  transform: translate3d(0,0,0)
+}
+
+.layer {
+  transform-style: preserve-3d;
+  position: absolute;
+  pointer-events: none;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  margin: auto;
+}
+
+.component {
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -moz-user-drag: none;
+  -webkit-user-drag: none;
+
+  touch-action: manipulation;
+
+  height: 100%;
+  width: 100%;
+
+  overflow: hidden;
+}
+
+.component-content {
+  height: 2000px;
+  width: 2000px;
+}
+
+.grid-canvas {
+  opacity: 0.0;
+  transform: translateZ(0.15px);
+  -webkit-transition: 0.3s ease-out;
+  -moz-transition: 0.3s ease-out;
+  -o-transition: 0.3s ease-out;
+  transition: 0.3s ease-out;
+  backface-visibility: hidden;
+}
+
+.drawing-canvas {
+  opacity: 1;
+  transform: translateZ(0.18px);
+  backface-visibility: hidden;
+  pointer-events: none;
+  touch-action: none;
+}
+
+.drawing-canvas.is-drawing-mode {
+  pointer-events: auto;
+  cursor: crosshair;
+}
+
+.lighting-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  transform: translateZ(0.19px);
+  backface-visibility: hidden;
+}
+
+.side-name-label {
+  position: fixed;
+  z-index: 1090;
+  box-sizing: border-box;
+  padding: 3px 7px;
+  border: 1px solid rgba(0,0,0,0.65);
+  border-radius: 6px;
+  color: #fff;
+  background: rgba(0,0,0,0.74);
+  box-shadow: 0 1px 4px rgba(255,255,255,0.3), 0 1px 5px rgba(0,0,0,0.65);
+  font-size: 13px;
+  line-height: 1.2;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.range-selection-box {
+  position: fixed;
+  z-index: 1100;
+  box-sizing: border-box;
+  border: 2px solid #4fc3ff;
+  background: rgba(79, 195, 255, 0.18);
+  box-shadow: 0 0 8px rgba(79, 195, 255, 0.8);
+  pointer-events: none;
+}
+
+.selection-toolbar {
+  position: absolute;
+  top: 46px;
+  right: 8px;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 5px 7px;
+  border-radius: 7px;
+  color: #eee;
+  background: rgba(12, 40, 55, 0.88);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+  font-size: 12px;
+  pointer-events: auto;
+}
+
+.selection-toolbar button {
+  height: 24px;
+  box-sizing: border-box;
+  border: 1px solid #497b91;
+  border-radius: 4px;
+  color: #eee;
+  background: #28556a;
+  cursor: pointer;
+}
+
+.selection-toolbar button.danger {
+  border-color: #9b4545;
+  background: #7a2d2d;
+}
+
+.drawing-toolbar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 5px;
+  border-radius: 7px;
+  color: #eee;
+  background: rgba(20, 20, 20, 0.78);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+  font-size: 12px;
+  pointer-events: auto;
+}
+
+.drawing-toolbar button,
+.drawing-toolbar input {
+  height: 24px;
+  box-sizing: border-box;
+}
+
+.drawing-toolbar button {
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #eee;
+  background: #333;
+  cursor: pointer;
+}
+
+.drawing-toolbar button.active {
+  color: #222;
+  background: #ffe28a;
+}
+
+.drawing-toolbar input[type="number"] {
+  width: 48px;
+}
+
+.drawing-toolbar input[type="color"] {
+  width: 34px;
+  padding: 0;
+}
+
+.tool-group {
+  display: flex;
+  gap: 3px;
+}
+
+.drawing-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.drawing-check input {
+  height: auto;
+}
+
+.toolbar-toggle {
+  min-width: 42px;
+}
+
+.game-table {
+  height: 100%;
+  width: 100%;
+}
+
+.table-image {
+  backface-visibility: hidden;
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+.background-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  margin: -5px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+}
+
+.background-image.is-filter {
+  will-change: filter;
+}
+
+.background-image.is-filter.white {
+  filter: blur(5px);
+}
+
+.background-image.is-filter.black {
+  filter: blur(5px);
+}
+
+.background-image.is-filter::after {
+  display: block;
+  content: '';
+  width: 100%;
+  height: 100%;
+}
+
+.background-image.is-filter.white::after {
+  background-color: hsl(0, 0%, 97%);
+  filter: opacity(0.2);
+}
+
+.background-image.is-filter.black::after {
+  background-color: hsl(0, 0%, 10%);
+  filter: opacity(0.3);
+}
+
+.background-image.is-night::after {
+  display: block;
+  content: '';
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, var(--bg-darkness, 0));
+}

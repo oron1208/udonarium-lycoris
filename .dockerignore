@@ -1,0 +1,12 @@
+node_modules
+.angular
+.git
+.gitignore
+cypress
+coverage
+backups
+data
+*.log
+server-cert.pem
+server-key.pem
+Dockerfile.*

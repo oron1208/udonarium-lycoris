@@ -1,0 +1,24 @@
+   <ng-container *ngIf="character">
+     <div class="controller">
+       <div class="buff-add-panel" *ngIf="gameCharacter">
+         <div class="panel-title">バフ/デバフ追加</div>
+         <input class="buff-name-input" [(ngModel)]="newBuffName" placeholder="効果名">
+         <input class="buff-value-input" [(ngModel)]="newBuffValue" placeholder="補正/内容">
+         <input class="buff-round-input" type="number" min="0" [(ngModel)]="newBuffRounds" placeholder="R">
+         <button type="button" (mousedown)="stopButtonEvent($event)" (click)="addBuff()">追加</button>
+       </div>
+       <div class="marker-panel" *ngIf="gameCharacter">
+         <div class="panel-title">アイコンマーカー</div>
+         <button type="button" class="marker-button" *ngFor="let marker of markerDictionary" [class.active]="hasMarker(marker.id)" [style.border-color]="marker.color" (mousedown)="stopButtonEvent($event)" (click)="toggleMarker(marker.id)">
+           <span class="marker-icon" [style.background-color]="marker.color">{{marker.icon}}</span>{{marker.name}}
+         </button>
+       </div>
+       <ng-container *ngIf="character.buffDataElement">
+        <div class="table">
+           <div class="flex-item" *ngFor="let childElement of character.buffDataElement.children">
+             <div class="table-row" game-data-element-buff [gameDataElement]="childElement" [isEdit]="isEdit" [isPieceMode]="false"></div>
+           </div>
+         </div>
+       </ng-container>
+      </div>
+   </ng-container >

@@ -1,0 +1,13 @@
+<div class="data-import-menu">
+  <label class="import-button">
+    <i class="material-icons">folder_open</i>
+    <span>ZIP読込</span>
+    <input type="file" style="display: none;" (change)="handleFileSelect($event)" multiple
+      accept="application/xml,text/xml,application/zip" />
+  </label>
+
+  <button type="button" class="import-button" (click)="importIacharaFromClipboard()">
+    <i class="material-icons">assignment</i>
+    <span>いあきゃらコマ読込</span>
+  </button>
+</div>

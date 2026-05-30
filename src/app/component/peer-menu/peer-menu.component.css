@@ -1,0 +1,76 @@
+.user {
+  display: table;
+}
+
+.user_icon {
+  display: table-cell;
+  vertical-align: top;
+  width: 160px;
+}
+
+.user_info {
+  display: table-cell;
+  vertical-align: bottom;
+}
+
+
+.image {
+  padding: 0px;
+  width: 128px;
+  height: 128px;
+  display: table-cell;
+  vertical-align: top;
+}
+
+.image img{
+  width: auto;
+  height: auto;
+  max-width:100%;
+  max-height:100%;
+  vertical-align: bottom;
+}
+
+.cover {
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+/*2022/1/16現在、クロームバージョン: 97.0.4692.71（Official Build） （64 ビット）
+キャレットの点滅で負荷がかかることへの対策不透明度指定*/
+.is-caret {
+  caret-color: rgba(0,0,0,0.95);
+}
+
+.gm-cursor-share-button {
+  margin-left: 0.75em;
+  padding: 2px 6px;
+  font-size: 0.9em;
+}
+
+.cursor-hide-status {
+  margin-top: 2px;
+}
+
+.operation-help {
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.operation-help-body {
+  margin-top: 6px;
+  padding: 8px;
+  border: 1px solid rgba(0,0,0,0.25);
+  border-radius: 4px;
+  background: rgba(255,255,255,0.75);
+}
+
+.operation-help-body h3,
+.operation-help-body h4 {
+  margin: 6px 0 4px;
+}
+
+.operation-help-body ul {
+  margin: 0 0 6px 1.4em;
+  padding: 0;
+}

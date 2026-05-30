@@ -1,0 +1,174 @@
+<div class="vn-stage">
+  <button type="button" class="vn-close" title="シアターを空にする" (mousedown)="clearStage(); $event.preventDefault()">×</button>
+
+  <!-- ═══════ actor layer ═══════ -->
+  <div class="vn-actor-layer">
+    <div *ngFor="let actor of actors; let i = index; trackBy: trackByCharacterId"
+      class="vn-actor"
+      [class.entering]="actor.isEntering"
+      [class.speaking]="isSpeaking(actor)"
+      [class.autofit]="isAutoFit"
+      [class.drag-over]="dropIndex === i && dragIndex !== i"
+      draggable="true"
+      (dragstart)="onDragStart(i, $event)"
+      (dragover)="onDragOver(i, $event)"
+      (drop)="onDrop(i, $event)"
+      (dragend)="onDragEnd()"
+      [style.left]="actorLeft(i)"
+      [style.transform]="'translateX(-50%) translateY(' + verticalOffset + 'px) scale(' + actorScale(i) + ')'"
+      [style.z-index]="actorZIndex(i, actor)">
+
+      <!-- bubble above portrait with typewriter -->
+      <div class="vn-bubble"
+        *ngIf="showBubble(actor)"
+        [class.bubble-right]="bubbleSide(i) === 'right'"
+        [class.bubble-left]="bubbleSide(i) === 'left'"
+        [attr.data-bubble-key]="actor.bubbleKey">
+        <div class="vn-nameplate">{{ actor.name }}</div>
+        <div class="vn-text">{{ getTypewriterText(actor.characterId) }}</div>
+      </div>
+
+      <div *ngIf="actorHasPortrait(actor)" class="vn-portrait-stack" [class.fading]="actor.isPortraitFading">
+        <img *ngIf="actor.previousImageIdentifier" class="vn-portrait vn-portrait-prev" [src]="actorPreviousImage(actor).url | safe: 'resourceUrl'" [alt]="actor.name">
+        <img class="vn-portrait vn-portrait-current" [src]="actorImage(actor).url | safe: 'resourceUrl'" [alt]="actor.name">
+      </div>
+      <div *ngIf="!actorHasPortrait(actor)" class="vn-placeholder">{{ actor.name || '？' }}</div>
+    </div>
+  </div>
+
+  <div class="vn-empty" *ngIf="actors.length < 1">VNステージ待機中</div>
+
+  <!-- ═══════ control panel ═══════ -->
+  <form class="vn-control" [class.vn-control-hotbar]="isHotbarVisible" (submit)="$event.preventDefault(); sendVnChat();">
+    <!-- expand chat log button -->
+    <div class="vn-toolbar-row" *ngIf="!chatLogExpanded">
+      <button type="button" class="vn-expand-btn" (mousedown)="toggleChatLog(); $event.preventDefault()" title="チャットログ展開">💬 ログ</button>
+    </div>
+
+    <!-- chat palette (above log) -->
+    <div class="vn-palette-wrap" *ngIf="paletteExpanded && selectedAllPaletteLines.length > 0"
+      [class.vn-palette-faded]="!paletteVisible">
+      <!-- index sidebar (appears on left when toggled) -->
+      <div class="vn-index-sidebar" *ngIf="indexExpanded && selectedPaletteIndex.length > 0"
+        [class.vn-index-faded]="!indexVisible">
+        <button *ngFor="let idx of selectedPaletteIndex" type="button" class="vn-index-btn"
+          (mousedown)="jumpToIndex(idx); $event.preventDefault()">
+          {{ idx.name }}
+        </button>
+      </div>
+      <!-- index toggle + palette lines -->
+      <div class="vn-palette-body">
+        <div class="vn-palette-header">
+          <button type="button" class="vn-index-toggle" (mousedown)="toggleIndex(); $event.preventDefault()"
+            [class.active]="indexExpanded" [disabled]="selectedPaletteIndex.length === 0">
+            📑インデックス
+          </button>
+          <input class="vn-palette-search is-caret" name="vnPaletteSearch" [(ngModel)]="paletteSearchText"
+            type="text" placeholder="チャパレ検索" autocomplete="off">
+        </div>
+        <div class="vn-palette-scroll" #paletteScroll (scroll)="onPaletteScroll($event)">
+          <ng-container *ngFor="let line of visiblePaletteLines; let i = index">
+            <div *ngIf="isSectionHeader(line)" class="vn-palette-section">{{ sectionTitle(line) }}</div>
+            <button *ngIf="line && !isSectionHeader(line)" type="button" class="vn-palette-line"
+              (mousedown)="sendPaletteLine(line); $event.preventDefault()"
+              title="{{ line }}">
+              {{ line.length > 36 ? line.substring(0, 36) + '…' : line }}
+            </button>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+
+    <!-- chat log -->
+    <div class="vn-chat-log" *ngIf="chatLogExpanded"
+      [class.vn-chat-log-faded]="!chatLogPinned && !chatLogVisible">
+      <div class="vn-log-tabs">
+        <button *ngFor="let tab of chatTabs" type="button" class="vn-log-tab"
+          [class.active]="tab.identifier === (selectedTab?.identifier || chatTabs[0]?.identifier)"
+          (mousedown)="selectTab(tab.identifier); $event.preventDefault()">
+          {{ tab.name }}
+        </button>
+        <span class="vn-log-spacer"></span>
+        <button type="button" class="vn-log-pin"
+          [class.pinned]="chatLogPinned"
+          (mousedown)="toggleChatLogPin(); $event.preventDefault()"
+          title="ログ表示固定">📌</button>
+        <button type="button" class="vn-log-collapse"
+          (mousedown)="toggleChatLog(); $event.preventDefault()"
+          title="閉じる">▼</button>
+      </div>
+      <div class="vn-log-messages" #logScroll>
+        <div *ngFor="let msg of chatLogMessages" class="vn-log-msg" [class.system]="msg.isSystem">
+          <span class="vn-log-name" *ngIf="msg.name">{{ msg.name }}：</span>
+          <span class="vn-log-text">{{ msg.text }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- stage roster (who's on stage) -->
+    <div class="vn-roster-inline" *ngIf="actors.length > 0">
+      <span class="vn-roster-inline-label">登場中</span>
+      <div *ngFor="let actor of actors" class="vn-roster-pill"
+        [class.active]="actor.characterId === selectedCharacterId"
+        (mousedown)="selectActor(actor.characterId); $event.preventDefault()">
+        <img *ngIf="actorHasPortrait(actor)" class="vn-roster-icon" [src]="actorImage(actor).url | safe: 'resourceUrl'">
+        <span class="vn-roster-name">{{ actor.name }}</span>
+        <span class="vn-roster-x" (mousedown)="removeActor(actor.characterId); $event.stopPropagation(); $event.preventDefault()">✕</span>
+      </div>
+    </div>
+
+    <div class="vn-control-row">
+      <select class="vn-select" name="vnCharacter" [(ngModel)]="selectedCharacterId" (change)="onCharacterChange()">
+        <option value="" disabled>キャラ選択</option>
+        <option *ngFor="let character of characters" [value]="character.identifier">{{ character.name }}</option>
+      </select>
+      <button type="button" class="vn-enter-btn" (mousedown)="enterStage(); $event.preventDefault()" [disabled]="!selectedCharacterId" title="シアターに登場させる">登場</button>
+      <button type="button" class="vn-nudge" title="上へ" (mousedown)="nudgeUp(); $event.preventDefault()">▲</button>
+      <button type="button" class="vn-nudge" title="下へ" (mousedown)="nudgeDown(); $event.preventDefault()">▼</button>
+      <button type="button" class="vn-nudge" title="位置リセット" (mousedown)="resetPosition(); $event.preventDefault()">↺</button>
+    </div>
+
+    <!-- tachie slot buttons -->
+    <div class="vn-tachie-row" *ngIf="tachieSlots.length > 0">
+      <button *ngFor="let slot of tachieSlots" type="button" class="vn-tachie-btn"
+        [class.active]="selectedTachieIndex === slot.index"
+        (mousedown)="selectTachie(slot.index); $event.preventDefault()">
+        {{ slot.label }}
+      </button>
+    </div>
+
+    <!-- toggle row -->
+    <div class="vn-toggle-row">
+      <button type="button" class="vn-mini-toggle" [class.on]="sendPortrait" (mousedown)="toggleSendPortrait(); $event.preventDefault()" title="ON=立ち絵付きで送信 / OFF=テキストのみ">
+        {{ sendPortrait ? '絵あり' : '絵なし' }}
+      </button>
+      <button type="button" class="vn-mini-toggle" [class.on]="affectPiece" (mousedown)="toggleAffectPiece(); $event.preventDefault()" title="ON=選択時に盤面のコマ立ち絵も変更">
+        {{ affectPiece ? 'コマ同期' : 'コマ独立' }}
+      </button>
+    </div>
+
+    <!-- dice row -->
+    <div class="vn-dice-row">
+      <button *ngFor="let d of diceTypes" type="button" class="vn-dice" (mousedown)="addDice(d); $event.preventDefault()" title="クリックで追加">{{ d }}</button>
+      <button type="button" class="vn-dice vn-dice-clear" (mousedown)="clearDice(); $event.preventDefault()">✕</button>
+    </div>
+
+    <!-- dice bot selector + palette toggle -->
+    <div class="vn-dicebot-row">
+      <select class="vn-dicebot-select" [(ngModel)]="selectedDiceBot" (change)="selectDiceBot($event.target.value)" name="diceBot">
+        <option value="DiceBot">DiceBot</option>
+        <option *ngFor="let info of diceBotInfos" [value]="info.id">{{ info.name }}</option>
+      </select>
+      <button type="button" class="vn-palette-toggle" (mousedown)="togglePalette(); $event.preventDefault()"
+        [class.active]="paletteExpanded" [disabled]="!selectedCharacterId || selectedPaletteLines.length === 0">
+        チャパレ📋
+      </button>
+    </div>
+
+    <div class="vn-send-row">
+      <textarea class="vn-input is-caret" name="vnText" [(ngModel)]="inputText" (input)="onInputChange()" (keydown)="onInputKeydown($event)" placeholder="Enterで送信 / Shift+Enterで改行"></textarea>
+      <button type="submit" class="vn-send" [disabled]="!hasInputText || !selectedCharacterId">送信</button>
+    </div>
+    <div class="vn-debug">{{ debugInfo }}</div>
+  </form>
+</div>

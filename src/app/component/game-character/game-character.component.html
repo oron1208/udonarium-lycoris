@@ -1,0 +1,207 @@
+<!-- 下2行なぜこれで クロームver102 の重さが軽減できるのか検証が終わっていないが保留にして入れておく -->
+<div *ngIf="canDisplayByRole" class="dummy-will-change" appMovable [movable.option]="movableOption">
+</div>
+<div *ngIf="canDisplayByRole" class="component is-3d is-grab is-pointer-events-none" [class.gm-only-token]="isGmOnly" [class.is-range-selected]="isRangeSelected" [style.width.px]="size * gridSize"
+  [style.height.px]="size * gridSize" appMovable [movable.option]="movableOption" (movable.ondragstart)="onMove()"
+  (movable.ondragend)="onMoved()" (mousedown)="checkKey($event)" #root>
+  <div class="status-marker-ring is-pointer-events-none" *ngIf="0 < statusMarkers.length">
+    <span class="status-marker" *ngFor="let marker of statusMarkers; let i = index" [style.background-color]="marker.color" [style.transform]="markerRingTransform(i, statusMarkers.length)" [title]="marker.name">{{marker.icon}}</span>
+  </div>
+  <div class="component-content is-3d" [@bounceInOut]="'in'">
+    <ng-container *ngIf="shouldUseFlatIcon; else nonFlatCharacterView">
+      <div class="flat-character-token is-pointer-events-auto" [class.is-locked]="isLock" [class.is-secret]="isSecretDetailsHidden" [class.is-targeted]="gameCharacter.targeted">
+        <img class="flat-character-image chrome-smooth-image-trick" *ngIf="0 < imageFile.url.length" [src]="imageFile.url | safe: 'resourceUrl'">
+        <div class="flat-character-initial" *ngIf="imageFile.url.length <= 0">{{simpleInitial}}</div>
+        <div class="flat-target-crosshair" *ngIf="gameCharacter.targeted"><span></span></div>
+        <div class="flat-character-name" *ngIf="0 < name.length && showSideNameLabel">{{name}}
+          <button *ngIf="canUseVnStageButton" type="button" class="vn-stage-select-button flat-vn-button" title="VNでこのコマを選択"
+            (mousedown)="selectForVnStage($event)" (click)="selectForVnStage($event)">VN</button>
+        </div>
+      </div>
+    </ng-container>
+    <ng-template #nonFlatCharacterView>
+    <ng-container *ngIf="shouldUseSimpleView; else fullCharacterView">
+      <div class="simple-character-token is-pointer-events-auto" [class.is-locked]="isLock" [class.is-secret]="isSecretDetailsHidden">
+        <button type="button" class="simple-full-button" title="このコマだけ通常表示" (mousedown)="forceFullView($event)" (click)="forceFullView($event)">通常</button>
+        <div class="simple-character-initial">{{simpleInitial}}</div>
+        <div class="simple-character-name" *ngIf="0 < name.length && showSideNameLabel">{{name}}</div>
+      </div>
+    </ng-container>
+    </ng-template>
+    <ng-template #fullCharacterView>
+    <div class="component-content is-3d is-pointer-events-auto" appRotable [rotable.option]="rotableOption"
+      (rotable.ondragstart)="onMove()" (rotable.ondragend)="onMoved()">
+      <div *ngIf="!this.gameCharacter.hideInventory" class="pedestal-inner is-3d" [style]="{ 'border': 'solid 6px #FFCC80'}"></div> 
+      <div *ngIf="this.gameCharacter.hideInventory" class="pedestal-inner is-3d" [style]="{ 'border': 'solid 6px #A0E0FF'}"></div>
+      <div class="pedestal-outer"></div>
+<!--床回転アイコン-->
+      <div *ngIf="!isLock" class="pedestal-grab rotate-grab will-change">
+        <div class="pedestal-grab-border">
+          <div class="material-icons of-front">autorenew</div>
+          <div class="material-icons of-back">autorenew</div>
+        </div>
+      </div>
+<!--影-->
+      <img class="image is-pointer-events-none chrome-smooth-image-trick" [ngStyle]="{'height':+ this.gameCharacter.komaImageHeignt + 'px','transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px) scaleY(0.5) translateY(-150%) translateY(' + size * gridSize +'px)'}" *ngIf="isDropShadow && (0 < imageFile.url.length) && this.gameCharacter.specifyKomaImageFlag" [src]="imageFile.url | safe: 'resourceUrl'" 
+      style="filter: brightness(0) opacity(0.7) blur(1px);">
+      <img class="image is-pointer-events-none chrome-smooth-image-trick" [ngStyle]="{'width':'100%','transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px) scaleY(0.5) translateY(-150%) translateY(' + size * gridSize +'px)'}" *ngIf="isDropShadow && (0 < imageFile.url.length) && !this.gameCharacter.specifyKomaImageFlag" [src]="imageFile.url | safe: 'resourceUrl'"
+      style="filter: brightness(0) opacity(0.7) blur(1px);">
+      <div class="upright-transform is-fit-width is-3d" [ngStyle]="{'transform': 'rotateY(90deg) rotateZ(-90deg) rotateY(-90deg) translateY(-50%) translateY(' + (-altitude) * gridSize +'px)'}">
+        <div class="rotate-frame is-3d" [style.width.px]="size * gridSize" [style.height.px]="size * gridSize"
+          appRotable [(rotable.value)]="roll" (rotable.ondragstart)="onMove()" (rotable.ondragend)="onMoved()">
+          <div class="rotate-inner is-3d">
+<!-- バフ表示 -->
+<!-- クロームver102の描画問題に対処するため構成を修正している -->
+            <div class="is-3d" *ngIf="this.gameCharacter.buffDataElement" >
+              <ng-container *ngIf="this.gameCharacter.buffDataElement.children.length == 1">
+                <ng-container *ngFor="let child of this.gameCharacter.buffDataElement.children">
+                  <ng-container *ngIf="child.children.length > 0">
+                    <div style="" *ngIf="this.gameCharacter.buffDataElement" class="buff-tag is-nowrap is-buff-background is-3d will-change backface-off"
+                      [ngStyle]="{'transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px) translateY(-100%)'}">
+                      <div [hidden]="!this.gameCharacter.targeted" class="target-icon-buff scrolldown5"><img src="./assets/images/target/target.png"></div>
+                      <div [hidden]="foldingBuff">
+                        <div class="buff-folding-icon " (mousedown)="foldingBuffFlag(true)">▼</div>
+                        <div class="!table is-3d">
+                          <div class="flex-item is-3d" *ngFor="let childElement of this.gameCharacter.buffDataElement.children">
+                            <div class="table-row fornt-tag is-3d" game-data-element-buff [gameDataElement]="childElement" [isEdit]="isEdit" [isPieceMode]="true"></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div [hidden]="!foldingBuff">
+                        <div class="buff-folding-icon" (mousedown)="foldingBuffFlag(false)">▲</div>
+                        <div class="table is-3d">
+                          <div class="flex-item is-3d">
+                            <div class="table-row fornt-tag is-3d" style="font-family: Cambria, Georgia; font-size: 12px;">簡易表示中/バフ{{buffNum}}個</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div style="" *ngIf="this.gameCharacter.buffDataElement" class="buff-tag is-nowrap is-buff-background is-3d will-change backface-off" 
+                     [ngStyle]="{'transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px) translateY(-100%) rotateY(180deg)'}">
+                      <div class="target-icon-buff2 scrolldown5" [hidden]="!this.gameCharacter.targeted"
+                      [ngStyle]="{'transform': 'rotateY(180deg)'}"><img src="./assets/images/target/target.png"></div>
+                      <div [hidden]="foldingBuff">
+                        <div class="buff-folding-icon" (mousedown)="foldingBuffFlag(true)">▼</div>
+                        <div class="table is-3d">
+                          <div class="flex-item is-3d" *ngFor="let childElement of this.gameCharacter.buffDataElement.children">
+                            <div class="table-row fornt-tag is-3d" game-data-element-buff [gameDataElement]="childElement" [isEdit]="isEdit" [isPieceMode]="true"></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div [hidden]="!foldingBuff">
+                        <div class="buff-folding-icon" (mousedown)="foldingBuffFlag(false)">▲</div>
+                        <div class="table is-3d">
+                          <div class="flex-item is-3d">
+                            <div class="table-row fornt-tag is-3d" style="font-family: Cambria, Georgia; font-size: 12px;">簡易表示中/バフ{{buffNum}}個</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </ng-container>
+                </ng-container>
+              </ng-container>
+            </div>
+<!-- 名前表示 -->
+<!-- クロームver102の描画問題に対処するため構成を修正している -->
+            <div [hidden]="!(this.buffNum==0)">
+              <div class="target-icon scrolldown4" [hidden]="!this.gameCharacter.targeted" 
+                [ngStyle]="{'transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px)'}">
+                <img src="./assets/images/target/target.png">
+              </div>
+            </div>
+            <ng-container *ngIf="this.gameCharacter.nonTalkFlag">
+              <div *ngIf="0 < name.length && showSideNameLabel" class="name-tag is-nowrap is-black-background is-3d will-change backface-off"
+                [ngStyle]="{'transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px)'
+                , 'background-color': 'rgba(255,255,255, 0.6)' , 'color' : '#333' ,  'border': 'solid 1px #555' }">
+                <div class="has-length-limit is-3d" >{{name}}
+                  <ng-container *ngIf="isLock">
+                    <i class="material-icons lock-icon" style="display: inline;">lock</i>
+                  </ng-container>
+                </div>
+              </div>
+              <div *ngIf="0 < name.length && showSideNameLabel" class="name-tag is-nowrap is-black-background is-3d will-change backface-off"
+                [ngStyle]="{'transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px) rotateY(180deg)'
+                , 'background-color': 'rgba(255,255,255, 0.6)' , 'color' : '#333' ,  'border': 'solid 1px #555' }">
+                <div class="has-length-limit is-3d" >{{name}}
+                  <ng-container *ngIf="isLock">
+                    <i class="material-icons lock-icon" style="display: inline;">lock</i>
+                  </ng-container>
+                </div>
+              </div>
+            </ng-container>
+            <ng-container *ngIf="!this.gameCharacter.nonTalkFlag">
+              <div *ngIf="0 < name.length && showSideNameLabel" class="name-tag is-nowrap is-black-background is-3d will-change backface-off"
+                [ngStyle]="{'transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px)'}">
+                <div class="has-length-limit is-3d">{{name}}
+                  <button *ngIf="canUseVnStageButton" type="button" class="vn-stage-select-button" title="VNでこのコマを選択"
+                    (mousedown)="selectForVnStage($event)" (click)="selectForVnStage($event)">VN</button>
+                  <ng-container *ngIf="isLock">
+                    <i class="material-icons lock-icon" style="display: inline;">lock</i>
+                  </ng-container>
+                </div>
+              </div>
+              <div *ngIf="0 < name.length && showSideNameLabel" class="name-tag is-nowrap is-black-background is-3d will-change backface-off"
+                [ngStyle]="{'transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px) rotateY(180deg)'}">
+                <div class="has-length-limit is-3d">{{name}}
+                  <button *ngIf="canUseVnStageButton" type="button" class="vn-stage-select-button" title="VNでこのコマを選択"
+                    (mousedown)="selectForVnStage($event)" (click)="selectForVnStage($event)">VN</button>
+                  <ng-container *ngIf="isLock">
+                    <i class="material-icons lock-icon" style="display: inline;">lock</i>
+                  </ng-container>
+                </div>
+              </div>
+            </ng-container>
+<!--回転部キャラ上-->
+            <div *ngIf="!isLock" class="grab-group is-3d">
+              <div class="rotate-grab rotate-grab-icon of-top is-3d will-change"
+                [ngStyle]="{'transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px) translateY( -0px)'}">
+                <i class="material-icons will-change">autorenew</i>
+              </div>
+            </div>
+<!--画像-->
+            <img class="image is-3d chrome-smooth-image-trick" [ngStyle]="{'height':+ this.gameCharacter.komaImageHeignt + 'px','transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px)'}" *ngIf="(0 < imageFile.url.length) && this.gameCharacter.specifyKomaImageFlag" [src]="imageFile.url | safe: 'resourceUrl'">
+            <img class="image is-3d chrome-smooth-image-trick" [ngStyle]="{'width':'100%'}" *ngIf="(0 < imageFile.url.length) && !this.gameCharacter.specifyKomaImageFlag" [src]="imageFile.url | safe: 'resourceUrl'">
+<!--回転部キャラ下-->
+            <div *ngIf="!isLock" class="grab-group is-3d">
+              <div *ngIf="!isLock" class="rotate-grab rotate-grab-icon of-bottom is-3d will-change"
+                [ngStyle]="{'transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px'}">
+                <ng-container *ngIf="!isLock">
+                  <i class="material-icons will-change">autorenew</i>
+                </ng-container>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    </ng-template>
+    <div class="topdown-icon-token is-pointer-events-none" *ngIf="shouldShowTopDownIcon" [class.is-targeted]="gameCharacter.targeted" [style.width.px]="size * gridSize" [style.height.px]="size * gridSize" [style.transform]="perspectiveAssistTransform">
+      <img class="topdown-icon-image chrome-smooth-image-trick" *ngIf="0 < imageFile.url.length" [src]="imageFile.url | safe: 'resourceUrl'">
+      <div class="topdown-icon-initial" *ngIf="imageFile.url.length <= 0">{{simpleInitial}}</div>
+      <div class="flat-target-crosshair" *ngIf="gameCharacter.targeted"><span></span></div>
+    </div>
+    <div class="topdown-name-tag" *ngIf="shouldShowTopDownNameTag" [style.width.px]="math.max(size * gridSize + 28, 92)" [style.transform]="perspectiveAssistNameTransform">
+      {{name}}
+      <button *ngIf="canUseVnStageButton" type="button" class="vn-stage-select-button flat-vn-button" title="VNでこのコマを選択"
+        (mousedown)="selectForVnStage($event)" (click)="selectForVnStage($event)">VN</button>
+    </div>
+    <div class="is-3d" *ngIf="!shouldUseSimpleView && isAltitudeIndicate && (altitude <= -0.5 || 0.5 <= altitude)"
+      style="display: flex; flex-flow: column nowrap; justify-content: space-between; border-left: 2px dashed black; transform-origin: top left"
+      [style.height.px]="math.abs(altitude * gridSize) - (altitude > 0 ? 0 : 0)"
+      [ngStyle]="{transform: 'translateX(' + (size * gridSize / 2) + 'px) translateY(' + (-size * gridSize / 2) + 'px) rotateX(-90deg) translateY(' + (altitude > 0 ? -altitude * gridSize : 0) + 'px) rotateY(' + (viewRotateZ) + 'deg)'}">
+      <div class="is-3d" [style.visibility]="altitude > 0 ? 'visible' : 'hidden'">
+        <span class="elevation-indicator is-3d" style="position: absolute"><i>{{ elevation }}</i></span>
+        <span class="elevation-indicator is-3d" style="position: absolute; transform: rotateY(-180deg)"><i>{{ elevation }}</i></span>
+      </div>
+      <div class="is-3d">
+        <span class="altitude-indicator is-3d" style="position: absolute">{{ math.abs(altitude) }}</span>
+        <span class="altitude-indicator is-3d" style="position: absolute; transform: rotateY(-180deg)">{{ math.abs(altitude) }}</span>
+      </div>
+      <div class="is-3d" [style.visibility]="altitude < 0 ? 'visible' : 'hidden'" [ngStyle]="{transform: 'translateY(' + (chatBubbleAltitude + 4) + 'px)'}">
+        <span class="elevation-indicator is-3d" style="position: absolute"><i>{{ elevation }}</i></span>
+        <span class="elevation-indicator is-3d" style="position: absolute; transform: rotateY(-180deg)"><i>{{ elevation }}</i></span>
+      </div>
+    </div>
+  </div>
+</div>

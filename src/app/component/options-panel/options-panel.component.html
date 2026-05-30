@@ -1,0 +1,198 @@
+<!-- ═══ compact mode: icon buttons only ═══ -->
+<div class="options-panel compact" *ngIf="isCompactMode">
+  <div class="compact-toolbar">
+    <button type="button" class="compact-btn" [class.on]="isMacroHotbarVisible" (click)="toggleMacroHotbar()" title="ホットバー ON/OFF">
+      <i class="material-icons">view_module</i>
+      <span class="compact-btn-label">バー</span>
+    </button>
+    <button type="button" class="compact-btn" [class.on]="isVnStageVisible" (click)="toggleVnStage()" title="VNステージ ON/OFF">
+      <i class="material-icons">theaters</i>
+      <span class="compact-btn-label">VN</span>
+    </button>
+    <button type="button" class="compact-btn" [class.on]="!isCursorShareDisabled" (click)="toggleCursorShare()" title="カーソル共有 ON/OFF">
+      <i class="material-icons">mouse</i>
+      <span class="compact-btn-label">CS</span>
+    </button>
+    <button type="button" class="compact-btn" [class.on]="isBuffTowerCollapsed" (click)="toggleBuffTowerCollapse()" title="バフタワー簡易表示">
+      <i class="material-icons">layers</i>
+      <span class="compact-btn-label">バフ</span>
+    </button>
+    <button type="button" class="compact-btn" [class.on]="isActivePanelForeground" (click)="toggleActivePanelForeground()" title="アクティブパネルを手前に表示">
+      <i class="material-icons">flip_to_front</i>
+      <span class="compact-btn-label">前面</span>
+    </button>
+    <button type="button" class="compact-btn" (click)="resetCamera()" title="視点リセット">
+      <i class="material-icons">center_focus_strong</i>
+      <span class="compact-btn-label">視点</span>
+    </button>
+    <span class="compact-spacer"></span>
+    <button type="button" class="compact-btn gm" [class.on]="isGmMode" (click)="toggleGmMode()" title="GM宣言 ON/OFF">
+      <i class="material-icons">visibility</i>
+      <span class="compact-btn-label">GM</span>
+    </button>
+    <button type="button" class="compact-btn" (click)="toggleCompactMode()" title="通常表示に戻す">
+      <i class="material-icons">expand</i>
+      <span class="compact-btn-label">展開</span>
+    </button>
+  </div>
+</div>
+
+<!-- ═══ normal mode: full layout ═══ -->
+<div class="options-panel" *ngIf="!isCompactMode">
+  <div class="compact-toggle-row">
+    <span class="section-title">オプション</span>
+    <span class="compact-spacer"></span>
+    <button type="button" class="compact-switch" (click)="toggleCompactMode()" title="簡易表示モード">
+      <i class="material-icons">compress</i> 簡易
+    </button>
+  </div>
+
+  <section class="options-section">
+    <h3>UI設定</h3>
+    <div class="option-row">
+      <span class="option-label">ホットバー</span>
+      <button type="button" class="option-toggle" [class.on]="isMacroHotbarVisible" (click)="toggleMacroHotbar()">
+        {{ isMacroHotbarVisible ? 'ON' : 'OFF' }}
+      </button>
+    </div>
+    <div class="option-row">
+      <span class="option-label">VNステージ</span>
+      <button type="button" class="option-toggle" [class.on]="isVnStageVisible" (click)="toggleVnStage()">
+        {{ isVnStageVisible ? 'ON' : 'OFF' }}
+      </button>
+    </div>
+    <div class="option-row">
+      <span class="option-label">VN立ち絵自動Fit</span>
+      <button type="button" class="option-toggle" [class.on]="isVnAutoFit" (click)="toggleVnAutoFit()">
+        {{ isVnAutoFit ? 'ON' : 'OFF' }}
+      </button>
+    </div>
+    <div class="option-hint">全員の立ち絵をVNエリアの高さに合わせます</div>
+    <div class="option-row">
+      <span class="option-label">盤面コマVNボタン</span>
+      <button type="button" class="option-toggle" [class.on]="isVnBoardButtonVisible" (click)="toggleVnBoardButton()">
+        {{ isVnBoardButtonVisible ? 'ON' : 'OFF' }}
+      </button>
+    </div>
+    <div class="option-hint">コマ名の横にVN選択ボタンを表示します</div>
+    <div class="option-row">
+      <span class="option-label">カーソル共有</span>
+      <button type="button" class="option-toggle" [class.on]="!isCursorShareDisabled" (click)="toggleCursorShare()">
+        {{ isCursorShareDisabled ? 'OFF' : 'ON' }}
+      </button>
+    </div>
+    <div class="option-row">
+      <span class="option-label">アクティブパネルを手前に表示</span>
+      <button type="button" class="option-toggle" [class.on]="isActivePanelForeground" (click)="toggleActivePanelForeground()">
+        {{ isActivePanelForeground ? 'ON' : 'OFF' }}
+      </button>
+    </div>
+    <div class="option-hint">ONの時、チャット欄などパネル内をクリックするとそのパネルを最前面にします</div>
+  </section>
+
+  <section class="options-section">
+    <h3>役割</h3>
+    <div class="option-row">
+      <span class="option-label">GM宣言</span>
+      <button type="button" class="option-toggle gm" [class.on]="isGmMode" (click)="toggleGmMode()">
+        {{ isGmMode ? 'GM中' : 'PL' }}
+      </button>
+    </div>
+  </section>
+
+  <section class="options-section">
+    <h3>表示</h3>
+    <div class="option-row">
+      <span class="option-label">バフタワー簡易表示</span>
+      <button type="button" class="option-toggle" [class.on]="isBuffTowerCollapsed" (click)="toggleBuffTowerCollapse()">
+        {{ isBuffTowerCollapsed ? '畳む' : '展開' }}
+      </button>
+    </div>
+    <div class="option-hint">2段以上のバフを簡易表示（畳む）にします</div>
+    <div class="option-row">
+      <span class="option-label">横から見た名前ラベル</span>
+      <button type="button" class="option-toggle" [class.on]="isShowSideNameLabel" (click)="toggleShowSideNameLabel()">
+        {{ isShowSideNameLabel ? 'ON' : 'OFF' }}
+      </button>
+    </div>
+    <div class="option-row">
+      <span class="option-label">真上から見た名前ラベル</span>
+      <button type="button" class="option-toggle" [class.on]="isShowTopDownNameLabel" (click)="toggleShowTopDownNameLabel()">
+        {{ isShowTopDownNameLabel ? 'ON' : 'OFF' }}
+      </button>
+    </div>
+    <div class="option-row" style="margin-top: 10px;">
+      <button type="button" class="option-button" (click)="resetCamera()">視点を初期位置に戻す</button>
+    </div>
+  </section>
+
+  <section class="options-section">
+    <h3>ヘルプ</h3>
+    <button type="button" class="option-button" (click)="toggleOperationHelp()">
+      {{ isOperationHelpOpen ? '操作ヘルプを閉じる' : '操作ヘルプを開く' }}
+    </button>
+    <button type="button" class="option-button" (click)="toggleUpdateNotes()">
+      {{ isUpdateNotesOpen ? 'アップデート内容を閉じる' : 'アップデート内容' }}
+    </button>
+    <div class="operation-help-body" *ngIf="isUpdateNotesOpen">
+      <h4>v1.21.0</h4>
+      <ul>
+        <li><b>VNステージ ログイン修正</b>：VNモードONでログイン時のフリーズを解消。部屋に入る際にVNステージを一時的に非表示にし、同期完了後に自動復帰します</li>
+        <li><b>立ち絵同期</b>：後から入室したプレイヤーのVNステージにも、既に登場中の立ち絵が正しく同期されるよう修正</li>
+        <li><b>セリフポップ同期</b>：他のプレイヤーのVNチャット発言の吹き出しが表示されない問題を修正</li>
+        <li>後からVNモードをONにした際も、既存の立ち絵が表示されるよう修正</li>
+        <li>charactersゲッターのキャッシュ追加等、パフォーマンス改善</li>
+      </ul>
+      <h4>v1.20.0</h4>
+      <ul>
+        <li><b>照明システム追加</b>：テーブルの暗さスライダー、キャラ/地形に光源設定（松明・焚き火・ランタン等）を追加。ペンツールの「壁として扱う」で光を遮断する壁を描けます（レイキャスト方式）</li>
+        <li><b>GMモード連動</b>：GM宣言中は暗闇が無効化され、光源の位置だけが確認できます</li>
+        <li><b>VNステージ</b>：立ち絵の表示・表情切り替え・吹き出しタイプライター演出を追加</li>
+        <li><b>ホットバー</b>：12枠×5ページ＝60個のマクロパレットを追加</li>
+        <li>サイドメニューに「照明演出」ボタンを追加（トグル式）</li>
+        <li>サンプルキャラ（魔窟マコ・桃鬼華）の画像が他ピアに正しく同期されるよう修正</li>
+      </ul>
+      <h4>v1.13.1</h4>
+      <ul>
+        <li>ジュークボックス：BGM/SE/環境音3モード化</li>
+        <li>名前ラベルON/OFF（横・真上）</li>
+        <li>平面モード簡易表示でも◯アイコン強制表示</li>
+        <li>共有メモの新規作成時にheight制限をデフォルトON</li>
+      </ul>
+      <h4>サンプルキャラ</h4>
+      <p>下のボタンで魔窟マコ・桃鬼華をテーブルに追加できます。</p>
+      <button type="button" class="option-button" (click)="addSampleCharacters()">
+        サンプルキャラを追加
+      </button>
+    </div>
+    <div class="operation-help-body" *ngIf="isOperationHelpOpen">
+      <h4>マニュアル</h4>
+      <ul>
+        <li><a href="https://x.com/oron1208/status/2060232536513802564?s=20" target="_blank">照明機能の使い方（X投稿）</a></li>
+        <li><a href="https://x.com/oron1208/status/2059585857045307679/video/1" target="_blank">VNモードの使い方（X動画）</a></li>
+        <li><a href="https://x.com/oron1208" target="_blank">開発者アカウント・お問い合わせ（@oron1208）</a></li>
+      </ul>
+      <h4>ホットバー</h4>
+      <ul>
+        <li>1〜5ページ切替で、12枠×5ページ＝60個のマクロを使えます。</li>
+        <li>左クリック：登録マクロを送信。空スロットは編集。</li>
+        <li>右クリック：マクロ本文をコピー。</li>
+        <li>Ctrl+クリック：スロット編集。</li>
+        <li>編集画面の「画像を選ぶ」で、ユドナリウム内画像をアイコンにできます。</li>
+        <li>保存/読込：ホットバー設定をJSONで書き出し・読み込みします。</li>
+      </ul>
+      <h4>自キャラ・対象指定</h4>
+      <ul>
+        <li>コマをAltクリックして対象状態にしてから「このコマを自キャラにする」を押すと、自キャラ固定できます。</li>
+        <li>自キャラ固定中は、ホットバーのマクロがそのコマのチャットパレットとして評価されます。</li>
+        <li>対象ON：ターゲット中のコマを対象にしてマクロを実行します。</li>
+        <li>自キャラ固定中は画面左下にそのコマの立ち絵を表示します。</li>
+      </ul>
+      <h4>カーソル共有</h4>
+      <ul>
+        <li>カーソル共有ON/OFFで、自分のマウスカーソル位置送信を切り替えます。</li>
+        <li>切替時はシステムログに通知され、接続情報の「マウスカーソルハイド中」に表示されます。</li>
+      </ul>
+    </div>
+  </section>
+</div>

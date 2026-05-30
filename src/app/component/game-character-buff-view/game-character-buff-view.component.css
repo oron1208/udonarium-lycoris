@@ -1,0 +1,72 @@
+.text {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Verdana, Meiryo, sans-serif;
+  font-size: 12px;
+}
+:host {
+  display: block;
+}
+
+.buff-add-panel,
+.marker-panel {
+  margin: 6px;
+  padding: 6px;
+  border: 1px solid #aaa;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.55);
+}
+
+.panel-title {
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.buff-add-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr 4em auto;
+  gap: 4px;
+  align-items: center;
+}
+
+.buff-add-panel .panel-title {
+  grid-column: 1 / -1;
+}
+
+.buff-add-panel input {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.marker-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.marker-panel .panel-title {
+  flex: 0 0 100%;
+}
+
+.marker-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 5px;
+  border: 2px solid #999;
+  border-radius: 14px;
+  background: #eee;
+  cursor: pointer;
+}
+
+.marker-button.active {
+  background: #ffe28a;
+  font-weight: bold;
+}
+
+.marker-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 50%;
+}

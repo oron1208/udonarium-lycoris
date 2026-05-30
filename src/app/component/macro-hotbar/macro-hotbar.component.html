@@ -1,0 +1,90 @@
+<ng-container *ngIf="isVisible">
+  <div class="selected-character-stand" *ngIf="selectedCharacter">
+    <div class="stand-image" *ngIf="selectedCharacterImageUrl">
+      <img [src]="selectedCharacterImageUrl | safe: 'resourceUrl'" />
+    </div>
+    <div class="stand-name">{{selectedCharacter.name || '自キャラ'}}</div>
+  </div>
+
+  <div class="macro-hotbar">
+  <div class="macro-hotbar-controls">
+    <button type="button" class="self-character-button" (click)="setTargetedCharacterAsSelf()"
+      title="Altキーで対象にしたコマを自キャラにします">
+      自キャラ設定
+    </button>
+    <div class="current-character-name" [title]="selectedCharacter ? selectedCharacter.name : 'プレイヤー'">
+      {{selectedCharacter ? (selectedCharacter.name || '名前なし') : 'プレイヤー'}}
+    </div>
+    <button type="button" class="clear-character-button" (click)="clearSelectedCharacter()" title="自キャラ設定を解除">解除</button>
+    <button type="button" class="target-mode-button" [class.active]="targetMode" (click)="toggleTargetMode()"
+      title="ONにすると、ターゲット中のコマを対象としてマクロを実行します">
+      {{targetMode ? '対象ON' : '対象OFF'}}
+    </button>
+  </div>
+
+  <div class="macro-hotbar-main">
+    <div class="macro-help" *ngIf="helpText">{{helpText}}</div>
+    <div class="macro-slot-popover" *ngIf="hoverSlotText">
+      <div class="popover-title">{{hoverSlotLabel}}</div>
+      <div class="popover-body">{{hoverSlotText}}</div>
+    </div>
+
+    <div class="macro-hotbar-pages">
+      <button *ngFor="let page of pageNumbers" type="button" [class.active]="activePage === page" (click)="setActivePage(page)">
+        {{page + 1}}
+      </button>
+    </div>
+
+    <div class="macro-hotbar-slots">
+      <button *ngFor="let slot of visibleSlots; let i = index" type="button" class="macro-slot"
+        [class.empty]="!slot.text.trim().length"
+        [attr.aria-label]="getSlotTooltip(slot)"
+        (mouseenter)="showSlotPopover(slot)"
+        (mouseleave)="hideSlotPopover()"
+        (click)="onSlotClick($event, i)" (contextmenu)="onSlotContextMenu($event, i)">
+        <span class="slot-number">{{activePage + 1}}-{{i + 1}}</span>
+        <span class="slot-icon" *ngIf="getIconUrl(slot); else noIcon">
+          <img [src]="getIconUrl(slot) | safe: 'resourceUrl'" />
+        </span>
+        <ng-template #noIcon>
+          <span class="slot-icon slot-icon-empty">＋</span>
+        </ng-template>
+        <span class="slot-label">{{slot.label || (slot.text ? slot.text : '空')}}</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="macro-hotbar-actions">
+    <button type="button" (click)="exportSlots()" title="ホットバー設定をJSONで保存">
+      <i class="material-icons">file_download</i><span>保存</span>
+    </button>
+    <button type="button" (click)="openImportDialog()" title="ホットバー設定JSONを読み込み">
+      <i class="material-icons">file_upload</i><span>読込</span>
+    </button>
+    <input #importFileInput type="file" accept="application/json,.json" style="display:none" (change)="importSlots($event)" />
+  </div>
+
+  <div class="macro-editor" *ngIf="0 <= editingIndex">
+    <div class="editor-title">ページ{{activePage + 1}} スロット{{(editingIndex % 12) + 1}} 編集</div>
+    <label>表示名<input class="is-caret" [(ngModel)]="editSlot.label" placeholder="例: 回避" /></label>
+    <div class="icon-editor">
+      <div class="editor-icon-preview" *ngIf="getIconUrl(editSlot); else editorNoIcon">
+        <img [src]="getIconUrl(editSlot) | safe: 'resourceUrl'" />
+      </div>
+      <ng-template #editorNoIcon>
+        <div class="editor-icon-preview no-image">画像なし</div>
+      </ng-template>
+      <div class="icon-editor-buttons">
+        <button type="button" (click)="selectIcon()">画像を選ぶ</button>
+        <button type="button" (click)="clearIcon()">画像なし</button>
+      </div>
+    </div>
+    <label>マクロ<textarea class="is-caret" [(ngModel)]="editSlot.text" placeholder="例: 2d6+3 回避"></textarea></label>
+    <div class="editor-buttons">
+      <button type="button" (click)="saveEdit()">保存</button>
+      <button type="button" (click)="clearEdit()">空にする</button>
+      <button type="button" (click)="cancelEdit()">キャンセル</button>
+    </div>
+  </div>
+  </div>
+</ng-container>

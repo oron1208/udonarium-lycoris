@@ -1,0 +1,160 @@
+:host {
+  display: block;
+}
+
+.jukebox-section {
+  margin-bottom: 4px;
+}
+
+.volume-row {
+  margin-bottom: 2px;
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.folder-add-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.folder-tabs {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.folder-tabs button {
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+.folder-tabs button.active {
+  background: rgba(80, 120, 180, 0.3);
+  font-weight: bold;
+}
+
+.audio-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 4px;
+  align-items: center;
+  padding: 3px 0;
+  border-bottom: 1px dotted #888;
+}
+
+.audio-controls {
+  display: flex;
+  gap: 2px;
+}
+
+.audio-controls button {
+  padding: 1px 6px;
+  font-size: 12px;
+}
+
+.audio-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.audio-name {
+  font-size: 13px;
+}
+
+.audio-folder-assign select {
+  font-size: 11px;
+  max-width: 7em;
+}
+
+.badge {
+  font-size: 11px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(80, 120, 180, 0.2);
+}
+
+.bgm-badge {
+  background: rgba(180, 80, 200, 0.25);
+}
+
+.ambient-badge {
+  background: rgba(80, 180, 120, 0.25);
+}
+
+.layer-actions {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.layer-actions button {
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+.play-btn {
+  color: #060;
+}
+
+.stop-btn {
+  color: #600;
+}
+
+.layer-hint {
+  font-size: 11px;
+  opacity: 0.8;
+  margin-bottom: 6px;
+}
+
+.layer-row {
+  border-top: 1px solid #aaa;
+  padding-top: 5px;
+  margin-top: 5px;
+}
+
+.layer-title,
+.layer-body {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 3px;
+}
+
+.layer-body select:first-child {
+  width: 14em;
+}
+
+.drop-zone {
+  border: 2px dashed #555;
+  border-radius: 5px;
+  padding: 25px;
+  text-align: center;
+  font: 24px bold 'Vollkorn';
+  color: #444;
+  cursor: pointer;
+}
+
+.large-font {
+  font-size: 64px;
+}
+
+.small-font {
+  font-size: 12px;
+}
+
+.box {
+  border-bottom: 1px dotted #888;
+}
