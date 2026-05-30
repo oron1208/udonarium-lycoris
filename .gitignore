@@ -54,3 +54,6 @@ dist/
 *.pem
 VPSサーバー設定/dev-admin-token.txt
 signaling-server/node_modules/
+
+# Room data backups (too large for GitHub)
+data/rooms/*.backup*
