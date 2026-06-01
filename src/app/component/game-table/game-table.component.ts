@@ -47,6 +47,20 @@ interface TableDrawingStroke {
   points: number[];
 }
 
+interface TableLightSource {
+  x: number;
+  y: number;
+  r: number;
+  intensity: number;
+  color: string;
+  type: string;
+  shape: string;
+  coneAngle: number;
+  direction: number;
+  flat: boolean;
+  coneCoreRadius: number;
+}
+
 @Component({
   selector: 'game-table',
   templateUrl: './game-table.component.html',
@@ -933,7 +947,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private drawLightSources(ctx: CanvasRenderingContext2D, gridSize: number, wallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null) {
-    const allLights: { x: number; y: number; r: number; intensity: number; color: string; type: string }[] = [];
+    const allLights: TableLightSource[] = [];
 
     const characters = ObjectStore.instance.getObjects<GameCharacter>(GameCharacter);
     for (const c of characters) {
@@ -944,7 +958,17 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
       const flicker = (c.lightType === 'torch' || c.lightType === 'campfire')
         ? Math.sin(this.flickerPhase * 3 + x * 0.01) * 0.08 + Math.sin(this.flickerPhase * 7 + y * 0.02) * 0.05
         : 0;
-      allLights.push({ x, y, r, intensity: Math.min(1, c.lightIntensity + flicker), color: c.lightColor, type: c.lightType });
+      allLights.push({
+        x, y, r,
+        intensity: Math.min(1, c.lightIntensity + flicker),
+        color: c.lightColor,
+        type: c.lightType,
+        shape: c.lightType === 'laser' ? 'laser' : (c.lightShape || 'circle'),
+        coneAngle: c.lightConeAngle || 60,
+        direction: this.normalizeAngle((c.rotate || 0) + 90),
+        flat: c.lightType === 'flashlight',
+        coneCoreRadius: (c.lightType === 'flashlight' || c.lightType === 'laser' || c.lightShape === 'laser') ? gridSize * 0.5 : gridSize
+      });
     }
 
     const terrains = ObjectStore.instance.getObjects<Terrain>(Terrain);
@@ -956,32 +980,39 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
       const flicker = (t.lightType === 'torch' || t.lightType === 'campfire')
         ? Math.sin(this.flickerPhase * 3 + x * 0.01) * 0.08 + Math.sin(this.flickerPhase * 7 + y * 0.02) * 0.05
         : 0;
-      allLights.push({ x, y, r, intensity: Math.min(1, t.lightIntensity + flicker), color: t.lightColor, type: t.lightType });
+      allLights.push({
+        x, y, r,
+        intensity: Math.min(1, t.lightIntensity + flicker),
+        color: t.lightColor,
+        type: t.lightType,
+        shape: t.lightType === 'laser' ? 'laser' : (t.lightShape || 'circle'),
+        coneAngle: t.lightConeAngle || 60,
+        direction: this.normalizeAngle((t.rotate || 0) + 90),
+        flat: t.lightType === 'flashlight',
+        coneCoreRadius: (t.lightType === 'flashlight' || t.lightType === 'laser' || t.lightShape === 'laser') ? gridSize * 0.5 : gridSize
+      });
     }
 
     for (const light of allLights) {
       if (wallGrid) {
-        this.drawLightWithRaycast(ctx, light.x, light.y, light.r, light.intensity, wallGrid);
+        this.drawLightWithRaycast(ctx, light, wallGrid);
       } else {
-        const grad = ctx.createRadialGradient(light.x, light.y, 0, light.x, light.y, light.r);
-        grad.addColorStop(0, `rgba(0, 0, 0, ${light.intensity})`);
-        grad.addColorStop(0.5, `rgba(0, 0, 0, ${light.intensity * 0.6})`);
-        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-        ctx.fillStyle = grad;
-        ctx.fillRect(light.x - light.r, light.y - light.r, light.r * 2, light.r * 2);
+        this.drawLightFill(ctx, light);
       }
     }
   }
 
   /** GMモード用: 暗幕なしで光源のグローだけ描く */
   private drawLightGlow(ctx: CanvasRenderingContext2D, gridSize: number) {
-    const allSources: { x: number; y: number; r: number; color: string; intensity: number }[] = [];
+    const allSources: TableLightSource[] = [];
     const characters = ObjectStore.instance.getObjects<GameCharacter>(GameCharacter);
     for (const c of characters) {
       if (!c.lightSourceEnabled || c.location.name !== 'table') continue;
       allSources.push({
         x: c.location.x + gridSize / 2, y: c.location.y + gridSize / 2,
-        r: c.lightRadius * gridSize, color: c.lightColor, intensity: c.lightIntensity
+        r: c.lightRadius * gridSize, color: c.lightColor, intensity: c.lightIntensity,
+        type: c.lightType, shape: c.lightType === 'laser' ? 'laser' : (c.lightShape || 'circle'), coneAngle: c.lightConeAngle || 60,
+        direction: this.normalizeAngle((c.rotate || 0) + 90), flat: c.lightType === 'flashlight', coneCoreRadius: (c.lightType === 'flashlight' || c.lightType === 'laser' || c.lightShape === 'laser') ? gridSize * 0.5 : gridSize
       });
     }
     const terrains = ObjectStore.instance.getObjects<Terrain>(Terrain);
@@ -989,23 +1020,21 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
       if (!t.lightSourceEnabled || t.location.name !== 'table') continue;
       allSources.push({
         x: t.location.x + (t.width || 1) * gridSize / 2, y: t.location.y + (t.depth || 1) * gridSize / 2,
-        r: t.lightRadius * gridSize, color: t.lightColor, intensity: t.lightIntensity
+        r: t.lightRadius * gridSize, color: t.lightColor, intensity: t.lightIntensity,
+        type: t.lightType, shape: t.lightType === 'laser' ? 'laser' : (t.lightShape || 'circle'), coneAngle: t.lightConeAngle || 60,
+        direction: this.normalizeAngle((t.rotate || 0) + 90), flat: t.lightType === 'flashlight', coneCoreRadius: (t.lightType === 'flashlight' || t.lightType === 'laser' || t.lightShape === 'laser') ? gridSize * 0.5 : gridSize
       });
     }
     for (const light of allSources) {
       const r = Math.max(10, light.r) * 0.7;
       const alpha = light.intensity * 0.3;
       const hex = Math.round(alpha * 255).toString(16).padStart(2, '0');
-      const grad = ctx.createRadialGradient(light.x, light.y, 0, light.x, light.y, r);
-      grad.addColorStop(0, light.color + hex);
-      grad.addColorStop(1, light.color + '00');
-      ctx.fillStyle = grad;
-      ctx.fillRect(light.x - r, light.y - r, r * 2, r * 2);
+      this.drawColoredLightFill(ctx, { ...light, r }, hex);
     }
   }
 
   private drawLightColors(ctx: CanvasRenderingContext2D, gridSize: number) {
-    const allSources: {x:number, y:number, r:number, color:string, intensity:number, type:string}[] = [];
+    const allSources: TableLightSource[] = [];
 
     const characters = ObjectStore.instance.getObjects<GameCharacter>(GameCharacter);
     for (const c of characters) {
@@ -1016,7 +1045,12 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
         r: c.lightRadius * gridSize,
         color: c.lightColor,
         intensity: c.lightIntensity,
-        type: c.lightType
+        type: c.lightType,
+        shape: c.lightType === 'laser' ? 'laser' : (c.lightShape || 'circle'),
+        coneAngle: c.lightConeAngle || 60,
+        direction: this.normalizeAngle((c.rotate || 0) + 90),
+        flat: c.lightType === 'flashlight',
+        coneCoreRadius: (c.lightType === 'flashlight' || c.lightType === 'laser' || c.lightShape === 'laser') ? gridSize * 0.5 : gridSize
       });
     }
 
@@ -1029,7 +1063,12 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
         r: t.lightRadius * gridSize,
         color: t.lightColor,
         intensity: t.lightIntensity,
-        type: t.lightType
+        type: t.lightType,
+        shape: t.lightType === 'laser' ? 'laser' : (t.lightShape || 'circle'),
+        coneAngle: t.lightConeAngle || 60,
+        direction: this.normalizeAngle((t.rotate || 0) + 90),
+        flat: t.lightType === 'flashlight',
+        coneCoreRadius: (t.lightType === 'flashlight' || t.lightType === 'laser' || t.lightShape === 'laser') ? gridSize * 0.5 : gridSize
       });
     }
 
@@ -1037,12 +1076,227 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
       const r = Math.max(10, light.r) * 0.7;
       const alpha = light.intensity * 0.3;
       const hex = Math.round(alpha * 255).toString(16).padStart(2, '0');
-      const grad = ctx.createRadialGradient(light.x, light.y, 0, light.x, light.y, r);
-      grad.addColorStop(0, light.color + hex);
-      grad.addColorStop(1, light.color + '00');
-      ctx.fillStyle = grad;
-      ctx.fillRect(light.x - r, light.y - r, r * 2, r * 2);
+      this.drawColoredLightFill(ctx, { ...light, r }, hex);
     }
+  }
+
+  private normalizeAngle(degrees: number): number {
+    const normalized = degrees % 360;
+    return normalized < 0 ? normalized + 360 : normalized;
+  }
+
+  private degreesToRadians(degrees: number): number {
+    return degrees * Math.PI / 180;
+  }
+
+  private getConeBounds(light: TableLightSource): { start: number; end: number; span: number } {
+    const span = this.degreesToRadians(light.coneAngle || 60);
+    const center = this.degreesToRadians(light.direction || 0);
+    return { start: center - span / 2, end: center + span / 2, span };
+  }
+
+  private drawLightFill(ctx: CanvasRenderingContext2D, light: TableLightSource, includeConeCore: boolean = true) {
+    if (this.isLaserLight(light)) {
+      this.drawLaserLightFill(ctx, light);
+      if (includeConeCore) this.drawConeCoreLightFill(ctx, light);
+      return;
+    }
+
+    ctx.save();
+    if (light.shape === 'cone') this.clipCone(ctx, light);
+
+    this.fillLightGradient(ctx, light);
+    ctx.restore();
+
+    if (includeConeCore) this.drawConeCoreLightFill(ctx, light);
+  }
+
+  private drawColoredLightFill(ctx: CanvasRenderingContext2D, light: TableLightSource, alphaHex: string) {
+    if (this.isLaserLight(light)) {
+      this.drawLaserColoredLightFill(ctx, light, alphaHex);
+      this.drawConeCoreColoredLightFill(ctx, light, alphaHex);
+      return;
+    }
+
+    ctx.save();
+    if (light.shape === 'cone') this.clipCone(ctx, light);
+
+    this.fillColoredLightGradient(ctx, light, alphaHex);
+    ctx.restore();
+
+    if (light.type === 'magic') this.drawMagicSonarColor(ctx, light, alphaHex);
+    this.drawConeCoreColoredLightFill(ctx, light, alphaHex);
+  }
+
+  private fillLightGradient(ctx: CanvasRenderingContext2D, light: TableLightSource) {
+    if (light.flat) {
+      ctx.fillStyle = `rgba(0, 0, 0, ${light.intensity})`;
+      if (light.shape === 'cone') {
+        ctx.fillRect(light.x - light.r, light.y - light.r, light.r * 2, light.r * 2);
+      } else {
+        ctx.beginPath();
+        ctx.arc(light.x, light.y, light.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      return;
+    }
+
+    const grad = ctx.createRadialGradient(light.x, light.y, 0, light.x, light.y, light.r);
+    grad.addColorStop(0, `rgba(0, 0, 0, ${light.intensity})`);
+    grad.addColorStop(0.5, `rgba(0, 0, 0, ${light.intensity * 0.6})`);
+    grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(light.x - light.r, light.y - light.r, light.r * 2, light.r * 2);
+  }
+
+  private fillColoredLightGradient(ctx: CanvasRenderingContext2D, light: TableLightSource, alphaHex: string) {
+    if (light.flat) {
+      ctx.fillStyle = light.color + alphaHex;
+      if (light.shape === 'cone') {
+        ctx.fillRect(light.x - light.r, light.y - light.r, light.r * 2, light.r * 2);
+      } else {
+        ctx.beginPath();
+        ctx.arc(light.x, light.y, light.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      return;
+    }
+
+    const grad = ctx.createRadialGradient(light.x, light.y, 0, light.x, light.y, light.r);
+    grad.addColorStop(0, light.color + alphaHex);
+    grad.addColorStop(1, light.color + '00');
+    ctx.fillStyle = grad;
+    ctx.fillRect(light.x - light.r, light.y - light.r, light.r * 2, light.r * 2);
+  }
+
+  private drawMagicSonarColor(ctx: CanvasRenderingContext2D, light: TableLightSource, alphaHex: string) {
+    const maxRadius = Math.max(1, light.r);
+    const phase = (this.flickerPhase * 0.9) % 1;
+    const baseAlpha = Math.max(parseInt(alphaHex || '00', 16) / 255, light.intensity * 0.45, 0.25);
+    ctx.save();
+    if (light.shape === 'cone') this.clipCone(ctx, light);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.shadowColor = light.color;
+    ctx.shadowBlur = Math.max(6, maxRadius * 0.035);
+
+    for (let i = 0; i < 4; i++) {
+      const t = (phase + i / 4) % 1;
+      const radius = maxRadius * (0.18 + t * 0.82);
+      const alpha = Math.max(0, (1 - t) * baseAlpha * 0.9);
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = light.color;
+      ctx.lineWidth = Math.max(2, maxRadius * 0.012 * (1 - t * 0.35));
+      ctx.beginPath();
+      ctx.arc(light.x, light.y, radius, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.globalAlpha = Math.min(0.7, baseAlpha);
+    ctx.strokeStyle = light.color;
+    ctx.lineWidth = Math.max(1, maxRadius * 0.006);
+    ctx.beginPath();
+    ctx.arc(light.x, light.y, maxRadius * 0.08, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  private drawConeCoreLightFill(ctx: CanvasRenderingContext2D, light: TableLightSource) {
+    if ((light.shape !== 'cone' && !this.isLaserLight(light)) || !light.coneCoreRadius) return;
+    const coreRadius = Math.min(light.coneCoreRadius, light.r);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(light.x, light.y, coreRadius, 0, Math.PI * 2);
+    ctx.clip();
+    this.fillLightGradient(ctx, { ...light, shape: 'circle' });
+    ctx.restore();
+  }
+
+  private drawConeCoreColoredLightFill(ctx: CanvasRenderingContext2D, light: TableLightSource, alphaHex: string) {
+    if ((light.shape !== 'cone' && !this.isLaserLight(light)) || !light.coneCoreRadius) return;
+    const coreRadius = Math.min(light.coneCoreRadius, light.r);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(light.x, light.y, coreRadius, 0, Math.PI * 2);
+    ctx.clip();
+    this.fillColoredLightGradient(ctx, { ...light, shape: 'circle' }, alphaHex);
+    ctx.restore();
+  }
+
+  private isLaserLight(light: TableLightSource): boolean {
+    return light.shape === 'laser' || light.type === 'laser';
+  }
+
+  private getLaserWidth(light: TableLightSource): number {
+    return Math.max(3, (light.coneCoreRadius || 50) * 0.18);
+  }
+
+  private drawLaserLightFill(ctx: CanvasRenderingContext2D, light: TableLightSource, distance: number = light.r) {
+    const angle = this.degreesToRadians(light.direction || 0);
+    const endX = light.x + Math.cos(angle) * distance;
+    const endY = light.y + Math.sin(angle) * distance;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = this.getLaserWidth(light);
+    if (light.flat) {
+      ctx.strokeStyle = `rgba(0, 0, 0, ${light.intensity})`;
+    } else {
+      const grad = ctx.createLinearGradient(light.x, light.y, endX, endY);
+      grad.addColorStop(0, `rgba(0, 0, 0, ${light.intensity})`);
+      grad.addColorStop(1, `rgba(0, 0, 0, ${light.intensity * 0.9})`);
+      ctx.strokeStyle = grad;
+    }
+    ctx.beginPath();
+    ctx.moveTo(light.x, light.y);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  private drawLaserColoredLightFill(ctx: CanvasRenderingContext2D, light: TableLightSource, alphaHex: string, distance: number = light.r) {
+    const angle = this.degreesToRadians(light.direction || 0);
+    const endX = light.x + Math.cos(angle) * distance;
+    const endY = light.y + Math.sin(angle) * distance;
+    const colorAlphaHex = this.laserColorAlphaHex(light, alphaHex);
+    const laserWidth = this.getLaserWidth(light);
+
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // レーザーは通常の色付き光より彩度を強く、線幅は細く出す。
+    // 控えめな色グロー + 細い高濃度コアの2層で描く。
+    ctx.lineWidth = laserWidth * 1.8;
+    ctx.strokeStyle = light.color + colorAlphaHex;
+    ctx.globalAlpha = 0.45;
+    ctx.beginPath();
+    ctx.moveTo(light.x, light.y);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = Math.max(2, laserWidth * 0.55);
+    ctx.strokeStyle = light.color + colorAlphaHex;
+    ctx.beginPath();
+    ctx.moveTo(light.x, light.y);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  private laserColorAlphaHex(light: TableLightSource, fallbackAlphaHex: string): string {
+    const alpha = Math.max(light.intensity * 0.95, parseInt(fallbackAlphaHex || '00', 16) / 255, 0.65);
+    return Math.round(Math.min(1, alpha) * 255).toString(16).padStart(2, '0');
+  }
+
+  private clipCone(ctx: CanvasRenderingContext2D, light: TableLightSource) {
+    const cone = this.getConeBounds(light);
+    ctx.beginPath();
+    ctx.moveTo(light.x, light.y);
+    ctx.arc(light.x, light.y, light.r, cone.start, cone.end);
+    ctx.closePath();
+    ctx.clip();
   }
 
   private drawLightBlockers(ctx: CanvasRenderingContext2D, gridSize: number) {
@@ -1135,17 +1389,59 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     return hasWalls ? { grid, cellSize, cols, rows } : null;
   }
 
-  private drawLightWithRaycast(
+  private drawLaserWithRaycast(
     ctx: CanvasRenderingContext2D,
-    cx: number, cy: number, radius: number, intensity: number,
+    light: TableLightSource,
     wallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number }
   ) {
     const { grid, cellSize, cols, rows } = wallGrid;
-    const RAYS = 180;
+    const angle = this.degreesToRadians(light.direction || 0);
+    const dx = Math.cos(angle);
+    const dy = Math.sin(angle);
+    let hitDist = light.r;
+
+    for (let d = cellSize; d <= light.r; d += cellSize) {
+      const gx = Math.floor((light.x + dx * d) / cellSize);
+      const gy = Math.floor((light.y + dy * d) / cellSize);
+      if (gx < 0 || gy < 0 || gx >= cols || gy >= rows) {
+        hitDist = d;
+        break;
+      }
+      if (grid[gy * cols + gx]) {
+        hitDist = d;
+        break;
+      }
+    }
+
+    this.drawLaserLightFill(ctx, light, hitDist);
+    this.drawConeCoreLightFill(ctx, light);
+  }
+
+  private drawLightWithRaycast(
+    ctx: CanvasRenderingContext2D,
+    light: TableLightSource,
+    wallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number }
+  ) {
+    const { grid, cellSize, cols, rows } = wallGrid;
+    const cx = light.x;
+    const cy = light.y;
+    const radius = light.r;
+    if (this.isLaserLight(light)) {
+      this.drawLaserWithRaycast(ctx, light, wallGrid);
+      return;
+    }
+
+    const isCone = light.shape === 'cone';
+    const cone = this.getConeBounds(light);
+    const RAYS = isCone ? Math.max(24, Math.ceil((light.coneAngle || 60) / 2)) : 180;
     const points: { x: number; y: number }[] = [];
 
+    if (isCone) points.push({ x: cx, y: cy });
+
     for (let i = 0; i < RAYS; i++) {
-      const angle = (i / RAYS) * Math.PI * 2;
+      const angle = isCone
+        ? cone.start + (cone.span * i / Math.max(1, RAYS - 1))
+        : (i / RAYS) * Math.PI * 2;
       const dx = Math.cos(angle);
       const dy = Math.sin(angle);
 
@@ -1177,13 +1473,10 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     ctx.closePath();
     ctx.clip();
 
-    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-    grad.addColorStop(0, `rgba(0, 0, 0, ${intensity})`);
-    grad.addColorStop(0.5, `rgba(0, 0, 0, ${intensity * 0.6})`);
-    grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
+    this.drawLightFill(ctx, light, false);
 
     ctx.restore();
+
+    this.drawConeCoreLightFill(ctx, light);
   }
 }

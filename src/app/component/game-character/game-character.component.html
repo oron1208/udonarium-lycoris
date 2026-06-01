@@ -7,6 +7,9 @@
   <div class="status-marker-ring is-pointer-events-none" *ngIf="0 < statusMarkers.length">
     <span class="status-marker" *ngFor="let marker of statusMarkers; let i = index" [style.background-color]="marker.color" [style.transform]="markerRingTransform(i, statusMarkers.length)" [title]="marker.name">{{marker.icon}}</span>
   </div>
+  <div class="direction-marker" *ngIf="shouldShowDirectionMarker" [class.is-rotatable]="canRotateByDirectionMarker" [style.transform]="directionMarkerTransform" title="平面モード時はドラッグでコマを回転" (mousedown)="startDirectionMarkerRotate($event)" (touchstart)="startDirectionMarkerRotate($event)">
+    <span>›</span>
+  </div>
   <div class="component-content is-3d" [@bounceInOut]="'in'">
     <ng-container *ngIf="shouldUseFlatIcon; else nonFlatCharacterView">
       <div class="flat-character-token is-pointer-events-auto" [class.is-locked]="isLock" [class.is-secret]="isSecretDetailsHidden" [class.is-targeted]="gameCharacter.targeted">

@@ -43,6 +43,8 @@ export class GameCharacter extends TabletopObject {
   @SyncVar() lightColor: string = '#ffaa44';
   @SyncVar() lightIntensity: number = 0.8;
   @SyncVar() lightType: string = 'torch';
+  @SyncVar() lightShape: string = 'circle';
+  @SyncVar() lightConeAngle: number = 60;
 
   _targeted: boolean = false;
   get targeted(): boolean {

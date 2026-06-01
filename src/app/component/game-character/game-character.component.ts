@@ -105,8 +105,16 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
   get shouldUseSimpleView(): boolean { return !this.shouldUseFlatIcon && this.isSimpleView && !this.gameCharacter.targeted && !this.isSimpleViewForcedFull; }
   get isTopDownView(): boolean { return !this.isFlatMode && !this.shouldUseSimpleView && !this.shouldUseFlatIcon && this.viewRotateX <= 16; }
   _showTopDownNameLabel: boolean = true;
+  _showDirectionMarker: boolean = false;
   get shouldShowTopDownNameTag(): boolean { return this.isTopDownView && 0 < this.name.length && this._showTopDownNameLabel; }
   get shouldShowTopDownIcon(): boolean { return this.isTopDownView; }
+  get shouldShowDirectionMarker(): boolean { return this._showDirectionMarker; }
+  get canRotateByDirectionMarker(): boolean { return this.isFlatMode && !this.isLock; }
+  get directionMarkerTransform(): string {
+    const radius = Math.max(this.size * this.gridSize / 2 + 18, 34);
+    const direction = this.normalizeAngle((this.rotate || 0) + 90);
+    return `translate(-50%, -50%) rotate(${direction}deg) translateX(${radius}px)`;
+  }
   get perspectiveAssistTransform(): string {
     return 'translateZ(2.05px)';
   }
@@ -133,6 +141,8 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
 
   private highlightTimer: NodeJS.Timer;
   private unhighlightTimer: NodeJS.Timer;
+  private isDirectionMarkerRotating: boolean = false;
+  private directionMarkerRotated: boolean = false;
 
   get elevation(): number {
     return +((this.gameCharacter.posZ + (this.altitude * this.gridSize)) / this.gridSize).toFixed(1);
@@ -178,6 +188,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
     try { this.isVnBoardButtonVisible = localStorage.getItem('udonarium.vnStage.boardButton.visible.v1') === '1'; } catch (_) { }
     try { this._showSideNameLabel = localStorage.getItem('udonarium.nameLabel.side.v1') !== '0'; } catch (_) { }
     try { this._showTopDownNameLabel = localStorage.getItem('udonarium.nameLabel.topdown.v1') !== '0'; } catch (_) { }
+    try { this._showDirectionMarker = localStorage.getItem('udonarium.character.directionMarker.visible.v1') === '1'; } catch (_) { }
     if (this.foldingBuffAutoCollapse) this.foldingBuff = true;
 
     EventSystem.register(this)
@@ -222,6 +233,12 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
         this.ngZone.run(() => {
           if (event.data?.side !== undefined) this._showSideNameLabel = !!event.data.side;
           if (event.data?.topdown !== undefined) this._showTopDownNameLabel = !!event.data.topdown;
+          this.changeDetector.markForCheck();
+        });
+      })
+      .on('CHARACTER_DIRECTION_MARKER_VISIBILITY_CHANGED', event => {
+        this.ngZone.run(() => {
+          this._showDirectionMarker = !!event.data?.visible;
           this.changeDetector.markForCheck();
         });
       })
@@ -276,6 +293,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   ngOnDestroy() {
+    this.stopDirectionMarkerRotate();
     this.input.destroy();
     EventSystem.unregister(this);
   }
@@ -658,6 +676,90 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
     const angle = safeTotal === 1 ? 180 + markerStartOffset : 180 + markerStartOffset - (span / 2) + (span * index / (safeTotal - 1));
     const radius = Math.max(18, (this.size * this.gridSize / 2) + 8);
     return `translate(-50%, -50%) rotate(${angle}deg) translate(${radius}px) rotate(${-angle}deg)`;
+  }
+
+  startDirectionMarkerRotate(event: MouseEvent | TouchEvent) {
+    if (!this.canRotateByDirectionMarker) return;
+    if ((event as MouseEvent).button === 1 || (event as MouseEvent).button === 2) return;
+    if (event.cancelable) event.preventDefault();
+    event.stopPropagation();
+
+    this.isDirectionMarkerRotating = true;
+    this.directionMarkerRotated = false;
+    this.onMove();
+    this.updateRotateByDirectionMarkerEvent(event);
+
+    document.addEventListener('mousemove', this.onDirectionMarkerMouseMove, { passive: false });
+    document.addEventListener('mouseup', this.onDirectionMarkerMouseUp, { passive: false });
+    document.addEventListener('touchmove', this.onDirectionMarkerTouchMove, { passive: false });
+    document.addEventListener('touchend', this.onDirectionMarkerTouchEnd, { passive: false });
+    document.addEventListener('touchcancel', this.onDirectionMarkerTouchEnd, { passive: false });
+  }
+
+  private onDirectionMarkerMouseMove = (event: MouseEvent) => this.moveDirectionMarkerRotate(event);
+  private onDirectionMarkerTouchMove = (event: TouchEvent) => this.moveDirectionMarkerRotate(event);
+  private onDirectionMarkerMouseUp = (event: MouseEvent) => this.endDirectionMarkerRotate(event);
+  private onDirectionMarkerTouchEnd = (event: TouchEvent) => this.endDirectionMarkerRotate(event);
+
+  private moveDirectionMarkerRotate(event: MouseEvent | TouchEvent) {
+    if (!this.isDirectionMarkerRotating) return;
+    if (event.cancelable) event.preventDefault();
+    event.stopPropagation();
+    this.updateRotateByDirectionMarkerEvent(event);
+  }
+
+  private endDirectionMarkerRotate(event?: MouseEvent | TouchEvent) {
+    if (!this.isDirectionMarkerRotating) return;
+    if (event) {
+      if (event.cancelable) event.preventDefault();
+      event.stopPropagation();
+    }
+    this.stopDirectionMarkerRotate();
+    this.snapRotateToPolygonal();
+    this.gameCharacter.update();
+    if (this.directionMarkerRotated) this.onMoved();
+    this.changeDetector.markForCheck();
+  }
+
+  private stopDirectionMarkerRotate() {
+    this.isDirectionMarkerRotating = false;
+    document.removeEventListener('mousemove', this.onDirectionMarkerMouseMove);
+    document.removeEventListener('mouseup', this.onDirectionMarkerMouseUp);
+    document.removeEventListener('touchmove', this.onDirectionMarkerTouchMove);
+    document.removeEventListener('touchend', this.onDirectionMarkerTouchEnd);
+    document.removeEventListener('touchcancel', this.onDirectionMarkerTouchEnd);
+  }
+
+  private updateRotateByDirectionMarkerEvent(event: MouseEvent | TouchEvent) {
+    const point = this.getClientPoint(event);
+    if (!point) return;
+    const rect = this.rootElementRef?.nativeElement?.getBoundingClientRect();
+    if (!rect) return;
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const angle = Math.atan2(point.y - centerY, point.x - centerX) * 180 / Math.PI;
+    this.rotate = this.normalizeAngle(angle - 90);
+    this.directionMarkerRotated = true;
+    this.changeDetector.markForCheck();
+  }
+
+  private getClientPoint(event: MouseEvent | TouchEvent): { x: number, y: number } | null {
+    if (event instanceof MouseEvent) return { x: event.clientX, y: event.clientY };
+    const touch = event.touches && event.touches.length ? event.touches[0] : (event.changedTouches && event.changedTouches.length ? event.changedTouches[0] : null);
+    return touch ? { x: touch.clientX, y: touch.clientY } : null;
+  }
+
+  private snapRotateToPolygonal(polygonal: number = 24) {
+    if (polygonal <= 1) return;
+    let rotate = this.rotate;
+    rotate = rotate < 0 ? rotate - (180 / polygonal) : rotate + (180 / polygonal);
+    rotate -= rotate % (360 / polygonal);
+    this.rotate = this.normalizeAngle(rotate);
+  }
+
+  private normalizeAngle(degrees: number): number {
+    const normalized = degrees % 360;
+    return normalized < 0 ? normalized + 360 : normalized;
   }
 
   private setSimpleViewForcedFull(forceFull: boolean) {
