@@ -28,12 +28,14 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
   isActivePanelForeground = true;
   isShowSideNameLabel = true;
   isShowTopDownNameLabel = true;
+  isShowCharacterDirectionMarker = false;
 
   private static readonly CURSOR_SHARE_DISABLED_KEY = 'udonarium.gm.cursorShareDisabled';
   private static readonly VN_BOARD_BUTTON_VISIBLE_KEY = 'udonarium.vnStage.boardButton.visible.v1';
   private static readonly ACTIVE_PANEL_FOREGROUND_KEY = 'udonarium.panel.activeForeground.v1';
   private static readonly SHOW_SIDE_NAME_LABEL_KEY = 'udonarium.nameLabel.side.v1';
   private static readonly SHOW_TOPDOWN_NAME_LABEL_KEY = 'udonarium.nameLabel.topdown.v1';
+  private static readonly SHOW_CHARACTER_DIRECTION_MARKER_KEY = 'udonarium.character.directionMarker.visible.v1';
 
   constructor(
     private panelService: PanelService,
@@ -55,6 +57,7 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
     try { this.isCursorShareDisabled = localStorage.getItem(OptionsPanelComponent.CURSOR_SHARE_DISABLED_KEY) === '1'; } catch (_) { }
     try { this.isShowSideNameLabel = localStorage.getItem(OptionsPanelComponent.SHOW_SIDE_NAME_LABEL_KEY) !== '0'; } catch (_) { }
     try { this.isShowTopDownNameLabel = localStorage.getItem(OptionsPanelComponent.SHOW_TOPDOWN_NAME_LABEL_KEY) !== '0'; } catch (_) { }
+    try { this.isShowCharacterDirectionMarker = localStorage.getItem(OptionsPanelComponent.SHOW_CHARACTER_DIRECTION_MARKER_KEY) === '1'; } catch (_) { }
 
     EventSystem.register(this)
       .on('MACRO_HOTBAR_VISIBILITY_CHANGED', event => {
@@ -77,6 +80,9 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
           if (event.data?.side !== undefined) this.isShowSideNameLabel = !!event.data.side;
           if (event.data?.topdown !== undefined) this.isShowTopDownNameLabel = !!event.data.topdown;
         });
+      })
+      .on('CHARACTER_DIRECTION_MARKER_VISIBILITY_CHANGED', event => {
+        this.ngZone.run(() => { this.isShowCharacterDirectionMarker = !!event.data?.visible; });
       });
   }
 
@@ -175,6 +181,12 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
     this.isShowTopDownNameLabel = !this.isShowTopDownNameLabel;
     try { localStorage.setItem(OptionsPanelComponent.SHOW_TOPDOWN_NAME_LABEL_KEY, this.isShowTopDownNameLabel ? '1' : '0'); } catch (_) { }
     EventSystem.trigger('NAME_LABEL_VISIBILITY_CHANGED', { topdown: this.isShowTopDownNameLabel });
+  }
+
+  toggleShowCharacterDirectionMarker() {
+    this.isShowCharacterDirectionMarker = !this.isShowCharacterDirectionMarker;
+    try { localStorage.setItem(OptionsPanelComponent.SHOW_CHARACTER_DIRECTION_MARKER_KEY, this.isShowCharacterDirectionMarker ? '1' : '0'); } catch (_) { }
+    EventSystem.trigger('CHARACTER_DIRECTION_MARKER_VISIBILITY_CHANGED', { visible: this.isShowCharacterDirectionMarker });
   }
 
   private loadNumber(key: string, fb: number): number {

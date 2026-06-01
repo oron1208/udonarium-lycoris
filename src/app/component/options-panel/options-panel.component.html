@@ -121,6 +121,13 @@
         {{ isShowTopDownNameLabel ? 'ON' : 'OFF' }}
       </button>
     </div>
+    <div class="option-row">
+      <span class="option-label">コマ正面マーク</span>
+      <button type="button" class="option-toggle" [class.on]="isShowCharacterDirectionMarker" (click)="toggleShowCharacterDirectionMarker()">
+        {{ isShowCharacterDirectionMarker ? 'ON' : 'OFF' }}
+      </button>
+    </div>
+    <div class="option-hint">コマの向き（光源コーンと同じ rotate + 90）を外側の矢印で表示します</div>
     <div class="option-row" style="margin-top: 10px;">
       <button type="button" class="option-button" (click)="resetCamera()">視点を初期位置に戻す</button>
     </div>
@@ -135,6 +142,14 @@
       {{ isUpdateNotesOpen ? 'アップデート内容を閉じる' : 'アップデート内容' }}
     </button>
     <div class="operation-help-body" *ngIf="isUpdateNotesOpen">
+      <h4>v1.22.0</h4>
+      <ul>
+        <li><b>コマ正面マーク強化</b>：コマの向き（光源方向 rotate + 90）を表示する正面マークを追加。平面モードでは正面マークをドラッグしてコマを回転できます</li>
+        <li><b>照明レーザー追加</b>：照射形状に「レーザー」を追加。指定色の細い直線光を rotate + 90 方向へ照射し、壁で遮断されます</li>
+        <li><b>光源タイプ整理</b>：光源タイプを「松明」「魔法の光」「懐中電灯」の3種類に整理</li>
+        <li><b>魔法の光演出</b>：魔法の光にソナー風の脈動リング表現を追加</li>
+        <li>コーン/レーザー/懐中電灯の近距離照明を調整し、光源の足元が自然に見えるよう改善</li>
+      </ul>
       <h4>v1.21.0</h4>
       <ul>
         <li><b>VNステージ ログイン修正</b>：VNモードONでログイン時のフリーズを解消。部屋に入る際にVNステージを一時的に非表示にし、同期完了後に自動復帰します</li>

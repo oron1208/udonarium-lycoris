@@ -154,10 +154,23 @@
             光源タイプ
             <select [(ngModel)]="tabletopObject.lightType" name="lightType">
               <option value="torch">松明</option>
-              <option value="campfire">焚き火</option>
-              <option value="lantern">ランタン</option>
-              <option value="cyalume">サイリウム</option>
               <option value="magic">魔法の光</option>
+              <option value="flashlight">懐中電灯</option>
+            </select>
+          </div>
+          <div>
+            照射形状
+            <select [(ngModel)]="tabletopObject.lightShape" name="lightShape">
+              <option value="circle">円（360度）</option>
+              <option value="cone">コーン</option>
+              <option value="laser">レーザー</option>
+            </select>
+          </div>
+          <div *ngIf="tabletopObject.lightShape === 'cone'">
+            コーン角度
+            <select [(ngModel)]="tabletopObject.lightConeAngle" name="lightConeAngle">
+              <option [ngValue]="60">狭い（60度）</option>
+              <option [ngValue]="90">広い（90度）</option>
             </select>
           </div>
           <div>

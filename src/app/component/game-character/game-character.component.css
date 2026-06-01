@@ -163,6 +163,44 @@
   line-height: 1;
 }
 
+.direction-marker {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 19;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(30, 20, 0, 0.85);
+  border-radius: 50%;
+  background: rgba(255, 204, 80, 0.92);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.65), 0 0 8px rgba(255, 204, 80, 0.65);
+  color: #2b1c00;
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.55);
+  transform-origin: center center;
+}
+
+.direction-marker span {
+  display: block;
+  transform: translateX(1px);
+  pointer-events: none;
+}
+
+.direction-marker.is-rotatable {
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.direction-marker.is-rotatable:active {
+  cursor: grabbing;
+}
+
 .simple-character-token,
 .flat-character-token {
   position: relative;
