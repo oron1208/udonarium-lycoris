@@ -8,6 +8,7 @@
 <vn-stage *ngIf="isVnStageVisible && vnStageReady"></vn-stage>
 <ui-panel [top]="0" [left]="0" [width]="105" [height]="470" [title]="'メニュー'" [showTitleButtons]="false">
   <nav>
+    <div *ngIf="isAdvancedRoom" class="advanced-room-badge">ADVANCED</div>
     <ul>
       <li (click)="open('PeerMenuComponent')">
         <a routerLink="/" routerLinkActive="active">

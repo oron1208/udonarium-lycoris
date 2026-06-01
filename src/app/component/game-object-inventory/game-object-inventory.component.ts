@@ -15,6 +15,7 @@ import { ContextMenuAction, ContextMenuService, ContextMenuSeparator } from 'ser
 import { GameObjectInventoryService } from 'service/game-object-inventory.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
+import { TabletopService } from 'service/tabletop.service';
 
 import { RemoteControllerComponent } from 'component/remote-controller/remote-controller.component';
 import { GmModeService } from 'service/gm-mode.service';
@@ -62,8 +63,11 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
     private inventoryService: GameObjectInventoryService,
     private contextMenuService: ContextMenuService,
     private pointerDeviceService: PointerDeviceService,
-    public gmModeService: GmModeService
+    public gmModeService: GmModeService,
+    private tabletopService: TabletopService
   ) { }
+
+  get isAdvancedRoom(): boolean { return this.tabletopService.currentTable?.roomMode === 'advanced'; }
 
   ngOnInit() {
     Promise.resolve().then(() => this.panelService.title = 'インベントリ');
@@ -118,6 +122,26 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
 
   isSecretDetailsHidden(gameObject: GameObject): boolean {
     return gameObject instanceof GameCharacter && !!gameObject.secretDetails && !this.gmModeService.isGm;
+  }
+
+  isMyPiece(gameObject: GameObject): boolean {
+    return gameObject instanceof GameCharacter
+      && (this.includesJsonId(gameObject.ownerPeerIds, Network.peerId) || this.includesJsonId(gameObject.ownerUserIds, Network.peerContext?.userId));
+  }
+
+  toggleMyPiece(gameObject: GameObject, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    if (!(gameObject instanceof GameCharacter)) return;
+    const owned = !this.isMyPiece(gameObject);
+    gameObject.ownerPeerIds = this.setJsonId(gameObject.ownerPeerIds, Network.peerId, owned);
+    gameObject.ownerUserIds = this.setJsonId(gameObject.ownerUserIds, Network.peerContext?.userId, owned);
+    if (owned && !gameObject.sightEnabled) gameObject.sightEnabled = true;
+    gameObject.update();
+    SoundEffect.play(PresetSound.sweep);
+    this.changeDetector.markForCheck();
   }
 
   displayName(gameObject: GameObject): string {
@@ -175,6 +199,11 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
 
     let actions: ContextMenuAction[] = [];
     const isHidden = this.isSecretDetailsHidden(gameObject);
+
+    if (this.isAdvancedRoom) {
+      actions.push({ name: this.isMyPiece(gameObject) ? '☑ 自分のコマ' : '☐ 自分のコマにする', action: () => this.toggleMyPiece(gameObject) });
+      actions.push(ContextMenuSeparator);
+    }
 
     actions.push({ name: isHidden ? '詳細は秘匿中' : '詳細を表示', action: () => { if (!isHidden) this.showDetail(gameObject); } });
     if (gameObject.location.name !== 'graveyard') {
@@ -377,5 +406,29 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
 
   trackByGameObject(index: number, gameObject: GameObject) {
     return gameObject ? gameObject.identifier : index;
+  }
+
+  private includesJsonId(raw: string, id: string): boolean {
+    if (!id) return false;
+    try {
+      const ids = JSON.parse(raw || '[]');
+      return Array.isArray(ids) && ids.map(value => String(value)).includes(id);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  private setJsonId(raw: string, id: string, enabled: boolean): string {
+    let ids: string[] = [];
+    try {
+      const parsed = JSON.parse(raw || '[]');
+      if (Array.isArray(parsed)) ids = parsed.map(value => String(value)).filter(value => 0 < value.length);
+    } catch (e) { }
+    if (id) {
+      const index = ids.indexOf(id);
+      if (enabled && index < 0) ids.push(id);
+      if (!enabled && 0 <= index) ids.splice(index, 1);
+    }
+    return JSON.stringify(ids);
   }
 }

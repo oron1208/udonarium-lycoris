@@ -1,7 +1,7 @@
 <!-- 下2行なぜこれで クロームver102 の重さが軽減できるのか検証が終わっていないが保留にして入れておく -->
 <div *ngIf="canDisplayByRole" class="dummy-will-change" appMovable [movable.option]="movableOption">
 </div>
-<div *ngIf="canDisplayByRole" class="component is-3d is-grab is-pointer-events-none" [class.gm-only-token]="isGmOnly" [class.is-range-selected]="isRangeSelected" [style.width.px]="size * gridSize"
+<div *ngIf="canDisplayByRole" class="component is-3d is-grab is-pointer-events-none" [class.gm-only-token]="isGmOnly" [class.my-piece-token]="isMyPiece" [class.is-range-selected]="isRangeSelected" [style.width.px]="size * gridSize"
   [style.height.px]="size * gridSize" appMovable [movable.option]="movableOption" (movable.ondragstart)="onMove()"
   (movable.ondragend)="onMoved()" (mousedown)="checkKey($event)" #root>
   <div class="status-marker-ring is-pointer-events-none" *ngIf="0 < statusMarkers.length">

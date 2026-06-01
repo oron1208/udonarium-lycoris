@@ -11,6 +11,7 @@ import { GameCharacter } from '@udonarium/game-character';
 import { DiceBot } from '@udonarium/dice-bot';
 import { ChatMessageService } from 'service/chat-message.service';
 import { GmModeService } from 'service/gm-mode.service';
+import { TabletopService } from 'service/tabletop.service';
 
 const BUBBLE_MS = 8000;
 const SPEAKING_MS = 2500;
@@ -84,7 +85,8 @@ export class VnStageComponent implements OnInit, OnDestroy {
   constructor(
     public chatMessageService: ChatMessageService,
     private ngZone: NgZone,
-    private gmModeService: GmModeService
+    private gmModeService: GmModeService,
+    private tabletopService: TabletopService
   ) { }
 
   ngOnInit() {
@@ -253,6 +255,28 @@ export class VnStageComponent implements OnInit, OnDestroy {
     if (this._charactersCacheTimer) clearTimeout(this._charactersCacheTimer);
     this._charactersCacheTimer = setTimeout(() => { this._charactersCache = null; }, 2000);
     return this._charactersCache;
+  }
+
+  get isAdvancedRoom(): boolean { return this.tabletopService.currentTable?.roomMode === 'advanced'; }
+
+  get selectedCharacter(): GameCharacter {
+    const character = ObjectStore.instance.get<GameCharacter>(this.selectedCharacterId);
+    return character instanceof GameCharacter ? character : null;
+  }
+
+  get isSelectedMyPiece(): boolean {
+    const character = this.selectedCharacter;
+    return !!character && (this.includesJsonId(character.ownerPeerIds, Network.peerId) || this.includesJsonId(character.ownerUserIds, Network.peerContext?.userId));
+  }
+
+  toggleSelectedMyPiece() {
+    const character = this.selectedCharacter;
+    if (!character) return;
+    const owned = !this.isSelectedMyPiece;
+    character.ownerPeerIds = this.setJsonId(character.ownerPeerIds, Network.peerId, owned);
+    character.ownerUserIds = this.setJsonId(character.ownerUserIds, Network.peerContext?.userId, owned);
+    if (owned && !character.sightEnabled) character.sightEnabled = true;
+    character.update();
   }
 
   private canUseCharacter(c: GameCharacter): boolean {
@@ -994,6 +1018,30 @@ export class VnStageComponent implements OnInit, OnDestroy {
 
   private loadSelectedCharacterId(): string {
     try { return localStorage.getItem('udonarium.vnStage.selectedCharacterId.v1') || ''; } catch (_) { return ''; }
+  }
+
+  private includesJsonId(raw: string, id: string): boolean {
+    if (!id) return false;
+    try {
+      const ids = JSON.parse(raw || '[]');
+      return Array.isArray(ids) && ids.map(value => String(value)).includes(id);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  private setJsonId(raw: string, id: string, enabled: boolean): string {
+    let ids: string[] = [];
+    try {
+      const parsed = JSON.parse(raw || '[]');
+      if (Array.isArray(parsed)) ids = parsed.map(value => String(value)).filter(value => 0 < value.length);
+    } catch (_) { }
+    if (id) {
+      const index = ids.indexOf(id);
+      if (enabled && index < 0) ids.push(id);
+      if (!enabled && 0 <= index) ids.splice(index, 1);
+    }
+    return JSON.stringify(ids);
   }
 
   private refreshChatLogFade() {

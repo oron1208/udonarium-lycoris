@@ -22,3 +22,51 @@
 .input {
   width: 100%;
 }
+
+.room-mode-select {
+  margin-top: 12px;
+}
+
+.room-mode-title {
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.room-mode-card {
+  background: rgba(255, 255, 255, 0.5);
+  border: solid 1px #b8a890;
+  border-radius: 6px;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: block;
+  margin: 6px 0;
+  padding: 8px 10px;
+}
+
+.room-mode-card.selected {
+  background: rgba(255, 244, 232, 0.95);
+  border-color: #795548;
+  box-shadow: 0 0 0 2px rgba(121, 85, 72, 0.18) inset;
+}
+
+.room-mode-card input {
+  margin-right: 6px;
+}
+
+.room-mode-name {
+  font-weight: bold;
+}
+
+.room-mode-description {
+  display: block;
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 4px 0 0 22px;
+}
+
+.room-mode-note {
+  color: #6a5540;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 6px;
+}

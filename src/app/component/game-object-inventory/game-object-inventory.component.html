@@ -90,6 +90,8 @@
 <ng-template #gameObjectTags let-gameObject="gameObject" let-secret="secret">
   <div class="inventory-object">
     <div class="object-name">{{displayName(gameObject)}}
+      <span *ngIf="isAdvancedRoom && isMyPiece(gameObject)" style="font-size:10px;background:#1976d2;color:#fff;border-radius:8px;padding:1px 5px;margin-left:4px;">MY</span>
+      <button style="font-size: 0.8em; padding: 2px 5px;" *ngIf="isAdvancedRoom" (click)="toggleMyPiece(gameObject, $event)">{{isMyPiece(gameObject) ? '自分解除' : '自分'}}</button>
       <button style="font-size: 0.8em; padding: 2px 5px;" *ngIf="selectedIdentifier === gameObject.identifier" (click)="onContextMenu($event, gameObject)">
         <i class="material-icons" style="font-size: 1em;">settings</i>
       </button>

@@ -18,6 +18,8 @@ export enum FilterType {
   BLACK = 'black',
 }
 
+export type RoomMode = 'standard' | 'advanced';
+
 @SyncObject('game-table')
 export class GameTable extends ObjectNode {
   @SyncVar() name: string = 'テーブル';
@@ -32,6 +34,7 @@ export class GameTable extends ObjectNode {
   @SyncVar() gridColor: string = '#000000e6';
   @SyncVar() drawingData: string = '[]';
   @SyncVar() statusMarkerDictionary: string = '[]';
+  @SyncVar() roomMode: RoomMode = 'standard';
 
   // 照明設定
   @SyncVar() lightingEnabled: boolean = false;

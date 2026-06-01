@@ -3,6 +3,20 @@
       placeholder="ルームの名前は必須" /></div>
   <div>パスワード: <input class="input" (input)="calcPeerId(roomName, $event.target.value)" [(ngModel)]="password" maxlength="12" #passwordValidation="ngModel" placeholder="空ならパスワードなし"
     /></div>
+  <div class="room-mode-select">
+    <div class="room-mode-title">部屋モード</div>
+    <label class="room-mode-card" [class.selected]="roomMode === 'standard'">
+      <input type="radio" name="roomMode" value="standard" [(ngModel)]="roomMode">
+      <span class="room-mode-name">通常モード</span>
+      <span class="room-mode-description">従来通りの操作感で遊ぶ部屋です。</span>
+    </label>
+    <label class="room-mode-card advanced" [class.selected]="roomMode === 'advanced'">
+      <input type="radio" name="roomMode" value="advanced" [(ngModel)]="roomMode">
+      <span class="room-mode-name">アドバンスモード</span>
+      <span class="room-mode-description">今後の視界管理・所有権管理に向けた拡張部屋です。UIをダーク系にします。</span>
+    </label>
+    <div class="room-mode-note">※作成後のモード切り替えは行いません。変更したい場合は新しい部屋を作成してください。</div>
+  </div>
   <hr/>
   <div *ngIf="roomNameValidation.errors && (roomNameValidation.dirty || roomNameValidation.touched)">
     <div [hidden]="!roomNameValidation.errors.required">
