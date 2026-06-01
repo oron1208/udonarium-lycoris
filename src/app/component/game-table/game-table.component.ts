@@ -4,7 +4,7 @@ import { Card } from '@udonarium/card';
 import { CardStack } from '@udonarium/card-stack';
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { GameObject } from '@udonarium/core/synchronize-object/game-object';
-import { EventSystem } from '@udonarium/core/system';
+import { EventSystem, Network } from '@udonarium/core/system';
 import { DiceSymbol } from '@udonarium/dice-symbol';
 import { GameCharacter } from '@udonarium/game-character';
 import { FilterType, GameTable, GridType } from '@udonarium/game-table';
@@ -139,12 +139,16 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   get isLightingActive(): boolean {
     return this.currentTable?.lightingEnabled && this.currentTable?.lightingNightMode;
   }
+  get isAdvancedVisionActive(): boolean {
+    return this.currentTable?.roomMode === 'advanced' && this.getMySightCharacters().length > 0;
+  }
   get isGmMode(): boolean { return this.gmModeService.isGm; }
   rangeSelectionStyle: { [key: string]: string } = {};
   private rangeSelectionStart: { x: number, y: number } = null;
   private rangeSelectionCurrent: { x: number, y: number } = null;
 
   get characters(): GameCharacter[] { return this.tabletopService.characters; }
+  get visibleCharacters(): GameCharacter[] { return this.characters.filter(character => this.canSeeCharacterInAdvancedMode(character)); }
   get isCharacterSimpleMode(): boolean { return 60 <= this.characters.length; }
   get tableMasks(): GameTableMask[] { return this.tabletopService.tableMasks; }
   get tableScratchMasks(): GameTableScratchMask[] { return this.tabletopService.tableScratchMasks; }
@@ -857,6 +861,120 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     return objectRect.left <= rect.right && rect.left <= objectRect.right && objectRect.top <= rect.bottom && rect.top <= objectRect.bottom;
   }
 
+  private canSeeCharacterInAdvancedMode(character: GameCharacter): boolean {
+    if (this.currentTable?.roomMode !== 'advanced' || this.gmModeService.isGm) return true;
+    if (this.includesJsonId(character.ownerPeerIds, Network.peerId) || this.includesJsonId(character.ownerUserIds, Network.peerContext?.userId)) return true;
+
+    const sightCharacters = this.getMySightCharacters();
+    if (sightCharacters.length < 1) return false;
+
+    const gridSize = this.currentTable.gridSize || 50;
+    const target = this.getCharacterCenter(character, gridSize);
+    const wallGrid = this.buildWallGrid(gridSize, this.currentTable.width * gridSize, this.currentTable.height * gridSize);
+    const isLit = this.isPointLit(target.x, target.y, gridSize, wallGrid);
+    for (const sightCharacter of sightCharacters) {
+      const mode = sightCharacter.sightMode || 'normal';
+      if (mode === 'normal' && !isLit) continue;
+      if (this.isPointInSightOfCharacter(target.x, target.y, sightCharacter, gridSize, wallGrid)) return true;
+    }
+    return false;
+  }
+
+  private getCharacterCenter(character: GameCharacter, gridSize: number): { x: number; y: number } {
+    const size = Math.max(1, character.size || 1) * gridSize;
+    return { x: character.location.x + size / 2, y: character.location.y + size / 2 };
+  }
+
+  private isPointInSightOfCharacter(x: number, y: number, character: GameCharacter, gridSize: number, wallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null): boolean {
+    const origin = this.getCharacterCenter(character, gridSize);
+    const radius = Math.max(1, character.sightRadius || 1) * gridSize;
+    if (Math.hypot(x - origin.x, y - origin.y) > radius) return false;
+    return !this.isRayBlocked(origin.x, origin.y, x, y, wallGrid);
+  }
+
+  private isPointLit(x: number, y: number, gridSize: number, wallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null): boolean {
+    if (!this.currentTable.lightingEnabled || !this.currentTable.lightingNightMode) return false;
+    const sources = this.collectLightSourcesForPointCheck(gridSize);
+    for (const light of sources) {
+      if (!this.isPointInsideLightShape(x, y, light)) continue;
+      if (!this.isRayBlocked(light.x, light.y, x, y, wallGrid)) return true;
+    }
+    return false;
+  }
+
+  private collectLightSourcesForPointCheck(gridSize: number): TableLightSource[] {
+    const sources: TableLightSource[] = [];
+    for (const c of ObjectStore.instance.getObjects<GameCharacter>(GameCharacter)) {
+      if (!c.lightSourceEnabled || c.location.name !== 'table') continue;
+      const center = this.getCharacterCenter(c, gridSize);
+      sources.push({
+        x: center.x,
+        y: center.y,
+        r: Math.max(10, c.lightRadius * gridSize),
+        intensity: c.lightIntensity,
+        color: c.lightColor,
+        type: c.lightType,
+        shape: c.lightType === 'laser' ? 'laser' : (c.lightShape || 'circle'),
+        coneAngle: c.lightConeAngle || 60,
+        direction: this.normalizeAngle((c.rotate || 0) + 90),
+        flat: c.lightType === 'flashlight',
+        coneCoreRadius: (c.lightType === 'flashlight' || c.lightType === 'laser' || c.lightShape === 'laser') ? gridSize * 0.5 : gridSize
+      });
+    }
+    for (const t of ObjectStore.instance.getObjects<Terrain>(Terrain)) {
+      if (!t.lightSourceEnabled || t.location.name !== 'table') continue;
+      sources.push({
+        x: t.location.x + (t.width || 1) * gridSize / 2,
+        y: t.location.y + (t.depth || 1) * gridSize / 2,
+        r: Math.max(10, t.lightRadius * gridSize),
+        intensity: t.lightIntensity,
+        color: t.lightColor,
+        type: t.lightType,
+        shape: t.lightType === 'laser' ? 'laser' : (t.lightShape || 'circle'),
+        coneAngle: t.lightConeAngle || 60,
+        direction: this.normalizeAngle((t.rotate || 0) + 90),
+        flat: t.lightType === 'flashlight',
+        coneCoreRadius: (t.lightType === 'flashlight' || t.lightType === 'laser' || t.lightShape === 'laser') ? gridSize * 0.5 : gridSize
+      });
+    }
+    return sources;
+  }
+
+  private isPointInsideLightShape(x: number, y: number, light: TableLightSource): boolean {
+    const dx = x - light.x;
+    const dy = y - light.y;
+    const distance = Math.hypot(dx, dy);
+    if (distance > light.r) return false;
+    if (this.isLaserLight(light)) {
+      const angle = this.degreesToRadians(light.direction || 0);
+      const forward = dx * Math.cos(angle) + dy * Math.sin(angle);
+      if (forward < 0 || forward > light.r) return false;
+      const side = Math.abs(-dx * Math.sin(angle) + dy * Math.cos(angle));
+      return side <= this.getLaserWidth(light) * 1.5 || distance <= (light.coneCoreRadius || 0);
+    }
+    if (light.shape !== 'cone') return true;
+    const pointAngle = Math.atan2(dy, dx);
+    const centerAngle = this.degreesToRadians(light.direction || 0);
+    const diff = Math.abs(Math.atan2(Math.sin(pointAngle - centerAngle), Math.cos(pointAngle - centerAngle)));
+    return diff <= this.degreesToRadians(light.coneAngle || 60) / 2 || distance <= (light.coneCoreRadius || 0);
+  }
+
+  private isRayBlocked(fromX: number, fromY: number, toX: number, toY: number, wallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null): boolean {
+    if (!wallGrid) return false;
+    const { grid, cellSize, cols, rows } = wallGrid;
+    const distance = Math.hypot(toX - fromX, toY - fromY);
+    if (distance <= cellSize) return false;
+    const dx = (toX - fromX) / distance;
+    const dy = (toY - fromY) / distance;
+    for (let d = cellSize; d < distance; d += cellSize) {
+      const gx = Math.floor((fromX + dx * d) / cellSize);
+      const gy = Math.floor((fromY + dy * d) / cellSize);
+      if (gx < 0 || gy < 0 || gx >= cols || gy >= rows) return true;
+      if (grid[gy * cols + gx]) return true;
+    }
+    return false;
+  }
+
   private removeSelectionRanges() {
     let selection = window.getSelection();
     if (!selection.isCollapsed) {
@@ -891,7 +1009,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     const table = this.currentTable;
     if (!table) return;
 
-    const active = table.lightingEnabled && table.lightingNightMode;
+    const active = (table.lightingEnabled && table.lightingNightMode) || this.isAdvancedVisionActive;
     if (!active) {
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -911,7 +1029,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, w, h);
 
-    const darkness = table.lightingIntensity;
+    const darkness = table.lightingEnabled && table.lightingNightMode ? table.lightingIntensity : 0.82;
     const isGm = this.gmModeService.isGm;
     this.flickerPhase += 0.03;
 
@@ -933,17 +1051,114 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
 
     ctx.globalCompositeOperation = 'destination-out';
 
-    this.drawLightSources(ctx, gridSize, wallGrid);
+    if (table.roomMode === 'advanced') {
+      this.drawAdvancedVisibility(ctx, gridSize, wallGrid, w, h);
+    } else {
+      this.drawLightSources(ctx, gridSize, wallGrid);
+    }
 
     ctx.globalCompositeOperation = 'source-over';
 
     // 壁の表面を暗く戻す
     this.drawLightBlockers(ctx, gridSize);
 
-    // 光源の色づけ
+    // 光源/視覚の色づけ
     ctx.globalCompositeOperation = 'source-atop';
     this.drawLightColors(ctx, gridSize);
+    if (table.roomMode === 'advanced') this.drawSightColors(ctx, gridSize);
     ctx.globalCompositeOperation = 'source-over';
+  }
+
+  private drawAdvancedVisibility(ctx: CanvasRenderingContext2D, gridSize: number, wallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null, w: number, h: number) {
+    const normalSight = this.createMaskCanvas(w, h);
+    const normalCtx = normalSight.getContext('2d');
+    this.drawSightSources(normalCtx, gridSize, wallGrid, ['normal']);
+
+    if (this.currentTable.lightingEnabled && this.currentTable.lightingNightMode) {
+      const lightMask = this.createMaskCanvas(w, h);
+      const lightCtx = lightMask.getContext('2d');
+      this.drawLightSources(lightCtx, gridSize, wallGrid);
+      normalCtx.globalCompositeOperation = 'destination-in';
+      normalCtx.drawImage(lightMask, 0, 0);
+      normalCtx.globalCompositeOperation = 'source-over';
+    } else {
+      normalCtx.clearRect(0, 0, w, h);
+    }
+
+    const darkvisionSight = this.createMaskCanvas(w, h);
+    const darkvisionCtx = darkvisionSight.getContext('2d');
+    this.drawSightSources(darkvisionCtx, gridSize, wallGrid, ['darkvision', 'superiorDarkvision']);
+
+    ctx.drawImage(normalSight, 0, 0);
+    ctx.drawImage(darkvisionSight, 0, 0);
+  }
+
+  private createMaskCanvas(w: number, h: number): HTMLCanvasElement {
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    return canvas;
+  }
+
+  private getMySightCharacters(): GameCharacter[] {
+    if (this.currentTable?.roomMode !== 'advanced') return [];
+    const peerId = Network.peerId;
+    const userId = Network.peerContext?.userId;
+    return ObjectStore.instance.getObjects<GameCharacter>(GameCharacter)
+      .filter(character => character.location.name === 'table')
+      .filter(character => !!character.sightEnabled)
+      .filter(character => this.includesJsonId(character.ownerPeerIds, peerId) || this.includesJsonId(character.ownerUserIds, userId));
+  }
+
+  private includesJsonId(raw: string, id: string): boolean {
+    if (!id) return false;
+    try {
+      const ids = JSON.parse(raw || '[]');
+      return Array.isArray(ids) && ids.map(value => String(value)).includes(id);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  private createSightSource(character: GameCharacter, gridSize: number): TableLightSource {
+    const mode = character.sightMode || 'normal';
+    const radius = Math.max(1, character.sightRadius || (mode === 'superiorDarkvision' ? 24 : mode === 'darkvision' ? 12 : 6));
+    const intensity = mode === 'superiorDarkvision' ? 0.78 : mode === 'darkvision' ? 0.58 : 0.92;
+    const color = mode === 'superiorDarkvision' ? '#8fd3ff' : mode === 'darkvision' ? '#9fb2c8' : '#fff7d6';
+    return {
+      x: character.location.x + Math.max(1, character.size || 1) * gridSize / 2,
+      y: character.location.y + Math.max(1, character.size || 1) * gridSize / 2,
+      r: Math.max(10, radius * gridSize),
+      intensity,
+      color,
+      type: `sight-${mode}`,
+      shape: 'circle',
+      coneAngle: 360,
+      direction: this.normalizeAngle((character.rotate || 0) + 90),
+      flat: false,
+      coneCoreRadius: 0
+    };
+  }
+
+  private drawSightSources(ctx: CanvasRenderingContext2D, gridSize: number, wallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null, modes: string[] = null) {
+    if (this.currentTable?.roomMode !== 'advanced') return;
+    for (const character of this.getMySightCharacters()) {
+      const mode = character.sightMode || 'normal';
+      if (modes && !modes.includes(mode)) continue;
+      const sight = this.createSightSource(character, gridSize);
+      if (wallGrid) this.drawLightWithRaycast(ctx, sight, wallGrid);
+      else this.drawLightFill(ctx, sight, false);
+    }
+  }
+
+  private drawSightColors(ctx: CanvasRenderingContext2D, gridSize: number) {
+    if (this.currentTable?.roomMode !== 'advanced') return;
+    for (const character of this.getMySightCharacters()) {
+      const sight = this.createSightSource(character, gridSize);
+      const alpha = sight.type === 'sight-normal' ? 0.08 : sight.type === 'sight-superiorDarkvision' ? 0.16 : 0.12;
+      const hex = Math.round(alpha * 255).toString(16).padStart(2, '0');
+      this.drawColoredLightFill(ctx, sight, hex);
+    }
   }
 
   private drawLightSources(ctx: CanvasRenderingContext2D, gridSize: number, wallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null) {
@@ -1302,7 +1517,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   private drawLightBlockers(ctx: CanvasRenderingContext2D, gridSize: number) {
     const table = this.currentTable;
     if (!table) return;
-    const darkness = table.lightingIntensity;
+    const darkness = table.lightingEnabled && table.lightingNightMode ? table.lightingIntensity : 0.82;
 
     // Terrain（壁）で光を遮断
     const terrains = ObjectStore.instance.getObjects<Terrain>(Terrain);

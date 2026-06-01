@@ -13,6 +13,7 @@ import { ImportCharacterImgComponent } from 'component/import-character-img/impo
 import { ModalService } from 'service/modal.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { SaveDataService } from 'service/save-data.service';
+import { TabletopService } from 'service/tabletop.service';
 
 import { GameCharacter } from '@udonarium/game-character';
 import { DiceSymbol } from '@udonarium/dice-symbol';
@@ -39,8 +40,64 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
     private saveDataService: SaveDataService,
     private panelService: PanelService,
     private modalService: ModalService,
-    private pointerDeviceService: PointerDeviceService
+    private pointerDeviceService: PointerDeviceService,
+    private tabletopService: TabletopService
   ) { }
+
+  get isAdvancedRoom(): boolean { return this.tabletopService.currentTable?.roomMode === 'advanced'; }
+  get isCharacter(): boolean { return this.tabletopObject instanceof GameCharacter; }
+  get character(): GameCharacter { return this.tabletopObject as GameCharacter; }
+
+  get isMyPiece(): boolean {
+    if (!this.isCharacter) return false;
+    return this.hasCurrentPeer(this.character.ownerPeerIds, Network.peerId) || this.hasCurrentPeer(this.character.ownerUserIds, Network.peerContext?.userId);
+  }
+
+  toggleMyPiece() {
+    if (!this.isCharacter) return;
+    if (this.isMyPiece) {
+      this.character.ownerPeerIds = this.removeCurrentPeer(this.character.ownerPeerIds, Network.peerId);
+      this.character.ownerUserIds = this.removeCurrentPeer(this.character.ownerUserIds, Network.peerContext?.userId);
+    } else {
+      this.character.ownerPeerIds = this.addCurrentPeer(this.character.ownerPeerIds, Network.peerId);
+      this.character.ownerUserIds = this.addCurrentPeer(this.character.ownerUserIds, Network.peerContext?.userId);
+      if (!this.character.sightEnabled) this.character.sightEnabled = true;
+    }
+    this.character.update();
+  }
+
+  setSightMode(mode: string) {
+    if (!this.isCharacter) return;
+    this.character.sightMode = mode;
+    if (mode === 'normal') this.character.sightRadius = 6;
+    if (mode === 'darkvision') this.character.sightRadius = 12;
+    if (mode === 'superiorDarkvision') this.character.sightRadius = 24;
+    this.character.update();
+  }
+
+  private parseIds(raw: string): string[] {
+    try {
+      const ids = JSON.parse(raw || '[]');
+      return Array.isArray(ids) ? ids.map(id => String(id)).filter(id => 0 < id.length) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  private hasCurrentPeer(raw: string, id: string): boolean {
+    return !!id && this.parseIds(raw).includes(id);
+  }
+
+  private addCurrentPeer(raw: string, id: string): string {
+    const ids = this.parseIds(raw);
+    if (id && !ids.includes(id)) ids.push(id);
+    return JSON.stringify(ids);
+  }
+
+  private removeCurrentPeer(raw: string, id: string): string {
+    if (!id) return raw || '[]';
+    return JSON.stringify(this.parseIds(raw).filter(value => value !== id));
+  }
 
   ngOnInit() {
     EventSystem.register(this)

@@ -92,6 +92,10 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
   get isSecretDetails(): boolean { return !!this.gameCharacter.secretDetails; }
   set isSecretDetails(secret: boolean) { this.gameCharacter.secretDetails = secret; }
   get isSecretDetailsHidden(): boolean { return this.isSecretDetails && !this.gmModeService.isGm; }
+  get isAdvancedRoom(): boolean { return this.tabletopService.currentTable?.roomMode === 'advanced'; }
+  get isMyPiece(): boolean {
+    return this.isAdvancedRoom && (this.hasOwnerId(this.gameCharacter.ownerPeerIds, Network.peerId) || this.hasOwnerId(this.gameCharacter.ownerUserIds, Network.peerContext?.userId));
+  }
   get canDisplayByRole(): boolean { return !this.isGmOnly || this.gmModeService.isGm; }
   get canUseVnStageButton(): boolean {
     if (!this.isVnBoardButtonVisible) return false;
@@ -331,6 +335,12 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
     }
 
     this.contextMenuService.open(position, [
+      ...(this.isAdvancedRoom ? [
+        (this.isMyPiece
+          ? { name: '☑ 自分のコマ', action: () => this.toggleMyPiece(false) }
+          : { name: '☐ 自分のコマにする', action: () => this.toggleMyPiece(true) }),
+        ContextMenuSeparator
+      ] : []),
       (this.isSimpleViewForcedFull
         ? {
           name: '簡略表示に戻す', action: () => {
@@ -495,6 +505,37 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
     }
     this.tabletopUndoService.recordCreate(cloneObjects);
     SoundEffect.play(PresetSound.piecePut);
+  }
+
+  private toggleMyPiece(owned: boolean) {
+    this.gameCharacter.ownerPeerIds = this.setOwnerId(this.gameCharacter.ownerPeerIds, Network.peerId, owned);
+    this.gameCharacter.ownerUserIds = this.setOwnerId(this.gameCharacter.ownerUserIds, Network.peerContext?.userId, owned);
+    if (owned && !this.gameCharacter.sightEnabled) this.gameCharacter.sightEnabled = true;
+    this.gameCharacter.update();
+    SoundEffect.play(PresetSound.sweep);
+  }
+
+  private hasOwnerId(raw: string, id: string): boolean {
+    return !!id && this.parseOwnerIds(raw).includes(id);
+  }
+
+  private setOwnerId(raw: string, id: string, owned: boolean): string {
+    const ids = this.parseOwnerIds(raw);
+    if (id) {
+      const index = ids.indexOf(id);
+      if (owned && index < 0) ids.push(id);
+      if (!owned && 0 <= index) ids.splice(index, 1);
+    }
+    return JSON.stringify(ids);
+  }
+
+  private parseOwnerIds(raw: string): string[] {
+    try {
+      const ids = JSON.parse(raw || '[]');
+      return Array.isArray(ids) ? ids.map(id => String(id)).filter(id => 0 < id.length) : [];
+    } catch (e) {
+      return [];
+    }
   }
 
   private getSelectedCharactersForBatch(): GameCharacter[] {

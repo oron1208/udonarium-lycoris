@@ -95,6 +95,36 @@
     </div>
   </ng-container>
   <ng-container *ngIf="tabletopObject.aliasName === 'character'">
+    <div *ngIf="isAdvancedRoom" class="extra-setting advanced-piece-section" style="border:1px solid #777;margin:8px 0;padding:8px;">
+      <b>アドバンス設定</b>
+      <div style="margin-top:4px;">
+        <button type="button" (click)="toggleMyPiece()">{{isMyPiece ? '自分のコマから外す' : '自分のコマにする'}}</button>
+        <span style="font-size:12px;margin-left:8px;">自分のコマにすると、このコマの視界が自分の盤面に反映されます。</span>
+      </div>
+      <div style="margin-top:6px;">
+        <label>視覚を有効にする
+          <input type="checkbox" [(ngModel)]="tabletopObject.sightEnabled" name="sightEnabled">
+        </label>
+      </div>
+      <ng-container *ngIf="tabletopObject.sightEnabled">
+        <div>
+          視覚タイプ
+          <select [ngModel]="tabletopObject.sightMode" (ngModelChange)="setSightMode($event)" name="sightMode">
+            <option value="normal">通常視界</option>
+            <option value="darkvision">暗視</option>
+            <option value="superiorDarkvision">上級暗視</option>
+          </select>
+        </div>
+        <div>
+          視界半径（マス）
+          <input type="range" min="1" max="60" step="0.5" [(ngModel)]="tabletopObject.sightRadius" style="width:10em;">
+          <input class="is-caret" [(ngModel)]="tabletopObject.sightRadius" type="number" min="1" max="60" step="0.5" style="width:5em;color:#555;">
+        </div>
+        <div style="font-size:12px;line-height:1.5;">
+          通常視界は明るめ、暗視は薄く、上級暗視は広く強めに視界を開きます。壁指定は照明と同じ判定を使います。
+        </div>
+      </ng-container>
+    </div>
     <select *ngIf="tabletopObject" (change)="setLocation($event.target.value)" [ngModel]="tabletopObject.location.name">
     <option value="table">テーブル</option>
     <option value="common">共有インベントリ</option>

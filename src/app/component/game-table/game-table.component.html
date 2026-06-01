@@ -31,7 +31,7 @@
         </div>
         <div *ngIf="characters.length > 0" class="layer">
           <div class="dummy"></div>
-          <game-character class="is-3d will-change-transform" *ngFor="let character of characters; trackBy: trackByGameObject" [gameCharacter]="character" [isSimpleView]="isCharacterSimpleMode" [isFlatMode]="isFlatMode" [isRangeSelected]="isCharacterRangeSelected(character)" [appTooltip]="isCharacterSimpleMode ? null : character"></game-character>
+          <game-character class="is-3d will-change-transform" *ngFor="let character of visibleCharacters; trackBy: trackByGameObject" [gameCharacter]="character" [isSimpleView]="isCharacterSimpleMode" [isFlatMode]="isFlatMode" [isRangeSelected]="isCharacterRangeSelected(character)" [appTooltip]="isCharacterSimpleMode ? null : character"></game-character>
         </div>
         <div class="layer cursor-layer">
           <div class="dummy"></div>
@@ -40,11 +40,11 @@
       </ng-container>
       <canvas class="drawing-canvas is-fill" [class.is-drawing-mode]="isDrawingMode" #drawingCanvas
         (pointerdown)="onDrawingPointerDown($event)" (pointermove)="onDrawingPointerMove($event)"></canvas>
-      <canvas class="lighting-canvas" #lightingCanvas [hidden]="!isLightingActive"></canvas>
+      <canvas class="lighting-canvas" #lightingCanvas [hidden]="!isLightingActive && !isAdvancedVisionActive"></canvas>
     </div>
   </div>
   <ng-container *ngIf="isSideNameLabelMode">
-    <div class="side-name-label" *ngFor="let character of characters; trackBy: trackByGameObject" [ngStyle]="getSideNameLabelStyle(character)">
+    <div class="side-name-label" *ngFor="let character of visibleCharacters; trackBy: trackByGameObject" [ngStyle]="getSideNameLabelStyle(character)">
       {{character.name}}
     </div>
   </ng-container>

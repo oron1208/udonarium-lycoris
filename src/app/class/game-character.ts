@@ -37,6 +37,13 @@ export class GameCharacter extends TabletopObject {
   @SyncVar() syncDummyCounter: number = 0;
   @SyncVar() statusMarkerIds: string = '[]';
 
+  // アドバンスモード: 所有/視界設定
+  @SyncVar() ownerPeerIds: string = '[]';
+  @SyncVar() ownerUserIds: string = '[]';
+  @SyncVar() sightEnabled: boolean = false;
+  @SyncVar() sightMode: string = 'normal';
+  @SyncVar() sightRadius: number = 6;
+
   // 光源
   @SyncVar() lightSourceEnabled: boolean = false;
   @SyncVar() lightRadius: number = 3;

@@ -1,7 +1,9 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 
 import { PeerContext } from '@udonarium/core/system/network/peer-context';
+import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { EventSystem, Network } from '@udonarium/core/system';
+import { GameTable, RoomMode } from '@udonarium/game-table';
 import { PeerCursor } from '@udonarium/peer-cursor';
 
 import { ModalService } from 'service/modal.service';
@@ -19,6 +21,7 @@ export class RoomSettingComponent implements OnInit, OnDestroy {
   roomName: string = 'ふつうの部屋';
   password: string = '';
   isPrivate: boolean = false;
+  roomMode: RoomMode = 'standard';
 
   get peerId(): string { return Network.peerId; }
   get isConnected(): boolean { return Network.peerIds.length <= 1 ? false : true; }
@@ -51,9 +54,27 @@ export class RoomSettingComponent implements OnInit, OnDestroy {
 
   createRoom() {
     let userId = Network.peerContext ? Network.peerContext.userId : PeerContext.generateId();
+    this.savePendingRoomMode();
     Network.open(userId, PeerContext.generateId('***'), this.roomName, this.password);
+    this.applyRoomModeToCurrentTables();
     PeerCursor.myCursor.peerId = Network.peerId;
     this.myPeer.reConnectPass = this.password;
     this.modalService.resolve();
+  }
+
+  private savePendingRoomMode() {
+    try {
+      localStorage.setItem('udonarium.pendingRoomMode.v1', this.roomMode);
+    } catch (e) {
+      console.warn('room mode localStorage save failed', e);
+    }
+  }
+
+  private applyRoomModeToCurrentTables() {
+    const tables = ObjectStore.instance.getObjects(GameTable);
+    tables.forEach(table => {
+      table.roomMode = this.roomMode;
+      table.update();
+    });
   }
 }

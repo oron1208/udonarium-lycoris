@@ -23,6 +23,7 @@ import { PeerContext } from '@udonarium/core/system/network/peer-context';
 import { DataSummarySetting } from '@udonarium/data-summary-setting';
 import { DiceBot } from '@udonarium/dice-bot';
 import { GameCharacter } from '@udonarium/game-character';
+import { GameTable } from '@udonarium/game-table';
 import { Jukebox } from '@udonarium/Jukebox';
 import { PeerCursor } from '@udonarium/peer-cursor';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
@@ -94,6 +95,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   isVnStageVisible = this.loadVnStageVisible();
   vnStageReady = true;
   private vnStageReadyTimer: any = null;
+  isAdvancedRoom = false;
   developerAnnouncementText = '';
   developerAnnouncementLevel = 'warning';
 
@@ -286,8 +288,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
           this.handleDeveloperControlMessage(data);
         });
       })
-      .on('UPDATE_GAME_OBJECT', event => { this.lazyNgZoneUpdate(event.isSendFromSelf); })
-      .on('DELETE_GAME_OBJECT', event => { this.lazyNgZoneUpdate(event.isSendFromSelf); })
+      .on('UPDATE_GAME_OBJECT', event => { this.syncAdvancedRoomUiClass(); this.lazyNgZoneUpdate(event.isSendFromSelf); })
+      .on('DELETE_GAME_OBJECT', event => { this.syncAdvancedRoomUiClass(); this.lazyNgZoneUpdate(event.isSendFromSelf); })
       .on('SYNCHRONIZE_AUDIO_LIST', event => { if (event.isSendFromSelf) this.lazyNgZoneUpdate(false); })
       .on('VN_STAGE_VISIBILITY_CHANGED', event => {
         this.ngZone.run(() => { this.isVnStageVisible = !!event.data?.visible; });
@@ -380,6 +382,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
   ngAfterViewInit() {
     PanelService.defaultParentViewContainerRef = ModalService.defaultParentViewContainerRef = ContextMenuService.defaultParentViewContainerRef = this.modalLayerViewContainerRef;
+    this.syncAdvancedRoomUiClass();
     setTimeout(() => {
       this.panelService.open(PeerMenuComponent, { width: 500, height: 450, left: 100 });
       this.panelService.open(ChatWindowComponent, { width: 700, height: 400, left: 100, top: 450 });
@@ -469,6 +472,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
   ngOnDestroy() {
     EventSystem.unregister(this);
+    document.body.classList.remove('udonarium-advanced-room');
     if (this.developerPollTimer != null) clearInterval(this.developerPollTimer);
     if (this.developerHeartbeatTimer != null) clearInterval(this.developerHeartbeatTimer);
   }
@@ -1005,6 +1009,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   }
 
   private lazyNgZoneUpdate(isImmediate: boolean) {
+    this.syncAdvancedRoomUiClass();
     if (isImmediate) {
       if (this.immediateUpdateTimer !== null) return;
       this.immediateUpdateTimer = setTimeout(() => {
@@ -1026,6 +1031,13 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         this.ngZone.run(() => { });
       }, 100);
     }
+  }
+
+  private syncAdvancedRoomUiClass() {
+    const viewTable = TableSelecter.instance && TableSelecter.instance.viewTable ? TableSelecter.instance.viewTable : ObjectStore.instance.getObjects(GameTable)[0];
+    const enabled = !!viewTable && viewTable.roomMode === 'advanced';
+    this.isAdvancedRoom = enabled;
+    document.body.classList.toggle('udonarium-advanced-room', enabled);
   }
 }
 

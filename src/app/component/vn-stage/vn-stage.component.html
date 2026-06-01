@@ -123,6 +123,9 @@
         <option *ngFor="let character of characters" [value]="character.identifier">{{ character.name }}</option>
       </select>
       <button type="button" class="vn-enter-btn" (mousedown)="enterStage(); $event.preventDefault()" [disabled]="!selectedCharacterId" title="シアターに登場させる">登場</button>
+      <button *ngIf="isAdvancedRoom" type="button" class="vn-mini-toggle" [class.on]="isSelectedMyPiece" (mousedown)="toggleSelectedMyPiece(); $event.preventDefault()" [disabled]="!selectedCharacterId" title="選択中キャラを自分のコマにする/解除">
+        {{ isSelectedMyPiece ? '自分のコマ' : '自分にする' }}
+      </button>
       <button type="button" class="vn-nudge" title="上へ" (mousedown)="nudgeUp(); $event.preventDefault()">▲</button>
       <button type="button" class="vn-nudge" title="下へ" (mousedown)="nudgeDown(); $event.preventDefault()">▼</button>
       <button type="button" class="vn-nudge" title="位置リセット" (mousedown)="resetPosition(); $event.preventDefault()">↺</button>

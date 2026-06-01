@@ -228,12 +228,24 @@ export class TabletopActionService {
     //
 
     gameTable.name = '最初のテーブル';
+    gameTable.roomMode = this.consumePendingRoomMode();
     gameTable.imageIdentifier = testBgFile.identifier;
     gameTable.width = 20;
     gameTable.height = 15;
     gameTable.initialize();
 
     tableSelecter.viewTableIdentifier = gameTable.identifier;
+  }
+
+  private consumePendingRoomMode(): 'standard' | 'advanced' {
+    try {
+      const mode = localStorage.getItem('udonarium.pendingRoomMode.v1');
+      localStorage.removeItem('udonarium.pendingRoomMode.v1');
+      if (mode === 'advanced') return 'advanced';
+    } catch (e) {
+      console.warn('room mode localStorage read failed', e);
+    }
+    return 'standard';
   }
 
   // バフ追加identifierを固定にするため初期キャラのバフはGameCharacterでやらずにここでやる
