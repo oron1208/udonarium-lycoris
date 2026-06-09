@@ -33,6 +33,7 @@ export class GameTable extends ObjectNode {
   @SyncVar() gridType: GridType = GridType.SQUARE;
   @SyncVar() gridColor: string = '#000000e6';
   @SyncVar() drawingData: string = '[]';
+  @SyncVar() wallDrawingData: string = '[]';
   @SyncVar() statusMarkerDictionary: string = '[]';
   @SyncVar() roomMode: RoomMode = 'standard';
 
@@ -41,6 +42,8 @@ export class GameTable extends ObjectNode {
   @SyncVar() lightingNightMode: boolean = true;
   @SyncVar() lightingIntensity: number = 0.55;
   @SyncVar() lightingTint: string = '#00030c';
+  @SyncVar() lightingAmbientLight: boolean = false;
+  @SyncVar() lightingAmbientIntensity: number = 0.35;
   @SyncVar() lightingPaMode: boolean = false;
   @SyncVar() lightingSpotlights: boolean = false;
   @SyncVar() lightingSpotlightColor: string = '#fff3c4';
@@ -51,8 +54,8 @@ export class GameTable extends ObjectNode {
   @SyncVar() lightingFlames: boolean = false;
   @SyncVar() lightingFlameLevel: number = 0.5;
   @SyncVar() lightingHaze: boolean = false;
-  @SyncVar() drawingAsWall: boolean = false;
   @SyncVar() initialObjectsPlaced: boolean = false;
+  @SyncVar() diceCutinEnabled: boolean = true;
 
   gridClipRect: {top: number, right: number, bottom: number, left: number} = null;
 

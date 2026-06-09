@@ -2,6 +2,7 @@ import { Component, NgZone, OnDestroy, OnInit } from '@angular/core';
 import { EventSystem } from '@udonarium/core/system';
 import { Network } from '@udonarium/core/system';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
+import { GameTable } from '@udonarium/game-table';
 import { ChatTabList } from '@udonarium/chat-tab-list';
 import { PeerCursor } from '@udonarium/peer-cursor';
 import { ChatMessageService } from 'service/chat-message.service';
@@ -18,6 +19,17 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
   isMacroHotbarVisible = true;
   isVnStageVisible = false;
   isGmMode = false;
+
+  get isAdvancedRoom(): boolean {
+    const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected) ||
+      ObjectStore.instance.getObjects<GameTable>(GameTable)[0];
+    return table?.roomMode === 'advanced';
+  }
+  get isDiceCutinEnabled(): boolean {
+    const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected) ||
+      ObjectStore.instance.getObjects<GameTable>(GameTable)[0];
+    return table?.diceCutinEnabled ?? true;
+  }
   isOperationHelpOpen = false;
   isUpdateNotesOpen = false;
   isBuffTowerCollapsed = true;
@@ -120,6 +132,15 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
     const chatTabList = ObjectStore.instance.get<ChatTabList>('ChatTabList');
     const sysTab = chatTabList ? chatTabList.systemMessageTab : null;
     this.chatMessageService.sendSystemMessage(sysTab, text, '#006633');
+  }
+
+  toggleDiceCutin() {
+    const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected) ||
+      ObjectStore.instance.getObjects<GameTable>(GameTable)[0];
+    if (table) {
+      table.diceCutinEnabled = !table.diceCutinEnabled;
+      table.update();
+    }
   }
 
   toggleVnAutoFit() {

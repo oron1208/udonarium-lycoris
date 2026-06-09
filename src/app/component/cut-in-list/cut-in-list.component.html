@@ -73,6 +73,7 @@
       <div>
         タグ名称 :<input class="is-caret" [(ngModel)]="cutInTagName" placeholder="" style="width: 5em;" [attr.disabled]="!isEditable ? '' : null" />
         チャット末尾発動：<input type="checkbox" [(ngModel)]="chatActivate" name="chatActivate" [attr.disabled]="!isEditable ? '' : null"/>
+        ダイスロール発動：<input type="checkbox" [(ngModel)]="diceActivate" name="diceActivate" [attr.disabled]="!isEditable ? '' : null"/>
       </div>
       <div>
       YouTube再生 :<input type="checkbox" [(ngModel)]="cutInIsVideo" name="cutInIsVideo" [attr.disabled]="!isEditable ? '' : null" (change) = "changeYouTubeInfo()" />

@@ -35,6 +35,9 @@ export class CutIn extends GameObject {
   @SyncVar() selected = false;
   @SyncVar() isLoop = false;
   @SyncVar() chatActivate = false;
+  @SyncVar() diceActivate = false;
+  @SyncVar() diceResultText: string = '';
+  @SyncVar() diceRollTimestamp: number = 0;
 
   @SyncVar() outTime = 0;
 

@@ -1,39 +1,45 @@
-<div class="background-image is-pointer-events-none" [ngClass]="[(backgroundFilterType ? 'is-filter' : ''), backgroundFilterType, isLightingActive ? 'is-night' : '']" 
+<div *ngIf="layerVisibility.background" class="background-image is-pointer-events-none" [ngClass]="[(backgroundFilterType ? 'is-filter' : ''), backgroundFilterType, isLightingActive ? 'is-night' : '']" 
 [style.background-image]="'url(' + backgroundImage.url + ')' | safe: 'style'"
 [style.--bg-darkness]="isLightingActive && !isGmMode ? currentTable.lightingIntensity : 0"></div>
 <div class="component is-fill is-perspective" [ngClass]="{'is-grabbing': isPointerDragging, 'is-flat-mode': isFlatMode}" #root>
   <div class="component-content is-fill is-3d-2" #gameTable>
-    <div id="app-game-table" class="game-table table-image is-3d-2" [style.background-image]="'url(' + tableImage.url + ')' | safe: 'style'" #gameObjects>
-      <canvas class="grid-canvas is-fill is-pointer-events-none" #gridCanvas></canvas>
+    <div id="app-game-table" class="game-table table-image is-3d-2" [style.background-image]="layerVisibility.tableImage ? ('url(' + tableImage.url + ')' | safe: 'style') : 'none'" #gameObjects>
+      <canvas class="grid-canvas is-fill is-pointer-events-none" #gridCanvas [style.opacity]="layerVisibility.grid ? 1 : 0"></canvas>
       <ng-container *ngIf="!isTableViewResetting">
-        <div *ngIf="terrains.length > 0" class="layer">
+        <div *ngIf="terrains.length > 0 && layerVisibility.terrain" class="layer">
           <div class="dummy"></div>
           <terrain class="is-3d will-change-transform" *ngFor="let terrain of terrains; trackBy: trackByGameObject" [terrain]="terrain"></terrain>
         </div>
+        <ng-container *ngIf="layerVisibility.mask">
         <game-table-mask class="is-3d will-change-transform" *ngFor="let mask of tableMasks; trackBy: trackByGameObject" [gameTableMask]="mask">
         </game-table-mask>
+        </ng-container>
         <game-table-scratch-mask class="is-3d will-change-transform" *ngFor="let scratchMask of tableScratchMasks; trackBy: trackByGameObject" [gameTableScratchMask]="scratchMask">
         </game-table-scratch-mask>
-        <div *ngIf="textNotes.length > 0" class="layer">
+        <div *ngIf="textNotes.length > 0 && layerVisibility.textNote" class="layer">
           <div class="dummy"></div>
           <text-note class="is-3d will-change-transform" *ngFor="let textNote of textNotes; trackBy: trackByGameObject" [textNote]="textNote" [appTooltip]="textNote" [ngStyle]="{'z-index' : textNote.zindex}"></text-note>
         </div>
+        <ng-container *ngIf="layerVisibility.card">
         <card-stack class="is-3d will-change-transform" *ngFor="let cardStack of cardStacks; trackBy: trackByGameObject" [cardStack]="cardStack" [appTooltip]="cardStack" [ngStyle]="{'z-index' : cardStack.zindex, 'transform': 'translateZ(' + (cardStack.zindex * 0.001) +'px)'}"></card-stack>
         <card class="is-3d will-change-transform" *ngFor="let card of cards; trackBy: trackByGameObject" [card]="card" [appTooltip]="card" [ngStyle]="{'z-index' : card.zindex, 'transform': 'translateZ(' + (card.zindex * 0.001) +'px)'}"></card>
-        <div class="range">
+        </ng-container>
+        <div *ngIf="layerVisibility.range" class="range">
           <div class="dummy"></div>
           <peer-cursor class="is-3d will-change-transform" *ngFor="let cursor of peerCursors; trackBy: trackByGameObject" [cursor]="cursor"></peer-cursor>
         </div>
+        <ng-container *ngIf="layerVisibility.range">
         <range class="is-3d will-change-transform" *ngFor="let range of ranges; trackBy: trackByGameObject" [range]="range"></range>
-        <div *ngIf="diceSymbols.length > 0" class="layer">
+        </ng-container>
+        <div *ngIf="diceSymbols.length > 0 && layerVisibility.dice" class="layer">
           <div class="dummy"></div>
           <dice-symbol class="is-3d will-change-transform" *ngFor="let diceSymbol of diceSymbols; trackBy: trackByGameObject" [diceSymbol]="diceSymbol" [appTooltip]="diceSymbol"></dice-symbol>
         </div>
-        <div *ngIf="characters.length > 0" class="layer">
+        <div *ngIf="characters.length > 0 && layerVisibility.character" class="layer">
           <div class="dummy"></div>
           <game-character class="is-3d will-change-transform" *ngFor="let character of visibleCharacters; trackBy: trackByGameObject" [gameCharacter]="character" [isSimpleView]="isCharacterSimpleMode" [isFlatMode]="isFlatMode" [isRangeSelected]="isCharacterRangeSelected(character)" [appTooltip]="isCharacterSimpleMode ? null : character"></game-character>
         </div>
-        <div class="layer cursor-layer">
+        <div *ngIf="layerVisibility.cursor" class="layer cursor-layer">
           <div class="dummy"></div>
           <peer-cursor class="is-3d will-change-transform" *ngFor="let cursor of peerCursors; trackBy: trackByGameObject" [cursor]="cursor"></peer-cursor>
         </div>
@@ -64,9 +70,32 @@
       <button type="button" title="等倍" (click)="resetFlatZoom()">{{(flatViewScale * 100) | number:'1.0-0'}}%</button>
       <button type="button" title="拡大" (click)="zoomFlatMode(0.1)">＋</button>
     </ng-container>
+    <button type="button" class="toolbar-toggle" (click)="isLayerPanelOpen = !isLayerPanelOpen">レイヤー</button>
+    <ng-container *ngIf="isLayerPanelOpen">
+      <div class="layer-panel-grid">
+        <label><input type="checkbox" [checked]="layerVisibility.background" (change)="toggleLayerVisibility('background')">背景</label>
+        <label><input type="checkbox" [checked]="layerVisibility.tableImage" (change)="toggleLayerVisibility('tableImage')">マップ</label>
+        <label><input type="checkbox" [checked]="layerVisibility.grid" (change)="toggleLayerVisibility('grid')">グリッド</label>
+        <label><input type="checkbox" [checked]="layerVisibility.terrain" (change)="toggleLayerVisibility('terrain')">地形</label>
+        <label><input type="checkbox" [checked]="layerVisibility.mask" (change)="toggleLayerVisibility('mask')">マスク</label>
+        <label><input type="checkbox" [checked]="layerVisibility.character" (change)="toggleLayerVisibility('character')">コマ</label>
+        <label><input type="checkbox" [checked]="layerVisibility.textNote" (change)="toggleLayerVisibility('textNote')">メモ</label>
+        <label><input type="checkbox" [checked]="layerVisibility.card" (change)="toggleLayerVisibility('card')">カード</label>
+        <label><input type="checkbox" [checked]="layerVisibility.dice" (change)="toggleLayerVisibility('dice')">ダイス</label>
+        <label><input type="checkbox" [checked]="layerVisibility.range" (change)="toggleLayerVisibility('range')">範囲</label>
+        <label><input type="checkbox" [checked]="layerVisibility.cursor" (change)="toggleLayerVisibility('cursor')">カーソル</label>
+        <label><input type="checkbox" [checked]="layerVisibility.drawing" (change)="toggleLayerVisibility('drawing')">描画ペン</label>
+        <label><input type="checkbox" [checked]="layerVisibility.wallDrawing" (change)="toggleLayerVisibility('wallDrawing')">壁ペン</label>
+        <label><input type="checkbox" [checked]="layerVisibility.lighting" (change)="toggleLayerVisibility('lighting')">照明</label>
+      </div>
+    </ng-container>
     <button type="button" class="toolbar-toggle" (click)="toggleDrawingTool()">ペン</button>
     <ng-container *ngIf="isDrawingToolOpen">
       <button type="button" [class.active]="isDrawingMode" (click)="toggleDrawingMode()">{{isDrawingMode ? '描画ON' : '描画OFF'}}</button>
+      <div class="tool-group">
+        <button type="button" [class.active]="drawingLayer === 'drawing'" (click)="drawingLayer = 'drawing'">描画ペン</button>
+        <button type="button" [class.active]="drawingLayer === 'wall'" (click)="drawingLayer = 'wall'">壁ペン</button>
+      </div>
       <div class="tool-group">
         <button type="button" [class.active]="drawingTool === 'pen'" (click)="drawingTool = 'pen'">ペン</button>
         <button type="button" [class.active]="drawingTool === 'line'" (click)="drawingTool = 'line'">直線</button>
@@ -79,7 +108,6 @@
       <label class="drawing-check"><input type="checkbox" [(ngModel)]="drawingFill">塗り</label>
       <button type="button" [class.active]="isDrawingEraser" (click)="isDrawingEraser = !isDrawingEraser">消しゴム</button>
       <button type="button" (click)="clearDrawing()">全消し</button>
-      <label class="drawing-check"><input type="checkbox" [(ngModel)]="currentTable.drawingAsWall">壁として扱う</label>
     </ng-container>
   </div>
 </div>

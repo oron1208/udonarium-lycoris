@@ -100,6 +100,17 @@
     </div>
   </section>
 
+  <section class="options-section" *ngIf="isAdvancedRoom">
+    <h3>アドバンス</h3>
+    <div class="option-row">
+      <span class="option-label">ダイスカットイン</span>
+      <button type="button" class="option-toggle" [class.on]="isDiceCutinEnabled" (click)="toggleDiceCutin()">
+        {{ isDiceCutinEnabled ? 'ON' : 'OFF' }}
+      </button>
+    </div>
+    <div class="option-hint">ダイスロール結果をカットイン演出で表示します</div>
+  </section>
+
   <section class="options-section">
     <h3>表示</h3>
     <div class="option-row">
@@ -142,6 +153,13 @@
       {{ isUpdateNotesOpen ? 'アップデート内容を閉じる' : 'アップデート内容' }}
     </button>
     <div class="operation-help-body" *ngIf="isUpdateNotesOpen">
+      <h4>v1.30.0</h4>
+      <ul>
+        <li><b>アドバンスモード追加</b>：視界管理・所有権管理・ダイスロール演出強化の拡張部屋モードを追加。通常モードと使い分け可能</li>
+        <li><b>コマ権限管理</b>：アドバンスモードでコマの所有権設定を追加。自分のコマだけ操作可能に</li>
+        <li><b>視界管理</b>：コマの視線範囲を設定可能。所有権と組み合わせて戦闘の視界シミュレーションに</li>
+        <li><b>ダイスロール演出</b>：BCDiceの全ダイスロール（通常・有利不利・イニシアチブ・ダメージ）で自動カットイン演出。キャラアイコン表示・元コマンド表示・クリティカル/ファンブル演出付き</li>
+      </ul>
       <h4>v1.22.0</h4>
       <ul>
         <li><b>コマ正面マーク強化</b>：コマの向き（光源方向 rotate + 90）を表示する正面マークを追加。平面モードでは正面マークをドラッグしてコマを回転できます</li>

@@ -110,6 +110,25 @@ export class CutInWindowComponent implements AfterViewInit, OnInit, OnDestroy {
           }
         }
       })
+      .on('DICE_CUT_IN_UPDATE', event => {
+        if (this.cutIn && this.cutIn.diceActivate && event.data.cutIn) {
+          console.log('DiceCutIn: window received update');
+          this.cutIn.diceResultText = event.data.cutIn.diceResultText;
+          this.cutIn.diceRollTimestamp = event.data.cutIn.diceRollTimestamp;
+          // outTime タイマーをリセット
+          if (this.cutInTimeOut) {
+            clearTimeout(this.cutInTimeOut);
+            this.cutInTimeOut = null;
+          }
+          if (this.cutIn.outTime > 0) {
+            this.cutInTimeOut = setTimeout(() => {
+              this.cutInTimeOut = null;
+              this.panelService.close();
+            }, this.cutIn.outTime * 1000);
+          }
+          this.ngZone.run(() => {});
+        }
+      })
       .on('STOP_CUT_IN_BY_BGM', event => {
         if ( this.cutIn ){
           console.log( ' \'STOP_CUT_IN_BY_BGM :' + this.cutIn);
@@ -257,6 +276,15 @@ export class CutInWindowComponent implements AfterViewInit, OnInit, OnDestroy {
       this.cutInTimeOut = null;
     }
     this.stopCutIn();
+
+    // ダイスカットインが閉じたことを通知
+    if (this.cutIn && this.cutIn.diceActivate) {
+      const cutInLauncher = ObjectStore.instance.get<CutInLauncher>('CutInLauncher');
+      if (cutInLauncher) {
+        cutInLauncher.notifyDiceCutInClosed();
+      }
+    }
+
     EventSystem.unregister(this);
   }
 

@@ -33,11 +33,45 @@ export class CutInLauncher extends GameObject {
 
   reloadDummy = 5;
 
+  // ダイスカットイン状態管理
+  private _diceCutInWindowOpen = false;
+
+  notifyDiceCutInClosed() {
+    console.log('DiceCutIn: window closed, resetting flag');
+    this._diceCutInWindowOpen = false;
+  }
+
   get jukebox(): Jukebox { return ObjectStore.instance.get<Jukebox>('Jukebox'); }
 
   isCutInBgmUploaded(audioIdentifier) {
     let audio = AudioStorage.instance.get( audioIdentifier );
     return audio ? true : false ;
+  }
+
+  diceRollCutIn(resultText: string, contextText: string, sendTo?: string) {
+    const allCutIn = this.getCutIns();
+    for (const cutIn_ of allCutIn) {
+      if (cutIn_.diceActivate) {
+        console.log('DiceCutIn: diceActivate found, windowOpen=' + this._diceCutInWindowOpen);
+        cutIn_.diceResultText = contextText || resultText;
+        cutIn_.diceRollTimestamp = Date.now();
+
+        if (!this._diceCutInWindowOpen) {
+          // 初回: カットインウィンドウを開く
+          this._diceCutInWindowOpen = true;
+          if (this.isCutInBgmUploaded(cutIn_.audioIdentifier) && cutIn_.tagName === '') {
+            this.jukebox.stop();
+          }
+          this.startCutIn(cutIn_, sendTo);
+        } else {
+          // 2回目以降: 既存ウィンドウを更新（新しいウィンドウは開かない）
+          console.log('DiceCutIn: updating existing window');
+          EventSystem.trigger('DICE_CUT_IN_UPDATE', { cutIn: cutIn_ });
+        }
+        return;
+      }
+    }
+    console.log('DiceCutIn: no diceActivate cutin found');
   }
 
   chatActivateCutIn( text: string , sendTo: string){

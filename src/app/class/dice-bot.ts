@@ -13,6 +13,7 @@ import { ObjectStore } from './core/synchronize-object/object-store';
 import { EventSystem } from './core/system';
 import { PromiseQueue } from './core/system/util/promise-queue';
 import { StringUtil } from './core/system/util/string-util';
+import { CutInLauncher } from './cut-in-launcher';
 import { DiceTable } from './dice-table';
 import { DiceTablePalette } from './chat-palette';
 
@@ -1023,6 +1024,15 @@ export class DiceBot extends GameObject {
     };
     const chatTab = ObjectStore.instance.get<ChatTab>(originalMessage.tabIdentifier);
     if (chatTab) { chatTab.addMessage(resourceMessage); }
+
+    // リソース操作＋ダイスロールの場合もカットイン発動
+    if (isDiceRoll && !isSecret) {
+      console.log('DiceCutIn: resourceBuffEdit cutin trigger, contextText=' + originalMessage.text);
+      const cutInLauncher = ObjectStore.instance.get<CutInLauncher>('CutInLauncher');
+      if (cutInLauncher) {
+        cutInLauncher.diceRollCutIn(text, originalMessage.text);
+      }
+    }
   }
 
   private sendResultMessage(rollResult: DiceRollResult, originalMessage: ChatMessage, multiTargetOption?: string) {
@@ -1054,6 +1064,17 @@ export class DiceBot extends GameObject {
     }
     const chatTab = ObjectStore.instance.get<ChatTab>(originalMessage.tabIdentifier);
     if (chatTab) { chatTab.addMessage(diceBotMessage); }
+
+    // ダイスロール汎用カットイン発動
+    if (!isSecret) {
+      console.log('DiceCutIn: sendResultMessage cutin trigger, contextText=' + originalMessage.text);
+      const cutInLauncher = ObjectStore.instance.get<CutInLauncher>('CutInLauncher');
+      if (cutInLauncher) {
+        cutInLauncher.diceRollCutIn(result, originalMessage.text, diceBotMessage.to);
+      } else {
+        console.log('DiceCutIn: CutInLauncher not found!');
+      }
+    }
   }
 
   // GameObject Lifecycle

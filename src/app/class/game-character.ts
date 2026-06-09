@@ -43,6 +43,7 @@ export class GameCharacter extends TabletopObject {
   @SyncVar() sightEnabled: boolean = false;
   @SyncVar() sightMode: string = 'normal';
   @SyncVar() sightRadius: number = 6;
+  @SyncVar() sightUnlimited: boolean = false;
 
   // 光源
   @SyncVar() lightSourceEnabled: boolean = false;
@@ -52,6 +53,8 @@ export class GameCharacter extends TabletopObject {
   @SyncVar() lightType: string = 'torch';
   @SyncVar() lightShape: string = 'circle';
   @SyncVar() lightConeAngle: number = 60;
+  @SyncVar() superiorDarknessEnabled: boolean = false;
+  @SyncVar() superiorDarknessRadius: number = 3;
 
   _targeted: boolean = false;
   get targeted(): boolean {

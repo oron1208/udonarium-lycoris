@@ -25,6 +25,7 @@ export class LightingLayerComponent implements OnInit, OnDestroy {
 
   state: LightingEffectState = {
     enabled: false, nightMode: true, intensity: 0.55, tint: '#00030c',
+    ambientLight: false, ambientIntensity: 0.35,
     paMode: false, spotlights: false, spotlightColor: '#fff3c4', spotlightCount: 2,
     lasers: false, laserColor: '#4cf3ff', laserSpeed: 1,
     flames: false, flameLevel: 0.5, haze: false
@@ -74,6 +75,8 @@ export class LightingLayerComponent implements OnInit, OnDestroy {
       nightMode: t.lightingNightMode,
       intensity: t.lightingIntensity,
       tint: t.lightingTint,
+      ambientLight: t.lightingAmbientLight,
+      ambientIntensity: t.lightingAmbientIntensity,
       paMode: t.lightingPaMode,
       spotlights: t.lightingSpotlights,
       spotlightColor: t.lightingSpotlightColor,

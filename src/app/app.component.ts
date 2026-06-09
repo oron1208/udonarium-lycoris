@@ -1035,7 +1035,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
   private syncAdvancedRoomUiClass() {
     const viewTable = TableSelecter.instance && TableSelecter.instance.viewTable ? TableSelecter.instance.viewTable : ObjectStore.instance.getObjects(GameTable)[0];
-    const enabled = !!viewTable && viewTable.roomMode === 'advanced';
+    const enabled = !!viewTable && viewTable.initialObjectsPlaced && viewTable.roomMode === 'advanced';
     this.isAdvancedRoom = enabled;
     document.body.classList.toggle('udonarium-advanced-room', enabled);
   }
