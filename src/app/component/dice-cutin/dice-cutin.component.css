@@ -1,0 +1,312 @@
+.dice-cutin-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.cutin-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 28px;
+  background: linear-gradient(135deg, rgba(20, 20, 40, 0.95), rgba(30, 30, 60, 0.95));
+  border: 2px solid rgba(100, 140, 255, 0.6);
+  border-radius: 16px;
+  box-shadow: 0 0 30px rgba(80, 120, 255, 0.4), 0 8px 32px rgba(0, 0, 0, 0.6);
+  min-width: 320px;
+  max-width: 700px;
+  animation: cardSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cutin-card.critical {
+  border-color: rgba(255, 215, 0, 0.8);
+  box-shadow: 0 0 40px rgba(255, 215, 0, 0.5), 0 0 80px rgba(255, 165, 0, 0.3);
+  background: linear-gradient(135deg, rgba(40, 30, 10, 0.95), rgba(50, 40, 15, 0.95));
+}
+
+.cutin-card.fumble {
+  border-color: rgba(255, 50, 50, 0.8);
+  box-shadow: 0 0 40px rgba(255, 50, 50, 0.5), 0 0 80px rgba(200, 0, 0, 0.3);
+  background: linear-gradient(135deg, rgba(40, 10, 10, 0.95), rgba(50, 15, 15, 0.95));
+}
+
+@keyframes cardSlideIn {
+  0% { transform: translateY(60px) scale(0.8); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.character-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 100px;
+  max-width: 120px;
+}
+
+.character-image {
+  width: auto;
+  height: auto;
+  max-width: 100px;
+  max-height: 140px;
+  object-fit: contain;
+  border: none;
+  border-radius: 8px;
+  box-shadow: none;
+  opacity: 0.7;
+  animation: charPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes charPop {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.character-name {
+  font-size: 11px;
+  color: #c0c8e0;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.character-placeholder {
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #3a4a6b, #2a3550);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 900;
+  color: #c0d0ff;
+  opacity: 0.7;
+  animation: charPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.dice-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.dice-expression {
+  font-size: 13px;
+  color: #8898c0;
+  font-family: 'Courier New', monospace;
+}
+
+.dice-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dice {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  animation: diceRollGeneric 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* d4 - triangle tumble */
+.dice-d4 {
+  animation-name: diceRollD4;
+}
+@keyframes diceRollD4 {
+  0%   { transform: rotate(0deg) scale(0.2) translateY(-30px); opacity: 0; }
+  25%  { transform: rotate(120deg) scale(1.3) translateY(5px); opacity: 0.7; }
+  50%  { transform: rotate(240deg) scale(0.9) translateY(-3px); opacity: 1; }
+  75%  { transform: rotate(330deg) scale(1.05) translateY(1px); }
+  100% { transform: rotate(360deg) scale(1) translateY(0); opacity: 1; }
+}
+
+/* d6 - box bounce */
+.dice-d6 {
+  animation-name: diceRollD6;
+}
+@keyframes diceRollD6 {
+  0%   { transform: rotateX(0) rotateZ(0) scale(0.2); opacity: 0; }
+  20%  { transform: rotateX(180deg) rotateZ(90deg) scale(1.3); opacity: 0.6; }
+  40%  { transform: rotateX(360deg) rotateZ(180deg) scale(0.85) translateY(-8px); opacity: 0.9; }
+  60%  { transform: rotateX(540deg) rotateZ(270deg) scale(1.1) translateY(3px); opacity: 1; }
+  80%  { transform: rotateX(660deg) rotateZ(330deg) scale(0.97) translateY(-1px); }
+  100% { transform: rotateX(720deg) rotateZ(360deg) scale(1) translateY(0); opacity: 1; }
+}
+
+/* d8 - diamond flip */
+.dice-d8 {
+  animation-name: diceRollD8;
+}
+@keyframes diceRollD8 {
+  0%   { transform: rotate(0deg) scaleY(0.3) scale(0.2); opacity: 0; }
+  30%  { transform: rotate(180deg) scaleY(1.4) scale(1.2); opacity: 0.7; }
+  60%  { transform: rotate(360deg) scaleY(0.8) scale(0.9); opacity: 1; }
+  100% { transform: rotate(720deg) scaleY(1) scale(1); opacity: 1; }
+}
+
+/* d10 - pentagon spin */
+.dice-d10 {
+  animation-name: diceRollD10;
+}
+@keyframes diceRollD10 {
+  0%   { transform: rotateY(0) scale(0.2) translateX(-20px); opacity: 0; }
+  25%  { transform: rotateY(180deg) scale(1.3) translateX(10px); opacity: 0.7; }
+  50%  { transform: rotateY(360deg) scale(0.85) translateX(-5px); opacity: 1; }
+  75%  { transform: rotateY(540deg) scale(1.05) translateX(2px); }
+  100% { transform: rotateY(720deg) scale(1) translateX(0); opacity: 1; }
+}
+
+/* d12 - polygon tumble */
+.dice-d12 {
+  animation-name: diceRollD12;
+}
+@keyframes diceRollD12 {
+  0%   { transform: rotate(0deg) rotateX(0) scale(0.2); opacity: 0; }
+  25%  { transform: rotate(90deg) rotateX(90deg) scale(1.3); opacity: 0.6; }
+  50%  { transform: rotate(180deg) rotateX(180deg) scale(0.85) translateY(-5px); opacity: 1; }
+  75%  { transform: rotate(270deg) rotateX(270deg) scale(1.05); }
+  100% { transform: rotate(360deg) rotateX(360deg) scale(1); opacity: 1; }
+}
+
+/* d20 - icosahedron spin */
+.dice-d20 {
+  animation-name: diceRollD20;
+}
+@keyframes diceRollD20 {
+  0%   { transform: rotateX(0) rotateY(0) scale(0.2); opacity: 0; }
+  20%  { transform: rotateX(120deg) rotateY(60deg) scale(1.4); opacity: 0.5; }
+  40%  { transform: rotateX(240deg) rotateY(180deg) scale(0.8) translateY(-10px); opacity: 0.8; }
+  60%  { transform: rotateX(360deg) rotateY(270deg) scale(1.15) translateY(4px); opacity: 1; }
+  80%  { transform: rotateX(480deg) rotateY(330deg) scale(0.95) translateY(-1px); }
+  100% { transform: rotateX(720deg) rotateY(360deg) scale(1) translateY(0); opacity: 1; }
+}
+
+/* d100 - double spin (2d10) */
+.dice-d100 {
+  animation-name: diceRollD100;
+}
+@keyframes diceRollD100 {
+  0%   { transform: rotateY(0) rotateX(0) scale(0.2); opacity: 0; }
+  30%  { transform: rotateY(360deg) rotateX(180deg) scale(1.3); opacity: 0.6; }
+  60%  { transform: rotateY(720deg) rotateX(360deg) scale(0.85) translateY(-5px); opacity: 1; }
+  100% { transform: rotateY(1080deg) rotateX(720deg) scale(1); opacity: 1; }
+}
+
+/* fallback */
+@keyframes diceRollGeneric {
+  0%   { transform: rotate(0) scale(0.2); opacity: 0; }
+  30%  { transform: rotate(180deg) scale(1.3); opacity: 0.7; }
+  60%  { transform: rotate(360deg) scale(0.9); opacity: 1; }
+  100% { transform: rotate(720deg) scale(1); opacity: 1; }
+}
+
+.dice-body {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.dice-body svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+}
+
+.dice-value-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 16px;
+  font-weight: 900;
+  color: #1a1a2e;
+  font-family: 'Arial Black', sans-serif;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+  z-index: 1;
+  animation: valueReveal 0.15s ease-out 0.5s both;
+}
+
+.dice-d4 .dice-value-overlay {
+  margin-top: 6px;
+}
+
+@keyframes valueReveal {
+  0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+.result-line {
+  font-size: 12px;
+  color: #8898c0;
+  font-family: 'Courier New', monospace;
+}
+
+.total-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.total-label {
+  font-size: 12px;
+  color: #8898c0;
+}
+
+.total-value {
+  font-size: 28px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0 10px rgba(100, 160, 255, 0.6), 0 2px 4px rgba(0, 0, 0, 0.5);
+  font-family: 'Arial Black', sans-serif;
+  animation: totalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) 0.6s both;
+}
+
+.total-value.crit {
+  color: #ffd700;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 0 40px rgba(255, 165, 0, 0.4);
+}
+
+.total-value.fumb {
+  color: #ff4444;
+  text-shadow: 0 0 20px rgba(255, 50, 50, 0.8), 0 0 40px rgba(200, 0, 0, 0.4);
+}
+
+@keyframes totalPop {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.critical-badge {
+  font-size: 14px;
+  color: #ffd700;
+  font-weight: bold;
+  animation: badgePulse 0.6s ease-in-out infinite alternate;
+}
+
+.fumble-badge {
+  font-size: 14px;
+  color: #ff4444;
+  font-weight: bold;
+  animation: badgePulse 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes badgePulse {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.15); }
+}

@@ -162,6 +162,9 @@ export class CutInListComponent implements OnInit, OnDestroy {
   get chatActivate(): boolean { return this.isEditable ? this.selectedCutIn.chatActivate : false ; }
   set chatActivate(chatActivate: boolean) { if (this.isEditable) this.selectedCutIn.chatActivate = chatActivate; }
 
+  get diceActivate(): boolean { return this.isEditable ? this.selectedCutIn.diceActivate : false ; }
+  set diceActivate(diceActivate: boolean) { if (this.isEditable) this.selectedCutIn.diceActivate = diceActivate; }
+
   get cutInOutTime(): number { return this.isEditable ? this.selectedCutIn.outTime : 0 ; }
   set cutInOutTime(cutInOutTime: number) { if (this.isEditable) this.selectedCutIn.outTime = cutInOutTime; }
 

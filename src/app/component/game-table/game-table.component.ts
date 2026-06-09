@@ -37,6 +37,24 @@ import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { Config } from '@udonarium/config';
 
 type TableDrawingTool = 'pen' | 'line' | 'rect' | 'ellipse' | 'triangle';
+type TableDrawingLayer = 'drawing' | 'wall';
+
+export type TableLayerVisibility = {
+  background: boolean;
+  tableImage: boolean;
+  grid: boolean;
+  terrain: boolean;
+  mask: boolean;
+  textNote: boolean;
+  card: boolean;
+  range: boolean;
+  dice: boolean;
+  character: boolean;
+  cursor: boolean;
+  drawing: boolean;
+  wallDrawing: boolean;
+  lighting: boolean;
+};
 
 interface TableDrawingStroke {
   color: string;
@@ -67,6 +85,24 @@ interface TableLightSource {
   styleUrls: ['./game-table.component.css'],
 })
 export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
+  static readonly DEFAULT_LAYER_VISIBILITY: TableLayerVisibility = {
+    background: true,
+    tableImage: true,
+    grid: true,
+    terrain: true,
+    mask: true,
+    textNote: true,
+    card: true,
+    range: true,
+    dice: true,
+    character: true,
+    cursor: true,
+    drawing: true,
+    wallDrawing: true,
+    lighting: true,
+  };
+  private static readonly LAYER_VISIBILITY_KEY = 'udonarium.advanced.layerVisibility.v1';
+
   @ViewChild('root', { static: true }) rootElementRef: ElementRef<HTMLElement>;
   @ViewChild('gameTable', { static: true }) gameTable: ElementRef<HTMLElement>;
   @ViewChild('gameObjects', { static: true }) gameObjects: ElementRef<HTMLElement>;
@@ -122,6 +158,8 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   isDrawingToolOpen: boolean = false;
   isDrawingMode: boolean = false;
   isDrawingEraser: boolean = false;
+  drawingLayer: TableDrawingLayer = 'drawing';
+  layerVisibility: TableLayerVisibility = GameTableComponent.loadLayerVisibility();
   drawingTool: TableDrawingTool = 'pen';
   drawingFill: boolean = false;
   drawingColor: string = '#ff3333';
@@ -203,6 +241,18 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
       .on('GM_MODE_CHANGED', event => {
         this.changeDetector.markForCheck();
       })
+      .on('TABLE_LAYER_VISIBILITY_CHANGED', event => {
+        this.ngZone.run(() => {
+          this.layerVisibility = {
+            ...GameTableComponent.DEFAULT_LAYER_VISIBILITY,
+            ...(event.data?.visibility || {})
+          };
+          try { localStorage.setItem(GameTableComponent.LAYER_VISIBILITY_KEY, JSON.stringify(this.layerVisibility)); } catch (_) { }
+          this.redrawDrawingCanvas();
+          this.renderLighting();
+          this.changeDetector.markForCheck();
+        });
+      })
       .on('DRAG_LOCKED_OBJECT', event => {
         this.isTableTransformMode = true;
         this.pointerDeviceService.isDragging = false;
@@ -269,6 +319,26 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     this.setTransform(0, 0, 0, 0, 0, 0);
     this.coordinateService.tabletopOriginElement = this.gameObjects.nativeElement;
     this.startLightingLoop();
+  }
+
+  private static loadLayerVisibility(): TableLayerVisibility {
+    try {
+      const raw = localStorage.getItem(GameTableComponent.LAYER_VISIBILITY_KEY);
+      const saved = raw ? JSON.parse(raw) : {};
+      return { ...GameTableComponent.DEFAULT_LAYER_VISIBILITY, ...(saved || {}) };
+    } catch (_) {
+      return { ...GameTableComponent.DEFAULT_LAYER_VISIBILITY };
+    }
+  }
+
+  isLayerPanelOpen: boolean = false;
+
+  toggleLayerVisibility(key: keyof TableLayerVisibility) {
+    this.layerVisibility[key] = !this.layerVisibility[key];
+    try { localStorage.setItem(GameTableComponent.LAYER_VISIBILITY_KEY, JSON.stringify(this.layerVisibility)); } catch (_) {}
+    this.redrawDrawingCanvas();
+    this.renderLighting();
+    this.changeDetector.markForCheck();
   }
 
   ngOnDestroy() {
@@ -570,8 +640,9 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   clearDrawing() {
-    if (!window.confirm('テーブルのお絵描きを全消ししますか？')) return;
-    this.currentTable.drawingData = '[]';
+    const layerName = this.drawingLayer === 'wall' ? '壁ペン' : '描画ペン';
+    if (!window.confirm(`${layerName}を全消ししますか？`)) return;
+    this.setDrawingDataForLayer(this.drawingLayer, []);
     this.currentTable.update();
     this.redrawDrawingCanvas();
   }
@@ -626,9 +697,9 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
 
     if (!this.isDrawing || !this.currentDrawingStroke) return;
     event.preventDefault();
-    const strokes = this.drawingStrokes;
+    const strokes = this.getDrawingStrokes(this.drawingLayer);
     strokes.push(this.currentDrawingStroke);
-    this.currentTable.drawingData = JSON.stringify(strokes.slice(-1000));
+    this.setDrawingDataForLayer(this.drawingLayer, strokes.slice(-1000));
     this.currentTable.update();
     this.currentDrawingStroke = null;
     this.isDrawing = false;
@@ -643,12 +714,26 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private get drawingStrokes(): TableDrawingStroke[] {
+    return this.getDrawingStrokes('drawing');
+  }
+
+  private get wallDrawingStrokes(): TableDrawingStroke[] {
+    return this.getDrawingStrokes('wall');
+  }
+
+  private getDrawingStrokes(layer: TableDrawingLayer): TableDrawingStroke[] {
     try {
-      const data = JSON.parse(this.currentTable.drawingData || '[]');
+      const raw = layer === 'wall' ? this.currentTable.wallDrawingData : this.currentTable.drawingData;
+      const data = JSON.parse(raw || '[]');
       return Array.isArray(data) ? data.filter(stroke => stroke && Array.isArray(stroke.points)) : [];
     } catch (e) {
       return [];
     }
+  }
+
+  private setDrawingDataForLayer(layer: TableDrawingLayer, strokes: TableDrawingStroke[]) {
+    if (layer === 'wall') this.currentTable.wallDrawingData = JSON.stringify(strokes);
+    else this.currentTable.drawingData = JSON.stringify(strokes);
   }
 
   private getDrawingPoint(event: PointerEvent): { x: number, y: number } {
@@ -662,13 +747,23 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     const context = canvas.getContext('2d');
     if (!context) return;
     context.clearRect(0, 0, canvas.width, canvas.height);
-    for (const stroke of this.drawingStrokes) this.drawStroke(stroke);
+    if (this.layerVisibility.drawing) {
+      for (const stroke of this.drawingStrokes) this.drawStroke(stroke);
+    }
+    if (this.layerVisibility.wallDrawing) {
+      for (const stroke of this.wallDrawingStrokes) this.drawStroke(stroke);
+    }
     if (extraStroke) this.drawStroke(extraStroke);
   }
 
   private drawStroke(stroke: TableDrawingStroke) {
     if (!stroke || stroke.points.length < 2) return;
     const canvas = this.drawingCanvas.nativeElement;
+    this.drawStrokeOnCanvas(canvas, stroke);
+  }
+
+  private drawStrokeOnCanvas(canvas: HTMLCanvasElement, stroke: TableDrawingStroke) {
+    if (!stroke || stroke.points.length < 2) return;
     const context = canvas.getContext('2d');
     if (!context) return;
     const tool = stroke.tool || 'pen';
@@ -872,8 +967,10 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     const target = this.getCharacterCenter(character, gridSize);
     const wallGrid = this.buildWallGrid(gridSize, this.currentTable.width * gridSize, this.currentTable.height * gridSize);
     const isLit = this.isPointLit(target.x, target.y, gridSize, wallGrid);
+    const isInSuperiorDarkness = this.isPointInSuperiorDarkness(target.x, target.y, gridSize, wallGrid);
     for (const sightCharacter of sightCharacters) {
       const mode = sightCharacter.sightMode || 'normal';
+      if (isInSuperiorDarkness && mode !== 'superiorDarkvision') continue;
       if (mode === 'normal' && !isLit) continue;
       if (this.isPointInSightOfCharacter(target.x, target.y, sightCharacter, gridSize, wallGrid)) return true;
     }
@@ -888,11 +985,12 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   private isPointInSightOfCharacter(x: number, y: number, character: GameCharacter, gridSize: number, wallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null): boolean {
     const origin = this.getCharacterCenter(character, gridSize);
     const radius = Math.max(1, character.sightRadius || 1) * gridSize;
-    if (Math.hypot(x - origin.x, y - origin.y) > radius) return false;
+    if (!character.sightUnlimited && Math.hypot(x - origin.x, y - origin.y) > radius) return false;
     return !this.isRayBlocked(origin.x, origin.y, x, y, wallGrid);
   }
 
   private isPointLit(x: number, y: number, gridSize: number, wallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null): boolean {
+    if (this.isAmbientLightEnabled()) return true;
     if (!this.currentTable.lightingEnabled || !this.currentTable.lightingNightMode) return false;
     const sources = this.collectLightSourcesForPointCheck(gridSize);
     for (const light of sources) {
@@ -1009,7 +1107,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     const table = this.currentTable;
     if (!table) return;
 
-    const active = (table.lightingEnabled && table.lightingNightMode) || this.isAdvancedVisionActive;
+    const active = this.layerVisibility.lighting && ((table.lightingEnabled && table.lightingNightMode) || this.isAdvancedVisionActive);
     if (!active) {
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1054,6 +1152,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     if (table.roomMode === 'advanced') {
       this.drawAdvancedVisibility(ctx, gridSize, wallGrid, w, h);
     } else {
+      this.drawAmbientLight(ctx, w, h);
       this.drawLightSources(ctx, gridSize, wallGrid);
     }
 
@@ -1074,7 +1173,9 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     const normalCtx = normalSight.getContext('2d');
     this.drawSightSources(normalCtx, gridSize, wallGrid, ['normal']);
 
-    if (this.currentTable.lightingEnabled && this.currentTable.lightingNightMode) {
+    if (this.isAmbientLightEnabled()) {
+      // 環境光がある時は、通常視界を「明るい場所」として扱う。
+    } else if (this.currentTable.lightingEnabled && this.currentTable.lightingNightMode) {
       const lightMask = this.createMaskCanvas(w, h);
       const lightCtx = lightMask.getContext('2d');
       this.drawLightSources(lightCtx, gridSize, wallGrid);
@@ -1084,13 +1185,20 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     } else {
       normalCtx.clearRect(0, 0, w, h);
     }
+    this.subtractSuperiorDarkness(normalCtx, gridSize, wallGrid);
 
     const darkvisionSight = this.createMaskCanvas(w, h);
     const darkvisionCtx = darkvisionSight.getContext('2d');
-    this.drawSightSources(darkvisionCtx, gridSize, wallGrid, ['darkvision', 'superiorDarkvision']);
+    this.drawSightSources(darkvisionCtx, gridSize, wallGrid, ['darkvision']);
+    this.subtractSuperiorDarkness(darkvisionCtx, gridSize, wallGrid);
+
+    const superiorDarkvisionSight = this.createMaskCanvas(w, h);
+    const superiorDarkvisionCtx = superiorDarkvisionSight.getContext('2d');
+    this.drawSightSources(superiorDarkvisionCtx, gridSize, wallGrid, ['superiorDarkvision']);
 
     ctx.drawImage(normalSight, 0, 0);
     ctx.drawImage(darkvisionSight, 0, 0);
+    ctx.drawImage(superiorDarkvisionSight, 0, 0);
   }
 
   private createMaskCanvas(w: number, h: number): HTMLCanvasElement {
@@ -1123,12 +1231,14 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   private createSightSource(character: GameCharacter, gridSize: number): TableLightSource {
     const mode = character.sightMode || 'normal';
     const radius = Math.max(1, character.sightRadius || (mode === 'superiorDarkvision' ? 24 : mode === 'darkvision' ? 12 : 6));
+    const table = this.currentTable;
+    const unlimitedRadius = table ? Math.hypot(table.width * gridSize, table.height * gridSize) / gridSize : radius;
     const intensity = mode === 'superiorDarkvision' ? 0.78 : mode === 'darkvision' ? 0.58 : 0.92;
     const color = mode === 'superiorDarkvision' ? '#8fd3ff' : mode === 'darkvision' ? '#9fb2c8' : '#fff7d6';
     return {
       x: character.location.x + Math.max(1, character.size || 1) * gridSize / 2,
       y: character.location.y + Math.max(1, character.size || 1) * gridSize / 2,
-      r: Math.max(10, radius * gridSize),
+      r: Math.max(10, (character.sightUnlimited ? unlimitedRadius : radius) * gridSize),
       intensity,
       color,
       type: `sight-${mode}`,
@@ -1215,6 +1325,66 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
         this.drawLightFill(ctx, light);
       }
     }
+  }
+
+  private collectSuperiorDarknessSources(gridSize: number): TableLightSource[] {
+    const sources: TableLightSource[] = [];
+    for (const c of ObjectStore.instance.getObjects<GameCharacter>(GameCharacter)) {
+      if (!c.superiorDarknessEnabled || c.location.name !== 'table') continue;
+      const center = this.getCharacterCenter(c, gridSize);
+      sources.push({
+        x: center.x,
+        y: center.y,
+        r: Math.max(10, (c.superiorDarknessRadius || 3) * gridSize),
+        intensity: 1,
+        color: '#000000',
+        type: 'superiorDarkness',
+        shape: 'circle',
+        coneAngle: 360,
+        direction: 0,
+        flat: true,
+        coneCoreRadius: 0
+      });
+    }
+    return sources;
+  }
+
+  private drawSuperiorDarknessSources(ctx: CanvasRenderingContext2D, gridSize: number, wallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null) {
+    for (const darkness of this.collectSuperiorDarknessSources(gridSize)) {
+      if (wallGrid) this.drawLightWithRaycast(ctx, darkness, wallGrid);
+      else this.drawLightFill(ctx, darkness, false);
+    }
+  }
+
+  private subtractSuperiorDarkness(ctx: CanvasRenderingContext2D, gridSize: number, wallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null) {
+    const sources = this.collectSuperiorDarknessSources(gridSize);
+    if (sources.length < 1) return;
+    ctx.globalCompositeOperation = 'destination-out';
+    for (const darkness of sources) {
+      if (wallGrid) this.drawLightWithRaycast(ctx, darkness, wallGrid);
+      else this.drawLightFill(ctx, darkness, false);
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  private isPointInSuperiorDarkness(x: number, y: number, gridSize: number, wallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null): boolean {
+    for (const darkness of this.collectSuperiorDarknessSources(gridSize)) {
+      if (!this.isPointInsideLightShape(x, y, darkness)) continue;
+      if (!this.isRayBlocked(darkness.x, darkness.y, x, y, wallGrid)) return true;
+    }
+    return false;
+  }
+
+  private isAmbientLightEnabled(): boolean {
+    const table = this.currentTable;
+    return !!table?.lightingAmbientLight && 0 < (table.lightingAmbientIntensity || 0);
+  }
+
+  private drawAmbientLight(ctx: CanvasRenderingContext2D, w: number, h: number) {
+    if (!this.isAmbientLightEnabled()) return;
+    const alpha = Math.max(0, Math.min(1, this.currentTable.lightingAmbientIntensity || 0));
+    ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+    ctx.fillRect(0, 0, w, h);
   }
 
   /** GMモード用: 暗幕なしで光源のグローだけ描く */
@@ -1579,29 +1749,37 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
           grid[gy * cols + gx] = 1;
     }
 
-    // ペン描画壁（縮小サンプリング）
-    const table = this.currentTable;
-    if (table?.drawingAsWall) {
-      const drawingCanvas = this.drawingCanvas?.nativeElement;
-      if (drawingCanvas && drawingCanvas.width > 0 && drawingCanvas.height > 0) {
-        const dCtx = drawingCanvas.getContext('2d');
-        const imgData = dCtx.getImageData(0, 0, drawingCanvas.width, drawingCanvas.height);
+    // 壁ペン描画壁（縮小サンプリング）
+    const wallCanvas = this.createWallDrawingCanvas(canvasW, canvasH);
+    if (wallCanvas) {
+        const dCtx = wallCanvas.getContext('2d');
+        const imgData = dCtx.getImageData(0, 0, wallCanvas.width, wallCanvas.height);
         const pixels = imgData.data;
-        const dw = drawingCanvas.width;
+        const dw = wallCanvas.width;
         for (let gy = 0; gy < rows; gy++) {
           for (let gx = 0; gx < cols; gx++) {
             const px = Math.min(gx * cellSize, dw - 1);
-            const py = Math.min(gy * cellSize, drawingCanvas.height - 1);
+            const py = Math.min(gy * cellSize, wallCanvas.height - 1);
             if (pixels[(py * dw + px) * 4 + 3] > 10) {
               grid[gy * cols + gx] = 1;
               hasWalls = true;
             }
           }
         }
-      }
     }
 
     return hasWalls ? { grid, cellSize, cols, rows } : null;
+  }
+
+  private createWallDrawingCanvas(width: number, height: number): HTMLCanvasElement | null {
+    if (!this.layerVisibility.wallDrawing) return null;
+    const strokes = this.wallDrawingStrokes;
+    if (strokes.length < 1) return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    for (const stroke of strokes) this.drawStrokeOnCanvas(canvas, stroke);
+    return canvas;
   }
 
   private drawLaserWithRaycast(

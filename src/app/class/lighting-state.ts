@@ -3,6 +3,8 @@ export interface LightingEffectState {
   nightMode: boolean;
   intensity: number;
   tint: string;
+  ambientLight: boolean;
+  ambientIntensity: number;
   paMode: boolean;
   spotlights: boolean;
   spotlightColor: string;
@@ -23,6 +25,8 @@ export const DEFAULT_LIGHTING_STATE: LightingEffectState = {
   nightMode: true,
   intensity: 0.55,
   tint: '#00030c',
+  ambientLight: false,
+  ambientIntensity: 0.35,
   paMode: false,
   spotlights: false,
   spotlightColor: '#fff3c4',

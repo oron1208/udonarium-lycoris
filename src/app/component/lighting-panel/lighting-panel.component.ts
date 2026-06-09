@@ -13,6 +13,7 @@ import { PanelService } from 'service/panel.service';
 export class LightingPanelComponent implements OnInit {
   state: LightingEffectState = {
     enabled: false, nightMode: true, intensity: 0.55, tint: '#00030c',
+    ambientLight: false, ambientIntensity: 0.35,
     paMode: false, spotlights: false, spotlightColor: '#fff3c4', spotlightCount: 2,
     lasers: false, laserColor: '#4cf3ff', laserSpeed: 1,
     flames: false, flameLevel: 0.5, haze: false
@@ -56,6 +57,8 @@ export class LightingPanelComponent implements OnInit {
       nightMode: t.lightingNightMode,
       intensity: t.lightingIntensity,
       tint: t.lightingTint,
+      ambientLight: t.lightingAmbientLight,
+      ambientIntensity: t.lightingAmbientIntensity,
       paMode: t.lightingPaMode,
       spotlights: t.lightingSpotlights,
       spotlightColor: t.lightingSpotlightColor,
@@ -76,6 +79,8 @@ export class LightingPanelComponent implements OnInit {
     t.lightingNightMode = this.state.nightMode;
     t.lightingIntensity = this.state.intensity;
     t.lightingTint = this.state.tint;
+    t.lightingAmbientLight = this.state.ambientLight;
+    t.lightingAmbientIntensity = this.state.ambientIntensity;
     t.lightingPaMode = this.state.paMode;
     t.lightingSpotlights = this.state.spotlights;
     t.lightingSpotlightColor = this.state.spotlightColor;
@@ -99,13 +104,13 @@ export class LightingPanelComponent implements OnInit {
   setPreset(name: string) {
     switch (name) {
       case 'night':
-        this.update({ enabled: true, nightMode: true, intensity: 0.55, tint: '#00030c', haze: false, spotlights: false, lasers: false, flames: false, paMode: false });
+        this.update({ enabled: true, nightMode: true, intensity: 0.55, tint: '#00030c', ambientLight: false, ambientIntensity: 0.35, haze: false, spotlights: false, lasers: false, flames: false, paMode: false });
         break;
       case 'live':
-        this.update({ enabled: true, nightMode: true, intensity: 0.5, tint: '#00020a', haze: true, spotlights: true, spotlightCount: 3, lasers: true, flames: false, paMode: true });
+        this.update({ enabled: true, nightMode: true, intensity: 0.5, tint: '#00020a', ambientLight: true, ambientIntensity: 0.25, haze: true, spotlights: true, spotlightCount: 3, lasers: true, flames: false, paMode: true });
         break;
       case 'uo':
-        this.update({ enabled: true, nightMode: true, intensity: 0.45, tint: '#120300', haze: true, spotlights: true, spotlightColor: '#ff8a18', lasers: false, flames: true, flameLevel: 0.9, paMode: true });
+        this.update({ enabled: true, nightMode: true, intensity: 0.45, tint: '#120300', ambientLight: true, ambientIntensity: 0.2, haze: true, spotlights: true, spotlightColor: '#ff8a18', lasers: false, flames: true, flameLevel: 0.9, paMode: true });
         break;
       case 'off':
         this.update({ enabled: false });

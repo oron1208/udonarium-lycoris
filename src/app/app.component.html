@@ -8,7 +8,7 @@
 <vn-stage *ngIf="isVnStageVisible && vnStageReady"></vn-stage>
 <ui-panel [top]="0" [left]="0" [width]="105" [height]="470" [title]="'メニュー'" [showTitleButtons]="false">
   <nav>
-    <div *ngIf="isAdvancedRoom" class="advanced-room-badge">ADVANCED</div>
+    <div *ngIf="isAdvancedRoom" class="advanced-room-badge">ADVANCED<br><span class="advanced-badge-sub">視界管理・所有権管理・ダイス演出</span></div>
     <ul>
       <li (click)="open('PeerMenuComponent')">
         <a routerLink="/" routerLinkActive="active">
@@ -79,6 +79,7 @@
     </ul>
   </nav>
 </ui-panel>
+<dice-cutin></dice-cutin>
 <div #modalLayer></div>
 <macro-hotbar></macro-hotbar>
 <network-indicator class="networkIndicator"></network-indicator>

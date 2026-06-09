@@ -117,8 +117,11 @@
         </div>
         <div>
           視界半径（マス）
-          <input type="range" min="1" max="60" step="0.5" [(ngModel)]="tabletopObject.sightRadius" style="width:10em;">
-          <input class="is-caret" [(ngModel)]="tabletopObject.sightRadius" type="number" min="1" max="60" step="0.5" style="width:5em;color:#555;">
+          <input type="range" min="1" max="60" step="0.5" [(ngModel)]="tabletopObject.sightRadius" [disabled]="tabletopObject.sightUnlimited" style="width:10em;">
+          <input class="is-caret" [(ngModel)]="tabletopObject.sightRadius" type="number" min="1" max="60" step="0.5" [disabled]="tabletopObject.sightUnlimited" style="width:5em;color:#555;">
+          <label style="margin-left:8px;">無限
+            <input type="checkbox" [(ngModel)]="tabletopObject.sightUnlimited" name="sightUnlimited">
+          </label>
         </div>
         <div style="font-size:12px;line-height:1.5;">
           通常視界は明るめ、暗視は薄く、上級暗視は広く強めに視界を開きます。壁指定は照明と同じ判定を使います。
@@ -216,6 +219,25 @@
             光の色 <input type="color" [(ngModel)]="tabletopObject.lightColor" name="lightColor">
           </div>
         </ng-container>
+        <div style="border-top:1px solid #777;margin-top:8px;padding-top:8px;">
+          <b>上級暗闇設定</b>
+          <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
+            <label style="cursor:pointer;">
+              上級暗闇を発生させる
+              <input type="checkbox" [(ngModel)]="tabletopObject.superiorDarknessEnabled" name="superiorDarknessEnabled">
+            </label>
+          </div>
+          <ng-container *ngIf="tabletopObject.superiorDarknessEnabled">
+            <div>
+              暗闇半径（マス）
+              <input type="range" min="1" max="15" step="0.5" [(ngModel)]="tabletopObject.superiorDarknessRadius" style="width:10em;">
+              <input class="is-caret" [(ngModel)]="tabletopObject.superiorDarknessRadius" type="number" min="1" max="15" step="0.5" style="width:5em;color:#555;">
+            </div>
+            <div style="font-size:12px;line-height:1.5;">
+              通常視界と暗視を遮断します。上級暗視だけがこの暗闇を見通せます。
+            </div>
+          </ng-container>
+        </div>
       </div>
     </div>
   </ng-container>

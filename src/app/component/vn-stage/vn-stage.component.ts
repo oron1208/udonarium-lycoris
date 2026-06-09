@@ -1,6 +1,6 @@
 import { Component, ElementRef, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
 
-import { ChatMessage } from '@udonarium/chat-message';
+import { ChatMessage, ChatMessageTargetContext } from '@udonarium/chat-message';
 import { ChatTab } from '@udonarium/chat-tab';
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
@@ -545,6 +545,46 @@ export class VnStageComponent implements OnInit, OnDestroy {
     try { localStorage.setItem('udonarium.vnStage.sendPortrait.v1', this.sendPortrait ? '1' : 'false'); } catch (_) { }
   }
 
+  private targeted(gameCharacter: GameCharacter): boolean {
+    if (gameCharacter.location.name != 'table') return false;
+    return gameCharacter.targeted;
+  }
+
+  private targetedGameCharacterList(): GameCharacter[] {
+    return ObjectStore.instance
+      .getObjects<GameCharacter>(GameCharacter)
+      .filter(character => this.targeted(character));
+  }
+
+  private prepareVnChatText(rawText: string, character: GameCharacter): { text: string, messageTargetContext: ChatMessageTargetContext[] } {
+    const palette = character.chatPalette;
+    if (!palette) {
+      return { text: rawText, messageTargetContext: [{ text: rawText, object: null }] };
+    }
+
+    if (palette.checkTargetCharactor(rawText)) {
+      const targets = this.targetedGameCharacterList();
+      if (targets.length < 1) {
+        return { text: '対象が未選択です', messageTargetContext: [] };
+      }
+
+      const evaluatedTexts: string[] = [];
+      const messageTargetContext: ChatMessageTargetContext[] = [];
+      let first = true;
+      for (let target of targets) {
+        const targetText = first ? rawText : DiceBot.deleteMyselfResourceBuff(rawText);
+        const evaluated = palette.evaluate(targetText, character.rootDataElement, target);
+        evaluatedTexts.push(`${evaluated} [${target.name}]`);
+        messageTargetContext.push({ text: evaluated, object: target });
+        first = false;
+      }
+      return { text: evaluatedTexts.join('\n'), messageTargetContext };
+    }
+
+    const evaluated = palette.evaluate(rawText, character.rootDataElement);
+    return { text: evaluated, messageTargetContext: [{ text: evaluated, object: null }] };
+  }
+
   sendVnChat() {
     const text = this.inputText.trim();
     if (!text) return;
@@ -558,14 +598,16 @@ export class VnStageComponent implements OnInit, OnDestroy {
     const tachieNum = shouldSendPortrait && character instanceof GameCharacter
       ? this.selectedTachieIndex : null;
 
-    // Evaluate palette variables like hotbar does
     let evaluatedText = text;
+    let messageTargetContext: ChatMessageTargetContext[] = [{ text, object: null }];
     let gameType = this.selectedDiceBot || 'DiceBot';
     let messageColor: string = null;
     if (character instanceof GameCharacter) {
       const palette = character.chatPalette;
+      const prepared = this.prepareVnChatText(text, character);
+      evaluatedText = prepared.text;
+      messageTargetContext = prepared.messageTargetContext;
       if (palette) {
-        evaluatedText = palette.evaluate(text, character.rootDataElement);
         if (!this.selectedDiceBot || this.selectedDiceBot === 'DiceBot') {
           gameType = palette.dicebot || 'DiceBot';
         }
@@ -588,10 +630,10 @@ export class VnStageComponent implements OnInit, OnDestroy {
 
     if (gameType && gameType !== 'DiceBot') {
       DiceBot.loadGameSystemAsync(gameType).then(gs => {
-        this.chatMessageService.sendMessage(chatTab, evaluatedText, gs, this.selectedCharacterId, null, tachieNum, messageColor);
+        this.chatMessageService.sendMessage(chatTab, evaluatedText, gs, this.selectedCharacterId, null, tachieNum, messageColor, messageTargetContext);
       });
     } else {
-      this.chatMessageService.sendMessage(chatTab, evaluatedText, null, this.selectedCharacterId, null, tachieNum, messageColor);
+      this.chatMessageService.sendMessage(chatTab, evaluatedText, null, this.selectedCharacterId, null, tachieNum, messageColor, messageTargetContext);
     }
     this.inputText = '';
     this.diceCounters.clear();
@@ -732,7 +774,9 @@ export class VnStageComponent implements OnInit, OnDestroy {
     if (!(character instanceof GameCharacter)) return;
     const palette = character.chatPalette;
     if (!palette) return;
-    const evaluated = palette.evaluate(line, character.rootDataElement, character);
+    const prepared = this.prepareVnChatText(line, character);
+    const evaluated = prepared.text;
+    const messageTargetContext = prepared.messageTargetContext;
     if (!evaluated) return;
     const chatTab = this.selectedTab || this.chatTabs[0];
     if (!chatTab) return;
@@ -756,10 +800,10 @@ export class VnStageComponent implements OnInit, OnDestroy {
 
     if (gameType && gameType !== 'DiceBot') {
       DiceBot.loadGameSystemAsync(gameType).then(gs => {
-        this.chatMessageService.sendMessage(chatTab, evaluated, gs, this.selectedCharacterId, null, tachieNum, messageColor);
+        this.chatMessageService.sendMessage(chatTab, evaluated, gs, this.selectedCharacterId, null, tachieNum, messageColor, messageTargetContext);
       });
     } else {
-      this.chatMessageService.sendMessage(chatTab, evaluated, null, this.selectedCharacterId, null, tachieNum, messageColor);
+      this.chatMessageService.sendMessage(chatTab, evaluated, null, this.selectedCharacterId, null, tachieNum, messageColor, messageTargetContext);
     }
     this.refreshChatLogFade();
     this.refreshPaletteFade();

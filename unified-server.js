@@ -500,7 +500,15 @@ function relayResyncRequest(ws) {
 }
 
 function serveStatic(req, res) {
-  let urlPath = decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, '');
+  let rawPath;
+  try {
+    rawPath = decodeURIComponent(req.url.split('?')[0]);
+  } catch (e) {
+    res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('Bad Request: malformed URI');
+    return;
+  }
+  let urlPath = rawPath.replace(/^\/+/, '');
   if (!urlPath) urlPath = 'index.html';
   const safePath = path.normalize(urlPath).replace(/^(\.\.[/\\])+/, '');
   const filePath = path.join(WEB_ROOT, safePath);
@@ -735,7 +743,8 @@ function getPeerDetails() {
 async function handleDeveloperClientApi(req, res, requestPath) {
   if (req.method === 'GET' && requestPath.startsWith('/api/dev/join-room/')) {
     cleanupDeveloperJoinTokens();
-    const token = decodeURIComponent(requestPath.slice('/api/dev/join-room/'.length));
+    let token;
+    try { token = decodeURIComponent(requestPath.slice('/api/dev/join-room/'.length)); } catch (e) { sendJson(res, 400, { ok: false, error: 'malformed-uri' }); return true; }
     const entry = developerJoinTokens.get(token);
     if (!entry) {
       sendJson(res, 404, { ok: false, error: 'join-token-not-found' });
@@ -860,7 +869,8 @@ async function handleDeveloperApi(req, res, requestPath) {
 
     if (req.method === 'GET' && requestPath.startsWith('/api/dev/join-room/')) {
       cleanupDeveloperJoinTokens();
-      const token = decodeURIComponent(requestPath.slice('/api/dev/join-room/'.length));
+      let token;
+      try { token = decodeURIComponent(requestPath.slice('/api/dev/join-room/'.length)); } catch (e) { sendJson(res, 400, { ok: false, error: 'malformed-uri' }); return true; }
       const entry = developerJoinTokens.get(token);
       if (!entry) {
         sendJson(res, 404, { ok: false, error: 'join-token-not-found' });
@@ -1115,7 +1125,8 @@ function handleMediaPut(req, res, kind, hash) {
       return;
     }
     fs.renameSync(tmp, finalFile);
-    const name = decodeURIComponent(String(req.headers['x-file-name'] || hash));
+    let name;
+    try { name = decodeURIComponent(String(req.headers['x-file-name'] || hash)); } catch (e) { name = hash; }
     fs.writeFileSync(metaFile, JSON.stringify({ hash, kind, type: contentType, name, bytes, updatedAt: new Date().toISOString() }));
     console.log(`[media] save ${kind} hash=${hash} bytes=${bytes}`);
     res.writeHead(201, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache' });

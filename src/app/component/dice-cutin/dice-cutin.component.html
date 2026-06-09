@@ -1,0 +1,29 @@
+<div class="dice-cutin-overlay" *ngIf="active && data" [@cutinAnimation]>
+  <div class="cutin-card" [class.critical]="data.isCritical" [class.fumble]="data.isFumble">
+    <div class="character-section">
+      <img *ngIf="data.characterImage" [src]="data.characterImage | safe: 'resourceUrl'" class="character-image">
+      <div *ngIf="!data.characterImage" class="character-placeholder">{{data.characterName.charAt(0)}}</div>
+      <span class="character-name">{{data.characterName}}</span>
+    </div>
+    <div class="dice-section">
+      <div class="dice-expression">{{data.diceExpression}}</div>
+      <div class="dice-container">
+        <div *ngFor="let dice of data.diceResults; let i = index"
+             class="dice dice-{{dice.shape}}"
+             [style.animation-delay]="(i * 0.1) + 's'">
+          <div class="dice-body" [innerHTML]="getDiceSvgSafe(dice.shape)"></div>
+          <div class="dice-value-overlay">{{dice.value}}</div>
+        </div>
+      </div>
+      <div class="result-line" *ngIf="data.modifier">
+        <span class="modifier">{{diceValuesText}} {{data.modifier}}</span>
+      </div>
+      <div class="total-section">
+        <span class="total-label">結果</span>
+        <span class="total-value" [class.crit]="data.isCritical" [class.fumb]="data.isFumble">{{data.total}}</span>
+        <span class="critical-badge" *ngIf="data.isCritical">🎉 クリティカル！</span>
+        <span class="fumble-badge" *ngIf="data.isFumble">💀 ファンブル！</span>
+      </div>
+    </div>
+  </div>
+</div>

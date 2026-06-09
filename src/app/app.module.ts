@@ -83,6 +83,7 @@ import { VoteWindowComponent } from 'component/vote-window/vote-window.component
 import { VnStageComponent } from 'component/vn-stage/vn-stage.component';
 import { LightingLayerComponent } from 'component/lighting-layer/lighting-layer.component';
 import { LightingPanelComponent } from 'component/lighting-panel/lighting-panel.component';
+import { DiceCutinComponent } from 'component/dice-cutin/dice-cutin.component';
 import { OptionsPanelComponent } from 'component/options-panel/options-panel.component';
 
 import { AlarmMenuComponent } from 'component/alarm-menu/alarm-menu.component';
@@ -157,6 +158,7 @@ import { AppComponent } from './app.component';
     VnStageComponent,
     LightingLayerComponent,
     LightingPanelComponent,
+    DiceCutinComponent,
     OptionsPanelComponent,
 
     AlarmMenuComponent,

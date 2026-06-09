@@ -5,7 +5,7 @@ import { ChatTab } from '@udonarium/chat-tab';
 import { ChatTabList } from '@udonarium/chat-tab-list';
 import { ObjectSerializer } from '@udonarium/core/synchronize-object/object-serializer';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
-import { EventSystem } from '@udonarium/core/system';
+import { EventSystem, Network } from '@udonarium/core/system';
 import { DiceSymbol } from '@udonarium/dice-symbol';
 import { GameCharacter } from '@udonarium/game-character';
 import { GameTable } from '@udonarium/game-table';
@@ -117,6 +117,7 @@ export class TabletopService {
           gameObject.location.y = pointer.y - 25;
           gameObject.posZ = pointer.z;
           this.placeToTabletop(gameObject);
+          if (gameObject instanceof GameCharacter) this.offerAdvancedRoomOwnership(gameObject);
           SoundEffect.play(PresetSound.piecePut);
         } else if (gameObject instanceof ChatTab) {
 
@@ -207,6 +208,45 @@ export class TabletopService {
         gameObject.setLocation('table');
         break;
     }
+  }
+
+  private offerAdvancedRoomOwnership(character: GameCharacter) {
+    if (this.currentTable?.roomMode !== 'advanced') return;
+    if (this.hasJsonId(character.ownerPeerIds, Network.peerId) || this.hasJsonId(character.ownerUserIds, Network.peerContext?.userId)) return;
+
+    const name = character.name || 'このコマ';
+    if (!window.confirm(`${name}を自分のコマにしますか？\n自分のコマにすると、このコマの視界が自分の盤面に反映されます。`)) return;
+
+    character.ownerPeerIds = this.setJsonId(character.ownerPeerIds, Network.peerId, true);
+    character.ownerUserIds = this.setJsonId(character.ownerUserIds, Network.peerContext?.userId, true);
+    if (!character.sightEnabled) character.sightEnabled = true;
+    character.update();
+  }
+
+  private hasJsonId(raw: string, id: string): boolean {
+    if (!id) return false;
+    try {
+      const ids = JSON.parse(raw || '[]');
+      return Array.isArray(ids) && ids.map(value => String(value)).includes(id);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  private setJsonId(raw: string, id: string, enabled: boolean): string {
+    if (!id) return raw || '[]';
+    let ids: string[] = [];
+    try {
+      const parsed = JSON.parse(raw || '[]');
+      ids = Array.isArray(parsed) ? parsed.map(value => String(value)).filter(value => 0 < value.length) : [];
+    } catch (e) {
+      ids = [];
+    }
+
+    const next = new Set(ids);
+    if (enabled) next.add(id);
+    else next.delete(id);
+    return JSON.stringify(Array.from(next));
   }
 }
 
