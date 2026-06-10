@@ -1,93 +1,157 @@
-# ユドナリウムLycoris
+<div align="center">
 
-このプロジェクトはユドナリウムをカスタマイズするために分岐し作成しました
+<img src="docs-site/assets/favicon.png" width="64" height="64" alt="Lycoris icon">
 
-ユドナリウム（Udonarium）はWebブラウザで動作するボードゲームオンラインセッション支援ツールです。
-本家ユドナリウムの開発範囲は本家に著作権が有り、
-追加したコードは私円柱(entyu)あるいは私が組み込んだソースの作者に著作権があります。
-いずれにせよライセンスは本家のMITを引き継ぎます。
-名前混同を避けるため本開発版名称はudonarium_lycoris　ユドナリウムLycorisとします。
+# 🌸 ユドナリウムリコリス
 
-[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/TK11235/udonarium/blob/master/LICENSE)
+**Udonarium Lycoris** — ブラウザだけで、どこでもTRPGを。
 
+[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/oron1208/udonarium-lycoris/blob/main/LICENSE)
+[![GitHub release](https://img.shields.io/github/v/tag/oron1208/udonarium-lycoris?label=latest&color=e63946)](https://github.com/oron1208/udonarium-lycoris/releases)
+[![Made with Angular](https://img.shields.io/badge/Angular-12-dd0031?logo=angular)](https://angular.io/)
 
-■立ち絵
+### [▶ 今すぐ使う](https://udonarium-lycoris.ddns.net) · [📖 取り扱い説明書](https://udonarium-lycoris.ddns.net/docs/) · [💾 ダウンロード](https://github.com/oron1208/udonarium-lycoris/releases)
 
-■発言に色を付ける
+---
 
-■ログの書き出し、消去機能
+<img src="docs/images/hero-banner.png" width="100%" alt="ユドナリウムリコリス スクリーンショット">
 
-■カウンターリモコン
+</div>
 
-■バフデバフ表示
+## ✨ リコリスとは
 
-■ダイス表
+ユドナリウムリコリスは、[ユドナリウムリリィ（Cylinder Lily）](https://cylinder-lily.com) をベースに、**TRPGのオンラインセッションをもっと楽しく** をテーマに大幅な改修を加えたフォーク版です。
 
-■画像タグ
+原作者 [TK11235](https://github.com/TK11235/udonarium) とリリィ開発者の素晴らしい成果物に深く感謝します。
 
-■ポップアップ等のUI調整機能
+### 🔴 リコリス独自機能
 
-を追加実装しています。
+| 機能 | 説明 |
+|------|------|
+| 🕯️ **照明エンジン** | 松明・魔法の光・懐中電灯・レーザー。壁による光遮断もレイキャストで再現 |
+| 🎵 **ジュークボックス** | BGM・SE・環境音の3モード。ワンクリックで雰囲気をチェンジ |
+| 🎭 **VNモード** | ビジュアルノベル風の立ち絵表示。表情切り替えでシーンを彩る |
+| 🎲 **ダイスカットイン** | ダイスロール時の演出アニメーション |
+| 🧭 **コマ演出** | 正面マーク表示・回転操作・高度な部屋設定 |
+| 👁️ **視線・所有権** | ピースごとの所有権設定と視線管理 |
+| 📝 **更新ノート** | バージョン更新内容をアプリ内で確認可能 |
 
-![lily_sample](https://user-images.githubusercontent.com/61339319/95869259-26b41380-0da6-11eb-96fa-1e6c6858c531.png)
+---
 
+## 📸 スクリーンショット
 
----------以下本家からの一部抜粋です---------------
+<!-- TODO: 以下の画像を実際のスクショに差し替えてください -->
 
-https://github.com/TK11235/udonarium
+<table>
+<tr>
+<td align="center" width="50%">
 
-## サーバ設置
-ユーザ自身でWebサーバを用意し、そのサーバにユドナリウムLycorisを設置して利用することができます。  
-以下のファイルをダウンロードして解凍し、Webサーバに配置してください。  
-v1.05.0からYouTubeカットイン機能があります。YouTubeの規約もご確認ください。
+<!-- TODO: 照明システムのスクショ -->
+**🕯️ 照明システム**
+<!-- <img src="docs/images/lighting.png" width="100%"> -->
+<em>松明・レーザー・壁の光遮断</em>
 
+</td>
+<td align="center" width="50%">
 
-最新版v1.11.0
+<!-- TODO: ジュークボックスのスクショ -->
+**🎵 ジュークボックス**
+<!-- <img src="docs/images/jukebox.png" width="100%"> -->
+<em>BGM / SE / 環境音の3モード</em>
 
-https://github.com/entyu/udonarium_lycoris/releases/download/v1.11.0_/udonarium_lycoris_v1.11.0.zip
+</td>
+</tr>
+<tr>
+<td align="center" width="50%">
 
-旧バージョン
+<!-- TODO: VNモードのスクショ -->
+**🎭 VNモード**
+<!-- <img src="docs/images/vn-mode.png" width="100%"> -->
+<em>ビジュアルノベル風の立ち絵表示</em>
 
-https://github.com/entyu/udonarium_lycoris/releases/download/V1.10.1/udonarium_lycoris-v1.10.1.zip
+</td>
+<td align="center" width="50%">
 
-https://github.com/entyu/udonarium_lycoris/releases/download/v1.10.0/udonarium_lycoris-v1.10.0.zip
+<!-- TODO: ダイスカットインのGIF -->
+**🎲 ダイスカットイン**
+<!-- <img src="docs/images/dice-cutin.gif" width="100%"> -->
+<em>ダイスロール演出</em>
 
-https://github.com/entyu/udonarium_lycoris/releases/download/v1.09.1/udonarium_lycoris-v1.09.1.zip
+</td>
+</tr>
+</table>
 
-https://github.com/entyu/udonarium_lycoris/releases/download/v1.09.0/udonarium_lycoris-v1.09.0.zip
+---
 
-https://github.com/entyu/udonarium_lycoris/releases/download/v1.08.1/udonarium_lycoris-v1.08.1.zip
+## 🚀 使い方
 
-https://github.com/entyu/udonarium_lycoris/releases/download/v1.08.0/udonarium_lycoris-v1.08.0.zip
+### すぐ遊ぶ（公開サーバー）
 
-https://github.com/entyu/udonarium_lycoris/releases/download/v1.07.0/udonarium_lycoris-v1.07.0.zip
+ブラウザでアクセスするだけ。アカウント登録不要。
 
-https://github.com/entyu/udonarium_lycoris/releases/download/v1.06.0/udonarium_lycoris-v1.06.0.zip
+👉 **[https://udonarium-lycoris.ddns.net](https://udonarium-lycoris.ddns.net)**
 
-https://github.com/entyu/udonarium_lycoris/releases/download/v1.05.0/udonarium_lycoris-v1.05.0.zip
+### 自前サーバーに設置する
 
-https://github.com/entyu/udonarium_lycoris/releases/download/%EF%BD%961.04.0/udonarium_lycoris-v1.04.0.zip
+1. [Releases](https://github.com/oron1208/udonarium-lycoris/releases) から最新版をダウンロード
+2. Webサーバーに配置して `index.html` にアクセス
+3. [SkyWay](https://webrtc.ecl.ntt.com/) のAPIキーを取得し、`src/assets/config.yaml` に設定
 
-https://github.com/entyu/udonarium_lycoris/releases/download/v1.03.0/udonarium_lycoris-v1.03.0.zip
+詳細は [📖 取り扱い説明書](https://udonarium-lycoris.ddns.net/docs/) をご覧ください。
 
-https://github.com/entyu/udonarium_lycoris/releases/download/v1.02.2/udonarium_lycoris-v1.02.2.zip
+### Docker で立てる
 
-https://github.com/entyu/udonarium_lycoris/releases/download/v1.02.1/udonarium_lycoris-v1.02.1.zip
+```bash
+docker run -d \
+  --name udonarium-lycoris \
+  -p 12081:12081 \
+  --env-file /path/to/env \
+  ghcr.io/oron1208/udonarium-lycoris:latest
+```
 
+---
 
-**開発者向けのソースコードをダウンロードしないように注意して下さい。**
-1. [SkyWay](https://webrtc.ecl.ntt.com/)のAPIキーを取得し、APIキー情報を`assets/config.yaml`に記述します。
-1. サーバに配置したユドナリウムの`index.html`にアクセスして動作することを確認してみてください。  
-ユドナリウムLycorisはサーバーサイドの処理を持たないので、CGIやデータベースは必要はありません。
+## 🏗️ ビルド（開発者向け）
 
-#### SkyWay
-このアプリケーションは通信処理にWebRTCを使用しています。  
-WebRTC向けのシグナリングサーバとして[SkyWay](https://webrtc.ecl.ntt.com/)を利用しているため、動作確認のためにSkyWayのAPIキーが必要です。
-取得したAPIキーの情報は`src/assets/config.yaml`に記述します。
+```bash
+# 依存インストール
+npm install
 
-#### そのほか難しいこと
-本家と同じなので本家の udonarium の説明を参照してください。
-自力コンパイルするかたへｖ1.02.0より--prodで自動生成される 3rdpartylicenses.txt にソフト内リンクが貼られるようにしてあります。
-つけないと生成されずlicensesへのリンクが切れるのでご注意ください。
+# 開発サーバー起動
+ng serve
 
+# プロダクションビルド
+ng build --prod
+```
 
+> ビルドには `--prod` フラグが必須です（3rdpartylicenses.txt の自動生成のため）。
+
+---
+
+## 🌸 名前の由来
+
+**リコリス（Lycoris）** — 彼岸花の英名。
+
+「あの世とこの世の境界に咲く花」のように、TRPGという虚構と現実の境界で、プレイヤーたちに忘れられない体験を咲かせたい。そんな想いを込めて。
+
+---
+
+## 📜 クレジット
+
+| 役割 | リンク |
+|------|--------|
+| **製作者** | [おれおん（@oron1208）](https://x.com/oron1208) |
+| **ベースフォーク** | [ユドナリウムリリィ（Cylinder Lily）](https://cylinder-lily.com) |
+| **オリジナル** | [ユドナリウム（TK11235）](https://github.com/TK11235/udonarium) |
+
+## 📄 ライセンス
+
+[MIT License](LICENSE) — オリジナルのユドナリウムのライセンスを引き継ぎます。
+
+---
+
+<div align="center">
+
+**彼岸花の咲く場所で、最高のTRPGセッションを。🌸**
+
+</div>
