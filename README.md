@@ -66,7 +66,7 @@
 
 <!-- TODO: VNモードのスクショ -->
 **🎭 VNモード**
-<!-- <img src="docs/images/vn-mode.png" width="100%"> -->
+<img src="docs/images/vn-mode.png" width="100%">
 <em>ビジュアルノベル風の立ち絵表示</em>
 
 </td>
