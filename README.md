@@ -74,7 +74,7 @@
 
 <!-- TODO: ダイスカットインのGIF -->
 **🎲 ダイスカットイン**
-<video src="docs/images/dice-cutin.mp4" width="100%" autoplay loop muted playsinline></video>
+<img src="docs/images/dice-cutin.png" width="100%">
 <em>ダイスロール演出</em>
 
 </td>
