@@ -57,3 +57,9 @@ signaling-server/node_modules/
 
 # Room data backups (too large for GitHub)
 data/rooms/*.backup*
+
+# Secrets & certs
+.env
+data/server-cert.pem
+data/server-key.pem
+backups/*.pem.bak
