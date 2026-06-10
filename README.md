@@ -2,7 +2,7 @@
 
 <img src="docs-site/assets/favicon.png" width="64" height="64" alt="Lycoris icon">
 
-# 🌸 ユドナリウムリコリス
+# 🌺 ユドナリウムリコリス
 
 **Udonarium Lycoris** — ブラウザだけで、どこでもTRPGを。
 
@@ -10,7 +10,7 @@
 [![GitHub release](https://img.shields.io/github/v/tag/oron1208/udonarium-lycoris?label=latest&color=e63946)](https://github.com/oron1208/udonarium-lycoris/releases)
 [![Made with Angular](https://img.shields.io/badge/Angular-12-dd0031?logo=angular)](https://angular.io/)
 
-### [▶ 今すぐ使う](https://udonarium-lycoris.ddns.net) · [📖 取り扱い説明書](https://udonarium-lycoris.ddns.net/docs/) · [💾 ダウンロード](https://github.com/oron1208/udonarium-lycoris/releases)
+### [▶ 今すぐ使う](https://udonarium-lycoris.ddns.net/docs/) · [📖 取り扱い説明書](https://udonarium-lycoris.ddns.net/docs/) · [💾 ダウンロード](https://github.com/oron1208/udonarium-lycoris/releases)
 
 ---
 
@@ -89,7 +89,7 @@
 
 ブラウザでアクセスするだけ。アカウント登録不要。
 
-👉 **[https://udonarium-lycoris.ddns.net](https://udonarium-lycoris.ddns.net)**
+👉 **[https://udonarium-lycoris.ddns.net/docs/](https://udonarium-lycoris.ddns.net/docs/)**
 
 ### 自前サーバーに設置する
 
@@ -128,7 +128,7 @@ ng build --prod
 
 ---
 
-## 🌸 名前の由来
+## 🌺 名前の由来
 
 **リコリス（Lycoris）** — 彼岸花の英名。
 
@@ -152,6 +152,6 @@ ng build --prod
 
 <div align="center">
 
-**彼岸花の咲く場所で、最高のTRPGセッションを。🌸**
+**黄昏の物語が始まる場所で、あなただけの物語を。**
 
 </div>
