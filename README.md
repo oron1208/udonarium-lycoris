@@ -56,7 +56,7 @@
 
 <!-- TODO: ジュークボックスのスクショ -->
 **🎵 ジュークボックス**
-<!-- <img src="docs/images/jukebox.png" width="100%"> -->
+<img src="docs/images/jukebox.png" width="100%">
 <em>BGM / SE / 環境音の3モード</em>
 
 </td>
