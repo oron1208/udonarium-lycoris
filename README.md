@@ -48,7 +48,7 @@
 
 <!-- TODO: 照明システムのスクショ -->
 **🕯️ 照明システム**
-<!-- <img src="docs/images/lighting.png" width="100%"> -->
+<img src="docs/images/lighting.png" width="100%">
 <em>松明・レーザー・壁の光遮断</em>
 
 </td>
