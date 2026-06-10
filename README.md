@@ -74,7 +74,7 @@
 
 <!-- TODO: ダイスカットインのGIF -->
 **🎲 ダイスカットイン**
-<!-- <img src="docs/images/dice-cutin.gif" width="100%"> -->
+<img src="docs/images/dice-cutin.gif" width="100%">
 <em>ダイスロール演出</em>
 
 </td>
