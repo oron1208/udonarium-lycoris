@@ -43,6 +43,12 @@ export class AudioSharingSystem {
             audio = AudioFile.createEmpty(item.identifier);
             AudioStorage.instance.add(audio);
           }
+          // カタログにnameが含まれていれば事前設定（ハッシュ値表示を防ぐ）
+          if (item.name && audio.name === audio.identifier) {
+            let ctx = audio.toContext();
+            ctx.name = item.name;
+            audio.apply(ctx);
+          }
           if (audio.state < AudioState.COMPLETE && !this.receiveTaskMap.has(item.identifier)) {
             let fetched = await ServerMediaStorage.fetchAudio(item.identifier);
             if (fetched) {
@@ -155,14 +161,22 @@ export class AudioSharingSystem {
     let task = BufferSharingTask.createReceiveTask<AudioFileContext>(identifier);
     this.receiveTaskMap.set(identifier, task);
 
-    task.onprogress = (task, loded, total) => {
-      let context = audio.toContext();
-      context.name = (loded * 100 / total).toFixed(1) + '%';
-      audio.apply(context);
+    task.onprogress = (task, loaded, total) => {
+      // 進捗表示でnameを上書きしないようにblobのurlだけで進捗を通知
+      // nameは受信完了時のonfinishで正しい値が復元される
     }
     task.onfinish = (task, data) => {
       this.stopReceiveTask(task.identifier);
-      if (data) EventSystem.trigger('UPDATE_AUDIO_RESOURE', [data]);
+      if (data) {
+        // 受信完了時に確実に正しいnameを復元する
+        let context = data as AudioFileContext;
+        if (context.name && audio.identifier) {
+          let audioCtx = audio.toContext();
+          audioCtx.name = context.name;
+          audio.apply(audioCtx);
+        }
+        EventSystem.trigger('UPDATE_AUDIO_RESOURE', [data]);
+      }
       AudioStorage.instance.synchronize();
     }
 

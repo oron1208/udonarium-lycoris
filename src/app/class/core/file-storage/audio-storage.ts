@@ -3,7 +3,7 @@ import { ResettableTimeout } from '../system/util/resettable-timeout';
 import { AudioFile, AudioFileContext, AudioState } from './audio-file';
 import { ServerMediaStorage } from './server-media-storage';
 
-export type CatalogItem = { readonly identifier: string, readonly state: number };
+export type CatalogItem = { readonly identifier: string, readonly state: number, readonly name?: string };
 
 export class AudioStorage {
   private static _instance: AudioStorage
@@ -127,7 +127,7 @@ export class AudioStorage {
     let catalog: CatalogItem[] = [];
     for (let audio of AudioStorage.instance.audios) {
       if (AudioState.COMPLETE <= audio.state) {
-        catalog.push({ identifier: audio.identifier, state: audio.state });
+        catalog.push({ identifier: audio.identifier, state: audio.state, name: audio.name });
       }
     }
     return catalog;

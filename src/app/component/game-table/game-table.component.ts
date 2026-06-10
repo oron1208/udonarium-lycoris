@@ -174,6 +174,11 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   // 照明
   private lightingAnimFrame: number = 0;
   private flickerPhase: number = 0;
+  private cachedWallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null = null;
+  private wallGridDirty: boolean = true;
+  private wallGridTableId: string = '';
+  private wallGridCacheTime: number = 0;
+  private static readonly WALL_GRID_CACHE_TTL = 200; // ms
   get isLightingActive(): boolean {
     return this.currentTable?.lightingEnabled && this.currentTable?.lightingNightMode;
   }
@@ -229,6 +234,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
         console.log('UPDATE_GAME_OBJECT GameTableComponent ' + this.currentTable.identifier);
         this.setGameTableGrid(this.currentTable.width, this.currentTable.height, this.currentTable.gridSize, this.currentTable.gridType, this.currentTable.gridColor);
         this.redrawDrawingCanvas();
+        this.invalidateWallGrid();
       })
       .on('RE_DRAW_TABLE', event => {
         console.log("テーブル再描画");
@@ -1715,6 +1721,24 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private buildWallGrid(gridSize: number, canvasW: number, canvasH: number): { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null {
+    const tableId = this.currentTable?.identifier || '';
+    const now = performance.now();
+    if (!this.wallGridDirty && this.wallGridTableId === tableId && this.cachedWallGrid && (now - this.wallGridCacheTime) < GameTableComponent.WALL_GRID_CACHE_TTL) {
+      return this.cachedWallGrid;
+    }
+    const result = this._buildWallGrid(gridSize, canvasW, canvasH);
+    this.cachedWallGrid = result;
+    this.wallGridDirty = false;
+    this.wallGridTableId = tableId;
+    this.wallGridCacheTime = now;
+    return result;
+  }
+
+  private invalidateWallGrid() {
+    this.wallGridDirty = true;
+  }
+
+  private _buildWallGrid(gridSize: number, canvasW: number, canvasH: number): { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null {
     const cellSize = 4;
     const cols = Math.ceil(canvasW / cellSize);
     const rows = Math.ceil(canvasH / cellSize);

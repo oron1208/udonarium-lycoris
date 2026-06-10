@@ -157,7 +157,7 @@ export class MacroHotbarComponent {
     event.stopPropagation();
     const index = this.toSlotIndex(visibleIndex);
 
-    if (event.ctrlKey) {
+    if (event.ctrlKey || event.metaKey) {
       this.startEdit(index);
       return;
     }
