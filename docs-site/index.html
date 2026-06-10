@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<title>ユドナリウムリコリス - Udonarium Lycoris</title>
+<meta name="description" content="ユドナリウムリコリス - こだわりのTRPGオンラインセッションツール">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="guide/guide.css">
+</head>
+<body>
+
+<!-- 背景固定レイヤー -->
+<div class="bg-fixed">
+  <div class="bg-layer bg-layer-1"></div>
+  <div class="bg-layer bg-layer-2"></div>
+</div>
+
+<!-- パーティクルキャンバス -->
+<canvas id="particles"></canvas>
+
+<!-- ナビゲーション -->
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">
+      <span class="logo-icon">◈</span> ユドナリウムリコリス
+    </a>
+    <div class="nav-links">
+      <a href="#about">概要</a>
+      <a href="#connect">接続</a>
+      <a href="#updates">更新履歴</a>
+      <a href="guide/index.html">操作説明</a>
+      <a href="#credits">クレジット</a>
+      <a href="https://github.com/oron1208/udonarium-lycoris" target="_blank" class="nav-link-github">GitHub</a>
+    </div>
+    <button class="nav-hamburger" id="hamburger" aria-label="メニュー">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- ヒーローセクション -->
+<section class="hero" id="hero">
+  <div class="hero-bg-gradient"></div>
+  <div class="hero-content">
+    <div class="hero-text">
+      <div class="hero-badge fade-in">TRPG Online Session Tool</div>
+      <h1 class="hero-title fade-in">
+        <span class="title-line">ユドナリウム</span>
+        <span class="title-accent">リコリス</span>
+      </h1>
+      <p class="hero-sub fade-in">
+        ブラウザだけで、どこでもTRPGのセッションを。<br>
+        照明・音楽・コマ演出まで、こだわりヴィジュアルテーブルトップを目指して。
+      </p>
+      <div class="hero-buttons fade-in">
+        <a href="https://udonarium-lycoris.ddns.net" class="btn btn-primary">
+          <span class="btn-icon">▶</span> セッションに参加
+        </a>
+        <a href="https://github.com/oron1208/udonarium-lycoris" target="_blank" class="btn btn-outline">
+          <span class="btn-icon">⌘</span> GitHub
+        </a>
+      </div>
+    </div>
+    <!-- 立ち絵エリア -->
+    <div class="hero-character fade-in" id="heroCharacter">
+      <img src="assets/character.png" alt="キャラクター">
+    </div>
+  </div>
+  <div class="scroll-hint">
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<!-- 概要セクション -->
+<section class="section" id="about">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">ABOUT</span>
+      <h2 class="section-title">ユドナリウムリコリスとは</h2>
+    </div>
+    <div class="about-grid">
+      <div class="about-card fade-up">
+        <div class="about-icon">🌐</div>
+        <h3>ブラウザ完結</h3>
+        <p>インストール不要。ブラウザを開くだけでTRPGのオンラインセッションが始められます。</p>
+      </div>
+      <div class="about-card fade-up">
+        <div class="about-icon">🕯️</div>
+        <h3>照明システム</h3>
+        <p>松明・魔法の光・レーザー。壁による光遮断も再現する、こだわりの照明エンジン。</p>
+      </div>
+      <div class="about-card fade-up">
+        <div class="about-icon">🎵</div>
+        <h3>ジュークボックス</h3>
+        <p>BGM・SE・環境音の3モード。雰囲気たっぷりのサウンドでセッションを盛り上げます。</p>
+      </div>
+      <div class="about-card fade-up">
+        <div class="about-icon">🎭</div>
+        <h3>VNモード</h3>
+        <p>ビジュアルノベル風の立ち絵表示。キャラクターの表情でシーンを彩ります。</p>
+      </div>
+    </div>
+    <div class="about-illustration fade-up">
+      <img src="assets/session-illustration.png" alt="セッション風景">
+    </div>
+  </div>
+</section>
+<section class="section section-dark" id="connect">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">CONNECT</span>
+      <h2 class="section-title">接続先</h2>
+    </div>
+    <div class="connect-card fade-up">
+      <div class="connect-icon">🔗</div>
+      <div class="connect-info">
+        <h3>公開サーバー</h3>
+        <div class="connect-url">
+          <a href="https://udonarium-lycoris.ddns.net" target="_blank">https://udonarium-lycoris.ddns.net</a>
+        </div>
+        <p class="connect-note">ブラウザでアクセスするだけでOK。アカウント登録不要。</p>
+      </div>
+    </div>
+    <div class="connect-card fade-up">
+      <div class="connect-icon">📂</div>
+      <div class="connect-info">
+        <h3>ソースコード</h3>
+        <div class="connect-url">
+          <a href="https://github.com/oron1208/udonarium-lycoris" target="_blank">github.com/oron1208/udonarium-lycoris</a>
+        </div>
+        <p class="connect-note">MIT License。フォーク・改造自由です。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 操作説明 -->
+<section class="section" id="guide">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">GUIDE</span>
+      <h2 class="section-title">操作説明</h2>
+    </div>
+    <div class="guide-list">
+      <a href="guide/hotbar.html" class="guide-card">
+        <div class="guide-card-icon">⌨️</div>
+        <div class="guide-card-body">
+          <h3>ホットバー</h3>
+          <p>よく使うマクロを登録してクリックで一発発動。使い方を画像付きで解説。</p>
+        </div>
+        <div class="guide-card-arrow">›</div>
+      </a>
+      <div class="guide-card guide-card-coming">
+        <div class="guide-card-icon">🕯️</div>
+        <div class="guide-card-body">
+          <h3>照明システム</h3>
+          <p>準備中...</p>
+        </div>
+      </div>
+      <div class="guide-card guide-card-coming">
+        <div class="guide-card-icon">🎭</div>
+        <div class="guide-card-body">
+          <h3>VNモード</h3>
+          <p>準備中...</p>
+        </div>
+      </div>
+      <div class="guide-card guide-card-coming">
+        <div class="guide-card-icon">🎵</div>
+        <div class="guide-card-body">
+          <h3>ジュークボックス</h3>
+          <p>準備中...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- アップデート履歴 -->
+<section class="section" id="updates">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">UPDATES</span>
+      <h2 class="section-title">アップデート履歴</h2>
+    </div>
+    <div class="timeline">
+      <div class="timeline-item fade-up">
+        <div class="timeline-badge">v1.31</div>
+        <div class="timeline-content">
+          <div class="timeline-date">2026-06-10</div>
+          <h3>音声同期修正・パフォーマンス改善</h3>
+          <ul>
+            <li>複数の音声ファイルを同時アップロードした際、2曲目以降のファイル名がハッシュ値になる問題を修正</li>
+            <li>部屋から退出後もアドバンスモードのUIが残る問題を修正</li>
+            <li>アドバンスモード時にサイドメニューに「ADVANCED」バッジを表示</li>
+            <li>アドバンスモードで壁を設置した際の重さを改善（壁グリッドキャッシュ最適化）</li>
+            <li>ファビコンをリコリスオリジナルデザインに変更</li>
+          </ul>
+        </div>
+      </div>
+      <div class="timeline-item fade-up">
+        <div class="timeline-badge">v1.30</div>
+        <div class="timeline-content">
+          <div class="timeline-date">2026-06-10</div>
+          <h3>アドバンスモード追加</h3>
+          <ul>
+            <li>視界管理・所有権管理・ダイスロール演出強化の拡張部屋モードを追加</li>
+            <li>コマの所有権設定を追加。自分のコマだけ操作可能に</li>
+            <li>コマの視線範囲を設定可能。戦闘の視界シミュレーションに</li>
+            <li>BCDiceの全ダイスロールで自動カットイン演出。キャラアイコン・クリティカル/ファンブル演出付き</li>
+          </ul>
+        </div>
+      </div>
+      <div class="timeline-item fade-up">
+        <div class="timeline-badge">v1.22</div>
+        <div class="timeline-content">
+          <div class="timeline-date">2026-06-01</div>
+          <h3>コマ演出・光源強化</h3>
+          <ul>
+            <li>コマの向きを表示する正面マークを追加。平面モードではドラッグで回転可能</li>
+            <li>照射形状に「レーザー」を追加。壁で遮断される直線光</li>
+            <li>光源タイプを「松明」「魔法の光」「懐中電灯」の3種類に整理</li>
+            <li>魔法の光にソナー風の脈動リング表現を追加</li>
+          </ul>
+        </div>
+      </div>
+      <div class="timeline-item fade-up">
+        <div class="timeline-badge">v1.21</div>
+        <div class="timeline-content">
+          <div class="timeline-date">2026-05-30</div>
+          <h3>VNモード安定化</h3>
+          <ul>
+            <li>VNモードON時のログインフリーズを修正</li>
+            <li>後から入室したプレイヤーにも立ち絵が正しく同期されるよう修正</li>
+            <li>他プレイヤーのVNチャット吹き出し表示に対応</li>
+            <li>パフォーマンス改善</li>
+          </ul>
+        </div>
+      </div>
+      <div class="timeline-item fade-up">
+        <div class="timeline-badge">v1.20</div>
+        <div class="timeline-content">
+          <div class="timeline-date">2026-05-28</div>
+          <h3>照明システム・VNモード追加</h3>
+          <ul>
+            <li>照明システム追加。テーブルの暗さ・光源設定（松明・焚き火等）を実装</li>
+            <li>ペンツール「壁として扱う」で光を遮断する壁を描画（レイキャスト方式）</li>
+            <li>GMモード連動。GM宣言中は暗闇が無効化</li>
+            <li>VNモード。立ち絵表示・表情切り替え・吹き出し演出</li>
+            <li>ホットバー（12枠×5ページ＝60個のマクロパレット）</li>
+          </ul>
+        </div>
+      </div>
+      <div class="timeline-item fade-up">
+        <div class="timeline-badge">v1.13</div>
+        <div class="timeline-content">
+          <div class="timeline-date">2026-05-20</div>
+          <h3>ジュークボックス・UI改善</h3>
+          <ul>
+            <li>ジュークボックス：BGM/SE/環境音3モード化</li>
+            <li>名前ラベルON/OFF（横・真上）</li>
+            <li>平面モード簡易表示でもコマアイコンを強制表示</li>
+            <li>共有メモの高さ制限をデフォルト有効化</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- クレジットセクション -->
+<section class="section section-dark" id="credits">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">CREDITS</span>
+      <h2 class="section-title">クレジット</h2>
+    </div>
+    <div class="credits-content fade-up">
+      <div class="credit-block">
+        <h3>製作者</h3>
+        <p><strong>おれおん</strong> — <a href="https://x.com/oron1208" target="_blank">@oron1208</a></p>
+      </div>
+      <div class="credit-block">
+        <h3>オリジナル — ユドナリウム</h3>
+        <p>本プロジェクトは <a href="https://github.com/TK11235/udonarium" target="_blank">TK11235氏のユドナリウム</a> をフォークし、大幅に改修したものです。</p>
+        <p>原作者の素晴らしい成果物に深く感謝いたします。</p>
+      </div>
+      <div class="credit-block">
+        <h3>ベースフォーク — ユドナリウムリリィ</h3>
+        <p>リコリスは <a href="https://cylinder-lily.com" target="_blank">ユドナリウムリリィ（Cylinder Lily）</a> をフォークし、さらに独自の改修を加えたものです。</p>
+        <p>リリィの開発・公開に深く感謝いたします。</p>
+      </div>
+      <div class="credit-block">
+        <h3>リコリス改修内容</h3>
+        <ul>
+          <li>ジュークボックス（BGM/SE/環境音）</li>
+          <li>照明・光源システム（レイキャスト光遮断）</li>
+          <li>VNモード（ビジュアルノベル風立ち絵）</li>
+          <li>コマ正面マーク・回転操作</li>
+          <li>照明レーザー</li>
+          <li>各種UI改善</li>
+        </ul>
+      </div>
+      <div class="credit-block">
+        <h3>ライセンス</h3>
+        <p>MIT License — 詳細は <a href="https://github.com/oron1208/udonarium-lycoris/blob/main/LICENSE" target="_blank">LICENSE</a> をご覧ください。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- フッター -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <span class="logo-icon">◈</span> ユドナリウムリコリス
+      </div>
+      <div class="footer-links">
+        <a href="https://cylinder-lily.com" target="_blank">リリィ</a>
+        <a href="https://github.com/TK11235/udonarium" target="_blank">オリジナル版</a>
+        <a href="https://github.com/oron1208/udonarium-lycoris" target="_blank">GitHub</a>
+      </div>
+      <div class="footer-copy">
+        &copy; 2026 Udonarium Lycoris. Based on <a href="https://cylinder-lily.com" target="_blank">Udonarium Lily</a>, originally <a href="https://github.com/TK11235/udonarium" target="_blank">Udonarium</a> by TK11235.
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="main.js"></script>
+</body>
+</html>

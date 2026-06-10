@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
+<title>コマ作成ツール - ユドナリウムリコリス</title>
+<meta name="description" content="ユドナリウムリコリス用のコマをブラウザ上で簡単作成。テンプレート選択→入力→XMLエクスポート。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="../guide/guide.css">
+<link rel="stylesheet" href="tool.css">
+</head>
+<body>
+
+<!-- 背景固定レイヤー -->
+<div class="bg-fixed">
+  <div class="bg-layer bg-layer-1"></div>
+  <div class="bg-layer bg-layer-2"></div>
+</div>
+
+<!-- パーティクル -->
+<canvas id="particles"></canvas>
+
+<!-- ナビ -->
+<nav class="nav scrolled">
+  <div class="nav-inner">
+    <a href="../" class="nav-logo"><span class="logo-icon">◈</span> ユドナリウムリコリス</a>
+    <div class="nav-links">
+      <a href="../#about">概要</a>
+      <a href="../#connect">接続</a>
+      <a href="../guide/index.html">操作説明</a>
+      <a href="index.html" class="nav-link-github">ツール一覧</a>
+    </div>
+  </div>
+</nav>
+
+<!-- メイン -->
+<section class="section tool-section" style="padding-top: 100px;">
+  <div class="container">
+    <div class="breadcrumb">
+      <a href="index.html">ツール一覧</a>
+      <span class="breadcrumb-sep">›</span>
+      <span>コマ作成</span>
+    </div>
+
+    <div class="tool-header">
+      <h1 class="tool-title">🛠️ コマ作成ツール</h1>
+      <p class="tool-desc">テンプレートを選んでポチポチ入力するだけで、ユドナリウムリコリス用のコマXMLが作れます。<br>完成したらエクスポートして、リコリスにドラッグ&ドロップで読み込んでください。</p>
+    </div>
+
+    <!-- ステップ1: テンプレート選択 -->
+    <div class="tool-card fade-up" id="step-template">
+      <div class="card-header">
+        <span class="card-step">STEP 1</span>
+        <h2>テンプレート選択</h2>
+      </div>
+      <div class="template-grid">
+        <button class="template-btn active" data-template="custom" onclick="selectTemplate('custom')">
+          <span class="template-icon">✏️</span>
+          <span class="template-name">カスタム</span>
+          <span class="template-desc">自由に設定</span>
+        </button>
+        <button class="template-btn" data-template="cthulhu" onclick="selectTemplate('cthulhu')">
+          <span class="template-icon">🐙</span>
+          <span class="template-name">クトゥルフ</span>
+          <span class="template-desc">CoC 6版</span>
+        </button>
+        <button class="template-btn" data-template="dnd5e" onclick="selectTemplate('dnd5e')">
+          <span class="template-icon">🐉</span>
+          <span class="template-name">D&D 5e</span>
+          <span class="template-desc">5th Edition</span>
+        </button>
+        <button class="template-btn" data-template="shinobi" onclick="selectTemplate('shinobi')">
+          <span class="template-icon">🥷</span>
+          <span class="template-name">シノビガミ</span>
+          <span class="template-desc">忍術バトル</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ステップ2: 基本情報 -->
+    <div class="tool-card fade-up" id="step-basic">
+      <div class="card-header">
+        <span class="card-step">STEP 2</span>
+        <h2>基本情報</h2>
+      </div>
+      <div class="form-grid">
+        <div class="form-item">
+          <label>キャラクター名 <span class="required">*</span></label>
+          <input type="text" id="charName" placeholder="例：鷹見 冴子" oninput="updatePreview()">
+        </div>
+        <div class="form-item">
+          <label>イニシアチブ値</label>
+          <input type="text" id="initiative" placeholder="例：12" oninput="updatePreview()">
+        </div>
+        <div class="form-item">
+          <label>コマサイズ</label>
+          <select id="charSize" onchange="updatePreview()">
+            <option value="1">1（標準）</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+          </select>
+        </div>
+        <div class="form-item form-item-full">
+          <label>コマ画像</label>
+          <div class="drop-zone" id="imageDropZone">
+            <div class="drop-zone-content">
+              <span class="drop-icon">📁</span>
+              <span>画像をドラッグ&ドロップ または クリックして選択</span>
+            </div>
+            <input type="file" id="imageInput" accept="image/*" hidden>
+          </div>
+          <div class="image-preview" id="imagePreview" style="display:none;">
+            <img id="previewImg" src="" alt="プレビュー">
+            <button class="btn-icon" onclick="removeImage()" title="削除">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ステップ3: リソース -->
+    <div class="tool-card fade-up" id="step-resource">
+      <div class="card-header">
+        <span class="card-step">STEP 3</span>
+        <h2>リソース <span class="card-sub">HP・MPなど</span></h2>
+        <button class="btn-small" onclick="addResource()">+ 追加</button>
+      </div>
+      <div id="resourceList">
+        <!-- 動的に生成 -->
+      </div>
+      <div class="empty-hint" id="resourceEmpty">リソース項目がありません。「+ 追加」で追加してください。</div>
+    </div>
+
+    <!-- ステップ4: 能力値 -->
+    <div class="tool-card fade-up" id="step-params">
+      <div class="card-header">
+        <span class="card-step">STEP 4</span>
+        <h2>能力値</h2>
+        <button class="btn-small" onclick="addParam()">+ 追加</button>
+      </div>
+      <div id="paramList">
+        <!-- 動的に生成 -->
+      </div>
+      <div class="empty-hint" id="paramEmpty">能力値項目がありません。「+ 追加」で追加してください。</div>
+    </div>
+
+    <!-- ステップ5: チャットパレット -->
+    <div class="tool-card fade-up" id="step-palette">
+      <div class="card-header">
+        <span class="card-step">STEP 5</span>
+        <h2>チャットパレット</h2>
+        <div class="card-header-actions">
+          <select id="paletteDicebot" onchange="updatePreview()">
+            <option value="DiceBot">標準ダイスボット</option>
+            <option value="Cthulhu">クトゥルフ</option>
+            <option value="Cthulhu7th">クトゥルフ7版</option>
+            <option value="DnD">D&D</option>
+            <option value="SwordWorld2.5">ソードワールド2.5</option>
+            <option value="Shinobigami">シノビガミ</option>
+          </select>
+        </div>
+      </div>
+      <div class="palette-hint">
+        <p>💡 <code>{変数名}</code> で能力値を参照できます。例：<code>2d6+{STR}</code></p>
+      </div>
+      <textarea id="paletteText" rows="10" placeholder="1行に1つコマンドを入力&#10;例：&#10;2d6+{STR} ダメージ&#10;CCB<={回避} 回避&#10;CCB<={目星} 目星" oninput="updatePreview()"></textarea>
+    </div>
+
+    <!-- プレビュー & エクスポート -->
+    <div class="tool-card fade-up" id="step-export">
+      <div class="card-header">
+        <span class="card-step">EXPORT</span>
+        <h2>エクスポート</h2>
+      </div>
+
+      <div class="export-preview" id="xmlPreview">
+        <pre><code id="xmlOutput">← 基本情報を入力するとXMLが生成されます</code></pre>
+      </div>
+
+      <div class="export-actions">
+        <button class="btn-primary" onclick="downloadXML()">⬇️ XMLダウンロード</button>
+        <button class="btn-secondary" onclick="copyXML()">📋 コピー</button>
+      </div>
+    </div>
+
+    <!-- インポート -->
+    <div class="tool-card fade-up">
+      <div class="card-header">
+        <span class="card-step">IMPORT</span>
+        <h2>XMLインポート</h2>
+      </div>
+      <p class="form-hint">既存のコマXMLを読み込んで編集できます。</p>
+      <div class="drop-zone" id="xmlDropZone">
+        <div class="drop-zone-content">
+          <span class="drop-icon">📄</span>
+          <span>XML / ZIPファイルをドラッグ&ドロップ または クリックして選択</span>
+        </div>
+        <input type="file" id="xmlInput" accept=".xml,.zip" hidden>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- フッター -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand"><span class="logo-icon">◈</span> ユドナリウムリコリス</div>
+      <div class="footer-links">
+        <a href="https://cylinder-lily.com" target="_blank">リリィ</a>
+        <a href="https://github.com/TK11235/udonarium" target="_blank">オリジナル版</a>
+        <a href="https://github.com/oron1208/udonarium-lycoris" target="_blank">GitHub</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 Udonarium Lycoris.</div>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<script src="character-maker.js"></script>
+<script src="../main.js"></script>
+</body>
+</html>

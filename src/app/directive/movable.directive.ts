@@ -7,6 +7,7 @@ import { CoordinateService } from 'service/coordinate.service';
 import { PointerCoordinate, PointerDeviceService } from 'service/pointer-device.service';
 import { TabletopUndoService } from 'service/tabletop-undo.service';
 import { TabletopSelectionService } from 'service/tabletop-selection.service';
+import { TabletopService } from 'service/tabletop.service';
 
 import { InputHandler } from './input-handler';
 
@@ -107,6 +108,7 @@ export class MovableDirective implements AfterViewInit, OnDestroy {
     private coordinateService: CoordinateService,
     private tabletopUndoService: TabletopUndoService,
     private tabletopSelectionService: TabletopSelectionService,
+    private tabletopService: TabletopService,
   ) { }
 
   ngAfterViewInit() {
@@ -246,11 +248,19 @@ export class MovableDirective implements AfterViewInit, OnDestroy {
     pointer3d.x -= this.width / 2;
     pointer3d.y -= this.height / 2;
 
-    // テーブル上の通常ドラッグはXY移動だけにする。
-    // 3D/平面モード切替後など、画面→テーブル座標変換でZが揺れることがあり、
-    // その値を posZ に反映するとコマがドラッグのたびに上空へ浮き上がってしまう。
-    const keepPosZ = this.pointerStart3d.z;
-    if (this.posX === pointer3d.x && this.posY === pointer3d.y && this.posZ === keepPosZ) return;
+    // Z座標: 3DパースペクティブZを使う。
+    // 地形の上では自然にZが上がる。地面に戻した時はZが0に戻る。
+    // pointerStart3d.zより下には落とさない制限は地形上のみ適用し、
+    // pointer3d.zが0の場合（地面）はそちらを優先する。
+    let newZ: number;
+    if (pointer3d.z > 0) {
+      // 3D Z > 0: 地形上または空中 → 開始Zより下には落とさない
+      newZ = pointer3d.z > this.pointerStart3d.z ? pointer3d.z : this.pointerStart3d.z;
+    } else {
+      // 3D Z = 0: 地面に戻った
+      newZ = 0;
+    }
+    if (this.posX === pointer3d.x && this.posY === pointer3d.y && this.posZ === newZ) return;
 
     if (!this.input.isDragging) this.ondragstart.emit(e as PointerEvent);
     this.ondrag.emit(e as PointerEvent);
@@ -261,10 +271,10 @@ export class MovableDirective implements AfterViewInit, OnDestroy {
       this.ratio += (ratio - this.ratio) * 0.1;
     }
 
-    if(!this.isScratcOwner){  //スクラッチマスク用の処理スキップ
+    if(!this.isScratcOwner){
       this.posX = pointer3d.x;
       this.posY = pointer3d.y;
-      this.posZ = keepPosZ;
+      this.posZ = newZ;
       this.updateGroupMoveTargets();
     }else{
       this.scratchObjectPosition(false);
@@ -331,6 +341,55 @@ export class MovableDirective implements AfterViewInit, OnDestroy {
     return this.isGroupMove
       ? [this.tabletopObject].concat(this.groupMoveTargets.map(target => target.object))
       : [this.tabletopObject];
+  }
+
+  /**
+   * 指定したXY座標の下にある地形の最上面Z座標を計算する。
+   * 地形がない場合は元のZ座標を返す。
+   * @param posX オブジェクトのX位置
+   * @param posY オブジェクトのY位置
+   * @param originalZ 元のZ位置（地形がない場合のフォールバック）
+   */
+  private getTerrainTopZ(posX: number, posY: number, originalZ: number): number {
+    try {
+      const terrains = this.tabletopService.terrains;
+      if (!terrains || terrains.length === 0) return originalZ;
+
+      // 自分自身（Terrain）を除外する
+      const selfId = this.tabletopObject ? this.tabletopObject.identifier : null;
+
+      const gridSize = this.tabletopService.currentTable.gridSize || 50;
+      let maxTopZ = -Infinity;
+      let foundTerrain = false;
+
+      for (const terrain of terrains) {
+        // 自分自身は判定から除外
+        if (selfId && terrain.identifier === selfId) continue;
+
+        const tX = terrain.location.x;
+        const tY = terrain.location.y;
+        const tW = terrain.width;
+        const tH = terrain.depth;
+        const tHeight = terrain.height;
+        const tAltitude = terrain.altitude || 0;
+
+        const halfW = (tW * gridSize) / 2;
+        const halfH = (tH * gridSize) / 2;
+        if (posX >= tX - halfW && posX <= tX + halfW &&
+            posY >= tY - halfH && posY <= tY + halfH) {
+          // 地形の最上面Z = altitude * gridSize + height * gridSize
+          const terrainTopZ = (terrain.posZ || 0) + (tAltitude + tHeight) * gridSize;
+          if (terrainTopZ > maxTopZ) {
+            maxTopZ = terrainTopZ;
+            foundTerrain = true;
+          }
+        }
+      }
+
+      return foundTerrain ? maxTopZ : originalZ;
+    } catch (e) {
+      return originalZ;
+    }
   }
 
   private updateGroupMoveTargets() {

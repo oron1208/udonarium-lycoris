@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
+<title>ホットバー 操作説明 - ユドナリウムリコリス</title>
+<meta name="description" content="ユドナリウムリコリスのホットバー機能の使い方を解説">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+
+<!-- 背景固定レイヤー -->
+<div class="bg-fixed">
+  <div class="bg-layer bg-layer-1"></div>
+  <div class="bg-layer bg-layer-2"></div>
+</div>
+
+<!-- パーティクル -->
+<canvas id="particles"></canvas>
+
+<!-- ナビ -->
+<nav class="nav scrolled">
+  <div class="nav-inner">
+    <a href="../" class="nav-logo"><span class="logo-icon">◈</span> ユドナリウムリコリス</a>
+    <div class="nav-links">
+      <a href="../#about">概要</a>
+      <a href="../#connect">接続</a>
+      <a href="../#guide">操作説明</a>
+      <a href="../#updates">更新履歴</a>
+      <a href="https://github.com/oron1208/udonarium-lycoris" target="_blank" class="nav-link-github">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ホットバー説明 -->
+<article class="section guide-article" style="padding-top: 100px;">
+  <div class="container">
+
+    <!-- パンくず -->
+    <div class="breadcrumb">
+      <a href="index.html">操作説明</a>
+      <span class="breadcrumb-sep">›</span>
+      <span>ホットバー</span>
+    </div>
+
+    <div class="guide-header">
+      <div class="guide-header-icon">⌨️</div>
+      <h1 class="guide-header-title">ホットバー</h1>
+      <p class="guide-header-desc">よく使うマクロを登録してクリックで一発発動。<br>12スロット×5ページ＝最大60個まで登録できます。</p>
+    </div>
+
+    <!-- 目次 -->
+    <div class="guide-toc fade-up">
+      <h3>目次</h3>
+      <ol>
+        <li><a href="#step1">ホットバーを表示する</a></li>
+        <li><a href="#step2">自キャラを設定する</a></li>
+        <li><a href="#step3">マクロを登録する</a></li>
+        <li><a href="#step4">ホットバーを実行する</a></li>
+        <li><a href="#step5">自キャラのデータを使う</a></li>
+        <li><a href="#notes">補足情報</a></li>
+      </ol>
+    </div>
+
+    <!-- ステップ1 -->
+    <div class="guide-step fade-up" id="step1">
+      <div class="step-number">1</div>
+      <div class="step-body">
+        <h2>ホットバーを表示する</h2>
+        <p>サイドメニューの<b>オプション</b>を開き、「ホットバー」を <b>ON</b> にします。</p>
+        <p>画面下部に12個のスロットが並んだバーが表示されます。</p>
+        <div class="step-image">
+          <img src="../assets/guide/hotbar-01-option.png" alt="オプションからホットバーをONにする">
+        </div>
+      </div>
+    </div>
+
+    <!-- ステップ2 -->
+    <div class="guide-step fade-up" id="step2">
+      <div class="step-number">2</div>
+      <div class="step-body">
+        <h2>自キャラを設定する</h2>
+        <p>ホットバーのマクロは、<b>自キャラ</b>として設定されたコマのデータを参照して実行されます。まずは自分が操作するコマを設定しましょう。</p>
+        <p>コマを <b>Alt + クリック</b> するとメニューが表示されるので、「自キャラに設定」を選択します。</p>
+        <div class="step-image">
+          <img src="../assets/guide/hotbar-02-selfchar.png" alt="コマをAlt+クリックで自キャラ設定">
+        </div>
+      </div>
+    </div>
+
+    <!-- ステップ3 -->
+    <div class="guide-step fade-up" id="step3">
+      <div class="step-number">3</div>
+      <div class="step-body">
+        <h2>マクロを登録する</h2>
+        <p>ホットバーの空スロットを <b>クリック</b> すると、マクロ編集画面が開きます。</p>
+        <div class="step-fields">
+          <div class="field-item">
+            <div class="field-label">表示名</div>
+            <div class="field-desc">スロットに表示される名前を入力します。（例：回避、攻撃、魔法など）</div>
+          </div>
+          <div class="field-item">
+            <div class="field-label">マクロ</div>
+            <div class="field-desc">実行するダイスコマンドを入力します。（例：<code>2d6+3</code>）</div>
+          </div>
+          <div class="field-item">
+            <div class="field-label">画像</div>
+            <div class="field-desc">スロットに表示するアイコン画像を設定します。</div>
+          </div>
+        </div>
+        <div class="step-image">
+          <img src="../assets/guide/hotbar-03-edit.png" alt="スロット編集画面">
+        </div>
+        <p>入力が終わったら登録ボタンを押すと、スロットに表示名と画像が反映されます。</p>
+      </div>
+    </div>
+
+    <!-- ステップ4 -->
+    <div class="guide-step fade-up" id="step4">
+      <div class="step-number">4</div>
+      <div class="step-body">
+        <h2>ホットバーを実行する</h2>
+        <p>登録したスロットを <b>クリック</b> するだけでマクロが即座に実行されます。</p>
+        <p>例えば「回避」スロットをクリックすると、<code>2d6+3</code> がロールされてチャットに結果が表示されます。</p>
+        <div class="step-image">
+          <img src="../assets/guide/hotbar-04-roll.png" alt="ホットバーで回避ロール発動">
+        </div>
+      </div>
+    </div>
+
+    <!-- ステップ5 -->
+    <div class="guide-step fade-up" id="step5">
+      <div class="step-number">5</div>
+      <div class="step-body">
+        <h2>自キャラのデータを使う</h2>
+        <p>マクロには固定値だけでなく、<b>コマに設定された能力値</b>を使ったダイスロールもできます。</p>
+        <p>コマのチャットパレットで変数を定義しておけば、ホットバーから実行した時にもその変数が展開されます。例えばチャットパレットで以下のように設定しておきます：</p>
+        <div class="code-block">
+          <code>AT+(+{AT}+{命中強化}) クォータースタッフ / 通常</code>
+        </div>
+        <p>このコマンドをホットバーに登録しておけば、クリックするだけで自キャラの能力値が自動計算されてロールされます。</p>
+        <div class="step-image">
+          <img src="../assets/guide/hotbar-05-variable-edit.png" alt="自キャラデータ参照マクロの登録">
+        </div>
+        <p style="margin-top: 16px;">実行結果。自キャラの能力値（<code>AT</code> や <code>命中強化</code>）が自動で反映されています。</p>
+        <div class="step-image">
+          <img src="../assets/guide/hotbar-06-variable-result.png" alt="自キャラデータ参照マクロの実行結果">
+        </div>
+      </div>
+    </div>
+
+    <!-- 補足情報 -->
+    <div class="guide-note fade-up" id="notes">
+      <h2>💡 補足情報</h2>
+      <div class="note-grid">
+        <div class="note-item">
+          <h3>スロットの編集・削除</h3>
+          <ul>
+            <li><b>Windows</b>: <code>Ctrl</code> + クリック</li>
+            <li><b>Mac</b>: <code>Cmd</code> + クリック</li>
+          </ul>
+          <p>編集画面が開き、コマンド内容の変更やスロットのクリアができます。</p>
+        </div>
+        <div class="note-item">
+          <h3>ページ切替</h3>
+          <p>バーの上部にある <b>1〜5</b> のページ番号をクリックしてページを切り替えられます。</p>
+        </div>
+        <div class="note-item">
+          <h3>マクロのコピー</h3>
+          <p>スロットを <b>右クリック</b> すると、登録されているマクロのコマンドがクリップボードにコピーされます。</p>
+        </div>
+        <div class="note-item">
+          <h3>データの保存について</h3>
+          <p>ホットバーのデータは<b>コマ個別のデータではなく、ホットバー独自のデータ</b>として管理されています。自キャラを切り替えてもホットバーの内容はそのまま保持されます。</p>
+        </div>
+        <div class="note-item">
+          <h3>自キャラとマクロの関係</h3>
+          <p>変数を使ったマクロ（<code>+{AT}</code> など）を実行するには、事前に自キャラを設定しておく必要があります。自キャラが未設定の場合、変数は展開されません。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 戻る -->
+    <div class="guide-back fade-up">
+      <a href="index.html">← 操作説明一覧に戻る</a>
+    </div>
+
+  </div>
+</article>
+
+<!-- フッター -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand"><span class="logo-icon">◈</span> ユドナリウムリコリス</div>
+      <div class="footer-links">
+        <a href="https://cylinder-lily.com" target="_blank">リリィ</a>
+        <a href="https://github.com/TK11235/udonarium" target="_blank">オリジナル版</a>
+        <a href="https://github.com/oron1208/udonarium-lycoris" target="_blank">GitHub</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 Udonarium Lycoris.</div>
+    </div>
+  </div>
+</footer>
+
+<script src="../main.js"></script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
+<title>ツール一覧 - ユドナリウムリコリス</title>
+<meta name="description" content="ユドナリウムリコリスの補助ツール一覧">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="../guide/guide.css">
+<link rel="stylesheet" href="tool.css">
+</head>
+<body>
+
+<!-- 背景固定レイヤー -->
+<div class="bg-fixed">
+  <div class="bg-layer bg-layer-1"></div>
+  <div class="bg-layer bg-layer-2"></div>
+</div>
+
+<!-- パーティクル -->
+<canvas id="particles"></canvas>
+
+<!-- ナビ -->
+<nav class="nav scrolled">
+  <div class="nav-inner">
+    <a href="../" class="nav-logo"><span class="logo-icon">◈</span> ユドナリウムリコリス</a>
+    <div class="nav-links">
+      <a href="../#about">概要</a>
+      <a href="../#connect">接続</a>
+      <a href="../guide/index.html">操作説明</a>
+      <a href="../tool/index.html">ツール</a>
+      <a href="index.html" class="nav-link-github">ツール</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ツール一覧 -->
+<section class="section tool-list-page" style="padding-top: 100px;">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">TOOLS</span>
+      <h2 class="section-title">補助ツール</h2>
+    </div>
+    <div class="tool-list">
+      <a href="character-maker.html" class="guide-card">
+        <div class="guide-card-icon">🛠️</div>
+        <div class="guide-card-body">
+          <h3>コマ作成ツール</h3>
+          <p>テンプレート選択→入力→XMLエクスポート。クトゥルフ・D&D・シノビガミ対応。画像ドラッグ&ドロップも。</p>
+        </div>
+        <div class="guide-card-arrow">›</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- フッター -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand"><span class="logo-icon">◈</span> ユドナリウムリコリス</div>
+      <div class="footer-links">
+        <a href="https://cylinder-lily.com" target="_blank">リリィ</a>
+        <a href="https://github.com/TK11235/udonarium" target="_blank">オリジナル版</a>
+        <a href="https://github.com/oron1208/udonarium-lycoris" target="_blank">GitHub</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 Udonarium Lycoris.</div>
+    </div>
+  </div>
+</footer>
+
+<script src="../main.js"></script>
+</body>
+</html>

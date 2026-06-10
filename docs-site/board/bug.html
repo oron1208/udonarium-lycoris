@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="/docs/assets/favicon.png">
+<title>不具合報告 - ユドナリウムリコリス</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/docs/style.css">
+<link rel="stylesheet" href="/docs/board/board.css">
+</head>
+<body>
+
+<div class="bg-fixed">
+  <div class="bg-layer bg-layer-1"></div>
+  <div class="bg-layer bg-layer-2"></div>
+</div>
+<canvas id="particles"></canvas>
+
+<nav class="nav scrolled" id="nav">
+  <div class="nav-inner">
+    <a href="/docs/" class="nav-logo"><span class="logo-icon">◈</span> ユドナリウムリコリス</a>
+    <div class="nav-links">
+      <a href="/docs/">トップ</a>
+      <a href="/docs/board/request.html">要望</a>
+      <a href="/docs/board/bug.html">不具合</a>
+      <a href="https://github.com/oron1208/udonarium-lycoris" target="_blank" class="nav-link-github">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<section class="section board-section" id="board">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">BUGS</span>
+      <h2 class="section-title">🐛 不具合報告</h2>
+      <p class="section-desc">バグや問題を発見したら報告してください</p>
+    </div>
+
+    <div class="post-form fade-up" id="postForm">
+      <h3>新規報告</h3>
+      <div class="form-row">
+        <label>お名前</label>
+        <input type="text" id="inputName" placeholder="名無しさん" maxlength="50">
+      </div>
+      <div class="form-row">
+        <label>タイトル <span class="required">*</span></label>
+        <input type="text" id="inputTitle" placeholder="例：〇〇の操作ができない" maxlength="200" required>
+      </div>
+      <div class="form-row">
+        <label>本文 <span class="required">*</span></label>
+        <textarea id="inputBody" placeholder="再現手順や環境（ブラウザ、OSなど）を書いていただけると助かります" maxlength="5000" rows="5" required></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="submitPost()">報告する</button>
+    </div>
+
+    <div class="posts-list" id="postsList">
+      <p class="loading">読み込み中...</p>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand"><span class="logo-icon">◈</span> ユドナリウムリコリス</div>
+      <div class="footer-copy">&copy; 2026 Udonarium Lycoris</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+const API_BASE = '/bb/api';
+const CATEGORY = 'bug';
+</script>
+<script src="/docs/main.js"></script>
+<script src="/docs/board/board.js"></script>
+</body>
+</html>
