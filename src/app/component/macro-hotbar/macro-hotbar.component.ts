@@ -10,6 +10,7 @@ import { PeerCursor } from '@udonarium/peer-cursor';
 import { FileSelecterComponent } from 'component/file-selecter/file-selecter.component';
 import { ChatMessageService } from 'service/chat-message.service';
 import { ModalService } from 'service/modal.service';
+import { TabletopService } from 'service/tabletop.service';
 
 interface MacroHotbarSlot {
   label: string;
@@ -46,13 +47,15 @@ export class MacroHotbarComponent {
   targetMode = this.settings.targetMode;
   activePage = this.settings.activePage;
   isVisible = this.loadVisibility();
+  get isExtendedDiceBotEnabled(): boolean { return this.tabletopService.currentTable?.extendedDiceBotEnabled ?? false; }
   helpText = '';
   hoverSlotLabel = '';
   hoverSlotText = '';
 
   constructor(
     public chatMessageService: ChatMessageService,
-    private modalService: ModalService
+    private modalService: ModalService,
+    private tabletopService: TabletopService
   ) {
     EventSystem.register(this)
       .on('MACRO_HOTBAR_VISIBILITY_CHANGED', event => {
@@ -299,14 +302,14 @@ export class MacroHotbarComponent {
           let first = true;
           for (let target of targets) {
             const macroText = first ? slot.text : DiceBot.deleteMyselfResourceBuff(slot.text);
-            const evaluated = palette.evaluate(macroText, character.rootDataElement, target);
+            const evaluated = palette.evaluate(macroText, character.rootDataElement, target, this.isExtendedDiceBotEnabled);
             evaluatedTexts.push(`${evaluated} [${target.name}]`);
             messageTargetContext.push({ text: evaluated, object: target });
             first = false;
           }
           text = evaluatedTexts.join('\n');
         } else {
-          text = palette.evaluate(slot.text, character.rootDataElement);
+          text = palette.evaluate(slot.text, character.rootDataElement, null, this.isExtendedDiceBotEnabled);
           messageTargetContext = [{ text: text, object: null }];
         }
       }

@@ -51,15 +51,18 @@ Thumbs.db
 data/
 node_modules/
 dist/
-*.pem
-VPSサーバー設定/dev-admin-token.txt
-signaling-server/node_modules/
 
 # Room data backups (too large for GitHub)
 data/rooms/*.backup*
 
 # Secrets & certs
 .env
-data/server-cert.pem
-data/server-key.pem
+*.pem
+*.key
+*token*
+*password*
+*secret*
+VPSサーバー設定/
+ローカルサーバー設定/
+data/
 backups/*.pem.bak

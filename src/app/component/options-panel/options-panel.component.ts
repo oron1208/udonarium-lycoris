@@ -30,6 +30,11 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
       ObjectStore.instance.getObjects<GameTable>(GameTable)[0];
     return table?.diceCutinEnabled ?? true;
   }
+  get isExtendedDiceBotEnabled(): boolean {
+    const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected) ||
+      ObjectStore.instance.getObjects<GameTable>(GameTable)[0];
+    return table?.extendedDiceBotEnabled ?? false;
+  }
   isOperationHelpOpen = false;
   isUpdateNotesOpen = false;
   isBuffTowerCollapsed = true;
@@ -139,6 +144,15 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
       ObjectStore.instance.getObjects<GameTable>(GameTable)[0];
     if (table) {
       table.diceCutinEnabled = !table.diceCutinEnabled;
+      table.update();
+    }
+  }
+
+  toggleExtendedDiceBot() {
+    const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected) ||
+      ObjectStore.instance.getObjects<GameTable>(GameTable)[0];
+    if (table) {
+      table.extendedDiceBotEnabled = !table.extendedDiceBotEnabled;
       table.update();
     }
   }

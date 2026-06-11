@@ -148,9 +148,59 @@ export class ChatPalette extends ObjectNode {
     return istarget;
   }
 
-  evaluate(line: PaletteLine, extendVariables?: DataElement): string
-  evaluate(line: string, extendVariables?: DataElement,target?: GameCharacter): string
-  evaluate(line: any, extendVariables?: DataElement,target?: GameCharacter): string {
+  private resolveVariableValue(name: string, extendVariables?: DataElement, target?: GameCharacter, useMax: boolean = false): string {
+    // パレット変数から検索
+    if (target?.chatPalette) {
+      for (let variable of target.chatPalette.paletteVariables) {
+        if (variable.name == name) return variable.value;
+      }
+    }
+    for (let variable of this.paletteVariables) {
+      if (variable.name == name) return variable.value;
+    }
+
+    // コマデータ要素から検索
+    if (target) {
+      let element = target.rootDataElement.getFirstElementByName(name);
+      if (element) {
+        if (useMax && element.isNumberResource) return element.value + '';
+        return element.isNumberResource ? element.currentValue + '' : element.value + '';
+      }
+    }
+    if (extendVariables) {
+      let element = extendVariables.getFirstElementByName(name);
+      if (element) {
+        if (useMax && element.isNumberResource) return element.value + '';
+        return element.isNumberResource ? element.currentValue + '' : element.value + '';
+      }
+    }
+    return '';
+  }
+
+  private evaluateFunction(funcName: string, argsStr: string, extendVariables?: DataElement, target?: GameCharacter): string {
+    const args = argsStr.split(',').map(a => StringUtil.toHalfWidth(a.trim()));
+    const values: number[] = [];
+    for (const arg of args) {
+      // 数値リテラルかチェック
+      const literalNum = parseFloat(arg);
+      if (!isNaN(literalNum) && arg.match(/^[\d.]+$/)) {
+        values.push(literalNum);
+        continue;
+      }
+      // タグ名として検索
+      const val = this.resolveVariableValue(arg, extendVariables, target);
+      const num = parseFloat(val);
+      if (!isNaN(num)) values.push(num);
+    }
+    if (values.length === 0) return '';
+    if (funcName === 'max') return Math.max(...values) + '';
+    if (funcName === 'min') return Math.min(...values) + '';
+    return '';
+  }
+
+  evaluate(line: PaletteLine, extendVariables?: DataElement, target?: GameCharacter, enableExtendedDiceBot?: boolean): string
+  evaluate(line: string, extendVariables?: DataElement, target?: GameCharacter, enableExtendedDiceBot?: boolean): string
+  evaluate(line: any, extendVariables?: DataElement, target?: GameCharacter, enableExtendedDiceBot?: boolean): string {
     let evaluate: string = '';
     if (typeof line === 'string') {
       evaluate = line;
@@ -168,6 +218,15 @@ export class ChatPalette extends ObjectNode {
       evaluate = evaluate.replace(/[tTｔＴ]?[{｛]\s*([^{}｛｝]+)\s*[}｝]/g, (match, name) => {
 
         name = StringUtil.toHalfWidth(name);
+
+        // max()/min() 関数の処理（拡張ダイスボット有効時のみ）
+        let funcMatch = enableExtendedDiceBot ? name.match(/^(max|min)\((.+)\)$/i) : null;
+        if (funcMatch) {
+          const result = this.evaluateFunction(funcMatch[1].toLowerCase(), funcMatch[2], extendVariables, target);
+          isContinue = true;
+          return result;
+        }
+
         let useMax = false;
         let namematch = name.match(/(.+)([\^＾]$)/);
         if (namematch) {

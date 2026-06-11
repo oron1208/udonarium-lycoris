@@ -109,6 +109,13 @@
       </button>
     </div>
     <div class="option-hint">ダイスロール結果をカットイン演出で表示します</div>
+    <div class="option-row">
+      <span class="option-label">拡張ダイスボット</span>
+      <button type="button" class="option-toggle" [class.on]="isExtendedDiceBotEnabled" (click)="toggleExtendedDiceBot()">
+        {{ isExtendedDiceBotEnabled ? 'ON' : 'OFF' }}
+      </button>
+    </div>
+    <div class="option-hint">チャットパレットで &#123;max(...)&#125;, &#123;min(...)&#125; 関数が使えるようになります</div>
   </section>
 
   <section class="options-section">

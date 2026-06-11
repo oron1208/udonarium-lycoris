@@ -56,6 +56,7 @@ export class GameTable extends ObjectNode {
   @SyncVar() lightingHaze: boolean = false;
   @SyncVar() initialObjectsPlaced: boolean = false;
   @SyncVar() diceCutinEnabled: boolean = true;
+  @SyncVar() extendedDiceBotEnabled: boolean = false;
 
   gridClipRect: {top: number, right: number, bottom: number, left: number} = null;
 

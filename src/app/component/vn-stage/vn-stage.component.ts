@@ -258,6 +258,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
   }
 
   get isAdvancedRoom(): boolean { return this.tabletopService.currentTable?.roomMode === 'advanced'; }
+  get isExtendedDiceBotEnabled(): boolean { return this.tabletopService.currentTable?.extendedDiceBotEnabled ?? false; }
 
   get selectedCharacter(): GameCharacter {
     const character = ObjectStore.instance.get<GameCharacter>(this.selectedCharacterId);
@@ -573,7 +574,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
       let first = true;
       for (let target of targets) {
         const targetText = first ? rawText : DiceBot.deleteMyselfResourceBuff(rawText);
-        const evaluated = palette.evaluate(targetText, character.rootDataElement, target);
+        const evaluated = palette.evaluate(targetText, character.rootDataElement, target, this.isExtendedDiceBotEnabled);
         evaluatedTexts.push(`${evaluated} [${target.name}]`);
         messageTargetContext.push({ text: evaluated, object: target });
         first = false;
@@ -581,7 +582,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
       return { text: evaluatedTexts.join('\n'), messageTargetContext };
     }
 
-    const evaluated = palette.evaluate(rawText, character.rootDataElement);
+    const evaluated = palette.evaluate(rawText, character.rootDataElement, null, this.isExtendedDiceBotEnabled);
     return { text: evaluated, messageTargetContext: [{ text: evaluated, object: null }] };
   }
 

@@ -10,6 +10,7 @@ import { PeerCursor } from '@udonarium/peer-cursor';
 import { ChatInputComponent } from 'component/chat-input/chat-input.component';
 import { ChatMessageService } from 'service/chat-message.service';
 import { PanelService } from 'service/panel.service';
+import { TabletopService } from 'service/tabletop.service';
 
 import { ContextMenuSeparator, ContextMenuService } from 'service/context-menu.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
@@ -28,6 +29,7 @@ export class ChatPaletteComponent implements OnInit, OnDestroy {
   @Input() character: GameCharacter = null;
 
   get palette(): ChatPalette { return this.character.chatPalette; }
+  get isExtendedDiceBotEnabled(): boolean { return this.tabletopService.currentTable?.extendedDiceBotEnabled ?? false; }
 
   private _gameType: string = '';
   private _paletteIndex: PaletteIndex[] = [];
@@ -65,7 +67,8 @@ export class ChatPaletteComponent implements OnInit, OnDestroy {
     private contextMenuService: ContextMenuService,
     private pointerDeviceService: PointerDeviceService,
     public chatMessageService: ChatMessageService,
-    private panelService: PanelService
+    private panelService: PanelService,
+    private tabletopService: TabletopService
   ) { }
 
   ngOnInit() {
@@ -236,7 +239,7 @@ export class ChatPaletteComponent implements OnInit, OnDestroy {
             str2 = DiceBot.deleteMyselfResourceBuff(str);
           }
 
-          outtext += this.palette.evaluate(str2, this.character.rootDataElement, object);
+          outtext += this.palette.evaluate(str2, this.character.rootDataElement, object, this.isExtendedDiceBotEnabled);
           outtext += ' ['+object.name + ']';
           first = false;
 
@@ -244,13 +247,13 @@ export class ChatPaletteComponent implements OnInit, OnDestroy {
             text: '',
             object: null
           };
-          targetContext.text = this.palette.evaluate(str2, this.character.rootDataElement, object);
+          targetContext.text = this.palette.evaluate(str2, this.character.rootDataElement, object, this.isExtendedDiceBotEnabled);
           targetContext.object = object;
           messageTargetContext.push( targetContext);
         }
       }else{
         objects = [];
-        outtext = this.palette.evaluate(value.text, this.character.rootDataElement);
+        outtext = this.palette.evaluate(value.text, this.character.rootDataElement, null, this.isExtendedDiceBotEnabled);
         let targetContext: ChatMessageTargetContext = {
           text: '',
           object: null
