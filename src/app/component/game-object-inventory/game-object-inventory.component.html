@@ -27,23 +27,33 @@
 </ng-template>
 <ng-template #inventoryViewSetting>
   <ng-container *ngIf="isEdit">
-    <div>
-      <div style="font-size: 12px;">並び順第1</div>
-      <input class="is-caret" [(ngModel)]="sortTag" placeholder="タグ名" />
-      <select [(ngModel)]="sortOrder">
+    <div *ngFor="let key of sortKeys; let i = index"
+      draggable="true"
+      (dragstart)="onSortKeyDragStart(i)"
+      (dragover)="onSortKeyDragOver($event, i)"
+      (dragleave)="onSortKeyDragLeave(i)"
+      (drop)="onSortKeyDrop(i)"
+      (dragend)="onSortKeyDragEnd()"
+      [style.opacity]="dragSortKeyIndex === i ? 0.5 : 1"
+      [style.background]="dragOverIndex === i ? '#e3f2fd' : ''"
+      style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px; padding: 2px 4px; border-radius: 4px; cursor: grab;">
+      <span style="cursor: grab; font-size: 14px; color: #888;">⠿</span>
+      <div style="font-size: 12px; min-width: 28px;">第{{i + 1}}</div>
+      <select style="flex: 1;" [(ngModel)]="sortKeys[i].tag" (ngModelChange)="updateSortKeyTag(i, $event)">
+        <option value="">（未設定）</option>
+        <option *ngIf="key.tag && !availableTags.includes(key.tag)" [value]="key.tag">{{key.tag}}</option>
+        <option *ngFor="let tag of availableTags" [value]="tag">{{tag}}</option>
+      </select>
+      <select [(ngModel)]="sortKeys[i].order" (ngModelChange)="updateSortKeyOrder(i, $event)">
         <option value="ASC">昇順</option>
         <option value="DESC">降順</option>
       </select>
+      <button *ngIf="sortKeys.length > 1" style="font-size: 0.8em; padding: 2px 5px;" (click)="removeSortKey(i)">✕</button>
     </div>
-    <div>
-      <div style="font-size: 12px;">並び順第2</div>
-      <input class="is-caret" [(ngModel)]="sortTag2nd" placeholder="タグ名" />
-      <select [(ngModel)]="sortOrder2nd">
-        <option value="ASC">昇順</option>
-        <option value="DESC">降順</option>
-      </select>
+    <div style="padding: 2px 0;">
+      <button class="tab-setting small-font" (click)="addSortKey()" style="font-size: 0.8em;">＋ソートキー追加</button>
     </div>
-    <div style="font-size: 12px; padding-top: 6px;">表示項目</div>
+    <div style="font-size: 12px; padding-top: 4px;">表示項目</div>
     <input class="is-caret" style="width: 100%; box-sizing: border-box;" [(ngModel)]="dataTag" placeholder="スペース区切りでタグ名 スラッシュで改行 ex.「HP MP / メモ」" />
     <div style="padding-top: 6px;">
       <button class="tab-setting small-font" (click)="toggleEdit()"><i class="material-icons small-font">settings</i>完了</button>
@@ -52,18 +62,13 @@
   <ng-container *ngIf="!isEdit">
     <table style="font-size: 0.8em;">
       <tr>
-        <th style=" vertical-align:middle;">並び順 第1:</th>
-        <td style=" vertical-align:middle;">
-          
-          <ng-container *ngIf="0 < sortTag.length">{{sortTag}} ({{sortOrderName}})</ng-container>
-          <ng-container *ngIf="sortTag.length < 1">-</ng-container>
-        </td>
-        <th style=" vertical-align:middle;"> 第2:</th>
-        <td style=" vertical-align:middle;">
-          
-          <ng-container *ngIf="0 < sortTag2nd.length">{{sortTag2nd}} ({{sortOrderName2nd}})</ng-container>
-          <ng-container *ngIf="sortTag2nd.length < 1">-</ng-container>
-        </td>
+        <ng-container *ngFor="let key of sortKeys; let i = index; let last = last">
+          <th style="vertical-align:middle;"> {{getSortKeyName(i)}}:</th>
+          <td style="vertical-align:middle;">
+            <ng-container *ngIf="key.tag && key.tag.length > 0">{{key.tag}} ({{getSortOrderName(key.order)}})</ng-container>
+            <ng-container *ngIf="!key.tag || key.tag.length < 1">-</ng-container>
+          </td>
+        </ng-container>
         <td><button class="tab-setting small-font" (click)="toggleEdit()"><i class="material-icons small-font">settings</i>設定</button></td>
       </tr>
     </table>

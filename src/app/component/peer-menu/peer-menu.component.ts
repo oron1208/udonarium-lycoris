@@ -170,6 +170,10 @@ export class PeerMenuComponent implements OnInit, OnDestroy, AfterViewInit {
     this.isOperationHelpOpen = !this.isOperationHelpOpen;
   }
 
+  openGuideSite() {
+    window.open('https://udonarium-lycoris.ddns.net/docs/guide/index.html', '_blank');
+  }
+
   findUserId(peerId: string) {
     const peerCursor = PeerCursor.findByPeerId(peerId);
     return peerCursor ? peerCursor.userId : '';

@@ -184,6 +184,14 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
     this.isOperationHelpOpen = !this.isOperationHelpOpen;
   }
 
+  openGuideSite() {
+    window.open('https://udonarium-lycoris.ddns.net/docs/guide/index.html', '_blank');
+  }
+
+  openUpdateNotesSite() {
+    window.open('https://udonarium-lycoris.ddns.net/docs/#updates', '_blank');
+  }
+
   toggleUpdateNotes() {
     this.isUpdateNotesOpen = !this.isUpdateNotesOpen;
   }

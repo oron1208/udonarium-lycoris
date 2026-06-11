@@ -3,7 +3,7 @@ import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { EventSystem, Network } from '@udonarium/core/system';
 import { StringUtil } from '@udonarium/core/system/util/string-util';
 import { DataElement } from '@udonarium/data-element';
-import { DataSummarySetting, SortOrder } from '@udonarium/data-summary-setting';
+import { DataSummarySetting, SortKeyEntry, SortOrder } from '@udonarium/data-summary-setting';
 import { GameCharacter } from '@udonarium/game-character';
 import { TabletopObject } from '@udonarium/tabletop-object';
 
@@ -18,14 +18,24 @@ export class GameObjectInventoryService {
   private get summarySetting(): DataSummarySetting { return DataSummarySetting.instance; }
 
   get sortTag(): string { return this.summarySetting.sortTag; }
-  set sortTag(sortTag: string) { this.summarySetting.sortTag = sortTag; }
+  set sortTag(sortTag: string) { this.summarySetting.sortTag = sortTag; this.syncSortKeysFromLegacy(); }
   get sortOrder(): SortOrder { return this.summarySetting.sortOrder; }
-  set sortOrder(sortOrder: SortOrder) { this.summarySetting.sortOrder = sortOrder; }
+  set sortOrder(sortOrder: SortOrder) { this.summarySetting.sortOrder = sortOrder; this.syncSortKeysFromLegacy(); }
 
   get sortTag2nd(): string { return this.summarySetting.sortTag2nd; }
-  set sortTag2nd(sortTag: string) { this.summarySetting.sortTag2nd = sortTag; }
+  set sortTag2nd(sortTag: string) { this.summarySetting.sortTag2nd = sortTag; this.syncSortKeysFromLegacy(); }
   get sortOrder2nd(): SortOrder { return this.summarySetting.sortOrder2nd; }
-  set sortOrder2nd(sortOrder: SortOrder) { this.summarySetting.sortOrder2nd = sortOrder; }
+  set sortOrder2nd(sortOrder: SortOrder) { this.summarySetting.sortOrder2nd = sortOrder; this.syncSortKeysFromLegacy(); }
+
+  get sortKeys(): SortKeyEntry[] { return this.summarySetting.sortKeys; }
+  set sortKeys(keys: SortKeyEntry[]) { this.summarySetting.sortKeys = keys; }
+
+  private syncSortKeysFromLegacy() {
+    this.summarySetting.sortKeys = [
+      { tag: this.summarySetting.sortTag, order: this.summarySetting.sortOrder },
+      { tag: this.summarySetting.sortTag2nd, order: this.summarySetting.sortOrder2nd }
+    ];
+  }
 
   get dataTag(): string { return this.summarySetting.dataTag; }
   set dataTag(dataTag: string) { this.summarySetting.dataTag = dataTag; }
@@ -78,6 +88,7 @@ export class GameObjectInventoryService {
           }
           this.callInventoryUpdate();
         } else if (object instanceof DataSummarySetting) {
+          DataSummarySetting.instance['_sortKeys'] = null; // sortKeys cache clear
           this.refreshDataElements();
           this.refreshSort();
           this.callInventoryUpdate();
@@ -164,6 +175,8 @@ class ObjectInventory {
   get sortOrder2nd(): SortOrder { return this.summarySetting.sortOrder2nd; }
   set sortOrder2nd(sortOrder: SortOrder) { this.summarySetting.sortOrder2nd = sortOrder; }
 
+  get sortKeys(): SortKeyEntry[] { return this.summarySetting.sortKeys; }
+
   get dataTag(): string { return this.summarySetting.dataTag; }
   set dataTag(dataTag: string) { this.summarySetting.dataTag = dataTag; }
 
@@ -235,36 +248,28 @@ class ObjectInventory {
   }
 
   private sortTabletopObjects(objects: TabletopObject[]): TabletopObject[] {
-    let sortTag = this.sortTag.length ? this.sortTag.trim() : '';
-    let sortTag2nd = this.sortTag2nd.length ? this.sortTag2nd.trim() : '';
-
-    let sortOrder = this.sortOrder === 'ASC' ? -1 : 1;
-    let sortOrder2nd = this.sortOrder2nd === 'ASC' ? -1 : 1;
-    if (sortTag.length < 1) return objects;
+    const sortKeys = this.sortKeys;
+    if (!sortKeys || sortKeys.length < 1) return objects;
+    const firstTag = sortKeys[0].tag?.trim();
+    if (!firstTag || firstTag.length < 1) return objects;
 
     objects.sort((a, b) => {
-      let aElm = a.rootDataElement?.getFirstElementByName(sortTag);
-      let bElm = b.rootDataElement?.getFirstElementByName(sortTag);
-      if (!aElm && !bElm) return 0;
-      if (!bElm) return -1;
-      if (!aElm) return 1;
+      for (const key of sortKeys) {
+        const tag = key.tag?.trim();
+        if (!tag || tag.length < 1) continue;
 
-      let aValue = this.convertToSortableValue(aElm);
-      let bValue = this.convertToSortableValue(bElm);
-      if (aValue < bValue) return sortOrder;
-      if (aValue > bValue) return sortOrder * -1;
+        const aElm = a.rootDataElement?.getFirstElementByName(tag);
+        const bElm = b.rootDataElement?.getFirstElementByName(tag);
+        if (!aElm && !bElm) continue;
+        if (!bElm) return -1;
+        if (!aElm) return 1;
 
-      let aElm2nd = a.rootDataElement.getFirstElementByName(sortTag2nd);
-      let bElm2nd = b.rootDataElement.getFirstElementByName(sortTag2nd);
-      if (!aElm2nd && !bElm2nd) return 0;
-      if (!bElm2nd) return -1;
-      if (!aElm2nd) return 1;
-
-      let aValue2nd = this.convertToSortableValue(aElm2nd);
-      let bValue2nd = this.convertToSortableValue(bElm2nd);
-      if (aValue2nd < bValue2nd) return sortOrder2nd;
-      if (aValue2nd > bValue2nd) return sortOrder2nd * -1;
-
+        const sortOrder = key.order === 'ASC' ? -1 : 1;
+        const aValue = this.convertToSortableValue(aElm);
+        const bValue = this.convertToSortableValue(bElm);
+        if (aValue < bValue) return sortOrder;
+        if (aValue > bValue) return sortOrder * -1;
+      }
       return 0;
     });
     return objects;

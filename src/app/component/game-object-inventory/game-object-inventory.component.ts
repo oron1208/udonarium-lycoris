@@ -4,7 +4,7 @@ import { GameObject } from '@udonarium/core/synchronize-object/game-object';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { EventSystem, Network } from '@udonarium/core/system';
 import { DataElement } from '@udonarium/data-element';
-import { SortOrder } from '@udonarium/data-summary-setting';
+import { SortKeyEntry, SortOrder } from '@udonarium/data-summary-setting';
 import { GameCharacter } from '@udonarium/game-character';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
 import { TabletopObject } from '@udonarium/tabletop-object';
@@ -54,6 +54,80 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
 
   get sortOrderName(): string { return this.sortOrder === SortOrder.ASC ? '昇順' : '降順'; }
   get sortOrderName2nd(): string { return this.sortOrder2nd === SortOrder.ASC ? '昇順' : '降順'; }
+
+  get sortKeys(): SortKeyEntry[] { return this.inventoryService.sortKeys; }
+  set sortKeys(keys: SortKeyEntry[]) { this.inventoryService.sortKeys = keys; }
+
+  getSortKeyName(index: number): string { return `第${index + 1}`; }
+  getSortOrderName(order: SortOrder): string { return order === SortOrder.ASC ? '昇順' : '降順'; }
+
+  addSortKey() {
+    const keys = [...this.sortKeys];
+    keys.push({ tag: '', order: SortOrder.ASC });
+    this.sortKeys = keys;
+  }
+
+  removeSortKey(index: number) {
+    if (this.sortKeys.length <= 1) return;
+    const keys = [...this.sortKeys];
+    keys.splice(index, 1);
+    this.sortKeys = keys;
+  }
+
+  updateSortKeyTag(index: number, tag: string) {
+    const keys = [...this.sortKeys];
+    keys[index] = { ...keys[index], tag };
+    this.sortKeys = keys;
+    this.changeDetector.markForCheck();
+  }
+
+  updateSortKeyOrder(index: number, order: SortOrder) {
+    const keys = [...this.sortKeys];
+    keys[index] = { ...keys[index], order };
+    this.sortKeys = keys;
+    this.changeDetector.markForCheck();
+  }
+
+  // ドラッグ&ドロップでソートキーの順番入れ替え
+  dragSortKeyIndex: number = -1;
+  dragOverIndex: number = -1;
+
+  onSortKeyDragStart(index: number) {
+    this.dragSortKeyIndex = index;
+  }
+
+  onSortKeyDragOver(event: DragEvent, index: number) {
+    event.preventDefault();
+    this.dragOverIndex = index;
+  }
+
+  onSortKeyDragLeave(index: number) {
+    if (this.dragOverIndex === index) this.dragOverIndex = -1;
+  }
+
+  onSortKeyDrop(index: number) {
+    if (this.dragSortKeyIndex < 0 || this.dragSortKeyIndex === index) {
+      this.dragSortKeyIndex = -1;
+      this.dragOverIndex = -1;
+      return;
+    }
+    const keys = [...this.sortKeys];
+    const [moved] = keys.splice(this.dragSortKeyIndex, 1);
+    keys.splice(index, 0, moved);
+    this.sortKeys = keys;
+    this.dragSortKeyIndex = -1;
+    this.dragOverIndex = -1;
+  }
+
+  onSortKeyDragEnd() {
+    this.dragSortKeyIndex = -1;
+    this.dragOverIndex = -1;
+  }
+
+  // 表示項目のタグリスト（プルダウン用）
+  get availableTags(): string[] {
+    return this.dataTags.filter(t => t && t.length > 0);
+  }
 
   get newLineString(): string { return this.inventoryService.newLineString; }
 
