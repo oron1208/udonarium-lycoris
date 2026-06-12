@@ -63,6 +63,7 @@ import { PointerDeviceService } from 'service/pointer-device.service';
 export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
   @Input() diceSymbol: DiceSymbol = null;
   @Input() is3D: boolean = false;
+  @Input() isFlatMode: boolean = false;
 
   get face(): string { return this.diceSymbol.face; }
   set face(face: string) { this.diceSymbol.face = face; }

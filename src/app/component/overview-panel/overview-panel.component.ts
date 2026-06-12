@@ -76,6 +76,9 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
 
   get newLineString(): string { return this.inventoryService.newLineString; }
   get isPointerDragging(): boolean { return this.pointerDeviceService.isDragging; }
+  get isForeground(): boolean {
+    try { return localStorage.getItem('udonarium.tooltip.foreground.v1') !== '0'; } catch (_) { return false; }
+  }
 
   get pointerEventsStyle(): any { return { 'is-pointer-events-auto': !this.isPointerDragging, 'pointer-events-none': this.isPointerDragging }; }
 

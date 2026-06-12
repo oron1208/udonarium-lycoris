@@ -54,6 +54,13 @@ interface DiceRollResult {
   id: string;
   result: string;
   isSecret: boolean;
+  // BCDice構造化データ
+  rands: [number, number][];
+  detailedRands: { kind: string; sides: number; value: number; }[];
+  isSuccess: boolean;
+  isFailure: boolean;
+  isCritical: boolean;
+  isFumble: boolean;
 }
 
 interface ResourceByCharacter{
@@ -103,14 +110,20 @@ export class DiceBot extends GameObject {
           console.log('isSecret!!!', result.secret);
           return {
             id: gameSystem.ID,
-            result: `${gameSystem.ID} : ${result.text}`.replace(/\n?(#\d+)\n/ig, '$1 '), // 繰り返しダイスロールは改行表示を短縮する
+            result: `${gameSystem.ID} : ${result.text}`.replace(/\n?(#\d+)\n/ig, '$1 '),
             isSecret: result.secret,
+            rands: result.rands || [],
+            detailedRands: result.detailedRands || [],
+            isSuccess: result.success || false,
+            isFailure: result.failure || false,
+            isCritical: result.critical || false,
+            isFumble: result.fumble || false,
           };
         }
       } catch (e) {
         console.error(e);
       }
-      return { id: gameSystem.ID, result: '', isSecret: false };
+      return { id: gameSystem.ID, result: '', isSecret: false, rands: [], detailedRands: [], isSuccess: false, isFailure: false, isCritical: false, isFumble: false };
     });
   }
 
@@ -329,7 +342,7 @@ export class DiceBot extends GameObject {
           const regArray = /^((\d+)?\s+)?(.*)?/ig.exec(rollTable.dice);
           const repeat: number = (regArray[2] != null) ? Number(regArray[2]) : 1;
           const rollText: string = (regArray[3] != null) ? regArray[3] : text;
-          const finalResult: DiceRollResult = { id: null, result: '', isSecret: false };
+          const finalResult: DiceRollResult = { id: null, result: '', isSecret: false, rands: [], detailedRands: [], isSuccess: false, isFailure: false, isCritical: false, isFumble: false };
           for (let i = 0; i < repeat && i < 32; i++) {
             const gameSystem = await DiceBot.loadGameSystemAsync(rollTable.diceTablePalette.dicebot);
             const rollResult = await DiceBot.diceRollAsync(rollText, gameSystem);
@@ -1068,9 +1081,12 @@ export class DiceBot extends GameObject {
     // ダイスロール汎用カットイン発動
     if (!isSecret) {
       console.log('DiceCutIn: sendResultMessage cutin trigger, contextText=' + originalMessage.text);
+      // 構造化データを直接イベント通知（アドバンスモード用）
+      EventSystem.trigger('DICE_CUT_IN_STRUCTURED', { rollResult: rollResult });
+      // CutInLauncher経由（サイドメニューカットイン用）
       const cutInLauncher = ObjectStore.instance.get<CutInLauncher>('CutInLauncher');
       if (cutInLauncher) {
-        cutInLauncher.diceRollCutIn(result, originalMessage.text, diceBotMessage.to);
+        cutInLauncher.diceRollCutIn(result, originalMessage.text, diceBotMessage.to, rollResult);
       } else {
         console.log('DiceCutIn: CutInLauncher not found!');
       }

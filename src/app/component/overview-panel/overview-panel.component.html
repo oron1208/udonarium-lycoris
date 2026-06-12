@@ -1,4 +1,4 @@
-<div class="component is-pointer-events-none" [@fadeInOut]="'in'" appDraggable #draggablePanel>
+<div class="component is-pointer-events-none" [ngClass]="{'tooltip-foreground': isForeground}" [@fadeInOut]="'in'" appDraggable #draggablePanel>
   <ng-container [ngSwitch]="tabletopObject.aliasName">
     <ng-container *ngSwitchCase="'numberResource'">
     </ng-container>

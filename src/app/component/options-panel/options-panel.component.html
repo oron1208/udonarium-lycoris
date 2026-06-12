@@ -146,6 +146,20 @@
       </button>
     </div>
     <div class="option-hint">コマの向き（光源コーンと同じ rotate + 90）を外側の矢印で表示します</div>
+    <div class="option-row">
+      <span class="option-label">パネルを最前面に表示</span>
+      <button type="button" class="option-toggle" [class.on]="isActivePanelForeground" (click)="toggleActivePanelForeground()">
+        {{ isActivePanelForeground ? 'ON' : 'OFF' }}
+      </button>
+    </div>
+    <div class="option-hint">操作中のパネルを常に最前面に表示します（他のパネルの裏に隠れません）</div>
+    <div class="option-row">
+      <span class="option-label">ホバープレビューを最前面に表示</span>
+      <button type="button" class="option-toggle" [class.on]="isTooltipForeground" (click)="toggleTooltipForeground()">
+        {{ isTooltipForeground ? 'ON' : 'OFF' }}
+      </button>
+    </div>
+    <div class="option-hint">コマやメモにマウスオーバーした時のプレビューを他のパネルより前面に表示します</div>
     <div class="option-row" style="margin-top: 10px;">
       <button type="button" class="option-button" (click)="resetCamera()">視点を初期位置に戻す</button>
     </div>
@@ -162,6 +176,6 @@
     <button type="button" class="option-button" (click)="addSampleCharacters()">
         🎭 サンプルキャラ追加
     </button>
-    <div style="font-size: 0.75em; color: #888; text-align: right; padding: 4px 8px;">v1.33.0-lycoris.0</div>
+    <div style="font-size: 0.75em; color: #888; text-align: right; padding: 4px 8px;">v1.34.0-lycoris.0</div>
   </section>
 </div>

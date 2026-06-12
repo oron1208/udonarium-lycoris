@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
+<title>拡張ダイスボット 操作説明 - ユドナリウムリコリス</title>
+<meta name="description" content="ユドナリウムリコリスの拡張ダイスボット機能の使い方を解説。max/min/sum/avg/abs等の関数や数式計算に対応。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+
+<!-- 背景固定レイヤー -->
+<div class="bg-fixed">
+  <div class="bg-layer bg-layer-1"></div>
+  <div class="bg-layer bg-layer-2"></div>
+</div>
+
+<!-- パーティクル -->
+<canvas id="particles"></canvas>
+
+<!-- ナビ -->
+<nav class="nav scrolled">
+  <div class="nav-inner">
+    <a href="../" class="nav-logo"><span class="logo-icon">◈</span> ユドナリウムリコリス</a>
+    <div class="nav-links">
+      <a href="../#about">概要</a>
+      <a href="../#connect">接続</a>
+      <a href="../#guide">操作説明</a>
+      <a href="../#updates">更新履歴</a>
+      <a href="https://github.com/oron1208/udonarium-lycoris" target="_blank" class="nav-link-github">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<!-- 拡張ダイスボット説明 -->
+<section class="section guide-article" style="padding-top: 100px;">
+  <div class="container">
+
+    <!-- パンくず -->
+    <div class="breadcrumb">
+      <a href="index.html">操作説明</a>
+      <span class="breadcrumb-sep">›</span>
+      <span>拡張ダイスボット</span>
+    </div>
+
+    <!-- ヘッダー -->
+    <div class="guide-header">
+      <div class="guide-header-icon">🎲</div>
+      <h1 class="guide-header-title">拡張ダイスボット</h1>
+      <p class="guide-header-desc">
+        チャットパレットで使える便利な関数と数式計算。<br>
+        アドバンスモードのオプションから有効にできます。
+      </p>
+    </div>
+
+    <!-- 目次 -->
+    <div class="guide-toc">
+      <h3>目次</h3>
+      <ol>
+        <li><a href="#enable">有効にする方法</a></li>
+        <li><a href="#functions">関数一覧</a></li>
+        <li><a href="#expression">数式の自動計算</a></li>
+        <li><a href="#examples">実践例</a></li>
+        <li><a href="#notes">注意事項</a></li>
+      </ol>
+    </div>
+
+    <!-- 1. 有効にする -->
+    <div class="guide-step" id="enable">
+      <div class="step-number">1</div>
+      <div class="step-body">
+        <h2>有効にする方法</h2>
+        <p>
+          アドバンスモードのオプションパネルにある<strong>「拡張ダイスボット」</strong>をONにしてください。<br>
+          この設定は部屋全体に反映されます（部屋にいる全員が同じ設定になります）。
+        </p>
+        <p>
+          拡張ダイスボットがONのとき、チャットパレットで以下の関数と数式計算が使えるようになります。
+        </p>
+      </div>
+    </div>
+
+    <!-- 2. 関数一覧 -->
+    <div class="guide-step" id="functions">
+      <div class="step-number">2</div>
+      <div class="step-body">
+        <h2>関数一覧</h2>
+        <p>
+          チャットパレットの行の中で <code>{関数名(引数)}</code> と書くと、送信時に計算結果に置換されます。<br>
+          引数には数値を直接書くほか、キャラクターのデータタグ名も使えます。
+        </p>
+
+        <div class="step-fields">
+          <div class="field-item">
+            <div class="field-label">{max(値1, 値2, ...)} <code>最大値</code></div>
+            <div class="field-desc">複数の値の中から最も大きい値を返します。</div>
+            <div class="code-block"><code>{max(3, 7, 5)} → 7</code></div>
+          </div>
+
+          <div class="field-item">
+            <div class="field-label">{min(値1, 値2, ...)} <code>最小値</code></div>
+            <div class="field-desc">複数の値の中から最も小さい値を返します。</div>
+            <div class="code-block"><code>{min(3, 7, 5)} → 3</code></div>
+          </div>
+
+          <div class="field-item">
+            <div class="field-label">{sum(値1, 値2, ...)} <code>合計</code></div>
+            <div class="field-desc">全ての値を足し合わせます。</div>
+            <div class="code-block"><code>{sum(3, 5, 7)} → 15</code></div>
+          </div>
+
+          <div class="field-item">
+            <div class="field-label">{avg(値1, 値2, ...)} <code>平均</code></div>
+            <div class="field-desc">全ての値の平均を計算します。</div>
+            <div class="code-block"><code>{avg(10, 15, 14)} → 13</code></div>
+          </div>
+
+          <div class="field-item">
+            <div class="field-label">{abs(値)} <code>絶対値</code></div>
+            <div class="field-desc">値の絶対値を返します。マイナスをプラスに変換したい時に。</div>
+            <div class="code-block"><code>{abs(-4)} → 4</code></div>
+          </div>
+
+          <div class="field-item">
+            <div class="field-label">{ceil(値)} <code>切り上げ</code></div>
+            <div class="field-desc">小数点以下を切り上げて整数にします。</div>
+            <div class="code-block"><code>{ceil(3.2)} → 4</code></div>
+          </div>
+
+          <div class="field-item">
+            <div class="field-label">{floor(値)} <code>切り捨て</code></div>
+            <div class="field-desc">小数点以下を切り捨てて整数にします。</div>
+            <div class="code-block"><code>{floor(3.8)} → 3</code></div>
+          </div>
+
+          <div class="field-item">
+            <div class="field-label">{round(値)} <code>四捨五入</code></div>
+            <div class="field-desc">小数点以下を四捨五入して整数にします。</div>
+            <div class="code-block"><code>{round(3.5)} → 4　/　{round(3.4)} → 3</code></div>
+          </div>
+
+          <div class="field-item">
+            <div class="field-label">{clamp(値, 最小, 最大)} <code>範囲制限</code></div>
+            <div class="field-desc">値を指定した範囲内に収めます。HP計算などで便利。</div>
+            <div class="code-block"><code>{clamp(15, 1, 10)} → 10　/　{clamp(-3, 0, 100)} → 0</code></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. 数式の自動計算 -->
+    <div class="guide-step" id="expression">
+      <div class="step-number">3</div>
+      <div class="step-body">
+        <h2>数式の自動計算</h2>
+        <p>
+          <code>{}</code> で囲まなくても、<strong>カッコで囲まれた数式</strong>が自動的に計算されます。<br>
+          これにより、BCDiceのコマンド内で計算を先に行うことができます。
+        </p>
+
+        <div class="step-fields">
+          <div class="field-item">
+            <div class="field-label">基本的な使い方</div>
+            <div class="field-desc">カッコの中に四則演算を書くと、送信時に計算結果に置換されます。</div>
+            <div class="code-block"><code>AR+(1-5) → AR+-4</code></div>
+            <div class="code-block"><code>2d6+(3*2) → 2d6+6</code></div>
+          </div>
+
+          <div class="field-item">
+            <div class="field-label">ネスト対応</div>
+            <div class="field-desc">カッコの中にカッコがある場合、内側から順番に計算されます。</div>
+            <div class="code-block"><code>AT+(2+(3*4)) → AT+14</code></div>
+          </div>
+
+          <div class="field-item">
+            <div class="field-label">使える演算子</div>
+            <div class="field-desc">
+              <code>+</code> 足し算　<code>-</code> 引き算　<code>*</code> 掛け算　<code>/</code> 割り算
+            </div>
+          </div>
+        </div>
+
+        <p style="margin-top: 16px;">
+          <strong>⚠️ 注意：</strong>カッコの中に数字と演算子以外の文字が含まれている場合は計算されず、そのままBCDiceに渡されます。<br>
+          例：<code>2d6</code> や <code>K20</code> などのダイス表記は計算対象になりません。
+        </p>
+      </div>
+    </div>
+
+    <!-- 4. 実践例 -->
+    <div class="guide-step" id="examples">
+      <div class="step-number">4</div>
+      <div class="step-body">
+        <h2>実践例</h2>
+
+        <h3 style="font-size: 1.05rem; margin-bottom: 8px;">D&D 5版 — 修正値に計算を使う</h3>
+        <p>キャラクターのデータタグと組み合わせて使えます。</p>
+        <div class="code-block"><code>AR+({STR}-5)>=15 → STRが14の場合 → AR+9>=15</code></div>
+        <div class="code-block"><code>AT+(1-5) → AT+-4</code></div>
+
+        <h3 style="font-size: 1.05rem; margin-top: 24px; margin-bottom: 8px;">clamping — HPの範囲制限</h3>
+        <p>ダメージ計算でHPが0未満にならないように制限。</p>
+        <div class="code-block"><code>HP={clamp({HP}-1d6, 0, 999)}</code></div>
+
+        <h3 style="font-size: 1.05rem; margin-top: 24px; margin-bottom: 8px;">平均値 — 能力値の平均を出す</h3>
+        <div class="code-block"><code>能力値平均: {avg({STR},{DEX},{CON})}</code></div>
+
+        <h3 style="font-size: 1.05rem; margin-top: 24px; margin-bottom: 8px;">絶対値 — 距離計算</h3>
+        <div class="code-block"><code>距離: {abs({X}-{TX})}</code></div>
+
+        <h3 style="font-size: 1.05rem; margin-top: 24px; margin-bottom: 8px;">切り上げ — ダイス半分</h3>
+        <div class="code-block"><code>{ceil({Lv}/2)}d6</code></div>
+      </div>
+    </div>
+
+    <!-- 5. 注意事項 -->
+    <div class="guide-note" id="notes">
+      <h2>⚠️ 注意事項</h2>
+      <div class="note-grid">
+        <div class="note-item">
+          <h3>部屋全体の設定</h3>
+          <p>拡張ダイスボットのON/OFFは部屋にいる全員に反映されます。一部のプレイヤーだけ有効にすることはできません。</p>
+        </div>
+        <div class="note-item">
+          <h3>BCDiceとの関係</h3>
+          <p>拡張ダイスボットはBCDiceにコマンドを渡す<strong>前</strong>に計算を行います。ダイスロール自体はBCDiceが処理します。</p>
+        </div>
+        <div class="note-item">
+          <h3>関数のネスト</h3>
+          <p><code>{max({abs(-3)}, {abs(-7)})}</code> のように、関数の中に関数を入れることはできません。段階的に計算してください。</p>
+        </div>
+        <div class="note-item">
+          <h3>セキュリティ</h3>
+          <p>数式の自動計算は数字と四則演算子のみを評価します。その他の文字が含まれている場合は計算されません。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 戻る -->
+    <div class="guide-back">
+      <a href="index.html">← 操作説明一覧に戻る</a>
+    </div>
+
+  </div>
+</section>
+
+<!-- フッター -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand"><span class="logo-icon">◈</span> ユドナリウムリコリス</div>
+      <div class="footer-links">
+        <a href="https://cylinder-lily.com" target="_blank">リリィ</a>
+        <a href="https://github.com/TK11235/udonarium" target="_blank">オリジナル版</a>
+        <a href="https://github.com/oron1208/udonarium-lycoris" target="_blank">GitHub</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 Udonarium Lycoris.</div>
+    </div>
+  </div>
+</footer>
+
+<script src="../main.js"></script>
+</body>
+</html>

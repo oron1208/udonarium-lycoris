@@ -43,6 +43,7 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
   isVnAutoFit = true;
   isVnBoardButtonVisible = false;
   isActivePanelForeground = true;
+  isTooltipForeground = false;
   isShowSideNameLabel = true;
   isShowTopDownNameLabel = true;
   isShowCharacterDirectionMarker = false;
@@ -50,6 +51,7 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
   private static readonly CURSOR_SHARE_DISABLED_KEY = 'udonarium.gm.cursorShareDisabled';
   private static readonly VN_BOARD_BUTTON_VISIBLE_KEY = 'udonarium.vnStage.boardButton.visible.v1';
   private static readonly ACTIVE_PANEL_FOREGROUND_KEY = 'udonarium.panel.activeForeground.v1';
+  private static readonly TOOLTIP_FOREGROUND_KEY = 'udonarium.tooltip.foreground.v1';
   private static readonly SHOW_SIDE_NAME_LABEL_KEY = 'udonarium.nameLabel.side.v1';
   private static readonly SHOW_TOPDOWN_NAME_LABEL_KEY = 'udonarium.nameLabel.topdown.v1';
   private static readonly SHOW_CHARACTER_DIRECTION_MARKER_KEY = 'udonarium.character.directionMarker.visible.v1';
@@ -69,6 +71,7 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
     try { this.isVnAutoFit = localStorage.getItem('udonarium.vnStage.autoFit.v1') === '1'; } catch (_) { }
     try { this.isVnBoardButtonVisible = localStorage.getItem(OptionsPanelComponent.VN_BOARD_BUTTON_VISIBLE_KEY) === '1'; } catch (_) { }
     try { this.isActivePanelForeground = localStorage.getItem(OptionsPanelComponent.ACTIVE_PANEL_FOREGROUND_KEY) !== '0'; } catch (_) { }
+    try { this.isTooltipForeground = localStorage.getItem(OptionsPanelComponent.TOOLTIP_FOREGROUND_KEY) !== '0'; } catch (_) { }
     try { this.isBuffTowerCollapsed = localStorage.getItem('udonarium.buffTower.collapsed.v1') !== 'false'; } catch (_) { }
     try { this.isCompactMode = localStorage.getItem('udonarium.options.compact.v3') === '1'; } catch (_) { }
     try { this.isCursorShareDisabled = localStorage.getItem(OptionsPanelComponent.CURSOR_SHARE_DISABLED_KEY) === '1'; } catch (_) { }
@@ -172,6 +175,11 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
   toggleActivePanelForeground() {
     this.isActivePanelForeground = !this.isActivePanelForeground;
     try { localStorage.setItem(OptionsPanelComponent.ACTIVE_PANEL_FOREGROUND_KEY, this.isActivePanelForeground ? '1' : '0'); } catch (_) { }
+  }
+
+  toggleTooltipForeground() {
+    this.isTooltipForeground = !this.isTooltipForeground;
+    try { localStorage.setItem(OptionsPanelComponent.TOOLTIP_FOREGROUND_KEY, this.isTooltipForeground ? '1' : '0'); } catch (_) { }
   }
 
   resetCamera() {

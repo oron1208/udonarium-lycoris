@@ -65,8 +65,8 @@ async function fetchSkyWayAuthToken(url: string, channelName: string, peerId: st
 async function createSkyWayAuthTokenMock(channelName: string, peerId: string): Promise<string> {
   // モック実装のため、アプリケーションIDとシークレットキーは固定値
   // 本番環境ではシークレットキーをサーバなどに置いて秘匿する
-  const _appId = '<SkyWay2023 Application ID>';
-  const _secret = '<SkyWay2023 Secret key>';
+  const _appId = 'ceb5b75f-6ae3-4c2b-b8e0-21435b04a5cf';
+  const _secret = '8djeDX…agM=';
 
   const lobbySize = 4;
 

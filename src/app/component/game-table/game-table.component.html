@@ -18,7 +18,7 @@
         </game-table-scratch-mask>
         <div *ngIf="textNotes.length > 0 && layerVisibility.textNote" class="layer">
           <div class="dummy"></div>
-          <text-note class="is-3d will-change-transform" *ngFor="let textNote of textNotes; trackBy: trackByGameObject" [textNote]="textNote" [appTooltip]="textNote" [ngStyle]="{'z-index' : textNote.zindex}"></text-note>
+          <text-note class="is-3d will-change-transform" *ngFor="let textNote of textNotes; trackBy: trackByGameObject" [textNote]="textNote" [appTooltip]="textNote" [isFlatMode]="isFlatMode" [ngStyle]="{'z-index' : textNote.zindex}"></text-note>
         </div>
         <ng-container *ngIf="layerVisibility.card">
         <card-stack class="is-3d will-change-transform" *ngFor="let cardStack of cardStacks; trackBy: trackByGameObject" [cardStack]="cardStack" [appTooltip]="cardStack" [ngStyle]="{'z-index' : cardStack.zindex, 'transform': 'translateZ(' + (cardStack.zindex * 0.001) +'px)'}"></card-stack>
@@ -33,7 +33,7 @@
         </ng-container>
         <div *ngIf="diceSymbols.length > 0 && layerVisibility.dice" class="layer">
           <div class="dummy"></div>
-          <dice-symbol class="is-3d will-change-transform" *ngFor="let diceSymbol of diceSymbols; trackBy: trackByGameObject" [diceSymbol]="diceSymbol" [appTooltip]="diceSymbol"></dice-symbol>
+          <dice-symbol class="is-3d will-change-transform" *ngFor="let diceSymbol of diceSymbols; trackBy: trackByGameObject" [diceSymbol]="diceSymbol" [appTooltip]="diceSymbol" [isFlatMode]="isFlatMode"></dice-symbol>
         </div>
         <div *ngIf="characters.length > 0 && layerVisibility.character" class="layer">
           <div class="dummy"></div>

@@ -48,7 +48,7 @@ export class CutInLauncher extends GameObject {
     return audio ? true : false ;
   }
 
-  diceRollCutIn(resultText: string, contextText: string, sendTo?: string) {
+  diceRollCutIn(resultText: string, contextText: string, sendTo?: string, rollResult?: any) {
     const allCutIn = this.getCutIns();
     for (const cutIn_ of allCutIn) {
       if (cutIn_.diceActivate) {
@@ -63,10 +63,17 @@ export class CutInLauncher extends GameObject {
             this.jukebox.stop();
           }
           this.startCutIn(cutIn_, sendTo);
+          // 構造化データをイベントで通知
+          if (rollResult) {
+            setTimeout(() => EventSystem.trigger('DICE_CUT_IN_STRUCTURED', { rollResult }), 100);
+          }
         } else {
-          // 2回目以降: 既存ウィンドウを更新（新しいウィンドウは開かない）
+          // 2回目以降: 既存ウィンドウを更新
           console.log('DiceCutIn: updating existing window');
           EventSystem.trigger('DICE_CUT_IN_UPDATE', { cutIn: cutIn_ });
+          if (rollResult) {
+            EventSystem.trigger('DICE_CUT_IN_STRUCTURED', { rollResult });
+          }
         }
         return;
       }

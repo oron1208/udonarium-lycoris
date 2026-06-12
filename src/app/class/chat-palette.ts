@@ -183,7 +183,7 @@ export class ChatPalette extends ObjectNode {
     for (const arg of args) {
       // 数値リテラルかチェック
       const literalNum = parseFloat(arg);
-      if (!isNaN(literalNum) && arg.match(/^[\d.]+$/)) {
+      if (!isNaN(literalNum) && arg.match(/^[-\d.]+$/)) {
         values.push(literalNum);
         continue;
       }
@@ -193,8 +193,21 @@ export class ChatPalette extends ObjectNode {
       if (!isNaN(num)) values.push(num);
     }
     if (values.length === 0) return '';
+    // 複数値関数
     if (funcName === 'max') return Math.max(...values) + '';
     if (funcName === 'min') return Math.min(...values) + '';
+    if (funcName === 'sum') return values.reduce((a, b) => a + b, 0) + '';
+    if (funcName === 'avg') return (values.reduce((a, b) => a + b, 0) / values.length) + '';
+    // 単一値関数（最初の値を使用）
+    const v = values[0];
+    if (funcName === 'abs') return Math.abs(v) + '';
+    if (funcName === 'ceil') return Math.ceil(v) + '';
+    if (funcName === 'floor') return Math.floor(v) + '';
+    if (funcName === 'round') return Math.round(v) + '';
+    // clamp(N, min, max) — 3引数必須
+    if (funcName === 'clamp' && values.length === 3) {
+      return Math.min(Math.max(values[0], values[1]), values[2]) + '';
+    }
     return '';
   }
 
@@ -220,7 +233,7 @@ export class ChatPalette extends ObjectNode {
         name = StringUtil.toHalfWidth(name);
 
         // max()/min() 関数の処理（拡張ダイスボット有効時のみ）
-        let funcMatch = enableExtendedDiceBot ? name.match(/^(max|min)\((.+)\)$/i) : null;
+        let funcMatch = enableExtendedDiceBot ? name.match(/^(max|min|sum|avg|abs|ceil|floor|round|clamp)\((.+)\)$/i) : null;
         if (funcMatch) {
           const result = this.evaluateFunction(funcMatch[1].toLowerCase(), funcMatch[2], extendVariables, target);
           isContinue = true;
@@ -271,6 +284,37 @@ export class ChatPalette extends ObjectNode {
       });
       if (limit < loop) isContinue = false;
     }
+
+    // 拡張ダイスボット: (数式) を計算して置換
+    // 例: AR+(1-5) → AR-4, AR(1-5) → AR-4, AR(5-1) → AR+4, 2d6+(3*2) → 2d6+6
+    if (enableExtendedDiceBot) {
+      let prev = '';
+      while (prev !== evaluate) {
+        prev = evaluate;
+        evaluate = evaluate.replace(/([+-]?)\(([-+\d*/.\s]+)\)/g, (match, prefix, expr) => {
+          try {
+            if (/^[-+\d*/.\s]+$/.test(expr)) {
+              const result = new Function('return (' + expr + ')')();
+              if (typeof result === 'number' && isFinite(result)) {
+                const absResult = Math.abs(result);
+                if (prefix === '+') {
+                  // +(式) → 結果に応じて +N または -N
+                  return result >= 0 ? '+' + result : String(result);
+                } else if (prefix === '-') {
+                  // -(式) → 符号反転
+                  return result > 0 ? '-' + result : '+' + absResult;
+                } else {
+                  // (式) 単体 → 結果に応じて +N または -N
+                  return result >= 0 ? '+' + result : String(result);
+                }
+              }
+            }
+          } catch (e) {}
+          return match;
+        });
+      }
+    }
+
     return evaluate;
   }
 

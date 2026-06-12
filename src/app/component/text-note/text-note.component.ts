@@ -23,6 +23,7 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('textArea', { static: true }) textAreaElementRef: ElementRef;
 
   @Input() textNote: TextNote = null;
+  @Input() isFlatMode: boolean = false;
   @Input() is3D: boolean = false;
 
   get title(): string { return this.textNote.title; }
