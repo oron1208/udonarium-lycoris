@@ -33,6 +33,12 @@ export class ContextMenuComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     return null;
   }
+  get sizeHande(): { size: number } {
+    for (let action of this.actions) {
+      if (action && action.sizeHande) return action.sizeHande;
+    }
+    return null;
+  }
 
   constructor(
     private elementRef: ElementRef<HTMLElement>,

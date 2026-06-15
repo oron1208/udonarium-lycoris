@@ -16,6 +16,7 @@ export interface MovableOption {
   readonly layerName?: string;
   readonly colideLayers?: string[];
   readonly transformCssOffset?: string;
+  readonly isFlatMode?: boolean;
 }
 
 interface GroupMoveTarget {
@@ -35,12 +36,14 @@ export class MovableDirective implements AfterViewInit, OnDestroy {
   private layerName: string = '';
   private colideLayers: string[] = [];
   private transformCssOffset: string = '';
+  private _isFlatMode: boolean = false;
 
   @Input('movable.option') set option(option: MovableOption) {
     this.tabletopObject = option.tabletopObject != null ? option.tabletopObject : this.tabletopObject;
     this.layerName = option.layerName != null ? option.layerName : this.layerName;
     this.colideLayers = option.colideLayers != null ? option.colideLayers : this.colideLayers;
     this.transformCssOffset = option.transformCssOffset != null ? option.transformCssOffset : this.transformCssOffset;
+    this._isFlatMode = option.isFlatMode != null ? option.isFlatMode : this._isFlatMode;
   }
   @Input('movable.disable') isDisable: boolean = false;
   @Input('movable.scratch_owner') isScratcOwner: boolean = false;
@@ -253,7 +256,9 @@ export class MovableDirective implements AfterViewInit, OnDestroy {
     // pointerStart3d.zより下には落とさない制限は地形上のみ適用し、
     // pointer3d.zが0の場合（地面）はそちらを優先する。
     let newZ: number;
-    if (pointer3d.z > 0) {
+    if (this._isFlatMode) {
+      newZ = 0;
+    } else if (pointer3d.z > 0) {
       // 3D Z > 0: 地形上または空中 → 開始Zより下には落とさない
       newZ = pointer3d.z > this.pointerStart3d.z ? pointer3d.z : this.pointerStart3d.z;
     } else {

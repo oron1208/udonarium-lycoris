@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { EventSystem } from '@udonarium/core/system';
+import { PeerCursor } from '@udonarium/peer-cursor';
 
 const STORAGE_KEY = 'udonarium-lycoris.gm-mode';
 
@@ -9,7 +10,9 @@ export class GmModeService {
   private readonly gmModeSubject = new BehaviorSubject<boolean>(this.load());
   readonly gmMode$ = this.gmModeSubject.asObservable();
 
-  get isGm(): boolean { return this.gmModeSubject.value; }
+  get isGm(): boolean {
+    return PeerCursor.myCursor ? !!PeerCursor.myCursor.isGmMode : this.gmModeSubject.value;
+  }
 
   toggle(): boolean {
     return this.setGmMode(!this.isGm);
@@ -17,6 +20,7 @@ export class GmModeService {
 
   setGmMode(isGm: boolean): boolean {
     this.gmModeSubject.next(isGm);
+    if (PeerCursor.myCursor) PeerCursor.myCursor.isGmMode = isGm;
     try {
       localStorage.setItem(STORAGE_KEY, isGm ? '1' : '0');
     } catch (e) {

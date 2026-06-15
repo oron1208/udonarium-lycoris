@@ -558,6 +558,11 @@
   border-color: rgba(100,180,255,0.3);
   color: #fff;
 }
+.vn-palette-line.is-selected {
+  background: rgba(48,133,224,0.58);
+  border-color: rgba(150,205,255,0.72);
+  color: #fff;
+}
 
 /* ═══════ old roster (left side) — keep for reference ═══════ */
 .vn-roster {

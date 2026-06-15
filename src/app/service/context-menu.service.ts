@@ -22,6 +22,7 @@ export interface ContextMenuAction {
   action?: Function,
   enabled?: boolean,
   altitudeHande?: TabletopObject,
+  sizeHande?: { size: number },
   type?: ContextMenuType,
   subActions?: ContextMenuAction[]
 }

@@ -70,7 +70,9 @@
           <ng-container *ngFor="let line of visiblePaletteLines; let i = index">
             <div *ngIf="isSectionHeader(line)" class="vn-palette-section">{{ sectionTitle(line) }}</div>
             <button *ngIf="line && !isSectionHeader(line)" type="button" class="vn-palette-line"
-              (mousedown)="sendPaletteLine(line); $event.preventDefault()"
+              [class.is-selected]="selectedPaletteLine === line"
+              (click)="selectPaletteLine(line); $event.preventDefault()"
+              (dblclick)="sendPaletteLine(line); $event.preventDefault()"
               title="{{ line }}">
               {{ line.length > 36 ? line.substring(0, 36) + '…' : line }}
             </button>

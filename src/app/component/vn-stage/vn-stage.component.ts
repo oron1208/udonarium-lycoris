@@ -298,7 +298,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
   get chatLogMessages(): ChatMessage[] {
     const tab = this.selectedTab;
     if (!tab) return [];
-    return (tab.chatMessages || []).filter(m => m && m.isDisplayable).slice(-80);
+    return (tab.chatMessages || []).filter(m => this.canShowChatLogMessage(m)).slice(-80);
   }
 
   get diceBotInfos() { return DiceBot.diceBotInfos || []; }
@@ -348,6 +348,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
   paletteVisible: boolean = true;
   indexVisible: boolean = true;
   paletteSearchText: string = '';
+  selectedPaletteLine: string = null;
   private paletteFadeTimer: any = null;
   private indexFadeTimer: any = null;
   scrollToIndex: number = -1;
@@ -589,6 +590,13 @@ export class VnStageComponent implements OnInit, OnDestroy {
   sendVnChat() {
     const text = this.inputText.trim();
     if (!text) return;
+    let isSecret = false;
+    let sendText = text;
+    if (/^s[:：]/i.test(text)) {
+      isSecret = true;
+      sendText = text.replace(/^s[:：]\s*/i, '').trim();
+      if (!sendText) return;
+    }
     this.ensureSelectedCharacter();
     const chatTab = this.selectedTab || this.chatTabs[0];
     if (!chatTab || !this.selectedCharacterId) return;
@@ -599,13 +607,13 @@ export class VnStageComponent implements OnInit, OnDestroy {
     const tachieNum = shouldSendPortrait && character instanceof GameCharacter
       ? this.selectedTachieIndex : null;
 
-    let evaluatedText = text;
-    let messageTargetContext: ChatMessageTargetContext[] = [{ text, object: null }];
+    let evaluatedText = sendText;
+    let messageTargetContext: ChatMessageTargetContext[] = [{ text: sendText, object: null }];
     let gameType = this.selectedDiceBot || 'DiceBot';
     let messageColor: string = null;
     if (character instanceof GameCharacter) {
       const palette = character.chatPalette;
-      const prepared = this.prepareVnChatText(text, character);
+      const prepared = this.prepareVnChatText(sendText, character);
       evaluatedText = prepared.text;
       messageTargetContext = prepared.messageTargetContext;
       if (palette) {
@@ -631,10 +639,10 @@ export class VnStageComponent implements OnInit, OnDestroy {
 
     if (gameType && gameType !== 'DiceBot') {
       DiceBot.loadGameSystemAsync(gameType).then(gs => {
-        this.chatMessageService.sendMessage(chatTab, evaluatedText, gs, this.selectedCharacterId, null, tachieNum, messageColor, messageTargetContext);
+        this.chatMessageService.sendMessage(chatTab, evaluatedText, gs, this.selectedCharacterId, null, tachieNum, messageColor, messageTargetContext, isSecret);
       });
     } else {
-      this.chatMessageService.sendMessage(chatTab, evaluatedText, null, this.selectedCharacterId, null, tachieNum, messageColor, messageTargetContext);
+      this.chatMessageService.sendMessage(chatTab, evaluatedText, null, this.selectedCharacterId, null, tachieNum, messageColor, messageTargetContext, isSecret);
     }
     this.inputText = '';
     this.diceCounters.clear();
@@ -770,6 +778,12 @@ export class VnStageComponent implements OnInit, OnDestroy {
     }, 100);
   }
 
+  selectPaletteLine(line: string) {
+    this.selectedPaletteLine = line;
+    this.inputText = line;
+    this.refreshPaletteFade();
+  }
+
   sendPaletteLine(line: string) {
     const character = ObjectStore.instance.get<GameCharacter>(this.selectedCharacterId);
     if (!(character instanceof GameCharacter)) return;
@@ -809,6 +823,8 @@ export class VnStageComponent implements OnInit, OnDestroy {
     this.refreshChatLogFade();
     this.refreshPaletteFade();
     this.refreshIndexFade();
+    this.selectedPaletteLine = null;
+    this.inputText = '';
   }
 
   get chatLogAutoHide(): boolean {
@@ -1043,7 +1059,13 @@ export class VnStageComponent implements OnInit, OnDestroy {
   /* ═══════════ misc ═══════════ */
 
   private isDisplayableMessage(m: ChatMessage): boolean {
-    return !!(m && m.isDisplayable && !m.isSystem && !m.isSecret && !m.isDicebot && m.text?.trim());
+    return !!(m && this.canShowChatLogMessage(m) && !m.isSystem && !m.isSecret && !m.isDicebot && m.text?.trim());
+  }
+
+  private canShowChatLogMessage(m: ChatMessage): boolean {
+    if (!m || !m.isDisplayable) return false;
+    if (!m.isSecret) return true;
+    return this.gmModeService.isGm || m.isSendFromSelf || m.isRelatedToMe;
   }
 
   private ensureSelectedCharacter() {

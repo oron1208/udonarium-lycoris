@@ -135,7 +135,7 @@ export class ChatMessageService {
   }
 
 
-  sendMessage(chatTab: ChatTab, text: string, gameSystem: GameSystemClass | null, sendFrom: string, sendTo?: string, tachieNum?: number, color?: string, messageTargetContext?: ChatMessageTargetContext[]): ChatMessage {
+  sendMessage(chatTab: ChatTab, text: string, gameSystem: GameSystemClass | null, sendFrom: string, sendTo?: string, tachieNum?: number, color?: string, messageTargetContext?: ChatMessageTargetContext[], isSecret: boolean = false): ChatMessage {
 
     let img;
     let imgIndex;
@@ -154,7 +154,9 @@ export class ChatMessageService {
 
     let dicebot = ObjectStore.instance.get<DiceBot>('DiceBot');
     let chatMessageTag: string;
-    if (gameSystem == null) {
+    if (isSecret) {
+      chatMessageTag = gameSystem ? `${gameSystem.ID} secret` : 'secret';
+    } else if (gameSystem == null) {
       chatMessageTag = '';
     } else if (dicebot.checkSecretDiceCommand(gameSystem, text)) {
       chatMessageTag = `${gameSystem.ID} secret`;

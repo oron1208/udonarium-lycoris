@@ -166,7 +166,8 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
     this.movableOption = {
       tabletopObject: this.textNote,
       transformCssOffset: 'translateZ(0.15px)',
-      colideLayers: ['terrain']
+      colideLayers: ['terrain'],
+      isFlatMode: this.isFlatMode
     };
     this.rotableOption = {
       tabletopObject: this.textNote

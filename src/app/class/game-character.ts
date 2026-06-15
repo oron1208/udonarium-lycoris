@@ -123,6 +123,7 @@ export class GameCharacter extends TabletopObject {
   }
 
   set name(value:string) { this.setCommonValue('name', value); }
+  set size(value: number) { this.setCommonValue('size', value); }
 
   TestExec() {
     console.log('TestExec');

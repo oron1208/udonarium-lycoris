@@ -64,6 +64,26 @@ input.altitude {
   padding: 3px;
 }
 
+.size-control {
+  padding: 2px 10px 6px;
+  font-size: 12px;
+  color: #444;
+}
+
+.size-title {
+  text-align: center;
+}
+
+.size-title input {
+  width: 3.6em;
+  font-size: 12px;
+  text-align: right;
+}
+
+.size-slider {
+  width: 100%;
+}
+
 .disabled .menu-title, .disabled .material-icons {
   color: gray;
 }

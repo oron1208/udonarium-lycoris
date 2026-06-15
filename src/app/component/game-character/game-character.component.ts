@@ -8,6 +8,7 @@ import {
   HostListener,
   Input,
   NgZone,
+  OnChanges,
   OnDestroy,
   OnInit,
   ViewChild
@@ -57,7 +58,7 @@ import { TabletopSelectionService } from 'service/tabletop-selection.service';
     ])
   ]
 })
-export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit {
+export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit, OnChanges {
   private static readonly SIMPLE_VIEW_FULL_STORAGE_KEY = 'udonarium.character.simpleView.full.v1';
   private static simpleViewFullIdentifiers: Set<string> = GameCharacterComponent.loadSimpleViewFullIdentifiers();
 
@@ -82,7 +83,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
   set roll(roll: number) { this.gameCharacter.roll = roll; }
   get isDropShadow(): boolean { return this.gameCharacter.isDropShadow; }
   _showSideNameLabel: boolean = true;
-  get showSideNameLabel(): boolean { return this._showSideNameLabel; }
+  get showSideNameLabel(): boolean { return this._showSideNameLabel && this.canDisplayByRole; }
   set isDropShadow(isDropShadow: boolean) { this.gameCharacter.isDropShadow = isDropShadow; }
   get isAltitudeIndicate(): boolean { return this.gameCharacter.isAltitudeIndicate; }
   set isAltitudeIndicate(isAltitudeIndicate: boolean) { this.gameCharacter.isAltitudeIndicate = isAltitudeIndicate; }
@@ -110,7 +111,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
   get isTopDownView(): boolean { return !this.isFlatMode && !this.shouldUseSimpleView && !this.shouldUseFlatIcon && this.viewRotateX <= 16; }
   _showTopDownNameLabel: boolean = true;
   _showDirectionMarker: boolean = false;
-  get shouldShowTopDownNameTag(): boolean { return this.isTopDownView && 0 < this.name.length && this._showTopDownNameLabel; }
+  get shouldShowTopDownNameTag(): boolean { return this.canDisplayByRole && this.isTopDownView && 0 < this.name.length && this._showTopDownNameLabel; }
   get shouldShowTopDownIcon(): boolean { return this.isTopDownView; }
   get shouldShowDirectionMarker(): boolean { return this._showDirectionMarker; }
   get canRotateByDirectionMarker(): boolean { return this.isFlatMode && !this.isLock; }
@@ -179,6 +180,18 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
     private tabletopUndoService: TabletopUndoService,
     private tabletopSelectionService: TabletopSelectionService,
   ) { }
+
+  ngOnChanges() {
+    this.movableOption = {
+      tabletopObject: this.gameCharacter,
+      transformCssOffset: 'translateZ(1.0px)',
+      colideLayers: ['terrain'],
+      isFlatMode: this.isFlatMode
+    };
+    this.rotableOption = {
+      tabletopObject: this.gameCharacter
+    };
+  }
 
   selectForVnStage(event: Event) {
     event.preventDefault();
@@ -282,7 +295,8 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
     this.movableOption = {
       tabletopObject: this.gameCharacter,
       transformCssOffset: 'translateZ(1.0px)',
-      colideLayers: ['terrain']
+      colideLayers: ['terrain'],
+      isFlatMode: this.isFlatMode
     };
     this.rotableOption = {
       tabletopObject: this.gameCharacter
@@ -362,6 +376,11 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
               }
             },
             altitudeHande: this.gameCharacter
+          },
+          {
+            name: 'サイズ調整',
+            action: null,
+            sizeHande: this.gameCharacter
           },
           (this.isAltitudeIndicate
             ? {
@@ -561,6 +580,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
     const allAltitudeIndicate = characters.every(character => !!character.isAltitudeIndicate);
     const allDropShadow = characters.every(character => !!character.isDropShadow);
     const altitudeHandle = this.createBatchAltitudeHandle(characters);
+    const sizeHandle = this.createBatchSizeHandle(characters);
 
     const actions: ContextMenuAction[] = [
       {
@@ -571,6 +591,11 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
               this.updateBatchCharacters(characters, PresetSound.sweep);
             },
             altitudeHande: altitudeHandle as any
+          },
+          {
+            name: 'サイズ調整',
+            action: null,
+            sizeHande: sizeHandle as any
           },
           (allAltitudeIndicate
             ? {
@@ -670,6 +695,23 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
       enumerable: true,
       configurable: true
     }) as { altitude: number };
+  }
+
+  private createBatchSizeHandle(characters: GameCharacter[]): { size: number } {
+    let size = characters[0]?.size || 1;
+    return Object.defineProperty({}, 'size', {
+      get: () => size,
+      set: (value: number) => {
+        size = Number(value);
+        for (const character of characters) {
+          character.size = size;
+          character.update();
+        }
+        EventSystem.trigger('UPDATE_INVENTORY', null);
+      },
+      enumerable: true,
+      configurable: true
+    }) as { size: number };
   }
 
   private moveBatchToLocation(characters: GameCharacter[], location: string, sound: string) {
