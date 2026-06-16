@@ -11,18 +11,23 @@ import { GameCharacter } from '@udonarium/game-character';
 import { DiceBot } from '@udonarium/dice-bot';
 import { ChatMessageService } from 'service/chat-message.service';
 import { GmModeService } from 'service/gm-mode.service';
+import { PointerDeviceService } from 'service/pointer-device.service';
 import { TabletopService } from 'service/tabletop.service';
 
 const BUBBLE_MS = 8000;
 const SPEAKING_MS = 2500;
 const MAX_ACTORS = 6;
 const PORTRAIT_FADE_MS = 160;
+const PORTRAIT_SCALE_MIN = 0.5;
+const PORTRAIT_SCALE_MAX = 2.0;
+const PORTRAIT_SCALE_STEP = 0.1;
 
 interface VnActor {
   characterId: string;
   name: string;
   tachieIndex: number;
   imageIdentifier: string;
+  portraitScale: number;
   previousImageIdentifier: string;
   isPortraitFading: boolean;
   portraitFadeTimer: any;
@@ -53,7 +58,9 @@ export class VnStageComponent implements OnInit, OnDestroy {
   selectedCharacterId: string = '';
   selectedTachieIndex: number = 0;
   inputText: string = '';
+  secretMode: boolean = false;
   verticalOffset: number = this.loadNumber('udonarium.vnStage.verticalOffset.v1', 0);
+  stageHeightPercent: number = this.loadNumber('udonarium.vnStage.heightPercent.v1', 58);
   now: number = Date.now();
   isHotbarVisible: boolean = false;
   isAutoFit: boolean = true;
@@ -62,6 +69,31 @@ export class VnStageComponent implements OnInit, OnDestroy {
 
   // Chat log panel
   chatLogExpanded: boolean = false;
+
+  // ── Detached panel state ──
+  paletteDetached: boolean = false;
+  logDetached: boolean = false;
+  paletteFloatX: number = -1;
+  paletteFloatY: number = -1;
+  paletteFloatW: number = 360;
+  paletteFloatH: number = 400;
+  logFloatX: number = -1;
+  logFloatY: number = -1;
+  logFloatW: number = 360;
+  logFloatH: number = 300;
+  paletteZIndex: number = 3000;
+  logZIndex: number = 3001;
+  paletteFrontPinned: boolean = false;
+  logFrontPinned: boolean = false;
+  private subPanelZCounter: number = 3001;
+  private panelDragTarget: 'palette' | 'log' | null = null;
+  private subDragOffsetX = 0;
+  private subDragOffsetY = 0;
+  private subResizeStartW = 0;
+  private subResizeStartH = 0;
+  private subResizeStartMX = 0;
+  private subResizeStartMY = 0;
+  private panelResizeTarget: 'palette' | 'log' | null = null;
   chatLogPinned: boolean = false;
   selectedTabIdentifier: string = '';
   selectedDiceBot: string = 'DiceBot';
@@ -71,6 +103,22 @@ export class VnStageComponent implements OnInit, OnDestroy {
   // Typewriter effect — per actor (stored in VnActor)
 
   readonly diceTypes = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'];
+  diceRowCollapsed: boolean = false;
+
+  // ── Floating panel state ──
+  panelX: number = -1; // -1 = use default (right-aligned)
+  panelY: number = -1;
+  panelW: number = 450;
+  panelH: number = -1; // -1 = auto
+  isPanelDragging: boolean = false;
+  isPanelResizing: boolean = false;
+  private dragOffsetX = 0;
+  private dragOffsetY = 0;
+  private resizeStartW = 0;
+  private resizeStartH = 0;
+  private resizeStartMouseX = 0;
+  private resizeStartMouseY = 0;
+
   private loadingImages: Set<string> = new Set();
   private clockTimer: NodeJS.Timer = null;
   private enterCounter = 0;
@@ -82,10 +130,13 @@ export class VnStageComponent implements OnInit, OnDestroy {
   private _charactersCacheTimer: any = null;
   private syncGraceTimer: any = null;
 
+  get isPointerDragging(): boolean { return this.pointerDeviceService.isDragging; }
+
   constructor(
     public chatMessageService: ChatMessageService,
     private ngZone: NgZone,
     private gmModeService: GmModeService,
+    private pointerDeviceService: PointerDeviceService,
     private tabletopService: TabletopService
   ) { }
 
@@ -102,6 +153,12 @@ export class VnStageComponent implements OnInit, OnDestroy {
     try { this.isHotbarVisible = localStorage.getItem('udonarium.macroHotbar.visible.v1') !== '0'; } catch (_) { this.isHotbarVisible = true; }
     try { this.isAutoFit = localStorage.getItem('udonarium.vnStage.autoFit.v1') === '1'; } catch (_) { }
     try { this.affectPiece = localStorage.getItem('udonarium.vnStage.affectPiece.v1') === '1'; } catch (_) { }
+    try { this.secretMode = localStorage.getItem('udonarium.vnStage.secretMode.v1') === '1'; } catch (_) { }
+    try {
+      const saved = localStorage.getItem('udonarium.vnPanel.pos.v1');
+      if (saved) { const p = JSON.parse(saved); this.panelX = p.x ?? -1; this.panelY = p.y ?? -1; this.panelW = Math.max(p.w ?? 450, 450); this.panelH = p.h ?? -1; }
+    } catch (_) { }
+    this.loadSubPanelState();
     try { this.sendPortrait = localStorage.getItem('udonarium.vnStage.sendPortrait.v1') !== 'false'; } catch (_) { }
 
     // Defer event registration and timer to avoid interfering with initial sync
@@ -120,7 +177,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
         if (event.isSendFromSelf) return;
         const d = event.data;
         if (!d || !d.characterId) return;
-        this.ngZone.run(() => this.upsertActor(d.characterId, d.name, d.tachieIndex ?? 0, d.imageIdentifier || '', '', false, false));
+        this.ngZone.run(() => this.upsertActor(d.characterId, d.name, d.tachieIndex ?? 0, d.imageIdentifier || '', '', false, false, d.portraitScale));
       })
       .on('VN_STAGE_REMOVE', event => {
         if (event.isSendFromSelf) return;
@@ -136,7 +193,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
         if (!Array.isArray(list)) return;
         this.ngZone.run(() => {
           for (const a of list) {
-            if (a?.characterId) this.upsertActor(a.characterId, a.name, a.tachieIndex ?? 0, a.imageIdentifier, '', false, false);
+            if (a?.characterId) this.upsertActor(a.characterId, a.name, a.tachieIndex ?? 0, a.imageIdentifier, '', false, false, a.portraitScale);
           }
         });
       })
@@ -163,7 +220,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
         const peerId: string = event.data?.peerId;
         if (!peerId) return;
         const payload = this.actors.map(a => ({
-          characterId: a.characterId, name: a.name, tachieIndex: a.tachieIndex, imageIdentifier: a.imageIdentifier
+          characterId: a.characterId, name: a.name, tachieIndex: a.tachieIndex, imageIdentifier: a.imageIdentifier, portraitScale: a.portraitScale
         }));
         EventSystem.call('VN_STAGE_FULL', { actors: payload }, peerId);
       })
@@ -179,6 +236,9 @@ export class VnStageComponent implements OnInit, OnDestroy {
       .on('VN_STAGE_AUTOFIT_CHANGED', event => {
         this.ngZone.run(() => { this.isAutoFit = event.data?.autoFit ?? true; });
       })
+      .on('VN_STAGE_HEIGHT_CHANGED', event => {
+        this.ngZone.run(() => { this.stageHeightPercent = this.clampStageHeight(event.data?.heightPercent); });
+      })
       .on('VN_STAGE_SELECT_CHARACTER', event => {
         const characterId = event.data?.characterId;
         if (!characterId) return;
@@ -189,7 +249,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
         const requesterPeerId = event.data?.requesterPeerId;
         if (!requesterPeerId) return;
         const payload = this.actors.map(a => ({
-          characterId: a.characterId, name: a.name, tachieIndex: a.tachieIndex, imageIdentifier: a.imageIdentifier
+          characterId: a.characterId, name: a.name, tachieIndex: a.tachieIndex, imageIdentifier: a.imageIdentifier, portraitScale: a.portraitScale
         }));
         EventSystem.call('VN_STAGE_FULL', { actors: payload }, requesterPeerId);
       })
@@ -242,6 +302,266 @@ export class VnStageComponent implements OnInit, OnDestroy {
     for (const a of this.actors) {
       if (a.typewriterTimer) { clearTimeout(a.typewriterTimer); clearInterval(a.typewriterTimer); }
     }
+  }
+
+  /* ═══════════ floating panel drag / resize ═══════════ */
+
+  get panelStyle(): { [key: string]: string } {
+    const s: { [key: string]: string } = {};
+    if (this.panelX >= 0) { s['left'] = this.panelX + 'px'; s['right'] = 'auto'; s['bottom'] = 'auto'; }
+    if (this.panelY >= 0) s['top'] = this.panelY + 'px';
+    if (this.panelW > 0) s['width'] = this.panelW + 'px';
+    if (this.panelH > 0) { s['max-height'] = 'none'; s['height'] = this.panelH + 'px'; }
+    return s;
+  }
+
+  onPanelDragStart(e: PointerEvent) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    this.isPanelDragging = true;
+    const rect = (e.currentTarget as HTMLElement).closest('.vn-control').getBoundingClientRect();
+    this.dragOffsetX = e.clientX - rect.left;
+    this.dragOffsetY = e.clientY - rect.top;
+    // fix to absolute position on first drag
+    this.panelX = rect.left;
+    this.panelY = rect.top;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }
+
+  onPanelDragMove(e: PointerEvent) {
+    if (!this.isPanelDragging) return;
+    e.preventDefault();
+    const nx = Math.max(0, Math.min(window.innerWidth - 100, e.clientX - this.dragOffsetX));
+    const ny = Math.max(0, Math.min(window.innerHeight - 60, e.clientY - this.dragOffsetY));
+    this.panelX = nx;
+    this.panelY = ny;
+  }
+
+  onPanelDragEnd(e: PointerEvent) {
+    if (!this.isPanelDragging) return;
+    this.isPanelDragging = false;
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch (_) { }
+    this.savePanelState();
+  }
+
+  onPanelResizeStart(e: PointerEvent) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    this.isPanelResizing = true;
+    const rect = (e.currentTarget as HTMLElement).closest('.vn-control').getBoundingClientRect();
+    this.resizeStartW = rect.width;
+    this.resizeStartH = rect.height;
+    this.resizeStartMouseX = e.clientX;
+    this.resizeStartMouseY = e.clientY;
+    // fix position
+    this.panelX = rect.left;
+    this.panelY = rect.top;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }
+
+  onPanelResizeMove(e: PointerEvent) {
+    if (!this.isPanelResizing) return;
+    e.preventDefault();
+    const dx = e.clientX - this.resizeStartMouseX;
+    const dy = e.clientY - this.resizeStartMouseY;
+    this.panelW = Math.max(280, Math.min(window.innerWidth - this.panelX - 10, this.resizeStartW + dx));
+    this.panelH = Math.max(200, Math.min(window.innerHeight - this.panelY - 10, this.resizeStartH + dy));
+  }
+
+  onPanelResizeEnd(e: PointerEvent) {
+    if (!this.isPanelResizing) return;
+    this.isPanelResizing = false;
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch (_) { }
+    this.savePanelState();
+  }
+
+  resetPanelPosition() {
+    this.panelX = -1;
+    this.panelY = -1;
+    this.panelW = 450;
+    this.panelH = -1;
+    this.savePanelState();
+  }
+
+  private savePanelState() {
+    try {
+      localStorage.setItem('udonarium.vnPanel.pos.v1', JSON.stringify({ x: this.panelX, y: this.panelY, w: this.panelW, h: this.panelH }));
+    } catch (_) { }
+  }
+
+  /* ═══════════ sub-panel (palette / chatlog) floating ═══════════ */
+
+  togglePaletteDetached() {
+    this.paletteDetached = !this.paletteDetached;
+    if (this.paletteDetached && this.paletteFloatX < 0) {
+      const rect = (document.querySelector('.vn-palette-wrap') as HTMLElement)?.getBoundingClientRect();
+      if (rect) { this.paletteFloatX = rect.left; this.paletteFloatY = rect.top; }
+      else { this.paletteFloatX = 20; this.paletteFloatY = 80; }
+    }
+    this.saveSubPanelState();
+  }
+
+  toggleLogDetached() {
+    this.logDetached = !this.logDetached;
+    if (this.logDetached && this.logFloatX < 0) {
+      const rect = (document.querySelector('.vn-chat-log') as HTMLElement)?.getBoundingClientRect();
+      if (rect) { this.logFloatX = rect.left; this.logFloatY = rect.top; }
+      else { this.logFloatX = 20; this.logFloatY = 300; }
+    }
+    this.saveSubPanelState();
+  }
+
+  get paletteFloatStyle(): { [k: string]: string } {
+    const x = this.paletteFloatX >= 0 ? this.paletteFloatX : 20;
+    const y = this.paletteFloatY >= 0 ? this.paletteFloatY : 80;
+    return {
+      'left': x + 'px', 'top': y + 'px',
+      'width': this.paletteFloatW + 'px', 'height': this.paletteFloatH + 'px',
+      'z-index': String(this.paletteFrontPinned ? 9000 : this.paletteZIndex)
+    };
+  }
+
+  get logFloatStyle(): { [k: string]: string } {
+    const x = this.logFloatX >= 0 ? this.logFloatX : 20;
+    const y = this.logFloatY >= 0 ? this.logFloatY : 80;
+    return {
+      'left': x + 'px', 'top': y + 'px',
+      'width': this.logFloatW + 'px', 'height': this.logFloatH + 'px',
+      'z-index': String(this.logFrontPinned ? 8999 : this.logZIndex)
+    };
+  }
+
+  bringSubPanelToFront(target: 'palette' | 'log') {
+    if (target === 'palette') {
+      if (!this.paletteFrontPinned) this.paletteZIndex = ++this.subPanelZCounter;
+    } else {
+      if (!this.logFrontPinned) this.logZIndex = ++this.subPanelZCounter;
+    }
+    this.saveSubPanelState();
+  }
+
+  toggleSubPanelFrontPin(target: 'palette' | 'log') {
+    if (target === 'palette') {
+      this.paletteFrontPinned = !this.paletteFrontPinned;
+      if (!this.paletteFrontPinned) this.paletteZIndex = ++this.subPanelZCounter;
+    } else {
+      this.logFrontPinned = !this.logFrontPinned;
+      if (!this.logFrontPinned) this.logZIndex = ++this.subPanelZCounter;
+    }
+    this.saveSubPanelState();
+  }
+
+  closeSubPanel(target: 'palette' | 'log', event?: Event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    if (target === 'palette') {
+      this.paletteExpanded = false;
+    } else {
+      this.chatLogExpanded = false;
+    }
+    if (this.panelDragTarget === target) this.panelDragTarget = null;
+    if (this.panelResizeTarget === target) this.panelResizeTarget = null;
+    this.saveSubPanelState();
+  }
+
+  onSubDragStart(target: 'palette' | 'log', e: PointerEvent) {
+    if (e.button !== 0) return;
+    e.preventDefault(); e.stopPropagation();
+    this.bringSubPanelToFront(target);
+    this.panelDragTarget = target;
+    const sel = target === 'palette' ? '.vn-palette-wrap' : '.vn-chat-log';
+    const rect = (e.currentTarget as HTMLElement).closest(sel)?.getBoundingClientRect();
+    if (!rect) return;
+    this.subDragOffsetX = e.clientX - rect.left;
+    this.subDragOffsetY = e.clientY - rect.top;
+    if (target === 'palette') { this.paletteFloatX = rect.left; this.paletteFloatY = rect.top; }
+    else { this.logFloatX = rect.left; this.logFloatY = rect.top; }
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }
+
+  onSubDragMove(target: 'palette' | 'log', e: PointerEvent) {
+    if (this.panelDragTarget !== target) return;
+    e.preventDefault();
+    const nx = Math.max(0, Math.min(window.innerWidth - 80, e.clientX - this.subDragOffsetX));
+    const ny = Math.max(0, Math.min(window.innerHeight - 40, e.clientY - this.subDragOffsetY));
+    if (target === 'palette') { this.paletteFloatX = nx; this.paletteFloatY = ny; }
+    else { this.logFloatX = nx; this.logFloatY = ny; }
+  }
+
+  onSubDragEnd(target: 'palette' | 'log', e: PointerEvent) {
+    if (this.panelDragTarget !== target) return;
+    this.panelDragTarget = null;
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch (_) { }
+    this.saveSubPanelState();
+  }
+
+  onSubResizeStart(target: 'palette' | 'log', e: PointerEvent) {
+    if (e.button !== 0) return;
+    e.preventDefault(); e.stopPropagation();
+    this.panelResizeTarget = target;
+    const sel = target === 'palette' ? '.vn-palette-wrap' : '.vn-chat-log';
+    const rect = (e.currentTarget as HTMLElement).closest(sel)?.getBoundingClientRect();
+    if (!rect) return;
+    this.subResizeStartW = rect.width;
+    this.subResizeStartH = rect.height;
+    this.subResizeStartMX = e.clientX;
+    this.subResizeStartMY = e.clientY;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }
+
+  onSubResizeMove(target: 'palette' | 'log', e: PointerEvent) {
+    if (this.panelResizeTarget !== target) return;
+    e.preventDefault();
+    const dx = e.clientX - this.subResizeStartMX;
+    const dy = e.clientY - this.subResizeStartMY;
+    const w = Math.max(220, this.subResizeStartW + dx);
+    const h = Math.max(150, this.subResizeStartH + dy);
+    if (target === 'palette') { this.paletteFloatW = w; this.paletteFloatH = h; }
+    else { this.logFloatW = w; this.logFloatH = h; }
+  }
+
+  onSubResizeEnd(target: 'palette' | 'log', e: PointerEvent) {
+    if (this.panelResizeTarget !== target) return;
+    this.panelResizeTarget = null;
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch (_) { }
+    this.saveSubPanelState();
+  }
+
+  private saveSubPanelState() {
+    try {
+      localStorage.setItem('udonarium.vnSubPanels.v1', JSON.stringify({
+        paletteDetached: this.paletteDetached, paletteFloatX: this.paletteFloatX, paletteFloatY: this.paletteFloatY,
+        paletteFloatW: this.paletteFloatW, paletteFloatH: this.paletteFloatH,
+        logDetached: this.logDetached, logFloatX: this.logFloatX, logFloatY: this.logFloatY,
+        logFloatW: this.logFloatW, logFloatH: this.logFloatH,
+        paletteZIndex: this.paletteZIndex, logZIndex: this.logZIndex,
+        paletteFrontPinned: this.paletteFrontPinned, logFrontPinned: this.logFrontPinned,
+        subPanelZCounter: this.subPanelZCounter
+      }));
+    } catch (_) { }
+  }
+
+  private loadSubPanelState() {
+    try {
+      const s = JSON.parse(localStorage.getItem('udonarium.vnSubPanels.v1') || '{}');
+      if (s.paletteDetached != null) {
+        this.paletteDetached = s.paletteDetached; this.paletteFloatX = s.paletteFloatX ?? -1; this.paletteFloatY = s.paletteFloatY ?? -1;
+        this.paletteFloatW = s.paletteFloatW ?? 360; this.paletteFloatH = s.paletteFloatH ?? 400;
+      }
+      if (s.logDetached != null) {
+        this.logDetached = s.logDetached; this.logFloatX = s.logFloatX ?? -1; this.logFloatY = s.logFloatY ?? -1;
+        this.logFloatW = s.logFloatW ?? 360; this.logFloatH = s.logFloatH ?? 300;
+      }
+      this.paletteZIndex = s.paletteZIndex ?? this.paletteZIndex;
+      this.logZIndex = s.logZIndex ?? this.logZIndex;
+      this.paletteFrontPinned = s.paletteFrontPinned ?? false;
+      this.logFrontPinned = s.logFrontPinned ?? false;
+      this.subPanelZCounter = Math.max(s.subPanelZCounter ?? this.subPanelZCounter, this.paletteZIndex, this.logZIndex);
+    } catch (_) { }
   }
 
   /* ═══════════ template helpers ═══════════ */
@@ -349,9 +669,13 @@ export class VnStageComponent implements OnInit, OnDestroy {
   indexVisible: boolean = true;
   paletteSearchText: string = '';
   selectedPaletteLine: string = null;
+  private revealedSecrets: Set<string> = new Set();
   private paletteFadeTimer: any = null;
   private indexFadeTimer: any = null;
   scrollToIndex: number = -1;
+  tachieCompactOverride: boolean = false;
+  tachieExpandedOverride: boolean = false;
+  tachieHoverPanelOpen: boolean = false;
 
   get hasInputText(): boolean { return this.inputText.trim().length > 0; }
 
@@ -376,6 +700,53 @@ export class VnStageComponent implements OnInit, OnDestroy {
       }
     }
     return slots;
+  }
+
+  get shouldCompactTachie(): boolean {
+    return this.tachieCompactOverride || this.tachieSlots.length > 12;
+  }
+
+  get isTachieExpanded(): boolean {
+    return !this.shouldCompactTachie || this.tachieExpandedOverride;
+  }
+
+  get tachieHoverPanelStyle(): { [key: string]: string } {
+    const panelWidth = Math.max(this.panelW || 450, 280);
+    const popupWidth = 260;
+    const gap = 8;
+    const bottom = this.isHotbarVisible ? 92 : 18;
+    if (this.panelX < 0) {
+      return { right: `${18 + panelWidth + gap}px`, bottom: `${bottom}px` };
+    }
+
+    const rightX = this.panelX + panelWidth + gap;
+    const leftX = this.panelX - popupWidth - gap;
+    const x = rightX + popupWidth <= window.innerWidth - 8 ? rightX : Math.max(8, leftX);
+    const y = this.panelY >= 0 ? Math.max(8, Math.min(this.panelY + 72, window.innerHeight - 368)) : 8;
+    return { left: `${x}px`, top: `${y}px` };
+  }
+
+  get selectedTachieSlot(): { index: number; label: string; imageId: string } {
+    return this.tachieSlots.find(slot => slot.index === this.selectedTachieIndex) || this.tachieSlots[0] || null;
+  }
+
+  setTachieExpanded(isExpanded: boolean) {
+    this.tachieCompactOverride = !isExpanded;
+    this.tachieExpandedOverride = isExpanded;
+    if (isExpanded) this.tachieHoverPanelOpen = false;
+  }
+
+  openTachieHoverPanel() {
+    if (this.shouldCompactTachie) this.tachieHoverPanelOpen = true;
+  }
+
+  closeTachieHoverPanel() {
+    this.tachieHoverPanelOpen = false;
+  }
+
+  toggleTachieHoverPanel() {
+    if (!this.shouldCompactTachie) return;
+    this.tachieHoverPanelOpen = !this.tachieHoverPanelOpen;
   }
 
   actorImage(actor: VnActor): ImageFile {
@@ -408,9 +779,10 @@ export class VnStageComponent implements OnInit, OnDestroy {
     return `${start + ((end - start) * index / (n - 1))}%`;
   }
 
-  actorScale(index: number): number {
+  actorScale(index: number, actor?: VnActor): number {
     const n = this.actors.length;
-    return n <= 2 ? 1 : n === 3 ? 0.9 : 0.8;
+    const baseScale = n <= 2 ? 1 : n === 3 ? 0.9 : 0.8;
+    return baseScale * this.normalizePortraitScale(actor?.portraitScale, 1);
   }
 
   actorZIndex(index: number, actor: VnActor): number {
@@ -507,7 +879,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
       if (this.selectedImageId) this.setActorImage(actor, this.selectedImageId);
       if (this.affectPiece) this.applyTachieToPiece(character, this.selectedTachieIndex);
       EventSystem.call('VN_STAGE_ADD', {
-        characterId: this.selectedCharacterId, name: actor.name, tachieIndex: this.selectedTachieIndex, imageIdentifier: this.selectedImageId
+        characterId: this.selectedCharacterId, name: actor.name, tachieIndex: this.selectedTachieIndex, imageIdentifier: this.selectedImageId, portraitScale: actor.portraitScale
       });
     }
   }
@@ -517,6 +889,9 @@ export class VnStageComponent implements OnInit, OnDestroy {
     try { localStorage.setItem('udonarium.vnStage.selectedCharacterId.v1', this.selectedCharacterId || ''); } catch (_) { }
     this.selectedTachieIndex = 0;
     this.selectedImageId = '';
+    this.tachieCompactOverride = false;
+    this.tachieExpandedOverride = false;
+    this.tachieHoverPanelOpen = false;
     const slots = this.tachieSlots;
     if (slots.length > 0) this.selectedImageId = slots[0].imageId;
 
@@ -588,15 +963,11 @@ export class VnStageComponent implements OnInit, OnDestroy {
   }
 
   sendVnChat() {
-    const text = this.inputText.trim();
+    let text = this.inputText.trim();
     if (!text) return;
-    let isSecret = false;
-    let sendText = text;
-    if (/^s[:：]/i.test(text)) {
-      isSecret = true;
-      sendText = text.replace(/^s[:：]\s*/i, '').trim();
-      if (!sendText) return;
-    }
+    const secretText = this.applySecretMode(text);
+    const { isSecret, coreText } = this.parseSecretText(secretText);
+    if (!coreText) return;
     this.ensureSelectedCharacter();
     const chatTab = this.selectedTab || this.chatTabs[0];
     if (!chatTab || !this.selectedCharacterId) return;
@@ -607,15 +978,22 @@ export class VnStageComponent implements OnInit, OnDestroy {
     const tachieNum = shouldSendPortrait && character instanceof GameCharacter
       ? this.selectedTachieIndex : null;
 
-    let evaluatedText = sendText;
-    let messageTargetContext: ChatMessageTargetContext[] = [{ text: sendText, object: null }];
+    let evaluatedText = coreText;
+    let messageTargetContext: ChatMessageTargetContext[] = [{ text: coreText, object: null }];
     let gameType = this.selectedDiceBot || 'DiceBot';
     let messageColor: string = null;
     if (character instanceof GameCharacter) {
       const palette = character.chatPalette;
-      const prepared = this.prepareVnChatText(sendText, character);
+      const prepared = this.prepareVnChatText(coreText, character);
       evaluatedText = prepared.text;
       messageTargetContext = prepared.messageTargetContext;
+      // シークレットの場合、messageTargetContext の text に s: を付与して
+      // dice-bot.ts の checkResourceEditCommand が認識できるようにする
+      if (isSecret) {
+        for (const ctx of messageTargetContext) {
+          ctx.text = 's:' + ctx.text;
+        }
+      }
       if (palette) {
         if (!this.selectedDiceBot || this.selectedDiceBot === 'DiceBot') {
           gameType = palette.dicebot || 'DiceBot';
@@ -647,6 +1025,36 @@ export class VnStageComponent implements OnInit, OnDestroy {
     this.inputText = '';
     this.diceCounters.clear();
     this.diceBuffer = '';
+  }
+
+  toggleSecretMode() {
+    this.secretMode = !this.secretMode;
+    try { localStorage.setItem('udonarium.vnStage.secretMode.v1', this.secretMode ? '1' : '0'); } catch (_) { }
+  }
+
+  private applySecretMode(text: string): string {
+    const trimmed = (text || '').trim();
+    if (!trimmed) return '';
+    return this.secretMode && !this.hasSecretPrefix(trimmed) ? 's:' + trimmed : trimmed;
+  }
+
+  private parseSecretText(text: string): { isSecret: boolean, coreText: string } {
+    const trimmed = (text || '').trim();
+    if (!this.hasSecretPrefix(trimmed)) return { isSecret: false, coreText: trimmed };
+    return {
+      isSecret: true,
+      coreText: trimmed.replace(/^s[:：]\s*/i, '').trim()
+    };
+  }
+
+  private hasSecretPrefix(text: string): boolean {
+    return /^s[:：]/i.test((text || '').trim());
+  }
+
+  private applySecretPrefixToContexts(messageTargetContext: ChatMessageTargetContext[]) {
+    for (const ctx of messageTargetContext) {
+      if (!this.hasSecretPrefix(ctx.text)) ctx.text = 's:' + ctx.text;
+    }
   }
 
   removeActor(characterId: string) {
@@ -681,6 +1089,32 @@ export class VnStageComponent implements OnInit, OnDestroy {
   nudgeDown() { this.setVerticalOffset(this.verticalOffset + 16); }
   resetPosition() { this.setVerticalOffset(0); }
 
+  get selectedActor(): VnActor {
+    return this.findActor(this.selectedCharacterId);
+  }
+
+  get selectedActorScaleLabel(): string {
+    return `${Math.round(this.normalizePortraitScale(this.selectedActor?.portraitScale, 1) * 100)}%`;
+  }
+
+  scaleSelectedActorDown() {
+    const actor = this.selectedActor;
+    if (!actor) return;
+    this.setActorPortraitScale(actor, actor.portraitScale - PORTRAIT_SCALE_STEP);
+  }
+
+  scaleSelectedActorUp() {
+    const actor = this.selectedActor;
+    if (!actor) return;
+    this.setActorPortraitScale(actor, actor.portraitScale + PORTRAIT_SCALE_STEP);
+  }
+
+  resetSelectedActorScale() {
+    const actor = this.selectedActor;
+    if (!actor) return;
+    this.setActorPortraitScale(actor, 1);
+  }
+
   enterStage() {
     if (!this.selectedCharacterId) return;
     const character = ObjectStore.instance.get<GameCharacter>(this.selectedCharacterId);
@@ -688,12 +1122,13 @@ export class VnStageComponent implements OnInit, OnDestroy {
     const name = character.name || '';
     const imageIdentifier = this.selectedImageId || this.findImageIdentifierByIndex(character, this.selectedTachieIndex);
 
-    this.upsertActor(character.identifier, name, this.selectedTachieIndex, imageIdentifier, '', false, true);
+    const portraitScale = this.loadActorPortraitScale(character.identifier);
+    this.upsertActor(character.identifier, name, this.selectedTachieIndex, imageIdentifier, '', false, true, portraitScale);
 
     if (this.affectPiece) this.applyTachieToPiece(character, this.selectedTachieIndex);
 
     EventSystem.call('VN_STAGE_ADD', {
-      characterId: character.identifier, name, tachieIndex: this.selectedTachieIndex, imageIdentifier
+      characterId: character.identifier, name, tachieIndex: this.selectedTachieIndex, imageIdentifier, portraitScale
     });
   }
 
@@ -784,14 +1219,33 @@ export class VnStageComponent implements OnInit, OnDestroy {
     this.refreshPaletteFade();
   }
 
+  isSecretRevealed(msg: any): boolean {
+    if (this.gmModeService.isGm || msg.isSendFromSelf) return true;
+    return this.revealedSecrets.has(msg.identifier || msg.tag);
+  }
+
+  canRevealSecret(msg: any): boolean {
+    return this.gmModeService.isGm || msg.isSendFromSelf;
+  }
+
+  revealSecret(msg: any) {
+    if (!this.canRevealSecret(msg)) return;
+    const id = msg.identifier || msg.tag;
+    if (id) this.revealedSecrets.add(id);
+  }
+
   sendPaletteLine(line: string) {
     const character = ObjectStore.instance.get<GameCharacter>(this.selectedCharacterId);
     if (!(character instanceof GameCharacter)) return;
     const palette = character.chatPalette;
     if (!palette) return;
-    const prepared = this.prepareVnChatText(line, character);
+    const secretText = this.applySecretMode(line);
+    const { isSecret, coreText } = this.parseSecretText(secretText);
+    if (!coreText) return;
+    const prepared = this.prepareVnChatText(coreText, character);
     const evaluated = prepared.text;
     const messageTargetContext = prepared.messageTargetContext;
+    if (isSecret) this.applySecretPrefixToContexts(messageTargetContext);
     if (!evaluated) return;
     const chatTab = this.selectedTab || this.chatTabs[0];
     if (!chatTab) return;
@@ -815,10 +1269,10 @@ export class VnStageComponent implements OnInit, OnDestroy {
 
     if (gameType && gameType !== 'DiceBot') {
       DiceBot.loadGameSystemAsync(gameType).then(gs => {
-        this.chatMessageService.sendMessage(chatTab, evaluated, gs, this.selectedCharacterId, null, tachieNum, messageColor, messageTargetContext);
+        this.chatMessageService.sendMessage(chatTab, evaluated, gs, this.selectedCharacterId, null, tachieNum, messageColor, messageTargetContext, isSecret);
       });
     } else {
-      this.chatMessageService.sendMessage(chatTab, evaluated, null, this.selectedCharacterId, null, tachieNum, messageColor, messageTargetContext);
+      this.chatMessageService.sendMessage(chatTab, evaluated, null, this.selectedCharacterId, null, tachieNum, messageColor, messageTargetContext, isSecret);
     }
     this.refreshChatLogFade();
     this.refreshPaletteFade();
@@ -861,14 +1315,15 @@ export class VnStageComponent implements OnInit, OnDestroy {
     }
     const name = character.name || '';
 
-    this.upsertActor(character.identifier, name, this.selectedTachieIndex, imageIdentifier, '', false, true);
+    const portraitScale = this.loadActorPortraitScale(character.identifier);
+    this.upsertActor(character.identifier, name, this.selectedTachieIndex, imageIdentifier, '', false, true, portraitScale);
 
     if (this.affectPiece) {
       this.applyTachieToPiece(character, this.selectedTachieIndex);
     }
 
     EventSystem.call('VN_STAGE_ADD', {
-      characterId: character.identifier, name, tachieIndex: this.selectedTachieIndex, imageIdentifier
+      characterId: character.identifier, name, tachieIndex: this.selectedTachieIndex, imageIdentifier, portraitScale
     });
   }
 
@@ -910,7 +1365,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
 
   private upsertActor(
     characterId: string, name: string, tachieIndex: number, imageIdentifier: string,
-    text: string, speaking: boolean, broadcast: boolean
+    text: string, speaking: boolean, broadcast: boolean, portraitScale?: number
   ) {
     if (!characterId) return;
     const now = Date.now();
@@ -919,7 +1374,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
 
     if (!actor) {
       actor = {
-        characterId, name, tachieIndex, imageIdentifier, previousImageIdentifier: '', isPortraitFading: false, portraitFadeTimer: null, text: '',
+        characterId, name, tachieIndex, imageIdentifier, portraitScale: this.normalizePortraitScale(portraitScale, this.loadActorPortraitScale(characterId)), previousImageIdentifier: '', isPortraitFading: false, portraitFadeTimer: null, text: '',
         enterKey: ++this.enterCounter,
         speakingUntil: 0, bubbleUntil: 0, lastSpokeAt: now,
         isEntering: true,
@@ -931,6 +1386,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
 
     actor.name = name || actor.name;
     actor.tachieIndex = tachieIndex;
+    if (Number.isFinite(Number(portraitScale))) actor.portraitScale = this.normalizePortraitScale(portraitScale, actor.portraitScale || 1);
     if (imageIdentifier) this.setActorImage(actor, imageIdentifier, isNew);
     if (text) actor.text = text;
     actor.lastSpokeAt = now;
@@ -988,6 +1444,45 @@ export class VnStageComponent implements OnInit, OnDestroy {
 
   private findActor(characterId: string): VnActor {
     return this.actors.find(a => a.characterId === characterId);
+  }
+
+  private setActorPortraitScale(actor: VnActor, scale: number) {
+    if (!actor) return;
+    actor.portraitScale = this.normalizePortraitScale(scale, actor.portraitScale || 1);
+    this.saveActorPortraitScale(actor.characterId, actor.portraitScale);
+    EventSystem.call('VN_STAGE_ADD', {
+      characterId: actor.characterId,
+      name: actor.name,
+      tachieIndex: actor.tachieIndex,
+      imageIdentifier: actor.imageIdentifier,
+      portraitScale: actor.portraitScale
+    });
+  }
+
+  private normalizePortraitScale(value: any, fallback: number): number {
+    const n = Number(value);
+    const safe = Number.isFinite(n) ? n : fallback;
+    return Math.max(PORTRAIT_SCALE_MIN, Math.min(PORTRAIT_SCALE_MAX, Math.round(safe * 100) / 100));
+  }
+
+  private loadActorPortraitScale(characterId: string): number {
+    try {
+      const raw = localStorage.getItem('udonarium.vnStage.portraitScales.v1') || '{}';
+      const map = JSON.parse(raw);
+      return this.normalizePortraitScale(map?.[characterId], 1);
+    } catch (_) {
+      return 1;
+    }
+  }
+
+  private saveActorPortraitScale(characterId: string, scale: number) {
+    if (!characterId) return;
+    try {
+      const raw = localStorage.getItem('udonarium.vnStage.portraitScales.v1') || '{}';
+      const map = JSON.parse(raw);
+      map[characterId] = this.normalizePortraitScale(scale, 1);
+      localStorage.setItem('udonarium.vnStage.portraitScales.v1', JSON.stringify(map));
+    } catch (_) { }
   }
 
   /* ═══════════ image helpers ═══════════ */
@@ -1064,8 +1559,8 @@ export class VnStageComponent implements OnInit, OnDestroy {
 
   private canShowChatLogMessage(m: ChatMessage): boolean {
     if (!m || !m.isDisplayable) return false;
-    if (!m.isSecret) return true;
-    return this.gmModeService.isGm || m.isSendFromSelf || m.isRelatedToMe;
+    // シークレットメッセージもログに表示する（内容はHTML側で隠す）
+    return true;
   }
 
   private ensureSelectedCharacter() {
@@ -1077,6 +1572,11 @@ export class VnStageComponent implements OnInit, OnDestroy {
   private setVerticalOffset(v: number) {
     this.verticalOffset = Math.max(-220, Math.min(160, v));
     try { localStorage.setItem('udonarium.vnStage.verticalOffset.v1', String(this.verticalOffset)); } catch (_) { }
+  }
+
+  private clampStageHeight(v: any): number {
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.max(25, Math.min(100, Math.round(n))) : 58;
   }
 
   private loadNumber(key: string, fb: number): number {

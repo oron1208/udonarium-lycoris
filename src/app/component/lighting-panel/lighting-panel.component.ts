@@ -4,6 +4,7 @@ import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { GameTable } from '@udonarium/game-table';
 import { LightingEffectState } from '@udonarium/lighting-state';
 import { PanelService } from 'service/panel.service';
+import { TabletopService } from 'service/tabletop.service';
 
 @Component({
   selector: 'lighting-panel',
@@ -19,9 +20,13 @@ export class LightingPanelComponent implements OnInit {
     flames: false, flameLevel: 0.5, haze: false
   };
   colors = ['#fff3c4', '#ff4fd8', '#4cf3ff', '#7dff6a', '#9b5cff', '#ff5a20'];
+  visionEnabled: boolean = false;
+
+  get isAdvancedRoom(): boolean { return this.table?.roomMode === 'advanced'; }
 
   constructor(
     private panelService: PanelService,
+    private tabletopService: TabletopService,
     private ngZone: NgZone
   ) {}
 
@@ -70,6 +75,7 @@ export class LightingPanelComponent implements OnInit {
       flameLevel: t.lightingFlameLevel,
       haze: t.lightingHaze,
     };
+    this.visionEnabled = t.visionEnabled;
   }
 
   private saveToTable() {
@@ -119,4 +125,12 @@ export class LightingPanelComponent implements OnInit {
   }
 
   setColor(key: 'spotlightColor' | 'laserColor' | 'tint', color: string) { this.update({ [key]: color } as any); }
+
+  toggleVision(enabled: boolean) {
+    this.visionEnabled = enabled;
+    const t = this.table;
+    if (!t) return;
+    t.visionEnabled = enabled;
+    t.update();
+  }
 }

@@ -13,6 +13,23 @@
   user-select: none;
 }
 
+.macro-hotbar.pointer-events-none,
+.macro-hotbar.pointer-events-none * {
+  pointer-events: none !important;
+}
+.macro-hotbar-drag-handle {
+  cursor: grab;
+  padding: 8px 4px;
+  color: rgba(255,255,255,0.3);
+  font-size: 14px;
+  letter-spacing: -2px;
+  align-self: center;
+  touch-action: none;
+  border-radius: 4px;
+}
+.macro-hotbar-drag-handle:hover { color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.08); }
+.macro-hotbar-drag-handle:active { cursor: grabbing; }
+
 .macro-hotbar-slots {
   display: flex;
   gap: 4px;

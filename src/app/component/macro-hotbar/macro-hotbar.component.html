@@ -6,7 +6,13 @@
     <div class="stand-name">{{selectedCharacter.name || '自キャラ'}}</div>
   </div>
 
-  <div class="macro-hotbar">
+  <div class="macro-hotbar" [class.pointer-events-none]="isPointerDragging" [ngStyle]="panelStyle">
+  <div class="macro-hotbar-drag-handle"
+    (pointerdown)="onPanelDragStart($event)"
+    (pointermove)="onPanelDragMove($event)"
+    (pointerup)="onPanelDragEnd($event)"
+    (pointercancel)="onPanelDragEnd($event)"
+    title="ドラッグで移動">⋮⋮</div>
   <div class="macro-hotbar-controls">
     <button type="button" class="self-character-button" (click)="setTargetedCharacterAsSelf()"
       title="Altキーで対象にしたコマを自キャラにします">

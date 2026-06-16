@@ -183,7 +183,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     return this.currentTable?.lightingEnabled && this.currentTable?.lightingNightMode;
   }
   get isAdvancedVisionActive(): boolean {
-    return this.currentTable?.roomMode === 'advanced' && this.getMySightCharacters().length > 0;
+    return this.currentTable?.roomMode === 'advanced' && this.currentTable?.visionEnabled && this.getMySightCharacters().length > 0;
   }
   get isGmMode(): boolean { return this.gmModeService.isGm; }
   rangeSelectionStyle: { [key: string]: string } = {};
@@ -192,6 +192,16 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
 
   get characters(): GameCharacter[] { return this.tabletopService.characters; }
   get visibleCharacters(): GameCharacter[] { return this.characters.filter(character => this.canSeeCharacterInAdvancedMode(character)); }
+  // 注意: 名前ラベルは game-character.component と game-table.component (side-name-label) の2箇所で描画されている。
+  // gmOnlyコマのフィルタリングは両方で行うこと。片方だけ直してもラベルが残るバグが発生する。
+  // game-character.component側は canDisplayByRole で制御。game-table側はこの getter で制御。
+  get sideLabelCharacters(): GameCharacter[] {
+    return this.visibleCharacters.filter(character => {
+      const vis = character.visibility || 'public';
+      if (vis === 'gmOnly') return this.gmModeService.isGm;
+      return true;
+    });
+  }
   get isCharacterSimpleMode(): boolean { return 60 <= this.characters.length; }
   get tableMasks(): GameTableMask[] { return this.tabletopService.tableMasks; }
   get tableScratchMasks(): GameTableScratchMask[] { return this.tabletopService.tableScratchMasks; }
@@ -963,7 +973,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private canSeeCharacterInAdvancedMode(character: GameCharacter): boolean {
-    if (this.currentTable?.roomMode !== 'advanced' || this.gmModeService.isGm) return true;
+    if (this.currentTable?.roomMode !== 'advanced' || !this.currentTable?.visionEnabled || this.gmModeService.isGm) return true;
     if (this.includesJsonId(character.ownerPeerIds, Network.peerId) || this.includesJsonId(character.ownerUserIds, Network.peerContext?.userId)) return true;
 
     const sightCharacters = this.getMySightCharacters();

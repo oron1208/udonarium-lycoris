@@ -576,3 +576,35 @@ a:hover { color: var(--accent-2); }
   .about-grid { grid-template-columns: 1fr; }
   .section { padding: 80px 0; }
 }
+
+/* ===== Guide Cards (トップページ用) ===== */
+.guide-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+.guide-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+  text-decoration: none;
+  color: var(--text);
+  transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+}
+.guide-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  color: var(--text);
+}
+.guide-card-icon { font-size: 2.5rem; flex-shrink: 0; }
+.guide-card-body h3 { font-size: 1.1rem; margin-bottom: 6px; font-weight: 600; }
+.guide-card-body p { color: var(--text-dim); font-size: 0.85rem; line-height: 1.6; }
+.guide-card-arrow { font-size: 1.5rem; color: var(--text-dim); margin-left: auto; transition: transform 0.3s; }
+.guide-card:hover .guide-card-arrow { transform: translateX(4px); color: var(--accent); }
+.guide-card-coming { opacity: 0.4; cursor: default; }
+.guide-card-coming:hover { transform: none; border-color: var(--border); box-shadow: none; }

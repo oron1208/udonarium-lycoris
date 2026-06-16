@@ -10,6 +10,7 @@ import { PeerCursor } from '@udonarium/peer-cursor';
 import { FileSelecterComponent } from 'component/file-selecter/file-selecter.component';
 import { ChatMessageService } from 'service/chat-message.service';
 import { ModalService } from 'service/modal.service';
+import { PointerDeviceService } from 'service/pointer-device.service';
 import { TabletopService } from 'service/tabletop.service';
 
 interface MacroHotbarSlot {
@@ -39,6 +40,13 @@ const TOTAL_SLOT_COUNT = SLOT_COUNT * PAGE_COUNT;
 export class MacroHotbarComponent {
   @ViewChild('importFileInput') importFileInput: ElementRef<HTMLInputElement>;
 
+  // ── Floating panel state ──
+  panelX: number = -1; // -1 = default centered
+  panelY: number = -1;
+  isPanelDragging: boolean = false;
+  private dragOffsetX = 0;
+  private dragOffsetY = 0;
+
   slots: MacroHotbarSlot[] = this.loadSlots();
   editingIndex: number = -1;
   editSlot: MacroHotbarSlot = this.emptySlot();
@@ -47,7 +55,10 @@ export class MacroHotbarComponent {
   targetMode = this.settings.targetMode;
   activePage = this.settings.activePage;
   isVisible = this.loadVisibility();
+
+  private _posLoaded = false;
   get isExtendedDiceBotEnabled(): boolean { return this.tabletopService.currentTable?.extendedDiceBotEnabled ?? false; }
+  get isPointerDragging(): boolean { return this.pointerDeviceService.isDragging; }
   helpText = '';
   hoverSlotLabel = '';
   hoverSlotText = '';
@@ -55,8 +66,14 @@ export class MacroHotbarComponent {
   constructor(
     public chatMessageService: ChatMessageService,
     private modalService: ModalService,
+    private pointerDeviceService: PointerDeviceService,
     private tabletopService: TabletopService
   ) {
+    try {
+      const saved = localStorage.getItem('udonarium.hotbar.pos.v1');
+      if (saved) { const p = JSON.parse(saved); this.panelX = p.x ?? -1; this.panelY = p.y ?? -1; }
+      this._posLoaded = true;
+    } catch (_) { }
     EventSystem.register(this)
       .on('MACRO_HOTBAR_VISIBILITY_CHANGED', event => {
         this.isVisible = !!event.data.visible;
@@ -68,6 +85,56 @@ export class MacroHotbarComponent {
 
   ngOnDestroy() {
     EventSystem.unregister(this);
+  }
+
+  /* ═══════════ floating panel drag ═══════════ */
+
+  get panelStyle(): { [key: string]: string } {
+    const s: { [key: string]: string } = {};
+    if (this.panelX >= 0) { s['left'] = this.panelX + 'px'; s['transform'] = 'none'; }
+    if (this.panelY >= 0) { s['bottom'] = 'auto'; s['top'] = this.panelY + 'px'; }
+    return s;
+  }
+
+  onPanelDragStart(e: PointerEvent) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    this.isPanelDragging = true;
+    const rect = (e.currentTarget as HTMLElement).closest('.macro-hotbar').getBoundingClientRect();
+    this.dragOffsetX = e.clientX - rect.left;
+    this.dragOffsetY = e.clientY - rect.top;
+    this.panelX = rect.left;
+    this.panelY = rect.top;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }
+
+  onPanelDragMove(e: PointerEvent) {
+    if (!this.isPanelDragging) return;
+    e.preventDefault();
+    const nx = Math.max(0, Math.min(window.innerWidth - 100, e.clientX - this.dragOffsetX));
+    const ny = Math.max(0, Math.min(window.innerHeight - 40, e.clientY - this.dragOffsetY));
+    this.panelX = nx;
+    this.panelY = ny;
+  }
+
+  onPanelDragEnd(e: PointerEvent) {
+    if (!this.isPanelDragging) return;
+    this.isPanelDragging = false;
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch (_) { }
+    this.savePanelState();
+  }
+
+  resetPanelPosition() {
+    this.panelX = -1;
+    this.panelY = -1;
+    this.savePanelState();
+  }
+
+  private savePanelState() {
+    try {
+      localStorage.setItem('udonarium.hotbar.pos.v1', JSON.stringify({ x: this.panelX, y: this.panelY }));
+    } catch (_) { }
   }
 
   getIconUrl(slot: MacroHotbarSlot): string {

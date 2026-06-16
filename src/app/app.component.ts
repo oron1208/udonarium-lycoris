@@ -747,7 +747,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         break;
       case 'LightingPanelComponent':
         component = LightingPanelComponent;
-        option = { width: 400, height: 500, left: 120, title: '照明演出' };
+        option = { width: 400, height: 500, left: 120, title: '照明視覚' };
         break;
       case 'OptionsPanelComponent':
         component = OptionsPanelComponent;
@@ -795,7 +795,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       return;
     }
     this.lightingPanelOpen = true;
-    const option: PanelOption = { width: 400, height: 400, left: 120, title: '照明演出' };
+    const option: PanelOption = { width: 400, height: 400, left: 120, title: '照明視覚' };
     option.top = (this.openPanelCount % 10 + 1) * 20;
     option.left = 100 + (this.openPanelCount % 20 + 1) * 5;
     this.openPanelCount++;

@@ -19,3 +19,7 @@ input[type="color"] { width:42px; height:26px; padding:0; border:none; backgroun
 .swatches button { width:24px; height:24px; padding:0; border-radius:50%; }
 .swatches button.active { outline:2px solid #fff; outline-offset:2px; }
 .hint { color:#444; font-size:11px; line-height:1.45; padding-top:8px; }
+.vision-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.option-toggle { min-width:60px; padding:3px 14px; border-radius:4px; border:1px solid #888; background:#444; color:#ddd; cursor:pointer; font-size:12px; font-weight:bold; }
+.option-toggle.on { background:#1565c0; border-color:#1976d2; color:#fff; }
+.option-toggle:hover { filter:brightness(1.15); }

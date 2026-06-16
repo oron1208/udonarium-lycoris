@@ -14,4 +14,15 @@
     <div class="range-row"><span>明るさ</span><input type="range" min="0" max="1" step="0.01" [ngModel]="state.ambientIntensity" (ngModelChange)="update({ambientIntensity: +$event})"><b>{{ (state.ambientIntensity * 100) | number:'1.0-0' }}%</b></div>
   </section>
 
+  <section *ngIf="isAdvancedRoom">
+    <h3>視界</h3>
+    <div class="vision-row">
+      <span>各コマによる視界制限</span>
+      <button type="button" class="option-toggle" [class.on]="visionEnabled" (click)="toggleVision(!visionEnabled)">
+        {{ visionEnabled ? 'ON' : 'OFF' }}
+      </button>
+    </div>
+    <p class="hint">ONにすると、自分のコマの視界範囲外が隠されます。</p>
+  </section>
+
 </div>

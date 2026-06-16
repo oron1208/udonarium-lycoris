@@ -66,6 +66,22 @@
       <button type="button" class="option-toggle" [class.on]="isVnAutoFit" (click)="toggleVnAutoFit()">
         {{ isVnAutoFit ? 'ON' : 'OFF' }}
       </button>
+      <button type="button" class="option-button mini" (click)="toggleVnHeightEditor()">高さ設定</button>
+    </div>
+    <div class="vn-height-editor" *ngIf="isVnHeightEditorOpen">
+      <div class="vn-height-preview">
+        <div class="vn-height-fill" [style.height.%]="vnStageHeightPercent">
+          <span>{{ vnStageHeightPercent }}%</span>
+        </div>
+      </div>
+      <input class="vn-height-slider" type="range" min="25" max="100" step="1"
+        [ngModel]="vnStageHeightPercent"
+        (ngModelChange)="setVnStageHeight($event)"
+        name="vnStageHeight">
+      <div class="vn-height-actions">
+        <button type="button" class="option-button mini" (click)="setVnStageHeight(58)">標準</button>
+        <button type="button" class="option-button mini" (click)="setVnStageHeight(100)">最大</button>
+      </div>
     </div>
     <div class="option-hint">全員の立ち絵をVNエリアの高さに合わせます</div>
     <div class="option-row">
@@ -176,6 +192,6 @@
     <button type="button" class="option-button" (click)="addSampleCharacters()">
         🎭 サンプルキャラ追加
     </button>
-    <div style="font-size: 0.75em; color: #888; text-align: right; padding: 4px 8px;">v1.34.0-lycoris.0</div>
+    <div style="font-size: 0.75em; color: #888; text-align: right; padding: 4px 8px;">v1.36-lycoris</div>
   </section>
 </div>

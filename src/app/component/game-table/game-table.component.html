@@ -50,7 +50,7 @@
     </div>
   </div>
   <ng-container *ngIf="isSideNameLabelMode">
-    <div class="side-name-label" *ngFor="let character of visibleCharacters; trackBy: trackByGameObject" [ngStyle]="getSideNameLabelStyle(character)">
+    <div class="side-name-label" *ngFor="let character of sideLabelCharacters; trackBy: trackByGameObject" [ngStyle]="getSideNameLabelStyle(character)">
       {{character.name}}
     </div>
   </ng-container>

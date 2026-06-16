@@ -2,10 +2,24 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta name="google-site-verification" content="IYq5RLg7LwMeUh7ZUX_a4Y5WGjicbZ8UHnnpziJ8p0Y" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" href="assets/favicon.png">
-<title>ユドナリウムリコリス - Udonarium Lycoris</title>
-<meta name="description" content="ユドナリウムリコリス - こだわりのTRPGオンラインセッションツール">
+<title>ユドナリウムリコリス - Udonarium Lycoris | ブラウザTRPGセッションツール</title>
+<meta name="description" content="ユドナリウムリコリスは、ブラウザ完結のオンラインTRPGセッションツールです。照明システム・ジュークボックス・VNモード・ダイスボットなど、こだわりの機能でセッションを盛り上げます。インストール不要。">
+<meta name="keywords" content="ユドナリウム,リコリス,TRPG,オンラインセッション,ブラウザ,ダイスボット,照明,ジュークボックス,VNモード,テーブルトップ,RPG">
+<meta name="author" content="Udonarium Lycoris">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://udonarium-lycoris.ddns.net/docs/">
+<meta property="og:title" content="ユドナリウムリコリス - Udonarium Lycoris">
+<meta property="og:description" content="ブラウザ完結のオンラインTRPGセッションツール。照明・ジュークボックス・VNモード等のこだわり機能搭載。">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://udonarium-lycoris.ddns.net/docs/">
+<meta property="og:site_name" content="ユドナリウムリコリス">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="ユドナリウムリコリス - Udonarium Lycoris">
+<meta name="twitter:description" content="ブラウザ完結のオンラインTRPGセッションツール。照明・ジュークボックス・VNモード等のこだわり機能搭載。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
@@ -170,13 +184,14 @@
           <p>準備中...</p>
         </div>
       </div>
-      <div class="guide-card guide-card-coming">
+      <a href="guide/vn-mode.html" class="guide-card">
         <div class="guide-card-icon">🎭</div>
         <div class="guide-card-body">
           <h3>VNモード</h3>
-          <p>準備中...</p>
+          <p>ビジュアルノベル風の立ち絵表示。吹き出し演出、チャットパレット連携、表情切り替え。</p>
         </div>
-      </div>
+        <div class="guide-card-arrow">›</div>
+      </a>
       <div class="guide-card guide-card-coming">
         <div class="guide-card-icon">🎵</div>
         <div class="guide-card-body">
@@ -196,6 +211,62 @@
       <h2 class="section-title">アップデート履歴</h2>
     </div>
     <div class="timeline">
+      <div class="timeline-item fade-up">
+        <div class="timeline-badge">v1.36</div>
+        <div class="timeline-content">
+          <div class="timeline-date">2026-06-16</div>
+          <h3>VNステージ大改修・セッション支援UI強化</h3>
+          <ul>
+            <li>VNステージを大幅拡張 — VNチャット、チャットパレット、チャットログを独立フローティングパネルとして扱えるように改善</li>
+            <li>VNチャットパレットの操作性を改善 — 1クリックで入力欄へ反映、ダブルクリックで送信、検索、インデックス、差分一覧の縮小・展開・ホバー選択に対応</li>
+            <li>VN立ち絵の表示調整を強化 — キャラクターごとの拡大・縮小、上下位置調整、ステージ高さ設定に対応し、身長差や画像サイズ差を表現しやすく改善</li>
+            <li>VNステージ高さ設定を追加 — オプションのUI設定から青い範囲プレビュー付きで25%〜100%の高さを調整可能</li>
+            <li>シークレット送信を強化 — VNチャットパネルの「シークレット」ボタンで、Enter送信・チャパレ送信時に自動で「s:」を付与（二重付与は回避）</li>
+            <li>VNチャットログの秘匿表示を改善 — シークレットメッセージをログ上で隠し、GMまたは送信者が必要に応じて内容公開できるように調整</li>
+            <li>VNステージやホットバー上をコマドラッグ中に通過しても、盤面裏側の座標を拾うようにし、Z軸方向へ吹き飛ぶ問題を改善</li>
+            <li>ホットバー、照明、アドバンスモード周辺のUIを調整し、繰り返し使う操作を扱いやすく改善</li>
+            <li>操作ガイドにVNモード関連の説明と画像を追加し、公式サイト側の案内を拡充</li>
+          </ul>
+        </div>
+      </div>
+      <div class="timeline-item fade-up">
+        <div class="timeline-badge">v1.35.1</div>
+        <div class="timeline-content">
+          <div class="timeline-date">2026-06-16</div>
+          <h3>バグ修正・UI調整</h3>
+          <ul>
+            <li>マイバッジの表示位置調整</li>
+            <li>VNチャットの「s:」プレフィックス関連バグ修正</li>
+          </ul>
+        </div>
+      </div>
+      <div class="timeline-item fade-up">
+        <div class="timeline-badge">v1.35</div>
+        <div class="timeline-content">
+          <div class="timeline-date">2026-06-15</div>
+          <h3>バグ修正・UI改善・シークレット強化</h3>
+          <ul>
+            <li>平面モードでコマ移動時にZ座標がずれるバグ修正 — 3Dビューでコマが宙に浮く問題を解消</li>
+            <li>GM専用コマの名前ラベルがPLに見えてしまうバグ修正 — 横ラベル・真上ラベル両方に権限チェックを追加</li>
+            <li>GM権限判定をlocalStorageからネットワーク同期（PeerCursor）に変更して確実性を向上</li>
+            <li>VNチャットログでシークレットメッセージがPLに見えるバグ修正</li>
+            <li>コマ右クリックにサイズ調整スライダーを追加（高度・サイズ設定に統合）</li>
+            <li>VNチャットで「s:」プレフィックスによるシークレット送信に対応</li>
+            <li>VNチャパレを1クリック選択・ダブルクリック送信方式に変更</li>
+          </ul>
+        </div>
+      </div>
+      <div class="timeline-item fade-up">
+        <div class="timeline-badge">v1.34.1</div>
+        <div class="timeline-content">
+          <div class="timeline-date">2026-06-13</div>
+          <h3>拡張ダイスボット修正・簡易モード削除</h3>
+          <ul>
+            <li>拡張ダイスボットの数式計算がSW2.5のK()コマンド等の引数と干渉する問題を修正</li>
+            <li>簡易モードを削除</li>
+          </ul>
+        </div>
+      </div>
       <div class="timeline-item fade-up">
         <div class="timeline-badge">v1.34</div>
         <div class="timeline-content">

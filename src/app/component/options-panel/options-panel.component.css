@@ -160,6 +160,51 @@
   font-size: 13px;
 }
 .option-button:hover { filter: brightness(1.15); }
+.option-button.mini {
+  padding: 3px 10px;
+  font-size: 12px;
+}
+
+.vn-height-editor {
+  margin: 4px 0 8px 120px;
+  padding: 8px;
+  width: 190px;
+  border: 1px solid rgba(80, 150, 230, 0.55);
+  border-radius: 6px;
+  background: rgba(10, 20, 36, 0.72);
+}
+.vn-height-preview {
+  position: relative;
+  height: 96px;
+  border: 1px solid rgba(255,255,255,0.24);
+  border-radius: 4px;
+  background: rgba(0,0,0,0.28);
+  overflow: hidden;
+}
+.vn-height-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 18px;
+  background: rgba(35, 135, 240, 0.72);
+  color: #fff;
+  font-weight: bold;
+  text-shadow: 0 1px 2px #000;
+}
+.vn-height-slider {
+  width: 100%;
+  margin: 8px 0 6px;
+  accent-color: #2387f0;
+}
+.vn-height-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
 
 .operation-help-body {
   margin-top: 8px;

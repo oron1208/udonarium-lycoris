@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://udonarium-lycoris.ddns.net/docs/sitemap.xml

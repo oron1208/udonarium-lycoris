@@ -41,6 +41,8 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
   isCompactMode = false;
   isCursorShareDisabled = false;
   isVnAutoFit = true;
+  isVnHeightEditorOpen = false;
+  vnStageHeightPercent = 58;
   isVnBoardButtonVisible = false;
   isActivePanelForeground = true;
   isTooltipForeground = false;
@@ -49,6 +51,7 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
   isShowCharacterDirectionMarker = false;
 
   private static readonly CURSOR_SHARE_DISABLED_KEY = 'udonarium.gm.cursorShareDisabled';
+  private static readonly VN_STAGE_HEIGHT_KEY = 'udonarium.vnStage.heightPercent.v1';
   private static readonly VN_BOARD_BUTTON_VISIBLE_KEY = 'udonarium.vnStage.boardButton.visible.v1';
   private static readonly ACTIVE_PANEL_FOREGROUND_KEY = 'udonarium.panel.activeForeground.v1';
   private static readonly TOOLTIP_FOREGROUND_KEY = 'udonarium.tooltip.foreground.v1';
@@ -69,6 +72,7 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
     try { this.isVnStageVisible = localStorage.getItem('udonarium.vnStage.visible.v1') === '1'; } catch (_) { }
     this.isGmMode = this.gmModeService.isGm;
     try { this.isVnAutoFit = localStorage.getItem('udonarium.vnStage.autoFit.v1') === '1'; } catch (_) { }
+    this.vnStageHeightPercent = this.clampVnStageHeight(this.loadNumber(OptionsPanelComponent.VN_STAGE_HEIGHT_KEY, 58));
     try { this.isVnBoardButtonVisible = localStorage.getItem(OptionsPanelComponent.VN_BOARD_BUTTON_VISIBLE_KEY) === '1'; } catch (_) { }
     try { this.isActivePanelForeground = localStorage.getItem(OptionsPanelComponent.ACTIVE_PANEL_FOREGROUND_KEY) !== '0'; } catch (_) { }
     try { this.isTooltipForeground = localStorage.getItem(OptionsPanelComponent.TOOLTIP_FOREGROUND_KEY) !== '0'; } catch (_) { }
@@ -166,6 +170,16 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
     EventSystem.trigger('VN_STAGE_AUTOFIT_CHANGED', { autoFit: this.isVnAutoFit });
   }
 
+  toggleVnHeightEditor() {
+    this.isVnHeightEditorOpen = !this.isVnHeightEditorOpen;
+  }
+
+  setVnStageHeight(value: number) {
+    this.vnStageHeightPercent = this.clampVnStageHeight(value);
+    try { localStorage.setItem(OptionsPanelComponent.VN_STAGE_HEIGHT_KEY, String(this.vnStageHeightPercent)); } catch (_) { }
+    EventSystem.trigger('VN_STAGE_HEIGHT_CHANGED', { heightPercent: this.vnStageHeightPercent });
+  }
+
   toggleVnBoardButton() {
     this.isVnBoardButtonVisible = !this.isVnBoardButtonVisible;
     try { localStorage.setItem(OptionsPanelComponent.VN_BOARD_BUTTON_VISIBLE_KEY, this.isVnBoardButtonVisible ? '1' : '0'); } catch (_) { }
@@ -242,5 +256,10 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
 
   private loadNumber(key: string, fb: number): number {
     try { const v = Number(localStorage.getItem(key)); return Number.isFinite(v) ? v : fb; } catch (_) { return fb; }
+  }
+
+  private clampVnStageHeight(value: any): number {
+    const n = Number(value);
+    return Number.isFinite(n) ? Math.max(25, Math.min(100, Math.round(n))) : 58;
   }
 }

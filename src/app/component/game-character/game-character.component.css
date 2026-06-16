@@ -81,8 +81,9 @@
 .component.my-piece-token::before {
   content: 'MY';
   position: absolute;
-  right: -10px;
-  top: -14px;
+  left: 50%;
+  transform: translateX(-50%) translateZ(2.4px);
+  top: -2px;
   z-index: 30;
   border: 1px solid rgba(255, 255, 255, 0.9);
   border-radius: 10px;
@@ -94,7 +95,6 @@
   line-height: 1;
   padding: 3px 5px;
   pointer-events: none;
-  transform: translateZ(2.4px);
 }
 
 .component-content {

@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
+<title>VNモード 操作説明 - ユドナリウムリコリス</title>
+<meta name="description" content="ユドナリウムリコリスのVNモード（ビジュアルノベルモード）の使い方を解説。立ち絵表示、チャット吹き出し、チャットパレット連携など。">
+<link rel="canonical" href="https://udonarium-lycoris.ddns.net/docs/guide/vn-mode.html">
+<meta property="og:title" content="VNモード 操作説明 - ユドナリウムリコリス">
+<meta property="og:description" content="ビジュアルノベル風の立ち絵表示でセッションを彩るVNモードの使い方。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+
+<!-- 背景固定レイヤー -->
+<div class="bg-fixed">
+  <div class="bg-layer bg-layer-1"></div>
+  <div class="bg-layer bg-layer-2"></div>
+</div>
+
+<!-- パーティクル -->
+<canvas id="particles"></canvas>
+
+<!-- ナビ -->
+<nav class="nav scrolled">
+  <div class="nav-inner">
+    <a href="../" class="nav-logo"><span class="logo-icon">◈</span> ユドナリウムリコリス</a>
+    <div class="nav-links">
+      <a href="../#about">概要</a>
+      <a href="../#connect">接続先</a>
+      <a href="../#updates">更新履歴</a>
+      <a href="index.html" class="nav-link-github">操作説明</a>
+    </div>
+  </div>
+</nav>
+
+<!-- 記事本文 -->
+<article class="section guide-article" style="padding-top: 100px;">
+  <div class="container">
+
+    <!-- ページヘッダー -->
+    <div class="guide-page-header fade-up">
+      <span class="section-tag">GUIDE</span>
+      <h2 class="section-title">🎭 VNモード</h2>
+      <p class="section-sub">ビジュアルノベル風の立ち絵表示で、セッションの雰囲気を盛り上げます。</p>
+    </div>
+
+    <!-- ===== セクション1: VNモードとは ===== -->
+    <section id="what" class="guide-visual-section fade-up">
+      <div class="guide-visual-hero">
+        <img src="assets/vn-two-characters.png" alt="VNモード使用例 - ケイジとマコの会話シーン">
+        <div class="guide-visual-hero-overlay"></div>
+      </div>
+      <div class="guide-visual-hero-text">
+        <h3>VNモードとは</h3>
+        <p>テーブル上部にビジュアルノベル風の立ち絵エリアを表示する機能です。キャラクターの立ち絵が並び、チャット送信時に吹き出しが表示されます。</p>
+        <ul class="guide-feature-list">
+          <li><span class="guide-feature-icon">🎭</span>キャラクターの立ち絵を並べて表示</li>
+          <li><span class="guide-feature-icon">💬</span>チャット送信時に吹き出し演出</li>
+          <li><span class="guide-feature-icon">🖼️</span>立ち絵の差分画像にワンクリックで変更</li>
+          <li><span class="guide-feature-icon">📋</span>チャットパレットと連携してワンクリック発言</li>
+          <li><span class="guide-feature-icon">🎲</span>ダイスボットもVNモード内から直接操作可能</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ===== セクション2: 有効にする ===== -->
+    <section id="enable" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">01</span>
+        <h3>VNモードを有効にする</h3>
+      </div>
+      <div class="guide-content-with-image">
+        <div class="guide-image-card">
+          <img src="assets/vn-option-toggle.png" alt="VNステージON/OFFボタン">
+        </div>
+        <div class="guide-steps">
+          <ol>
+            <li>画面左のオプションパネル（歯車アイコン）を開く</li>
+            <li>上部の「<strong>VN</strong>」ボタンをクリック</li>
+            <li>テーブル上部にVNステージが表示されます</li>
+          </ol>
+          <p class="guide-note">もう一度クリックするとOFFになります。設定はブラウザに保存されるため、次回以降も同じ状態が維持されます。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== セクション3: キャラクターを登場させる ===== -->
+    <section id="enter" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">02</span>
+        <h3>キャラクターを登場させる</h3>
+      </div>
+      <div class="guide-content-with-image guide-image-right">
+        <div class="guide-steps">
+          <ol>
+            <li>VNステージ下部のコントロールパネルにある「キャラ選択」プルダウンからキャラクターを選ぶ</li>
+            <li>「登場」ボタンをクリック</li>
+            <li>キャラクターがステージに登場し、立ち絵が表示されます</li>
+          </ol>
+          <p class="guide-note">立ち絵が設定されていないキャラクターの場合は、名前だけが表示されます。登場中のキャラクターは下部の「登場中」エリアにアイコンで表示されます。✕ボタンで退場させることができます。</p>
+        </div>
+        <div class="guide-image-card">
+          <img src="assets/vn-single-character.png" alt="キャラクター1体登場">
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== セクション4: チャットを送る ===== -->
+    <section id="chat" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">03</span>
+        <h3>チャットを送る</h3>
+      </div>
+      <div class="guide-steps">
+        <ol>
+          <li>「キャラ選択」で発言するキャラクターを選ぶ</li>
+          <li>テキスト入力欄にメッセージを入力</li>
+          <li><kbd>Enter</kbd>で送信（<kbd>Shift</kbd>+<kbd>Enter</kbd>で改行）</li>
+        </ol>
+        <p>送信すると、ステージ上のキャラクターの頭上に吹き出しが表示されます。</p>
+      </div>
+      <div class="guide-bubble-demo">
+        <div class="demo-bubble demo-bubble-left">
+          <span class="demo-bubble-name">ケイジ</span>
+          <span class="demo-bubble-text">ここから先は危険だ。気をつけろよ。</span>
+        </div>
+        <div class="demo-bubble demo-bubble-right">
+          <span class="demo-bubble-name">マコ</span>
+          <span class="demo-bubble-text">わかった！がんばるね💕</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== セクション5: 立ち絵を切り替える ===== -->
+    <section id="portrait" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">04</span>
+        <h3>立ち絵の差分画像にワンクリックで変更</h3>
+      </div>
+      <p>キャラクターの画像欄に複数の立ち絵を登録しておくと、発言時に表情を切り替えられます。コントロールパネルの表情ボタンをクリックするだけ！</p>
+      <div class="guide-expression-showcase" style="margin-left: auto;">
+        <div class="expression-stage" style="height: 400px;">
+          <img class="expression-img active" data-idx="0" src="assets/vn-expression-0-normal.png" alt="通常">
+          <img class="expression-img" data-idx="1" src="assets/vn-expression-1-angry.png" alt="むすっ">
+          <img class="expression-img" data-idx="2" src="assets/vn-expression-2-surprise.png" alt="びっくり">
+          <img class="expression-img" data-idx="3" src="assets/vn-expression-3-crying.png" alt="泣きそう">
+          <img class="expression-img" data-idx="4" src="assets/vn-expression-4-smile.png" alt="笑顔">
+        </div>
+        <div class="expression-buttons">
+          <button class="expression-btn active" data-idx="0">0 通常</button>
+          <button class="expression-btn" data-idx="1">1 むすっ</button>
+          <button class="expression-btn" data-idx="2">2 びっくり</button>
+          <button class="expression-btn" data-idx="3">3 泣きそう</button>
+          <button class="expression-btn" data-idx="4">4 笑顔</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== セクション6: 立ち絵スロット ===== -->
+    <section id="tachie-slots" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">05</span>
+        <h3>立ち絵スロット</h3>
+      </div>
+      <div class="guide-content-with-image guide-image-right">
+        <p>キャラクターに複数の画像が登録されている場合、コントロールパネルにスロットボタンが表示されます。</p>
+        <ul>
+          <li>各ボタンをクリックすると、対応する立ち絵に切り替わります</li>
+          <li>アクティブなスロットはハイライト表示されます</li>
+          <li>画像1枚目がデフォルト（通常表情）、2枚目以降を感情表情にする使い方がおすすめ</li>
+        </ul>
+        <div class="guide-image-card">
+          <img src="assets/vn-slots.png" alt="立ち絵スロットのUI">
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== セクション7: 吹き出しの仕組み ===== -->
+    <section id="bubble" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">06</span>
+        <h3>吹き出しの仕組み</h3>
+      </div>
+      <div class="guide-content-with-image guide-image-right">
+        <div class="guide-steps">
+          <p>チャットを送ると、発言キャラクターの頭上に吹き出しが表示されます。</p>
+          <ul>
+            <li><strong>名前プレート</strong>: キャラクター名が表示されます</li>
+            <li><strong>タイプライター演出</strong>: 文字が1文字ずつ表示されます</li>
+            <li><strong>位置</strong>: 左側のキャラは右向き、右側のキャラは左向きに吹き出しが出ます</li>
+            <li>新しい発言があると、前の吹き出しは消えて新しいものに切り替わります</li>
+          </ul>
+        </div>
+        <div class="guide-image-card">
+          <img src="assets/vn-bubble-demo.png" alt="吹き出し演出の例">
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== セクション8: チャットパレット連携 ===== -->
+    <section id="palette" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">07</span>
+        <h3>チャットパレット連携</h3>
+      </div>
+      <p>キャラクターにチャットパレットが設定されている場合、VNモード内から直接使えます。</p>
+      <div class="guide-slideshow">
+        <div class="slideshow-stage" style="height: 500px;">
+          <img class="slideshow-img active" data-idx="0" src="assets/vn-palette-1-hidden.png" alt="チャパレ非表示">
+          <img class="slideshow-img" data-idx="1" src="assets/vn-palette-2-open.png" alt="チャパレ展開">
+          <img class="slideshow-img" data-idx="2" src="assets/vn-palette-3-send.png" alt="チャパレで発言">
+          <img class="slideshow-img" data-idx="3" src="assets/vn-palette-4-index.png" alt="インデックス表示">
+          <img class="slideshow-img" data-idx="4" src="assets/vn-palette-5-log.png" alt="ログ画面">
+          <img class="slideshow-img" data-idx="5" src="assets/vn-palette-6-search.png" alt="検索画面">
+        </div>
+        <div class="slideshow-nav">
+          <button class="slideshow-btn active" data-idx="0">1. パレット非表示</button>
+          <button class="slideshow-btn" data-idx="1">2. パレット展開</button>
+          <button class="slideshow-btn" data-idx="2">3. 発言送信</button>
+          <button class="slideshow-btn" data-idx="3">4. インデックス</button>
+          <button class="slideshow-btn" data-idx="4">5. ログ表示</button>
+          <button class="slideshow-btn" data-idx="5">6. 検索</button>
+        </div>
+      </div>
+      <div class="guide-palette-features">
+        <h4>便利な機能</h4>
+        <ul>
+          <li><strong>検索</strong>: パレット内の行をキーワードで絞り込み</li>
+          <li><strong>インデックス</strong>: セクション見出しにジャンプできるナビゲーション（📑ボタンで表示）</li>
+          <li><strong>セクション表示</strong>: <code>// 見出し</code> 形式の行はセクションヘッダーとして表示されます</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ===== セクション9: チャットログ ===== -->
+    <section id="chatlog" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">08</span>
+        <h3>チャットログ</h3>
+      </div>
+      <div class="guide-content-with-image guide-image-right">
+        <div class="guide-steps">
+          <p>VNモード内でチャットログを確認できます。</p>
+          <ul>
+            <li><strong>💬 ログ</strong>ボタンでチャットログを展開</li>
+            <li>チャットタブを切り替えて、目的のログを表示</li>
+            <li><strong>📌 ピン留め</strong>: ログ表示を固定（ONにしないと一定時間で自動的に閉じます）</li>
+            <li>▼ボタンでログを閉じる</li>
+          </ul>
+        </div>
+        <div class="guide-image-card">
+          <img src="assets/vn-chatlog.png" alt="チャットログの表示">
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== セクション10: ダイスロール ===== -->
+    <section id="dice" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">09</span>
+        <h3>ダイスロール</h3>
+      </div>
+      <div class="guide-content-with-image guide-image-right">
+        <div class="guide-steps">
+          <p>VNモード内からダイスを振ることができます。</p>
+          <ul>
+            <li><strong>ダイスボタン</strong>: D4, D6, D8, D10, D12, D20, D100 の各ボタンをクリックでダイスを追加</li>
+            <li>複数クリックでダイスを追加（例: D6を3回クリック → 3D6）</li>
+            <li><strong>✕</strong>ボタンでダイスをリセット</li>
+            <li><strong>ダイスボット選択</strong>: プルダウンからゲームシステムを選択すると、BCDiceによるダイスボットが使えます</li>
+          </ul>
+        </div>
+        <div class="guide-image-card">
+          <img src="assets/vn-dice.png" alt="ダイスロールのUI">
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== セクション11: コマ同期 ===== -->
+    <section id="sync" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">10</span>
+        <h3>コマ同期</h3>
+      </div>
+      <div class="guide-content-with-image guide-image-right">
+        <div class="guide-steps">
+          <p>VNモードの設定で、盤面のコマと連動できます。</p>
+          <ul>
+            <li><strong>絵あり/絵なし</strong>: ON=立ち絵付きでチャット送信 / OFF=テキストのみ</li>
+            <li><strong>コマ同期/コマ独立</strong>: ON=VNモードで選択した立ち絵が盤面のコマ画像にも反映 / OFF=盤面コマに影響しない</li>
+          </ul>
+        </div>
+        <div class="guide-image-card">
+          <img src="assets/vn-sync.png" alt="コマ同期のUI">
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== コマからVN逆引き ===== -->
+    <section id="reverse" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">10+</span>
+        <h3>コマからVNパネルを逆引き <span class="guide-section-badge">便利機能</span></h3>
+      </div>
+      <p>オプションの「<strong>盤面コマVNボタン</strong>」をONにすると、盤面のコマにVNボタンが表示されます。これをクリックするだけで、そのキャラクターのVNパネルに即座に切り替わります。</p>
+      <div class="guide-reverse-cards">
+        <div class="guide-image-card">
+          <img src="assets/vn-reverse-mako.png" alt="マコちゃんのコマからVN逆引き">
+          <div class="guide-image-caption">マコちゃんを選択中</div>
+        </div>
+        <div class="guide-image-card">
+          <img src="assets/vn-reverse-keiji.png" alt="ケイジのコマからVN逆引き">
+          <div class="guide-image-caption">ケイジを選択中</div>
+        </div>
+      </div>
+      <div class="guide-reverse-appeal">
+        <h4>✨ これの何がすごい？</h4>
+        <p>複数のキャラクターやNPCを扱うとき、これまではそれぞれのキャラクターシートを開いてチャットパレットを切り替える必要がありました。</p>
+        <p>コマのVNボタンから逆引きすると、<strong>立ち絵の選択だけでなくチャットパレットも同期して切り替わる</strong>ため、チャットパレットウィンドウが1つだけで済みます。1クリックでキャラクターを切り替えて、すぐに発言可能！</p>
+      </div>
+    </section>
+
+    <!-- ===== セクション12: 立ち位置の調整 ===== -->
+    <section id="position" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">11</span>
+        <h3>立ち位置の調整</h3>
+      </div>
+      <div class="guide-content-with-image guide-image-right">
+        <div class="guide-steps">
+          <ul>
+            <li><strong>▲ / ▼</strong>: 立ち絵全体の上下位置を微調整</li>
+            <li><strong>↺</strong>: 位置をリセット</li>
+            <li><strong>ドラッグ&ドロップ</strong>: 登場中のキャラクターアイコンをドラッグして、立ち位置の順番を入れ替え可能</li>
+          </ul>
+        </div>
+        <div class="guide-image-card">
+          <img src="assets/vn-drag-position.png" alt="立ち位置のドラッグ操作">
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== セクション13: Tips ===== -->
+    <section id="tips" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">12</span>
+        <h3>Tips</h3>
+      </div>
+      <ul class="guide-tips-list">
+        <li>後から入室したプレイヤーにも、自動で立ち絵が同期されます</li>
+        <li>VNモードをOFFにしてからONに戻しても、登場状態は保持されます</li>
+        <li>テーブル右上の「×」ボタンでステージを空にできます（全キャラ退場）</li>
+        <li>アドバンスモードの部屋では「自分のコマ」ボタンが表示され、選択中キャラを自分のコマとして設定できます</li>
+      </ul>
+    </section>
+
+    <!-- ナビ -->
+    <div class="guide-nav fade-up">
+      <a href="index.html" class="guide-nav-back">← 操作説明一覧に戻る</a>
+    </div>
+  </div>
+</article>
+
+<!-- フッター -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand"><span class="logo-icon">◈</span> ユドナリウムリコリス</div>
+      <div class="footer-links">
+        <a href="https://cylinder-lily.com" target="_blank">リリィ</a>
+        <a href="https://github.com/TK11235/udonarium" target="_blank">オリジナル版</a>
+        <a href="https://github.com/oron1208/udonarium-lycoris" target="_blank">GitHub</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 Udonarium Lycoris.</div>
+    </div>
+  </div>
+</footer>
+
+<script src="../main.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // 表情クロスフェード
+  document.querySelectorAll('.expression-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = btn.dataset.idx;
+      document.querySelectorAll('.expression-img').forEach(img => img.classList.remove('active'));
+      document.querySelectorAll('.expression-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector('.expression-img[data-idx="' + idx + '"]').classList.add('active');
+      btn.classList.add('active');
+    });
+  });
+
+  // チャパレスライドショー
+  document.querySelectorAll('.slideshow-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = btn.dataset.idx;
+      document.querySelectorAll('.slideshow-img').forEach(img => img.classList.remove('active'));
+      document.querySelectorAll('.slideshow-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector('.slideshow-img[data-idx="' + idx + '"]').classList.add('active');
+      btn.classList.add('active');
+    });
+  });
+
+  // フェードイン
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+  // 画像ライトボックス
+  const lightbox = document.createElement('div');
+  lightbox.className = 'guide-lightbox';
+  lightbox.innerHTML = '<img src="" alt="">';
+  document.body.appendChild(lightbox);
+  lightbox.addEventListener('click', () => lightbox.classList.remove('active'));
+
+  document.querySelectorAll('.guide-image-card img, .expression-img, .slideshow-img, .guide-visual-hero img').forEach(img => {
+    img.style.cursor = 'zoom-in';
+    img.addEventListener('click', () => {
+      lightbox.querySelector('img').src = img.src;
+      lightbox.classList.add('active');
+    });
+  });
+});
+</script>
+</body>
+</html>

@@ -83,7 +83,9 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
   set roll(roll: number) { this.gameCharacter.roll = roll; }
   get isDropShadow(): boolean { return this.gameCharacter.isDropShadow; }
   _showSideNameLabel: boolean = true;
-  get showSideNameLabel(): boolean { return this._showSideNameLabel && this.canDisplayByRole; }
+  // 注意: 名前ラベルは game-character.component と game-table.component (side-name-label) の2箇所で描画されている。
+  // gmOnlyコマのフィルタリングは両方で行うこと。詳細は game-table.component.ts の sideLabelCharacters を参照。
+  get showSideNameLabel(): boolean { return this._showSideNameLabel; }
   set isDropShadow(isDropShadow: boolean) { this.gameCharacter.isDropShadow = isDropShadow; }
   get isAltitudeIndicate(): boolean { return this.gameCharacter.isAltitudeIndicate; }
   set isAltitudeIndicate(isAltitudeIndicate: boolean) { this.gameCharacter.isAltitudeIndicate = isAltitudeIndicate; }
@@ -367,7 +369,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
         }),
       ContextMenuSeparator,
       { 
-        name: '高度設定', action: null, subActions: [
+        name: '高度・サイズ設定', action: null, subActions: [
           {
             name: '高度を0にする', action: () => {
               if (this.altitude != 0) {
@@ -584,7 +586,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
 
     const actions: ContextMenuAction[] = [
       {
-        name: '高度設定', action: null, subActions: [
+        name: '高度・サイズ設定', action: null, subActions: [
           {
             name: '高度を0にする', action: () => {
               for (const character of characters) character.altitude = 0;
