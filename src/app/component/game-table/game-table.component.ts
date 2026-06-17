@@ -202,7 +202,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
       return true;
     });
   }
-  get isCharacterSimpleMode(): boolean { return 60 <= this.characters.length; }
+  get isCharacterSimpleMode(): boolean { return false; }
   get tableMasks(): GameTableMask[] { return this.tabletopService.tableMasks; }
   get tableScratchMasks(): GameTableScratchMask[] { return this.tabletopService.tableScratchMasks; }
   get cards(): Card[] { return this.tabletopService.cards; }
