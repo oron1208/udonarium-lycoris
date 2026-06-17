@@ -46,6 +46,8 @@ export class MacroHotbarComponent {
   isPanelDragging: boolean = false;
   private dragOffsetX = 0;
   private dragOffsetY = 0;
+  private dragPanelW = 0;
+  private dragPanelH = 0;
 
   slots: MacroHotbarSlot[] = this.loadSlots();
   editingIndex: number = -1;
@@ -104,6 +106,8 @@ export class MacroHotbarComponent {
     const rect = (e.currentTarget as HTMLElement).closest('.macro-hotbar').getBoundingClientRect();
     this.dragOffsetX = e.clientX - rect.left;
     this.dragOffsetY = e.clientY - rect.top;
+    this.dragPanelW = rect.width;
+    this.dragPanelH = rect.height;
     this.panelX = rect.left;
     this.panelY = rect.top;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -112,8 +116,8 @@ export class MacroHotbarComponent {
   onPanelDragMove(e: PointerEvent) {
     if (!this.isPanelDragging) return;
     e.preventDefault();
-    const nx = Math.max(0, Math.min(window.innerWidth - 100, e.clientX - this.dragOffsetX));
-    const ny = Math.max(0, Math.min(window.innerHeight - 40, e.clientY - this.dragOffsetY));
+    const nx = Math.max(0, Math.min(window.innerWidth - this.dragPanelW, e.clientX - this.dragOffsetX));
+    const ny = Math.max(0, Math.min(window.innerHeight - this.dragPanelH, e.clientY - this.dragOffsetY));
     this.panelX = nx;
     this.panelY = ny;
   }

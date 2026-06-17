@@ -1,4 +1,4 @@
-import { Component, ElementRef, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, HostBinding, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
 
 import { ChatMessage, ChatMessageTargetContext } from '@udonarium/chat-message';
 import { ChatTab } from '@udonarium/chat-tab';
@@ -51,6 +51,7 @@ interface VnActor {
   styleUrls: ['./vn-stage.component.css']
 })
 export class VnStageComponent implements OnInit, OnDestroy {
+  @HostBinding('class.vn-has-front-pinned') get hasFrontPinnedSubPanel(): boolean { return this.paletteFrontPinned || this.logFrontPinned; }
   @ViewChild('logScroll', { static: false }) logScrollEl: ElementRef;
   @ViewChild('paletteScroll', { static: false }) paletteScrollEl: ElementRef;
 
@@ -89,6 +90,8 @@ export class VnStageComponent implements OnInit, OnDestroy {
   private panelDragTarget: 'palette' | 'log' | null = null;
   private subDragOffsetX = 0;
   private subDragOffsetY = 0;
+  private subDragPanelW = 0;
+  private subDragPanelH = 0;
   private subResizeStartW = 0;
   private subResizeStartH = 0;
   private subResizeStartMX = 0;
@@ -110,10 +113,13 @@ export class VnStageComponent implements OnInit, OnDestroy {
   panelY: number = -1;
   panelW: number = 450;
   panelH: number = -1; // -1 = auto
+  panelLocked: boolean = false;
   isPanelDragging: boolean = false;
   isPanelResizing: boolean = false;
   private dragOffsetX = 0;
   private dragOffsetY = 0;
+  private dragPanelW = 0;
+  private dragPanelH = 0;
   private resizeStartW = 0;
   private resizeStartH = 0;
   private resizeStartMouseX = 0;
@@ -156,7 +162,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
     try { this.secretMode = localStorage.getItem('udonarium.vnStage.secretMode.v1') === '1'; } catch (_) { }
     try {
       const saved = localStorage.getItem('udonarium.vnPanel.pos.v1');
-      if (saved) { const p = JSON.parse(saved); this.panelX = p.x ?? -1; this.panelY = p.y ?? -1; this.panelW = Math.max(p.w ?? 450, 450); this.panelH = p.h ?? -1; }
+      if (saved) { const p = JSON.parse(saved); this.panelX = p.x ?? -1; this.panelY = p.y ?? -1; this.panelW = Math.max(p.w ?? 450, 450); this.panelH = p.h ?? -1; this.panelLocked = !!p.locked; this.clampMainPanelToViewport(); }
     } catch (_) { }
     this.loadSubPanelState();
     try { this.sendPortrait = localStorage.getItem('udonarium.vnStage.sendPortrait.v1') !== 'false'; } catch (_) { }
@@ -307,6 +313,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
   /* ═══════════ floating panel drag / resize ═══════════ */
 
   get panelStyle(): { [key: string]: string } {
+    this.clampMainPanelToViewport();
     const s: { [key: string]: string } = {};
     if (this.panelX >= 0) { s['left'] = this.panelX + 'px'; s['right'] = 'auto'; s['bottom'] = 'auto'; }
     if (this.panelY >= 0) s['top'] = this.panelY + 'px';
@@ -319,10 +326,13 @@ export class VnStageComponent implements OnInit, OnDestroy {
     if (e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
+    if (this.panelLocked) return;
     this.isPanelDragging = true;
     const rect = (e.currentTarget as HTMLElement).closest('.vn-control').getBoundingClientRect();
     this.dragOffsetX = e.clientX - rect.left;
     this.dragOffsetY = e.clientY - rect.top;
+    this.dragPanelW = rect.width;
+    this.dragPanelH = rect.height;
     // fix to absolute position on first drag
     this.panelX = rect.left;
     this.panelY = rect.top;
@@ -332,8 +342,8 @@ export class VnStageComponent implements OnInit, OnDestroy {
   onPanelDragMove(e: PointerEvent) {
     if (!this.isPanelDragging) return;
     e.preventDefault();
-    const nx = Math.max(0, Math.min(window.innerWidth - 100, e.clientX - this.dragOffsetX));
-    const ny = Math.max(0, Math.min(window.innerHeight - 60, e.clientY - this.dragOffsetY));
+    const nx = Math.max(0, Math.min(window.innerWidth - this.dragPanelW, e.clientX - this.dragOffsetX));
+    const ny = Math.max(0, Math.min(window.innerHeight - this.dragPanelH, e.clientY - this.dragOffsetY));
     this.panelX = nx;
     this.panelY = ny;
   }
@@ -349,6 +359,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
     if (e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
+    if (this.panelLocked) return;
     this.isPanelResizing = true;
     const rect = (e.currentTarget as HTMLElement).closest('.vn-control').getBoundingClientRect();
     this.resizeStartW = rect.width;
@@ -382,13 +393,34 @@ export class VnStageComponent implements OnInit, OnDestroy {
     this.panelY = -1;
     this.panelW = 450;
     this.panelH = -1;
+    this.panelLocked = false;
+    this.savePanelState();
+    setTimeout(() => this.resetSubPanelPositions(), 0);
+  }
+
+  togglePanelLock(event?: Event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    this.panelLocked = !this.panelLocked;
+    this.clampMainPanelToViewport();
     this.savePanelState();
   }
 
   private savePanelState() {
     try {
-      localStorage.setItem('udonarium.vnPanel.pos.v1', JSON.stringify({ x: this.panelX, y: this.panelY, w: this.panelW, h: this.panelH }));
+      localStorage.setItem('udonarium.vnPanel.pos.v1', JSON.stringify({ x: this.panelX, y: this.panelY, w: this.panelW, h: this.panelH, locked: this.panelLocked }));
     } catch (_) { }
+  }
+
+  private clampMainPanelToViewport() {
+    const viewportW = Math.max(1, window.innerWidth || 1);
+    const viewportH = Math.max(1, window.innerHeight || 1);
+    this.panelW = Math.max(280, Math.min(this.panelW || 450, Math.max(280, viewportW - 10)));
+    if (this.panelH > 0) this.panelH = Math.max(200, Math.min(this.panelH, Math.max(200, viewportH - 10)));
+    if (this.panelX >= 0) this.panelX = this.clampNumber(this.panelX, 0, Math.max(0, viewportW - this.panelW));
+    if (this.panelY >= 0) this.panelY = this.clampNumber(this.panelY, 0, Math.max(0, viewportH - (this.panelH > 0 ? this.panelH : 220)));
   }
 
   /* ═══════════ sub-panel (palette / chatlog) floating ═══════════ */
@@ -414,6 +446,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
   }
 
   get paletteFloatStyle(): { [k: string]: string } {
+    this.clampSubPanelToViewport('palette');
     const x = this.paletteFloatX >= 0 ? this.paletteFloatX : 20;
     const y = this.paletteFloatY >= 0 ? this.paletteFloatY : 80;
     return {
@@ -424,6 +457,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
   }
 
   get logFloatStyle(): { [k: string]: string } {
+    this.clampSubPanelToViewport('log');
     const x = this.logFloatX >= 0 ? this.logFloatX : 20;
     const y = this.logFloatY >= 0 ? this.logFloatY : 80;
     return {
@@ -444,12 +478,51 @@ export class VnStageComponent implements OnInit, OnDestroy {
 
   toggleSubPanelFrontPin(target: 'palette' | 'log') {
     if (target === 'palette') {
+      this.ensureSubPanelPosition('palette');
       this.paletteFrontPinned = !this.paletteFrontPinned;
+      this.clampSubPanelToViewport('palette');
       if (!this.paletteFrontPinned) this.paletteZIndex = ++this.subPanelZCounter;
     } else {
+      this.ensureSubPanelPosition('log');
       this.logFrontPinned = !this.logFrontPinned;
+      this.clampSubPanelToViewport('log');
       if (!this.logFrontPinned) this.logZIndex = ++this.subPanelZCounter;
     }
+    this.saveSubPanelState();
+  }
+
+  private isSubPanelPositionPinned(target: 'palette' | 'log'): boolean {
+    return target === 'palette' ? this.paletteFrontPinned : this.logFrontPinned;
+  }
+
+  private ensureSubPanelPosition(target: 'palette' | 'log') {
+    if (target === 'palette' && (this.paletteFloatX < 0 || this.paletteFloatY < 0)) {
+      const rect = (document.querySelector('.vn-palette-wrap') as HTMLElement)?.getBoundingClientRect();
+      this.paletteFloatX = rect ? rect.left : 20;
+      this.paletteFloatY = rect ? rect.top : 80;
+    }
+    if (target === 'log' && (this.logFloatX < 0 || this.logFloatY < 0)) {
+      const rect = (document.querySelector('.vn-chat-log') as HTMLElement)?.getBoundingClientRect();
+      this.logFloatX = rect ? rect.left : Math.min(400, Math.max(20, window.innerWidth - this.logFloatW - 20));
+      this.logFloatY = rect ? rect.top : 80;
+    }
+  }
+
+  resetSubPanelPositions() {
+    this.paletteFloatW = 360;
+    this.paletteFloatH = 400;
+    this.logFloatW = 360;
+    this.logFloatH = 300;
+    const rect = (document.querySelector('.vn-control') as HTMLElement)?.getBoundingClientRect();
+    const baseRight = rect ? rect.right : window.innerWidth - 18;
+    const baseTop = rect ? rect.top : window.innerHeight - (this.isHotbarVisible ? 92 : 18) - 320;
+    this.paletteFloatX = Math.max(0, Math.min(window.innerWidth - this.paletteFloatW, baseRight - this.paletteFloatW));
+    this.paletteFloatY = Math.max(0, Math.min(window.innerHeight - this.paletteFloatH, baseTop - this.paletteFloatH - 8));
+    this.logFloatX = Math.max(0, Math.min(window.innerWidth - this.logFloatW, baseRight - this.logFloatW));
+    this.logFloatY = Math.max(0, Math.min(window.innerHeight - this.logFloatH, baseTop - this.logFloatH - 8));
+    this.paletteZIndex = 3000;
+    this.logZIndex = 3001;
+    this.subPanelZCounter = 3001;
     this.saveSubPanelState();
   }
 
@@ -471,6 +544,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
   onSubDragStart(target: 'palette' | 'log', e: PointerEvent) {
     if (e.button !== 0) return;
     e.preventDefault(); e.stopPropagation();
+    if (this.isSubPanelPositionPinned(target)) return;
     this.bringSubPanelToFront(target);
     this.panelDragTarget = target;
     const sel = target === 'palette' ? '.vn-palette-wrap' : '.vn-chat-log';
@@ -478,6 +552,8 @@ export class VnStageComponent implements OnInit, OnDestroy {
     if (!rect) return;
     this.subDragOffsetX = e.clientX - rect.left;
     this.subDragOffsetY = e.clientY - rect.top;
+    this.subDragPanelW = rect.width;
+    this.subDragPanelH = rect.height;
     if (target === 'palette') { this.paletteFloatX = rect.left; this.paletteFloatY = rect.top; }
     else { this.logFloatX = rect.left; this.logFloatY = rect.top; }
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -486,8 +562,8 @@ export class VnStageComponent implements OnInit, OnDestroy {
   onSubDragMove(target: 'palette' | 'log', e: PointerEvent) {
     if (this.panelDragTarget !== target) return;
     e.preventDefault();
-    const nx = Math.max(0, Math.min(window.innerWidth - 80, e.clientX - this.subDragOffsetX));
-    const ny = Math.max(0, Math.min(window.innerHeight - 40, e.clientY - this.subDragOffsetY));
+    const nx = Math.max(0, Math.min(window.innerWidth - this.subDragPanelW, e.clientX - this.subDragOffsetX));
+    const ny = Math.max(0, Math.min(window.innerHeight - this.subDragPanelH, e.clientY - this.subDragOffsetY));
     if (target === 'palette') { this.paletteFloatX = nx; this.paletteFloatY = ny; }
     else { this.logFloatX = nx; this.logFloatY = ny; }
   }
@@ -502,6 +578,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
   onSubResizeStart(target: 'palette' | 'log', e: PointerEvent) {
     if (e.button !== 0) return;
     e.preventDefault(); e.stopPropagation();
+    if (this.isSubPanelPositionPinned(target)) return;
     this.panelResizeTarget = target;
     const sel = target === 'palette' ? '.vn-palette-wrap' : '.vn-chat-log';
     const rect = (e.currentTarget as HTMLElement).closest(sel)?.getBoundingClientRect();
@@ -518,8 +595,10 @@ export class VnStageComponent implements OnInit, OnDestroy {
     e.preventDefault();
     const dx = e.clientX - this.subResizeStartMX;
     const dy = e.clientY - this.subResizeStartMY;
-    const w = Math.max(220, this.subResizeStartW + dx);
-    const h = Math.max(150, this.subResizeStartH + dy);
+    const currentX = target === 'palette' ? this.paletteFloatX : this.logFloatX;
+    const currentY = target === 'palette' ? this.paletteFloatY : this.logFloatY;
+    const w = Math.max(220, Math.min(window.innerWidth - Math.max(0, currentX) - 10, this.subResizeStartW + dx));
+    const h = Math.max(150, Math.min(window.innerHeight - Math.max(0, currentY) - 10, this.subResizeStartH + dy));
     if (target === 'palette') { this.paletteFloatW = w; this.paletteFloatH = h; }
     else { this.logFloatW = w; this.logFloatH = h; }
   }
@@ -561,7 +640,31 @@ export class VnStageComponent implements OnInit, OnDestroy {
       this.paletteFrontPinned = s.paletteFrontPinned ?? false;
       this.logFrontPinned = s.logFrontPinned ?? false;
       this.subPanelZCounter = Math.max(s.subPanelZCounter ?? this.subPanelZCounter, this.paletteZIndex, this.logZIndex);
+      this.clampSubPanelToViewport('palette');
+      this.clampSubPanelToViewport('log');
     } catch (_) { }
+  }
+
+  private clampSubPanelToViewport(target: 'palette' | 'log') {
+    const viewportW = Math.max(1, window.innerWidth || 1);
+    const viewportH = Math.max(1, window.innerHeight || 1);
+    const minW = 220;
+    const minH = 150;
+    if (target === 'palette') {
+      this.paletteFloatW = Math.max(minW, Math.min(this.paletteFloatW || 360, Math.max(minW, viewportW - 10)));
+      this.paletteFloatH = Math.max(minH, Math.min(this.paletteFloatH || 400, Math.max(minH, viewportH - 10)));
+      if (this.paletteFloatX >= 0) this.paletteFloatX = this.clampNumber(this.paletteFloatX, 0, Math.max(0, viewportW - this.paletteFloatW));
+      if (this.paletteFloatY >= 0) this.paletteFloatY = this.clampNumber(this.paletteFloatY, 0, Math.max(0, viewportH - this.paletteFloatH));
+    } else {
+      this.logFloatW = Math.max(minW, Math.min(this.logFloatW || 360, Math.max(minW, viewportW - 10)));
+      this.logFloatH = Math.max(minH, Math.min(this.logFloatH || 300, Math.max(minH, viewportH - 10)));
+      if (this.logFloatX >= 0) this.logFloatX = this.clampNumber(this.logFloatX, 0, Math.max(0, viewportW - this.logFloatW));
+      if (this.logFloatY >= 0) this.logFloatY = this.clampNumber(this.logFloatY, 0, Math.max(0, viewportH - this.logFloatH));
+    }
+  }
+
+  private clampNumber(value: number, min: number, max: number): number {
+    return Math.max(min, Math.min(max, Number.isFinite(value) ? value : min));
   }
 
   /* ═══════════ template helpers ═══════════ */
@@ -989,11 +1092,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
       messageTargetContext = prepared.messageTargetContext;
       // シークレットの場合、messageTargetContext の text に s: を付与して
       // dice-bot.ts の checkResourceEditCommand が認識できるようにする
-      if (isSecret) {
-        for (const ctx of messageTargetContext) {
-          ctx.text = 's:' + ctx.text;
-        }
-      }
+      if (isSecret) this.applySecretPrefixToContexts(messageTargetContext);
       if (palette) {
         if (!this.selectedDiceBot || this.selectedDiceBot === 'DiceBot') {
           gameType = palette.dicebot || 'DiceBot';
@@ -1033,13 +1132,14 @@ export class VnStageComponent implements OnInit, OnDestroy {
   }
 
   private applySecretMode(text: string): string {
-    const trimmed = (text || '').trim();
+    const trimmed = this.normalizeSecretTargetPrefix((text || '').trim());
     if (!trimmed) return '';
-    return this.secretMode && !this.hasSecretPrefix(trimmed) ? 's:' + trimmed : trimmed;
+    return this.secretMode && !this.hasSecretPrefix(trimmed) && !this.hasSecretResourceEditPrefix(trimmed) ? 's:' + trimmed : trimmed;
   }
 
   private parseSecretText(text: string): { isSecret: boolean, coreText: string } {
     const trimmed = (text || '').trim();
+    if (this.hasSecretResourceEditPrefix(trimmed)) return { isSecret: true, coreText: trimmed };
     if (!this.hasSecretPrefix(trimmed)) return { isSecret: false, coreText: trimmed };
     return {
       isSecret: true,
@@ -1051,10 +1151,20 @@ export class VnStageComponent implements OnInit, OnDestroy {
     return /^s[:：]/i.test((text || '').trim());
   }
 
+  private hasSecretResourceEditPrefix(text: string): boolean {
+    return /^st[:：]/i.test((text || '').trim());
+  }
+
   private applySecretPrefixToContexts(messageTargetContext: ChatMessageTargetContext[]) {
     for (const ctx of messageTargetContext) {
+      ctx.text = this.normalizeSecretTargetPrefix(ctx.text);
       if (!this.hasSecretPrefix(ctx.text)) ctx.text = 's:' + ctx.text;
+      ctx.text = this.normalizeSecretTargetPrefix(ctx.text);
     }
+  }
+
+  private normalizeSecretTargetPrefix(text: string): string {
+    return (text || '').trim().replace(/^s[:：]\s*st[:：]/i, 'st:');
   }
 
   removeActor(characterId: string) {

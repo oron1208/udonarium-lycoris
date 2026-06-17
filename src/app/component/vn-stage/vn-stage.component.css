@@ -7,6 +7,7 @@
   pointer-events: none;
   z-index: 8500;
 }
+:host.vn-has-front-pinned{z-index:99000}
 
 .vn-stage {
   position: absolute;
@@ -47,7 +48,6 @@
 }
 .vn-close:hover { background: rgba(80, 80, 80, 0.75); }
 
-/* ═══════ actor layer ═══════ */
 .vn-actor {
   position: absolute;
   bottom: 0;
@@ -165,12 +165,10 @@
   animation: vn-bubble-life 280ms ease-out both, vn-bubble-float 1.2s ease-in-out infinite;
 }
 
-/* left actors → bubble shifts right (toward center) */
 .vn-bubble.bubble-right {
   left: 50%;
   transform: translateX(10%);
 }
-/* right actors → bubble shifts left (toward center) */
 .vn-bubble.bubble-left {
   left: 50%;
   transform: translateX(-110%);
@@ -231,7 +229,6 @@
   letter-spacing: 0.12em;
 }
 
-/* ═══════ inline roster (in control panel) ═══════ */
 .vn-roster-inline {
   display: flex;
   align-items: center;
@@ -970,10 +967,7 @@
   display: flex;
   flex-direction: column;
 }
-.vn-float-panel.vn-front-pinned {
-  border-color: rgba(255, 212, 110, 0.72);
-  box-shadow: 0 14px 34px rgba(0,0,0,0.58), 0 0 0 1px rgba(255, 212, 110, 0.22);
-}
+.vn-float-panel.vn-front-pinned .vn-float-resize-handle{display:none}
 .vn-float-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 6px 10px; cursor: grab; font-size: 12px; font-weight: bold; color: rgba(255,255,255,0.8);

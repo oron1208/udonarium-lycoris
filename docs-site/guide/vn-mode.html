@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" href="../assets/favicon.png">
 <title>VNモード 操作説明 - ユドナリウムリコリス</title>
-<meta name="description" content="ユドナリウムリコリスのVNモード（ビジュアルノベルモード）の使い方を解説。立ち絵表示、チャット吹き出し、チャットパレット連携など。">
+<meta name="description" content="ユドナリウムリコリスのVNモード（ビジュアルノベルモード）の使い方を解説。立ち絵表示、サイズ調整、チャット吹き出し、チャットパレット連携、シークレット送信など。">
 <link rel="canonical" href="https://udonarium-lycoris.ddns.net/docs/guide/vn-mode.html">
 <meta property="og:title" content="VNモード 操作説明 - ユドナリウムリコリス">
 <meta property="og:description" content="ビジュアルノベル風の立ち絵表示でセッションを彩るVNモードの使い方。">
@@ -39,6 +39,32 @@
   </div>
 </nav>
 
+<!-- 目次 -->
+<aside class="guide-toc fade-up" id="toc">
+  <details open>
+    <summary>📑 目次</summary>
+    <ol>
+      <li><a href="#what">VNモードとは</a></li>
+      <li><a href="#enable">VNモードを有効にする</a></li>
+      <li><a href="#enter">キャラクターを登場させる</a></li>
+      <li><a href="#chat">チャットを送る</a></li>
+      <li><a href="#new-panel">新パネル機能</a></li>
+      <li><a href="#portrait">立ち絵の差分切り替え</a></li>
+      <li><a href="#size">立ち絵サイズ調整</a></li>
+      <li><a href="#height">VNステージの高さ設定</a></li>
+      <li><a href="#bubble">吹き出しの仕組み</a></li>
+      <li><a href="#palette">チャットパレット連携</a></li>
+      <li><a href="#chatlog">チャットログ</a></li>
+      <li><a href="#dice">ダイスロール</a></li>
+      <li><a href="#sync">コマ同期</a></li>
+      <li><a href="#reverse">コマからVNパネルを逆引き</a></li>
+
+      <li><a href="#position">立ち位置の調整</a></li>
+      <li><a href="#tips">Tips</a></li>
+    </ol>
+  </details>
+</aside>
+
 <!-- 記事本文 -->
 <article class="section guide-article" style="padding-top: 100px;">
   <div class="container">
@@ -53,7 +79,7 @@
     <!-- ===== セクション1: VNモードとは ===== -->
     <section id="what" class="guide-visual-section fade-up">
       <div class="guide-visual-hero">
-        <img src="assets/vn-two-characters.png" alt="VNモード使用例 - ケイジとマコの会話シーン">
+        <img src="assets/vn-stage-full.png" alt="VNモード使用例 - 表示領域100%での会話シーン">
         <div class="guide-visual-hero-overlay"></div>
       </div>
       <div class="guide-visual-hero-text">
@@ -63,7 +89,9 @@
           <li><span class="guide-feature-icon">🎭</span>キャラクターの立ち絵を並べて表示</li>
           <li><span class="guide-feature-icon">💬</span>チャット送信時に吹き出し演出</li>
           <li><span class="guide-feature-icon">🖼️</span>立ち絵の差分画像にワンクリックで変更</li>
+          <li><span class="guide-feature-icon">📏</span>キャラごとのサイズ調整で身長差を表現</li>
           <li><span class="guide-feature-icon">📋</span>チャットパレットと連携してワンクリック発言</li>
+          <li><span class="guide-feature-icon">🔒</span>シークレット送信（GM向け）</li>
           <li><span class="guide-feature-icon">🎲</span>ダイスボットもVNモード内から直接操作可能</li>
         </ul>
       </div>
@@ -100,7 +128,7 @@
         <div class="guide-steps">
           <ol>
             <li>VNステージ下部のコントロールパネルにある「キャラ選択」プルダウンからキャラクターを選ぶ</li>
-            <li>「登場」ボタンをクリック</li>
+            <li>「<strong>登場</strong>」ボタンをクリック</li>
             <li>キャラクターがステージに登場し、立ち絵が表示されます</li>
           </ol>
           <p class="guide-note">立ち絵が設定されていないキャラクターの場合は、名前だけが表示されます。登場中のキャラクターは下部の「登場中」エリアにアイコンで表示されます。✕ボタンで退場させることができます。</p>
@@ -137,13 +165,65 @@
       </div>
     </section>
 
-    <!-- ===== セクション5: 立ち絵を切り替える ===== -->
-    <section id="portrait" class="guide-section fade-up">
+    <!-- ===== セクション5: 新パネル機能 ===== -->
+    <section id="new-panel" class="guide-section fade-up">
       <div class="guide-section-header">
         <span class="guide-section-num">04</span>
-        <h3>立ち絵の差分画像にワンクリックで変更</h3>
+        <h3>新パネル機能 <span class="guide-section-badge">v1.36</span></h3>
       </div>
-      <p>キャラクターの画像欄に複数の立ち絵を登録しておくと、発言時に表情を切り替えられます。コントロールパネルの表情ボタンをクリックするだけ！</p>
+      <div class="guide-image-card" style="max-width: 700px; margin: 16px auto;">
+        <img src="assets/vn-panel-annotations.png" alt="VNチャットパネル各部の機能">
+      </div>
+      <p>v1.36でVNチャットパネルが大幅に刷新しました。以下の機能が追加されています：</p>
+
+      <h4 class="guide-subhead">🔒 シークレット送信</h4>
+      <ul>
+        <li>送信ボタンの横に「<strong>シークレット</strong>」ボタンを追加</li>
+        <li>ONにすると送信メッセージに <code>s:</code> が自動付与され、シークレット発言として送信</li>
+        <li>ON状態で送信、Enter、チャパレのダブルクリック送信すべてに適用</li>
+        <li>手動で <code>s:</code> を付けた場合は二重付与なし</li>
+        <li>全角 <code>s：</code> にも対応</li>
+      </ul>
+
+      <h4 class="guide-subhead">🗜️ 立ち絵リスト縮小</h4>
+      <ul>
+        <li>「<strong>縮小</strong>」ボタンで差分画像一覧をコンパクト化</li>
+        <li>差分が12枚超えの場合は自動で縮小表示に切り替わる</li>
+        <li>縮小中は「展開」「ホバー」ボタンで切り替え可能</li>
+        <li><strong>展開</strong>: パネル内に全差分を表示</li>
+        <li><strong>ホバー</strong>: 右側に独立パネルとして全差分を表示（小画像＋名前）</li>
+      </ul>
+
+      <h4 class="guide-subhead">🎲 ダイス一覧縮小</h4>
+      <ul>
+        <li>ダイス行の「<strong>−</strong>」ボタンでダイス一覧を縮小</li>
+        <li>パネルのスペースを節約できます</li>
+      </ul>
+
+      <h4 class="guide-subhead">📐 パネルサイズ変更・移動</h4>
+      <ul>
+        <li><strong>右下ドラッグ</strong>: パネル右下をつかんでサイズ変更</li>
+        <li><strong>ヘッダードラッグ</strong>: パネルヘッダーをドラッグして好きな位置に移動</li>
+        <li>位置とサイズはブラウザに保存され、次回以降も維持</li>
+        <li>チャパレ・チャットログパネルも同様に移動・リサイズ可能</li>
+      </ul>
+
+      <h4 class="guide-subhead">📌 最前面固定</h4>
+      <ul>
+        <li>チャパレ・チャットログに📌ピンボタンを追加</li>
+        <li>ONにすると他のパネルより手前に固定される</li>
+      </ul>
+    </section>
+
+    <!-- ===== セクション6: 立ち絵の差分切り替え ===== -->
+    <section id="portrait" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">05</span>
+        <h3>立ち絵の差分切り替え</h3>
+      </div>
+      <p>キャラクターの画像欄に複数の立ち絵を登録しておくと、表情をワンクリックで切り替えられます。</p>
+
+      <h4 class="guide-subhead">通常表示</h4>
       <div class="guide-expression-showcase" style="margin-left: auto;">
         <div class="expression-stage" style="height: 400px;">
           <img class="expression-img active" data-idx="0" src="assets/vn-expression-0-normal.png" alt="通常">
@@ -160,31 +240,86 @@
           <button class="expression-btn" data-idx="4">4 笑顔</button>
         </div>
       </div>
-    </section>
 
-    <!-- ===== セクション6: 立ち絵スロット ===== -->
-    <section id="tachie-slots" class="guide-section fade-up">
-      <div class="guide-section-header">
-        <span class="guide-section-num">05</span>
-        <h3>立ち絵スロット</h3>
-      </div>
+      <h4 class="guide-subhead">差分が多い場合の表示モード <span class="guide-section-badge">v1.36</span></h4>
+      <p>差分画像が12枚を超える場合は自動的に縮小表示に切り替わります。また、任意で「縮小」ボタンから手動切替も可能です。</p>
       <div class="guide-content-with-image guide-image-right">
-        <p>キャラクターに複数の画像が登録されている場合、コントロールパネルにスロットボタンが表示されます。</p>
-        <ul>
-          <li>各ボタンをクリックすると、対応する立ち絵に切り替わります</li>
-          <li>アクティブなスロットはハイライト表示されます</li>
-          <li>画像1枚目がデフォルト（通常表情）、2枚目以降を感情表情にする使い方がおすすめ</li>
-        </ul>
+        <div class="guide-steps">
+          <p>縮小表示中は以下の3つの操作モードが使えます：</p>
+          <ul>
+            <li><strong>展開</strong>: 従来通りパネル内に全差分を展開</li>
+            <li><strong>ホバー</strong>: 右側に独立パネルとして全差分を表示（小画像＋名前）</li>
+            <li><strong>縮小</strong>: 現在の差分だけコンパクトに表示</li>
+          </ul>
+          <p class="guide-note">ホバー別パネルはVNチャット内ではなく、完全に独立したフローティングパネルとして横に開きます。</p>
+        </div>
         <div class="guide-image-card">
-          <img src="assets/vn-slots.png" alt="立ち絵スロットのUI">
+          <img src="assets/vn-hover-expressions.png" alt="ホバー展開で差分一覧を表示">
         </div>
       </div>
     </section>
 
-    <!-- ===== セクション7: 吹き出しの仕組み ===== -->
-    <section id="bubble" class="guide-section fade-up">
+    <!-- ===== セクション7: 立ち絵サイズ調整 ===== -->
+    <section id="size" class="guide-section fade-up">
       <div class="guide-section-header">
         <span class="guide-section-num">06</span>
+        <h3>立ち絵サイズ調整 <span class="guide-section-badge">v1.36</span></h3>
+      </div>
+      <p>キャラクターごとに立ち絵の表示サイズを <strong>50%〜200%</strong> の範囲で調整できます。</p>
+      <div class="guide-content-with-image">
+        <div class="guide-image-card">
+          <img src="assets/vn-size-110.png" alt="立ち絵サイズ110%の状態">
+        </div>
+        <div class="guide-steps">
+          <p>VNチャットパネルのキャラ操作部分にある「<strong>− 100% ＋</strong>」で調整：</p>
+          <ul>
+            <li><strong>− / ＋</strong>: 5%刻みでサイズ変更（50%〜200%）</li>
+            <li><strong>↺</strong>: 100%にリセット</li>
+            <li>キャラごとにサイズが保存される</li>
+            <li>差分を切り替えてもサイズは維持</li>
+            <li>他プレイヤーにもサイズが同期される</li>
+          </ul>
+        </div>
+      </div>
+      <div class="guide-callout callout-tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <p><strong>身長差の表現に！</strong> キャラのサイズを変えることで、大人と子供、巨人と小人などの体型差を表現できます。</p>
+        </div>
+      </div>
+      <div class="guide-image-card" style="max-width: 600px; margin: 16px auto;">
+        <img src="assets/vn-size-height-diff.png" alt="サイズ70%で身長差を表現">
+        <div class="guide-image-caption">マコのサイズを70%にして身長差を表現</div>
+      </div>
+    </section>
+
+    <!-- ===== セクション8: VNステージ高さ設定 ===== -->
+    <section id="height" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">07</span>
+        <h3>VNステージの高さ設定 <span class="guide-section-badge">v1.36</span></h3>
+      </div>
+      <div class="guide-content-with-image guide-image-right">
+        <div class="guide-steps">
+          <p>オプション → 「<strong>UI設定</strong>」→「<strong>高さ設定</strong>」で、VNステージの立ち絵エリアの高さを調整できます。</p>
+          <ul>
+            <li><strong>範囲</strong>: 25%〜100%</li>
+            <li>青い範囲プレビューで現在の高さを視覚的に確認</li>
+            <li>「標準」ボタンで58%、「最大」ボタンで100%に一括設定</li>
+            <li>設定はブラウザに保存</li>
+          </ul>
+          <p class="guide-note">VNステージをめいっぱい使いたい時は100%に。盤面を広く見せたい時は低めに設定しましょう。</p>
+        </div>
+        <div class="guide-image-card">
+          <img src="assets/vn-height-setting.png" alt="高さ設定スライダー">
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== セクション9: 吹き出しの仕組み ===== -->
+    <section id="bubble" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">08</span>
         <h3>吹き出しの仕組み</h3>
       </div>
       <div class="guide-content-with-image guide-image-right">
@@ -203,67 +338,56 @@
       </div>
     </section>
 
-    <!-- ===== セクション8: チャットパレット連携 ===== -->
+    <!-- ===== セクション10: チャットパレット連携 ===== -->
     <section id="palette" class="guide-section fade-up">
       <div class="guide-section-header">
-        <span class="guide-section-num">07</span>
+        <span class="guide-section-num">09</span>
         <h3>チャットパレット連携</h3>
       </div>
-      <p>キャラクターにチャットパレットが設定されている場合、VNモード内から直接使えます。</p>
-      <div class="guide-slideshow">
-        <div class="slideshow-stage" style="height: 500px;">
-          <img class="slideshow-img active" data-idx="0" src="assets/vn-palette-1-hidden.png" alt="チャパレ非表示">
-          <img class="slideshow-img" data-idx="1" src="assets/vn-palette-2-open.png" alt="チャパレ展開">
-          <img class="slideshow-img" data-idx="2" src="assets/vn-palette-3-send.png" alt="チャパレで発言">
-          <img class="slideshow-img" data-idx="3" src="assets/vn-palette-4-index.png" alt="インデックス表示">
-          <img class="slideshow-img" data-idx="4" src="assets/vn-palette-5-log.png" alt="ログ画面">
-          <img class="slideshow-img" data-idx="5" src="assets/vn-palette-6-search.png" alt="検索画面">
-        </div>
-        <div class="slideshow-nav">
-          <button class="slideshow-btn active" data-idx="0">1. パレット非表示</button>
-          <button class="slideshow-btn" data-idx="1">2. パレット展開</button>
-          <button class="slideshow-btn" data-idx="2">3. 発言送信</button>
-          <button class="slideshow-btn" data-idx="3">4. インデックス</button>
-          <button class="slideshow-btn" data-idx="4">5. ログ表示</button>
-          <button class="slideshow-btn" data-idx="5">6. 検索</button>
-        </div>
+      <p>キャラクターにチャットパレットが設定されている場合、VNモード内から直接使えます。「<strong>チャパレ</strong>」ボタンを押すと、独立したフローティングパネルとして開きます。</p>
+      <div class="guide-image-card" style="max-width: 700px; margin: 16px auto;">
+        <img src="assets/vn-palette-floating.png" alt="チャパレ独立フローティングパネル">
       </div>
       <div class="guide-palette-features">
         <h4>便利な機能</h4>
         <ul>
           <li><strong>検索</strong>: パレット内の行をキーワードで絞り込み</li>
-          <li><strong>インデックス</strong>: セクション見出しにジャンプできるナビゲーション（📑ボタンで表示）</li>
-          <li><strong>セクション表示</strong>: <code>// 見出し</code> 形式の行はセクションヘッダーとして表示されます</li>
+          <li><strong>インデックス</strong>: 左側にセクション見出しのナビゲーションを表示（📑ボタンでON/OFF）</li>
+          <li><strong>セクション表示</strong>: <code>// 見出し</code> 形式の行はセクションヘッダーとして表示</li>
+          <li><strong>ダブルクリック送信</strong>: パレット行をダブルクリックで即座にVN発言</li>
+          <li><strong>リサイズ</strong>: パネル右下をドラッグしてサイズ変更可能</li>
+          <li><strong>ドラッグ移動</strong>: パネルヘッダーをドラッグして好きな位置に移動</li>
+          <li><strong>最前面固定</strong>: 📌ピンボタンで他パネルより手前に固定</li>
         </ul>
       </div>
     </section>
 
-    <!-- ===== セクション9: チャットログ ===== -->
+    <!-- ===== セクション11: チャットログ ===== -->
     <section id="chatlog" class="guide-section fade-up">
       <div class="guide-section-header">
-        <span class="guide-section-num">08</span>
+        <span class="guide-section-num">10</span>
         <h3>チャットログ</h3>
       </div>
       <div class="guide-content-with-image guide-image-right">
         <div class="guide-steps">
-          <p>VNモード内でチャットログを確認できます。</p>
+          <p>「<strong>ログ</strong>」ボタンを押すと、独立したフローティングパネルとしてチャットログが開きます。</p>
           <ul>
-            <li><strong>💬 ログ</strong>ボタンでチャットログを展開</li>
             <li>チャットタブを切り替えて、目的のログを表示</li>
-            <li><strong>📌 ピン留め</strong>: ログ表示を固定（ONにしないと一定時間で自動的に閉じます）</li>
-            <li>▼ボタンでログを閉じる</li>
+            <li><strong>📌 ピン留め</strong>: ログ表示を最前面に固定</li>
+            <li><strong>ドラッグ移動・リサイズ</strong>: パネルヘッダーで移動、右下でサイズ変更</li>
+            <li>シークレット発言は🔒アイコン付きで表示</li>
           </ul>
         </div>
         <div class="guide-image-card">
-          <img src="assets/vn-chatlog.png" alt="チャットログの表示">
+          <img src="assets/vn-chatlog-floating.png" alt="チャットログ独立パネル">
         </div>
       </div>
     </section>
 
-    <!-- ===== セクション10: ダイスロール ===== -->
+    <!-- ===== セクション12: ダイスロール ===== -->
     <section id="dice" class="guide-section fade-up">
       <div class="guide-section-header">
-        <span class="guide-section-num">09</span>
+        <span class="guide-section-num">11</span>
         <h3>ダイスロール</h3>
       </div>
       <div class="guide-content-with-image guide-image-right">
@@ -274,6 +398,7 @@
             <li>複数クリックでダイスを追加（例: D6を3回クリック → 3D6）</li>
             <li><strong>✕</strong>ボタンでダイスをリセット</li>
             <li><strong>ダイスボット選択</strong>: プルダウンからゲームシステムを選択すると、BCDiceによるダイスボットが使えます</li>
+            <li><strong>ダイス縮小</strong>: −ボタンでダイス行をコンパクト化</li>
           </ul>
         </div>
         <div class="guide-image-card">
@@ -282,10 +407,10 @@
       </div>
     </section>
 
-    <!-- ===== セクション11: コマ同期 ===== -->
+    <!-- ===== セクション13: コマ同期 ===== -->
     <section id="sync" class="guide-section fade-up">
       <div class="guide-section-header">
-        <span class="guide-section-num">10</span>
+        <span class="guide-section-num">12</span>
         <h3>コマ同期</h3>
       </div>
       <div class="guide-content-with-image guide-image-right">
@@ -305,7 +430,7 @@
     <!-- ===== コマからVN逆引き ===== -->
     <section id="reverse" class="guide-section fade-up">
       <div class="guide-section-header">
-        <span class="guide-section-num">10+</span>
+        <span class="guide-section-num">12+</span>
         <h3>コマからVNパネルを逆引き <span class="guide-section-badge">便利機能</span></h3>
       </div>
       <p>オプションの「<strong>盤面コマVNボタン</strong>」をONにすると、盤面のコマにVNボタンが表示されます。これをクリックするだけで、そのキャラクターのVNパネルに即座に切り替わります。</p>
@@ -326,10 +451,10 @@
       </div>
     </section>
 
-    <!-- ===== セクション12: 立ち位置の調整 ===== -->
+    <!-- ===== 立ち位置の調整 ===== -->
     <section id="position" class="guide-section fade-up">
       <div class="guide-section-header">
-        <span class="guide-section-num">11</span>
+        <span class="guide-section-num">13</span>
         <h3>立ち位置の調整</h3>
       </div>
       <div class="guide-content-with-image guide-image-right">
@@ -346,17 +471,19 @@
       </div>
     </section>
 
-    <!-- ===== セクション13: Tips ===== -->
+    <!-- ===== Tips ===== -->
     <section id="tips" class="guide-section fade-up">
       <div class="guide-section-header">
-        <span class="guide-section-num">12</span>
+        <span class="guide-section-num">14</span>
         <h3>Tips</h3>
       </div>
       <ul class="guide-tips-list">
-        <li>後から入室したプレイヤーにも、自動で立ち絵が同期されます</li>
-        <li>VNモードをOFFにしてからONに戻しても、登場状態は保持されます</li>
-        <li>テーブル右上の「×」ボタンでステージを空にできます（全キャラ退場）</li>
-        <li>アドバンスモードの部屋では「自分のコマ」ボタンが表示され、選択中キャラを自分のコマとして設定できます</li>
+        <li>🔄 後から入室したプレイヤーにも、自動で立ち絵が同期されます</li>
+        <li>💾 VNモードをOFFにしてからONに戻しても、登場状態は保持されます</li>
+        <li>🗑️ テーブル右上の「×」ボタンでステージを空にできます（全キャラ退場）</li>
+        <li>👤 アドバンスモードの部屋では「自分のコマ」ボタンが表示され、選択中キャラを自分のコマとして設定できます</li>
+        <li>🎨 立ち絵サイズはキャラごとに保存されるので、セッションをまたいでも維持されます</li>
+        <li>📐 VNステージ高さは「めいっぱい使いたい人」向けに100%まで拡張可能</li>
       </ul>
     </section>
 
@@ -396,17 +523,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // チャパレスライドショー
-  document.querySelectorAll('.slideshow-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const idx = btn.dataset.idx;
-      document.querySelectorAll('.slideshow-img').forEach(img => img.classList.remove('active'));
-      document.querySelectorAll('.slideshow-btn').forEach(b => b.classList.remove('active'));
-      document.querySelector('.slideshow-img[data-idx="' + idx + '"]').classList.add('active');
-      btn.classList.add('active');
-    });
-  });
-
   // フェードイン
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
@@ -424,7 +540,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.body.appendChild(lightbox);
   lightbox.addEventListener('click', () => lightbox.classList.remove('active'));
 
-  document.querySelectorAll('.guide-image-card img, .expression-img, .slideshow-img, .guide-visual-hero img').forEach(img => {
+  document.querySelectorAll('.guide-image-card img, .expression-img, .guide-visual-hero img').forEach(img => {
     img.style.cursor = 'zoom-in';
     img.addEventListener('click', () => {
       lightbox.querySelector('img').src = img.src;

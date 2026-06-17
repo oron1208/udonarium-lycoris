@@ -45,7 +45,8 @@
       (pointerup)="onPanelDragEnd($event)"
       (pointercancel)="onPanelDragEnd($event)">
       <span class="vn-panel-title">💬 VNチャット</span>
-      <button type="button" class="vn-panel-reset" (mousedown)="resetPanelPosition(); $event.preventDefault(); $event.stopPropagation()" title="位置リセット">↺</button>
+      <button type="button" class="vn-panel-reset" [class.pinned]="panelLocked" (pointerdown)="togglePanelLock($event)" [title]="panelLocked ? 'パネル固定を解除' : 'パネルを固定'">📌</button>
+      <button type="button" class="vn-panel-reset" (pointerdown)="resetPanelPosition(); $event.preventDefault(); $event.stopPropagation()" title="位置リセット">↺</button>
     </div>
     <div class="vn-panel-resize-handle"
       (pointerdown)="onPanelResizeStart($event)"
@@ -77,6 +78,7 @@
       <button type="button" class="vn-nudge" title="上へ" (mousedown)="nudgeUp(); $event.preventDefault()">▲</button>
       <button type="button" class="vn-nudge" title="下へ" (mousedown)="nudgeDown(); $event.preventDefault()">▼</button>
       <button type="button" class="vn-nudge" title="位置リセット" (mousedown)="resetPosition(); $event.preventDefault()">↺</button>
+      <button type="button" class="vn-nudge" title="チャパレ/ログを初期位置に戻す" (pointerdown)="resetSubPanelPositions(); $event.preventDefault(); $event.stopPropagation()">窓↺</button>
     </div>
 
     <div class="vn-scale-row" *ngIf="selectedActor">
@@ -191,7 +193,7 @@
       <div class="vn-float-actions" (pointerdown)="$event.stopPropagation()">
         <button type="button" class="vn-float-pin" [class.pinned]="paletteFrontPinned"
           (click)="toggleSubPanelFrontPin('palette'); $event.preventDefault(); $event.stopPropagation()"
-          title="最前面に固定">📌</button>
+          title="最前面＋画面固定">📌</button>
         <button type="button" class="vn-float-close" (click)="closeSubPanel('palette', $event)" title="閉じる">✕</button>
       </div>
     </div>
@@ -247,7 +249,7 @@
       <div class="vn-float-actions" (pointerdown)="$event.stopPropagation()">
         <button type="button" class="vn-float-pin" [class.pinned]="logFrontPinned"
           (click)="toggleSubPanelFrontPin('log'); $event.preventDefault(); $event.stopPropagation()"
-          title="最前面に固定">📌</button>
+          title="最前面＋画面固定">📌</button>
         <button type="button" class="vn-float-close" (click)="closeSubPanel('log', $event)" title="閉じる">✕</button>
       </div>
     </div>
