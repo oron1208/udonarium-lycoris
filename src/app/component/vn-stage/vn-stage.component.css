@@ -32,7 +32,7 @@
   height: 58vh;
   min-height: 0;
   pointer-events: none;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .vn-close {
@@ -682,6 +682,79 @@
   min-width: 42px;
   text-align: center;
 }
+
+/* ═══════ stage free-layout controls ═══════ */
+.vn-stage-layout-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  margin-top: 4px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: rgba(255,211,106,0.08);
+  border: 1px solid rgba(255,211,106,0.25);
+  color: #ffd36a;
+  font-size: 12px;
+  font-weight: bold;
+}
+.vn-move-toggle.on {
+  color: #111;
+  background: #ff7a7a;
+  border-color: #ff7a7a;
+  font-weight: bold;
+}
+
+.vn-stage-layout-name {
+  margin-left: auto;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.8;
+}
+.vn-stage-layout-row .vn-scale-btn.on {
+  color: #111;
+  background: #ffd36a;
+  border-color: #ffd36a;
+}
+
+/* ═══════ portrait drag / resize handles ═══════ */
+.vn-portrait-stack {
+  position: relative;
+  transform-origin: center bottom;
+  touch-action: none;
+  max-width: none;
+  overflow: visible;
+}
+.vn-portrait-stack img {
+  max-width: none !important;
+}
+.vn-portrait-stack.is-selected {
+  outline: 2px dashed rgba(255,211,106,0.8);
+  outline-offset: -4px;
+  cursor: grab;
+}
+.vn-portrait-stack.is-selected:active {
+  cursor: grabbing;
+}
+.vn-portrait-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: rgba(255,211,106,0.9);
+  border: 1px solid rgba(0,0,0,0.5);
+  border-radius: 2px;
+  z-index: 10;
+  touch-action: none;
+}
+.vn-handle-nw { top: -6px; left: -6px; }
+.vn-handle-n  { top: -6px; left: 50%; margin-left: -6px; }
+.vn-handle-ne { top: -6px; right: -6px; }
+.vn-handle-e  { top: 50%; right: -6px; margin-top: -6px; }
+.vn-handle-se { bottom: -6px; right: -6px; }
+.vn-handle-s  { bottom: -6px; left: 50%; margin-left: -6px; }
+.vn-handle-sw { bottom: -6px; left: -6px; }
+.vn-handle-w  { top: 50%; left: -6px; margin-top: -6px; }
 .vn-tachie-section {
   position: relative;
   margin-top: 8px;

@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, Input, OnDestroy, OnInit } from '@angular/core';
+import { AfterViewInit, Component, Input, OnDestroy, OnInit, ViewChild, ElementRef } from '@angular/core';
 
 import { EventSystem, Network } from '@udonarium/core/system';
 import { DataElement } from '@udonarium/data-element';
@@ -16,6 +16,7 @@ import { SaveDataService } from 'service/save-data.service';
 import { TabletopService } from 'service/tabletop.service';
 
 import { GameCharacter } from '@udonarium/game-character';
+import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 import { DiceSymbol } from '@udonarium/dice-symbol';
 
 import { RangeArea } from '@udonarium/range';
@@ -181,6 +182,83 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
     option.title = (<GameCharacter>this.tabletopObject).name + 'への画像複製';
     let component = this.panelService.open<ImportCharacterImgComponent>(ImportCharacterImgComponent, option);
     component.tabletopObject = <GameCharacter>this.tabletopObject;
+  }
+
+  @ViewChild('bulkFileInput') bulkFileInput: ElementRef<HTMLInputElement>;
+
+  async onBulkFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input || !input.files || input.files.length < 1) return;
+    const files = Array.from(input.files).filter(f => f.type.startsWith('image/'));
+    input.value = '';
+    if (files.length < 1) return;
+
+    const confirmed = confirm(`${files.length}枚の画像が見つかりました。すべて登録しますか？`);
+    if (!confirmed) return;
+
+    const character = <GameCharacter>this.tabletopObject;
+    if (!character.imageDataElement) return;
+    const MAX_BYTES = 2 * 1024 * 1024;
+
+    for (const file of files) {
+      let processFile: Blob = file;
+      const baseName = file.name.replace(/\.[^.]+$/, '');
+
+      if (file.size > MAX_BYTES) {
+        alert(`${baseName} は2MBを超えているため自動圧縮します。`);
+        try {
+          processFile = await this.compressImage(file);
+        } catch (e) {
+          console.error('compress failed', e);
+          alert(`${baseName} の圧縮に失敗しました。スキップします。`);
+          continue;
+        }
+      }
+
+      try {
+        const imageFile = await ImageStorage.instance.addAsync(processFile as File);
+        if (imageFile && imageFile.identifier) {
+          const child = DataElement.create('imageIdentifier', imageFile.identifier, { type: 'image' });
+          child.name = baseName;
+          child.currentValue = baseName;
+          character.imageDataElement.appendChild(child);
+        }
+      } catch (e) {
+        console.error('add failed', e);
+        alert(`${baseName} の登録に失敗しました。`);
+      }
+    }
+  }
+
+  private compressImage(file: File, maxDim: number = 1920, quality: number = 0.85): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            const ratio = Math.min(maxDim / w, maxDim / h);
+            w = Math.round(w * ratio);
+            h = Math.round(h * ratio);
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d')!;
+          ctx.drawImage(img, 0, 0, w, h);
+          canvas.toBlob(blob => {
+            if (blob) resolve(blob);
+            else reject(new Error('canvas toBlob failed'));
+          }, 'image/jpeg', quality);
+        };
+        img.onerror = reject;
+        img.src = reader.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   }
 
   clickRangeOffSetX(){

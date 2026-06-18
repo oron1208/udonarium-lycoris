@@ -200,6 +200,26 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
     EventSystem.trigger('RESET_CAMERA', {});
   }
 
+  resetHotbarPosition() {
+    try {
+      localStorage.removeItem('udonarium.macroHotbar.pos.v1');
+      localStorage.removeItem('udonarium.macroHotbar.visible.v1');
+      localStorage.setItem('udonarium.macroHotbar.visible.v1', '1');
+    } catch (_) { }
+    EventSystem.trigger('MACRO_HOTBAR_RESET', {});
+    EventSystem.call('MACRO_HOTBAR_VISIBILITY_CHANGED', { visible: true });
+  }
+
+  resetVnUi() {
+    try {
+      localStorage.removeItem('udonarium.vnPanel.pos.v1');
+      localStorage.removeItem('udonarium.vnSubPanels.v1');
+      localStorage.removeItem('udonarium.vnStage.heightPercent.v1');
+      localStorage.setItem('udonarium.vnStage.heightPercent.v1', '58');
+    } catch (_) { }
+    EventSystem.trigger('VN_RESET_UI', {});
+  }
+
   toggleBuffTowerCollapse() {
     this.isBuffTowerCollapsed = !this.isBuffTowerCollapsed;
     try { localStorage.setItem('udonarium.buffTower.collapsed.v1', this.isBuffTowerCollapsed ? '1' : 'false'); } catch (_) { }

@@ -28,6 +28,7 @@ interface MacroHotbarSettings {
 const STORAGE_KEY = 'udonarium.macroHotbar.v1';
 const SETTINGS_STORAGE_KEY = 'udonarium.macroHotbar.settings.v1';
 const VISIBILITY_STORAGE_KEY = 'udonarium.macroHotbar.visible.v1';
+const PINNED_STORAGE_KEY = 'udonarium.macroHotbar.pinned.v1';
 const SLOT_COUNT = 12;
 const PAGE_COUNT = 5;
 const TOTAL_SLOT_COUNT = SLOT_COUNT * PAGE_COUNT;
@@ -57,6 +58,7 @@ export class MacroHotbarComponent {
   targetMode = this.settings.targetMode;
   activePage = this.settings.activePage;
   isVisible = this.loadVisibility();
+  isPinned = this.loadPinned();
 
   private _posLoaded = false;
   get isExtendedDiceBotEnabled(): boolean { return this.tabletopService.currentTable?.extendedDiceBotEnabled ?? false; }
@@ -80,6 +82,13 @@ export class MacroHotbarComponent {
       .on('MACRO_HOTBAR_VISIBILITY_CHANGED', event => {
         this.isVisible = !!event.data.visible;
       })
+      .on('MACRO_HOTBAR_RESET', event => {
+        this.panelX = -1;
+        this.panelY = -1;
+        this.isVisible = true;
+        this.isPinned = false;
+        try { localStorage.removeItem('udonarium.macroHotbar.pos.v1'); localStorage.removeItem('udonarium.macroHotbar.pinned.v1'); } catch (_) { }
+      })
       .on('IACHARA_HOTBAR_IMPORT', event => {
         this.importIacharaHotbar(event.data || {});
       });
@@ -95,7 +104,14 @@ export class MacroHotbarComponent {
     const s: { [key: string]: string } = {};
     if (this.panelX >= 0) { s['left'] = this.panelX + 'px'; s['transform'] = 'none'; }
     if (this.panelY >= 0) { s['bottom'] = 'auto'; s['top'] = this.panelY + 'px'; }
+    if (this.isPinned) { s['z-index'] = '2000001'; }
     return s;
+  }
+
+  togglePin() {
+    this.isPinned = !this.isPinned;
+    try { localStorage.setItem(PINNED_STORAGE_KEY, this.isPinned ? '1' : '0'); } catch (_) { }
+    this.helpText = this.isPinned ? 'ピン止めON: 常に手前に表示' : 'ピン止めOFF';
   }
 
   onPanelDragStart(e: PointerEvent) {
@@ -465,6 +481,10 @@ export class MacroHotbarComponent {
     this.isVisible = true;
     try { localStorage.setItem(VISIBILITY_STORAGE_KEY, '1'); } catch (e) { }
     this.helpText = `${data.characterName || 'コマ'}のCoC判定を${writeIndex - startIndex}個登録しました`;
+  }
+
+  private loadPinned(): boolean {
+    try { return localStorage.getItem(PINNED_STORAGE_KEY) === '1'; } catch (_) { return false; }
   }
 
   private loadVisibility(): boolean {

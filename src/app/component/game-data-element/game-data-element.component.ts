@@ -7,6 +7,8 @@ import {
   OnDestroy,
   OnInit,
   HostListener,
+  ViewChild,
+  ElementRef,
 } from '@angular/core';
 import { EventSystem } from '@udonarium/core/system';
 import { DataElement } from '@udonarium/data-element';
@@ -35,6 +37,8 @@ export class GameDataElementComponent implements OnInit, OnDestroy, AfterViewIni
 
   @Input() isImage: boolean = false;
   @Input() indexNum: number = 0;
+
+  @ViewChild('bulkFileInput') bulkFileInput: ElementRef<HTMLInputElement>;
 
   private _name: string = '';
   get name(): string { return this._name; }
@@ -110,8 +114,91 @@ export class GameDataElementComponent implements OnInit, OnDestroy, AfterViewIni
   addImageElement() {
     this.gameDataElement.appendChild(DataElement.create('imageIdentifier', '', { type: 'image' }));
     const root: DataElement = <DataElement>this.gameDataElement.parent;
-
     this.updateKomaIconMaxValue(root);
+  }
+
+  bulkImportImages() {
+    const input = this.bulkFileInput?.nativeElement;
+    if (input) {
+      input.setAttribute('webkitdirectory', '');
+      input.click();
+    }
+  }
+
+  async onBulkFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input || !input.files || input.files.length < 1) return;
+    const files = Array.from(input.files).filter(f => f.type.startsWith('image/'));
+    input.value = '';
+    if (files.length < 1) return;
+
+    const confirmed = confirm(`${files.length}枚の画像が見つかりました。すべて登録しますか？`);
+    if (!confirmed) return;
+
+    const root: DataElement = <DataElement>this.gameDataElement.parent;
+    const MAX_BYTES = 2 * 1024 * 1024;
+
+    for (const file of files) {
+      let processFile: Blob = file;
+      const baseName = file.name.replace(/\.[^.]+$/, '');
+
+      if (file.size > MAX_BYTES) {
+        alert(`${baseName} は2MBを超えているため自動圧縮します。`);
+        try {
+          processFile = await this.compressImage(file);
+        } catch (e) {
+          console.error('compress failed', e);
+          alert(`${baseName} の圧縮に失敗しました。スキップします。`);
+          continue;
+        }
+      }
+
+      try {
+        const imageFile = await ImageStorage.instance.addAsync(processFile as File);
+        if (imageFile && imageFile.identifier) {
+          const child = DataElement.create('imageIdentifier', imageFile.identifier, { type: 'image' });
+          child.name = baseName;
+          child.currentValue = baseName;
+          this.gameDataElement.appendChild(child);
+        }
+      } catch (e) {
+        console.error('add failed', e);
+        alert(`${baseName} の登録に失敗しました。`);
+      }
+    }
+    this.updateKomaIconMaxValue(root);
+    this.changeDetector.markForCheck();
+  }
+
+  private compressImage(file: File, maxDim: number = 1920, quality: number = 0.85): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            const ratio = Math.min(maxDim / w, maxDim / h);
+            w = Math.round(w * ratio);
+            h = Math.round(h * ratio);
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d')!;
+          ctx.drawImage(img, 0, 0, w, h);
+          canvas.toBlob(blob => {
+            if (blob) resolve(blob);
+            else reject(new Error('canvas toBlob failed'));
+          }, 'image/jpeg', quality);
+        };
+        img.onerror = reject;
+        img.src = reader.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   }
 
   addElement() {

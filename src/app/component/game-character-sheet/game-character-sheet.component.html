@@ -382,7 +382,11 @@
             <div class="table">
               <div class="table-row" game-data-element [gameDataElement]="tabletopObject.imageDataElement" [isTagLocked]="true" [isEdit]="isEdit" [isImage]="true"></div>            </div>
             <ng-container *ngIf="tabletopObject.aliasName === 'character'">
-              <button style="width:300px; color: #555;" (click)="showImportImages()">画像を他のコマからインポート</button>
+              <div style="display:flex; gap:4px; margin-top:4px;">
+                <button style="flex:1; color: #555;" (click)="showImportImages()">画像を他のコマからインポート</button>
+                <button style="flex:1; color: #555;" (click)="bulkFileInput.click()">📁 フォルダからまとめて追加</button>
+                <input #bulkFileInput type="file" accept="image/*" multiple style="display:none" (change)="onBulkFileSelected($event)" />
+              </div>
             </ng-container>
           </div>
         </ng-container>

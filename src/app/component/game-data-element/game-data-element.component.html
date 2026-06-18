@@ -169,5 +169,7 @@
 </ng-template>
 <ng-template #editButtonsImageTitle>
   <button (click)="addImageElement()"><i class="material-icons">add_circle</i></button>
+  <button (click)="bulkImportImages()" title="フォルダからまとめてインポート"><i class="material-icons">folder_open</i></button>
+  <input #bulkFileInput type="file" accept="image/*" multiple style="display:none" (change)="onBulkFileSelected($event)" />
 </ng-template>
 

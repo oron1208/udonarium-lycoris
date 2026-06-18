@@ -8,14 +8,9 @@
       [class.entering]="actor.isEntering"
       [class.speaking]="isSpeaking(actor)"
       [class.autofit]="isAutoFit"
-      [class.drag-over]="dropIndex === i && dragIndex !== i"
-      draggable="true"
-      (dragstart)="onDragStart(i, $event)"
-      (dragover)="onDragOver(i, $event)"
-      (drop)="onDrop(i, $event)"
-      (dragend)="onDragEnd()"
+      [class.stage-selected]="isStageSelected(actor)"
       [style.left]="actorLeft(i)"
-      [style.transform]="'translateX(-50%) translateY(' + verticalOffset + 'px) scale(' + actorScale(i, actor) + ')'"
+      [style.transform]="'translateX(calc(-50% + ' + (actor.customOffsetX || 0) + 'vw)) translateY(calc(' + verticalOffset + 'px + ' + (actor.customOffsetY || 0) + 'vh))'"
       [style.z-index]="actorZIndex(i, actor)">
 
       <div class="vn-bubble"
@@ -27,9 +22,23 @@
         <div class="vn-text">{{ getTypewriterText(actor.characterId) }}</div>
       </div>
 
-      <div *ngIf="actorHasPortrait(actor)" class="vn-portrait-stack" [class.fading]="actor.isPortraitFading">
+      <div *ngIf="actorHasPortrait(actor)" class="vn-portrait-stack"
+        [class.fading]="actor.isPortraitFading"
+        [class.is-selected]="isStageSelected(actor)"
+        [style.width.vw]="actor.portraitWidth > 0 ? actor.portraitWidth : null"
+        [style.height.vh]="actor.portraitHeight > 0 ? actor.portraitHeight : null"
+        [style.transform]="'scale(' + actorScale(i, actor) + ')'"
+        (pointerdown)="onPortraitDragStart(actor, $event)"
+        (dragstart)="$event.preventDefault()">
         <img *ngIf="actor.previousImageIdentifier" class="vn-portrait vn-portrait-prev" [src]="actorPreviousImage(actor).url | safe: 'resourceUrl'" [alt]="actor.name">
         <img class="vn-portrait vn-portrait-current" [src]="actorImage(actor).url | safe: 'resourceUrl'" [alt]="actor.name">
+        <!-- Resize handles -->
+        <ng-container *ngIf="isStageSelected(actor)">
+          <div *ngFor="let edge of portraitResizeEdges"
+            class="vn-portrait-handle vn-handle-{{edge}}"
+            [style.cursor]="portraitHandleCursor(edge)"
+            (pointerdown)="onPortraitResizeStart(actor, edge, $event)"></div>
+        </ng-container>
       </div>
       <div *ngIf="!actorHasPortrait(actor)" class="vn-placeholder">{{ actor.name || '？' }}</div>
     </div>
@@ -87,6 +96,22 @@
       <span class="vn-scale-value">{{ selectedActorScaleLabel }}</span>
       <button type="button" class="vn-scale-btn" title="大きく" (mousedown)="scaleSelectedActorUp(); $event.preventDefault()">＋</button>
       <button type="button" class="vn-scale-btn" title="サイズリセット" (mousedown)="resetSelectedActorScale(); $event.preventDefault()">↺</button>
+    </div>
+
+    <!-- Stage free-layout controls -->
+    <div class="vn-stage-layout-row" *ngIf="selectedActor">
+      <button type="button" class="vn-scale-btn vn-move-toggle" [class.on]="moveMode"
+        (mousedown)="toggleMoveMode(); $event.preventDefault()"
+        title="ONで立ち絵をドラッグ移動・リサイズ可能">
+        {{ moveMode ? '移動終了' : '移動開始' }}
+      </button>
+      <ng-container *ngIf="moveMode && stageSelectedActor">
+        <button type="button" class="vn-scale-btn" title="前面へ" (mousedown)="bringActorForward(stageSelectedActor); $event.preventDefault()">⬆</button>
+        <button type="button" class="vn-scale-btn" title="背面へ" (mousedown)="sendActorBackward(stageSelectedActor); $event.preventDefault()">⬇</button>
+        <button type="button" class="vn-scale-btn" [class.on]="stageSelectedActor.aspectLocked !== false" title="アス比ロック" (mousedown)="toggleAspectLock(stageSelectedActor); $event.preventDefault()">🔓</button>
+        <button type="button" class="vn-scale-btn" title="配置リセット" (mousedown)="resetActorLayout(stageSelectedActor); $event.preventDefault()">↺</button>
+        <span class="vn-stage-layout-name">{{ stageSelectedActor.name }}</span>
+      </ng-container>
     </div>
 
     <div class="vn-tachie-section" *ngIf="tachieSlots.length > 0">

@@ -43,6 +43,13 @@ interface VnActor {
   typewriterTimer: any;
   lastBubbleUntil: number;
   bubbleKey: number;
+  // Per-actor custom layout
+  customOffsetX: number;
+  customOffsetY: number;
+  portraitWidth: number;
+  portraitHeight: number;
+  customZ: number;
+  aspectLocked: boolean;
 }
 
 @Component({
@@ -67,6 +74,20 @@ export class VnStageComponent implements OnInit, OnDestroy {
   isAutoFit: boolean = true;
   affectPiece: boolean = false;
   sendPortrait: boolean = true;
+
+  // ── Stage portrait free-layout ──
+  stageSelectedId: string = '';
+  moveMode: boolean = false;
+  private portraitDragMode: 'move' | 'resize' | null = null;
+  private portraitDragEdge: string = '';
+  private portraitDragStartX = 0;
+  private portraitDragStartY = 0;
+  private portraitDragStartOffX = 0;
+  private portraitDragStartOffY = 0;
+  private portraitDragStartW = 0;
+  private portraitDragStartH = 0;
+  private portraitDragAspect = 1;
+  private draggingActor: VnActor | null = null;
 
   // Chat log panel
   chatLogExpanded: boolean = false;
@@ -169,6 +190,17 @@ export class VnStageComponent implements OnInit, OnDestroy {
 
     // Defer event registration and timer to avoid interfering with initial sync
     // During SYNCHRONIZE_GAME_OBJECT, vn-stage must be completely inert
+    // One-time cleanup of bad layout values from drag bug
+    try {
+      const keys = Object.keys(localStorage).filter(k => k.startsWith('udonarium.vnStage.actorLayout.'));
+      for (const k of keys) {
+        const d = JSON.parse(localStorage.getItem(k) || '{}');
+        if (Math.abs(d.customOffsetX || 0) > 50 || Math.abs(d.customOffsetY || 0) > 50) {
+          localStorage.removeItem(k);
+        }
+      }
+    } catch (_) { }
+
     this.syncGraceTimer = setTimeout(() => {
       this.registerEventHandlers();
       this.clockTimer = setInterval(() => {
@@ -200,6 +232,17 @@ export class VnStageComponent implements OnInit, OnDestroy {
         this.ngZone.run(() => {
           for (const a of list) {
             if (a?.characterId) this.upsertActor(a.characterId, a.name, a.tachieIndex ?? 0, a.imageIdentifier, '', false, false, a.portraitScale);
+            if (a?.characterId) {
+              const actor = this.findActor(a.characterId);
+              if (actor) {
+                actor.customOffsetX = Math.max(-50, Math.min(50, a.customOffsetX || 0));
+                actor.customOffsetY = Math.max(-50, Math.min(50, a.customOffsetY || 0));
+                actor.portraitWidth = Math.max(0, Math.min(1200, a.portraitWidth || 0));
+                actor.portraitHeight = Math.max(0, Math.min(1200, a.portraitHeight || 0));
+                actor.customZ = a.customZ || 0;
+                actor.aspectLocked = a.aspectLocked !== false;
+              }
+            }
           }
         });
       })
@@ -226,7 +269,8 @@ export class VnStageComponent implements OnInit, OnDestroy {
         const peerId: string = event.data?.peerId;
         if (!peerId) return;
         const payload = this.actors.map(a => ({
-          characterId: a.characterId, name: a.name, tachieIndex: a.tachieIndex, imageIdentifier: a.imageIdentifier, portraitScale: a.portraitScale
+          characterId: a.characterId, name: a.name, tachieIndex: a.tachieIndex, imageIdentifier: a.imageIdentifier, portraitScale: a.portraitScale,
+          customOffsetX: a.customOffsetX || 0, customOffsetY: a.customOffsetY || 0, portraitWidth: a.portraitWidth || 0, portraitHeight: a.portraitHeight || 0, customZ: a.customZ || 0, aspectLocked: a.aspectLocked !== false
         }));
         EventSystem.call('VN_STAGE_FULL', { actors: payload }, peerId);
       })
@@ -237,6 +281,20 @@ export class VnStageComponent implements OnInit, OnDestroy {
         if (event.data?.visible) {
           this.restoreActorsFromTable();
         }
+      })
+      .on('VN_RESET_UI', event => {
+        this.ngZone.run(() => {
+          this.panelX = -1;
+          this.panelY = -1;
+          this.panelW = 450;
+          this.panelH = -1;
+          this.panelLocked = false;
+          this.stageHeightPercent = 58;
+          this.paletteDetached = false;
+          this.logDetached = false;
+          this.resetSubPanelPositions();
+          this.savePanelState();
+        });
       })
       .on('VN_STAGE_PIECE_SCALE_CHANGED', event => { })
       .on('VN_STAGE_AUTOFIT_CHANGED', event => {
@@ -255,9 +313,25 @@ export class VnStageComponent implements OnInit, OnDestroy {
         const requesterPeerId = event.data?.requesterPeerId;
         if (!requesterPeerId) return;
         const payload = this.actors.map(a => ({
-          characterId: a.characterId, name: a.name, tachieIndex: a.tachieIndex, imageIdentifier: a.imageIdentifier, portraitScale: a.portraitScale
+          characterId: a.characterId, name: a.name, tachieIndex: a.tachieIndex, imageIdentifier: a.imageIdentifier, portraitScale: a.portraitScale,
+          customOffsetX: a.customOffsetX || 0, customOffsetY: a.customOffsetY || 0, portraitWidth: a.portraitWidth || 0, portraitHeight: a.portraitHeight || 0, customZ: a.customZ || 0, aspectLocked: a.aspectLocked !== false
         }));
         EventSystem.call('VN_STAGE_FULL', { actors: payload }, requesterPeerId);
+      })
+      .on('VN_STAGE_LAYOUT', event => {
+        if (event.isSendFromSelf) return;
+        const d = event.data;
+        if (!d?.characterId) return;
+        this.ngZone.run(() => {
+          const actor = this.findActor(d.characterId);
+          if (!actor) return;
+          actor.customOffsetX = Math.max(-50, Math.min(50, d.customOffsetX || 0));
+          actor.customOffsetY = Math.max(-50, Math.min(50, d.customOffsetY || 0));
+          actor.portraitWidth = Math.max(0, Math.min(1200, d.portraitWidth || 0));
+          actor.portraitHeight = Math.max(0, Math.min(1200, d.portraitHeight || 0));
+          actor.customZ = d.customZ || 0;
+          actor.aspectLocked = d.aspectLocked !== false;
+        });
       })
       // Fallback: detect ChatMessage syncs from other peers (MESSAGE_ADDED only fires locally)
       .on('UPDATE_GAME_OBJECT', 1, event => {
@@ -889,7 +963,264 @@ export class VnStageComponent implements OnInit, OnDestroy {
   }
 
   actorZIndex(index: number, actor: VnActor): number {
-    return this.showBubble(actor) || this.isSpeaking(actor) ? 1000 + index : 100 + index;
+    const base = this.showBubble(actor) || this.isSpeaking(actor) ? 1000 + index : 100 + index;
+    return actor.customZ || base;
+  }
+
+  get stageSelectedActor(): VnActor {
+    return this.findActor(this.stageSelectedId);
+  }
+
+  isStageSelected(actor: VnActor): boolean {
+    return !!actor && actor.characterId === this.stageSelectedId;
+  }
+
+  selectStageActor(actor: VnActor) {
+    this.stageSelectedId = (actor && actor.characterId === this.stageSelectedId) ? '' : (actor?.characterId || '');
+  }
+
+  toggleMoveMode() {
+    this.moveMode = !this.moveMode;
+    if (!this.moveMode) {
+      this.stageSelectedId = '';
+    } else if (this.selectedCharacterId) {
+      const actor = this.findActor(this.selectedCharacterId);
+      if (actor) this.stageSelectedId = this.selectedCharacterId;
+    }
+  }
+
+  private broadcastActorLayout(actor: VnActor) {
+    if (!actor?.characterId) return;
+    EventSystem.call('VN_STAGE_LAYOUT', {
+      characterId: actor.characterId,
+      customOffsetX: actor.customOffsetX || 0,
+      customOffsetY: actor.customOffsetY || 0,
+      portraitWidth: actor.portraitWidth || 0,
+      portraitHeight: actor.portraitHeight || 0,
+      customZ: actor.customZ || 0,
+      aspectLocked: actor.aspectLocked !== false
+    });
+  }
+
+  /* ── portrait free-drag ── */
+
+  onPortraitDragStart(actor: VnActor, e: PointerEvent) {
+    if (e.button !== 0) return;
+    if (!this.moveMode) return;  // only drag when move mode is active
+    e.preventDefault(); e.stopPropagation();
+    this.draggingActor = actor;
+    this.portraitDragMode = 'move';
+    this.portraitDragStartX = e.clientX;
+    this.portraitDragStartY = e.clientY;
+    this.portraitDragStartOffX = actor.customOffsetX || 0;
+    this.portraitDragStartOffY = actor.customOffsetY || 0;
+    const moveHandler = (ev: PointerEvent) => {
+      this.ngZone.run(() => {
+        if (this.portraitDragMode !== 'move' || !this.draggingActor) return;
+        const dxVw = (ev.clientX - this.portraitDragStartX) / window.innerWidth * 100;
+        const dyVh = (ev.clientY - this.portraitDragStartY) / window.innerHeight * 100;
+        this.draggingActor.customOffsetX = this.portraitDragStartOffX + dxVw;
+        this.draggingActor.customOffsetY = this.portraitDragStartOffY + dyVh;
+      });
+    };
+    const upHandler = (ev: PointerEvent) => {
+      document.removeEventListener('pointermove', moveHandler);
+      document.removeEventListener('pointerup', upHandler);
+      document.removeEventListener('pointercancel', upHandler);
+      this.ngZone.run(() => {
+        if (this.draggingActor) {
+          this.saveActorLayout(this.draggingActor);
+          this.broadcastActorLayout(this.draggingActor);
+        }
+        this.portraitDragMode = null;
+        this.draggingActor = null;
+      });
+    };
+    document.addEventListener('pointermove', moveHandler);
+    document.addEventListener('pointerup', upHandler);
+    document.addEventListener('pointercancel', upHandler);
+  }
+
+  onPortraitDragMove(actor: VnActor, e: PointerEvent) {
+    // handled by document-level listener in onPortraitDragStart
+  }
+
+  onPortraitDragEnd(actor: VnActor, e: PointerEvent) {
+    // handled by document-level listener in onPortraitDragStart
+  }
+
+  /* ── portrait resize (8 handles) ── */
+
+  onPortraitResizeStart(actor: VnActor, edge: string, e: PointerEvent) {
+    if (e.button !== 0) return;
+    e.preventDefault(); e.stopPropagation();
+    this.portraitDragMode = 'resize';
+    this.portraitDragEdge = edge;
+    this.portraitDragStartX = e.clientX;
+    this.portraitDragStartY = e.clientY;
+    const vw = window.innerWidth / 100;
+    const vh = window.innerHeight / 100;
+    const stackEl = (e.currentTarget as HTMLElement).closest('.vn-portrait-stack') as HTMLElement;
+    this.portraitDragStartW = (stackEl?.offsetWidth || 300) / vw;
+    this.portraitDragStartH = (stackEl?.offsetHeight || 400) / vh;
+    this.portraitDragAspect = this.portraitDragStartW / Math.max(0.01, this.portraitDragStartH);
+    if (!actor.portraitWidth) actor.portraitWidth = this.portraitDragStartW;
+    if (!actor.portraitHeight) actor.portraitHeight = this.portraitDragStartH;
+    const moveHandler = (ev: PointerEvent) => {
+      this.ngZone.run(() => {
+        if (this.portraitDragMode !== 'resize' || !actor) return;
+        const dxVw = (ev.clientX - this.portraitDragStartX) / vw;
+        const dyVh = (ev.clientY - this.portraitDragStartY) / vh;
+        const edgeName = this.portraitDragEdge;
+        const lock = actor.aspectLocked !== false;
+        let w = actor.portraitWidth || this.portraitDragStartW;
+        let h = actor.portraitHeight || this.portraitDragStartH;
+        const minW = 5, minH = 5, maxW = 120, maxH = 120;
+        if (edgeName.includes('e')) w = this.portraitDragStartW + dxVw;
+        if (edgeName.includes('w')) w = this.portraitDragStartW - dxVw;
+        if (edgeName.includes('s')) h = this.portraitDragStartH + dyVh;
+        if (edgeName.includes('n')) h = this.portraitDragStartH - dyVh;
+        w = Math.max(minW, Math.min(maxW, w));
+        h = Math.max(minH, Math.min(maxH, h));
+        if (lock) {
+          if (edgeName === 'e' || edgeName === 'w') h = w / this.portraitDragAspect;
+          else if (edgeName === 'n' || edgeName === 's') w = h * this.portraitDragAspect;
+          else { if (Math.abs(dxVw) >= Math.abs(dyVh)) h = w / this.portraitDragAspect; else w = h * this.portraitDragAspect; }
+        }
+        actor.portraitWidth = w;
+        actor.portraitHeight = h;
+      });
+    };
+    const upHandler = (ev: PointerEvent) => {
+      document.removeEventListener('pointermove', moveHandler);
+      document.removeEventListener('pointerup', upHandler);
+      document.removeEventListener('pointercancel', upHandler);
+      this.ngZone.run(() => this.onPortraitResizeEnd(actor, ev));
+    };
+    document.addEventListener('pointermove', moveHandler);
+    document.addEventListener('pointerup', upHandler);
+    document.addEventListener('pointercancel', upHandler);
+  }
+
+  onPortraitResizeMove(actor: VnActor, e: PointerEvent) {
+    if (this.portraitDragMode !== 'resize' || !this.isStageSelected(actor)) return;
+    e.preventDefault();
+    const dx = e.clientX - this.portraitDragStartX;
+    const dy = e.clientY - this.portraitDragStartY;
+    const edge = this.portraitDragEdge;
+    const lock = actor.aspectLocked !== false; // default true
+    let w = actor.portraitWidth || this.portraitDragStartW;
+    let h = actor.portraitHeight || this.portraitDragStartH;
+
+    const minW = 60, minH = 60, maxW = 1200, maxH = 1200;
+
+    if (edge.includes('e')) w = this.portraitDragStartW + dx;
+    if (edge.includes('w')) w = this.portraitDragStartW - dx;
+    if (edge.includes('s')) h = this.portraitDragStartH + dy; // bottom edge: drag down = grow
+    if (edge.includes('n')) h = this.portraitDragStartH - dy; // top edge: drag up = grow
+
+    w = Math.max(minW, Math.min(maxW, w));
+    h = Math.max(minH, Math.min(maxH, h));
+
+    if (lock) {
+      // Keep aspect ratio: adjust the non-primary axis
+      if (edge === 'e' || edge === 'w') {
+        h = w / this.portraitDragAspect;
+      } else if (edge === 'n' || edge === 's') {
+        w = h * this.portraitDragAspect;
+      } else {
+        // corner: use the larger delta
+        if (Math.abs(dx) >= Math.abs(dy)) h = w / this.portraitDragAspect;
+        else w = h * this.portraitDragAspect;
+      }
+    }
+
+    actor.portraitWidth = w;
+    actor.portraitHeight = h;
+  }
+
+  onPortraitResizeEnd(actor: VnActor, e: PointerEvent) {
+    if (this.portraitDragMode !== 'resize') return;
+    this.portraitDragMode = null;
+    this.saveActorLayout(actor);
+    this.broadcastActorLayout(actor);
+  }
+
+  bringActorForward(actor: VnActor) {
+    if (!actor) return;
+    const maxZ = this.actors.reduce((m, a) => Math.max(m, a.customZ || 0), 0);
+    actor.customZ = maxZ + 1;
+    this.saveActorLayout(actor);
+    this.broadcastActorLayout(actor);
+  }
+
+  sendActorBackward(actor: VnActor) {
+    if (!actor) return;
+    const minZ = this.actors.reduce((m, a) => Math.min(m, a.customZ || 9999), 9999);
+    actor.customZ = minZ - 1;
+    this.saveActorLayout(actor);
+    this.broadcastActorLayout(actor);
+  }
+
+  toggleAspectLock(actor: VnActor) {
+    if (!actor) return;
+    actor.aspectLocked = actor.aspectLocked === false ? true : false;
+    this.saveActorLayout(actor);
+    this.broadcastActorLayout(actor);
+  }
+
+  resetActorLayout(actor: VnActor) {
+    if (!actor) return;
+    actor.customOffsetX = 0;
+    actor.customOffsetY = 0;
+    actor.portraitWidth = 0;
+    actor.portraitHeight = 0;
+    actor.customZ = 0;
+    actor.aspectLocked = true;
+    this.saveActorLayout(actor);
+    this.broadcastActorLayout(actor);
+  }
+
+  get portraitResizeEdges(): string[] {
+    return ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+  }
+
+  portraitHandleCursor(edge: string): string {
+    const map: { [k: string]: string } = {
+      'nw': 'nwse-resize', 'n': 'ns-resize', 'ne': 'nesw-resize',
+      'e': 'ew-resize', 'se': 'nwse-resize', 's': 'ns-resize',
+      'sw': 'nesw-resize', 'w': 'ew-resize'
+    };
+    return map[edge] || 'default';
+  }
+
+  private saveActorLayout(actor: VnActor) {
+    if (!actor?.characterId) return;
+    try {
+      localStorage.setItem(`udonarium.vnStage.actorLayout.${actor.characterId}.v1`, JSON.stringify({
+        customOffsetX: actor.customOffsetX || 0,
+        customOffsetY: actor.customOffsetY || 0,
+        portraitWidth: actor.portraitWidth || 0,
+        portraitHeight: actor.portraitHeight || 0,
+        customZ: actor.customZ || 0,
+        aspectLocked: actor.aspectLocked !== false
+      }));
+    } catch (_) { }
+  }
+
+  private loadActorLayout(actor: VnActor) {
+    if (!actor?.characterId) return;
+    try {
+      const raw = localStorage.getItem(`udonarium.vnStage.actorLayout.${actor.characterId}.v1`);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      actor.customOffsetX = Math.max(-50, Math.min(50, d.customOffsetX || 0));
+      actor.customOffsetY = Math.max(-50, Math.min(50, d.customOffsetY || 0));
+      actor.portraitWidth = Math.max(0, Math.min(1200, d.portraitWidth || 0));
+      actor.portraitHeight = Math.max(0, Math.min(1200, d.portraitHeight || 0));
+      actor.customZ = d.customZ || 0;
+      actor.aspectLocked = d.aspectLocked !== false;
+    } catch (_) { }
   }
 
   bubbleSide(index: number): string {
@@ -1489,8 +1820,10 @@ export class VnStageComponent implements OnInit, OnDestroy {
         speakingUntil: 0, bubbleUntil: 0, lastSpokeAt: now,
         isEntering: true,
         displayedText: '', typewriterIndex: 0, typewriterTimer: null, lastBubbleUntil: 0, bubbleKey: 0,
+        customOffsetX: 0, customOffsetY: 0, portraitWidth: 0, portraitHeight: 0, customZ: 0, aspectLocked: true,
       };
       this.actors.push(actor);
+      this.loadActorLayout(actor);
       setTimeout(() => this.ngZone.run(() => { actor.isEntering = false; }), 400);
     }
 
