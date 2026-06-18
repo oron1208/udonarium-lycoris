@@ -51,6 +51,7 @@
       <li><a href="#new-panel">新パネル機能</a></li>
       <li><a href="#portrait">立ち絵の差分切り替え</a></li>
       <li><a href="#size">立ち絵サイズ調整</a></li>
+      <li><a href="#free-layout">立ち絵の自由配置・リサイズ</a> <span class="guide-toc-badge">v1.37</span></li>
       <li><a href="#height">VNステージの高さ設定</a></li>
       <li><a href="#bubble">吹き出しの仕組み</a></li>
       <li><a href="#palette">チャットパレット連携</a></li>
@@ -59,7 +60,7 @@
       <li><a href="#sync">コマ同期</a></li>
       <li><a href="#reverse">コマからVNパネルを逆引き</a></li>
 
-      <li><a href="#position">立ち位置の調整</a></li>
+      <li><a href="#position">立ち位置の調整・重なり順</a></li>
       <li><a href="#tips">Tips</a></li>
     </ol>
   </details>
@@ -293,6 +294,51 @@
       </div>
     </section>
 
+    <!-- ===== セクション: 立ち絵の自由配置・リサイズ ===== -->
+    <section id="free-layout" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">06+</span>
+        <h3>立ち絵の自由配置・リサイズ <span class="guide-section-badge">v1.37</span></h3>
+      </div>
+      <p>v1.37より、VNステージ上の立ち絵を<strong>自由にドラッグ移動</strong>・<strong>8方向リサイズ</strong>・<strong>重なり順の操作</strong>ができるようになりました。画面サイズの異なるプレイヤー間でも位置がズレにくいよう、vw/vh相対座標で同期されます。</p>
+
+      <h4 class="guide-subhead">🖱️ 立ち絵をドラッグで自由移動</h4>
+      <ul>
+        <li>VNチャットパネルのキャラ操作部分で「<strong>移動開始</strong>」ボタンをクリック</li>
+        <li>対象キャラの立ち絵に黄色い枠が表示され、ドラッグ移動が可能になる</li>
+        <li>画面上の立ち絵をそのままドラッグして好きな位置へ配置</li>
+        <li>「<strong>移動終了</strong>」ボタン（またはもう一度クリック）で移動モード解除</li>
+        <li>位置は他プレイヤーにもリアルタイムで同期</li>
+      </ul>
+
+      <h4 class="guide-subhead">📐 8方向リサイズハンドル</h4>
+      <ul>
+        <li>移動モード中、立ち絵の四隅と四辺に<strong>8つのリサイズハンドル</strong>が表示</li>
+        <li>ハンドルをドラッグして立ち絵を拡大・縮小</li>
+        <li><strong>アス比ロック</strong>: 🔒ボタンでアスペクト比を維持したままリサイズ（デフォルトON）</li>
+        <li>解除すれば自由な縦横比に変更可能</li>
+      </ul>
+
+      <h4 class="guide-subhead">⬆⬇ 重なり順の操作</h4>
+      <ul>
+        <li><strong>⬆ ボタン</strong>: 立ち絵を前面に（手前に配置）</li>
+        <li><strong>⬇ ボタン</strong>: 立ち絵を背面に（奥に配置）</li>
+        <li>キャラクターの前後関係を自由に表現できる</li>
+      </ul>
+
+      <h4 class="guide-subhead">↺ 配置リセット</h4>
+      <ul>
+        <li>「<strong>↺</strong>」ボタンで位置・サイズ・重なり順をすべて初期値に戻す</li>
+      </ul>
+
+      <div class="guide-callout callout-tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <p><strong>演出の自由度が大幅UP！</strong> キャラクターを画面中央に大きく配置したり、脇に小さく配置したり、重なりを活かした演出が可能です。位置とサイズは画面サイズに依存しないvw/vh単位で同期されるため、異なる環境のプレイヤー間でも見え方が近くなります。</p>
+        </div>
+      </div>
+    </section>
+
     <!-- ===== セクション8: VNステージ高さ設定 ===== -->
     <section id="height" class="guide-section fade-up">
       <div class="guide-section-header">
@@ -464,6 +510,7 @@
             <li><strong>↺</strong>: 位置をリセット</li>
             <li><strong>ドラッグ&ドロップ</strong>: 登場中のキャラクターアイコンをドラッグして、立ち位置の順番を入れ替え可能</li>
           </ul>
+          <p class="guide-note">v1.37以降は「移動開始」ボタンで立ち絵を画面上の好きな位置にフリードラッグできます。詳しくは<a href="#free-layout">立ち絵の自由配置・リサイズ</a>を参照。</p>
         </div>
         <div class="guide-image-card">
           <img src="assets/vn-drag-position.png" alt="立ち位置のドラッグ操作">
@@ -484,6 +531,8 @@
         <li>👤 アドバンスモードの部屋では「自分のコマ」ボタンが表示され、選択中キャラを自分のコマとして設定できます</li>
         <li>🎨 立ち絵サイズはキャラごとに保存されるので、セッションをまたいでも維持されます</li>
         <li>📐 VNステージ高さは「めいっぱい使いたい人」向けに100%まで拡張可能</li>
+        <li>↩️ オプションの「ホットバーを初期位置に戻す」「VN UIを初期位置に戻す」ボタンで、パネル配置をリセット可能 <span class="guide-section-badge">v1.37</span></li>
+        <li>📐 立ち絵の位置・サイズ・重なり順は他プレイヤーとリアルタイム同期 <span class="guide-section-badge">v1.37</span></li>
       </ul>
     </section>
 
