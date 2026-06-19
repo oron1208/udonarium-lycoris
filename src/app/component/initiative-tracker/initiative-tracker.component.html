@@ -1,0 +1,43 @@
+<div class="initiative-tracker" *ngIf="isCombatActive">
+  <div class="tracker-bar" [class.collapsed]="isCollapsed">
+    <!-- ヘッダー -->
+    <div class="tracker-header">
+      <div class="round-display">
+        <span class="round-icon">⚔️</span>
+        <span class="round-num">R{{ currentRound }}</span>
+      </div>
+      <button class="collapse-btn" (click)="toggleCollapse()">
+        <span *ngIf="!isCollapsed">▲</span>
+        <span *ngIf="isCollapsed">▼</span>
+      </button>
+    </div>
+
+    <!-- キャラクター一覧 -->
+    <div class="tracker-list" *ngIf="!isCollapsed">
+      <div
+        *ngFor="let entry of getVisibleEntries(); let i = index; trackBy: trackById"
+        class="tracker-entry"
+        [class.active]="i === currentTurnIndex"
+        [class.hidden]="entry.isHidden"
+      >
+        <div class="entry-portrait">
+          <img *ngIf="getCharacterIcon(entry.identifier)" [src]="getCharacterIcon(entry.identifier) | safe: 'resourceUrl'" [alt]="entry.name">
+          <div class="entry-portrait-placeholder" *ngIf="!getCharacterIcon(entry.identifier)">{{ entry.name.charAt(0) }}</div>
+        </div>
+        <div class="entry-info">
+          <div class="entry-name">{{ entry.name }}</div>
+          <div class="entry-init">Init: {{ entry.initiative }}</div>
+        </div>
+        <div class="entry-indicator" *ngIf="i === currentTurnIndex">
+          <span class="turn-marker">▶</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- コントロール -->
+    <div class="tracker-controls" *ngIf="!isCollapsed && isGm">
+      <button class="ctrl-btn prev" (click)="prevTurn()" title="前のターン">◀</button>
+      <button class="ctrl-btn next" (click)="nextTurn()" title="次のターン">▶</button>
+    </div>
+  </div>
+</div>

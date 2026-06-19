@@ -83,7 +83,7 @@ export class ChatMessageService {
   }
 
   // システムメッセージ専用
-  sendSystemMessage(chatTab: ChatTab, text: string, color?: string): ChatMessage {
+  sendSystemMessage(chatTab: ChatTab, text: string, color?: string, isSecret: boolean = false): ChatMessage {
     if (!chatTab) return null;
     let chatMessage: ChatMessageContext = {
       from: Network.peerContext.userId,
@@ -91,7 +91,7 @@ export class ChatMessageService {
       name: 'システムメッセージ',
       imageIdentifier: '',
       timestamp: this.calcTimeStamp(chatTab),
-      tag: 'system',
+      tag: isSecret ? 'secret' : 'system',
       text: text,
       imagePos: -1,
       messColor: color || '#006633',

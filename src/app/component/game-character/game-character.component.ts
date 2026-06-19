@@ -17,8 +17,10 @@ import { GameObject } from '@udonarium/core/synchronize-object/game-object';
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ObjectNode } from '@udonarium/core/synchronize-object/object-node';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
+import { ChatTabList } from '@udonarium/chat-tab-list';
 import { EventSystem, Network } from '@udonarium/core/system';
 import { GameCharacter } from '@udonarium/game-character';
+import { GameTable } from '@udonarium/game-table';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
 import { ChatPaletteComponent } from 'component/chat-palette/chat-palette.component';
 import { GameCharacterSheetComponent } from 'component/game-character-sheet/game-character-sheet.component';
@@ -27,6 +29,7 @@ import { MovableOption } from 'directive/movable.directive';
 import { RotableOption } from 'directive/rotable.directive';
 import { ContextMenuAction, ContextMenuSeparator, ContextMenuService } from 'service/context-menu.service';
 import { PanelOption, PanelService } from 'service/panel.service';
+import { InitiativeDiceRollerComponent } from 'component/initiative-dice-roller/initiative-dice-roller.component';
 import { PointerDeviceService } from 'service/pointer-device.service';
 import { GmModeService } from 'service/gm-mode.service';
 import { RemoteControllerComponent } from 'component/remote-controller/remote-controller.component';
@@ -35,6 +38,8 @@ import { findStatusMarkerDefinition, parseStatusMarkerIds, StatusMarkerDefinitio
 import { TabletopService } from 'service/tabletop.service';
 import { TabletopUndoService } from 'service/tabletop-undo.service';
 import { TabletopSelectionService } from 'service/tabletop-selection.service';
+import { InitiativeService } from 'service/initiative.service';
+import { ChatMessageService } from 'service/chat-message.service';
 
 @Component({
   selector: 'game-character',
@@ -70,6 +75,10 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
   @ViewChild('root') rootElementRef: ElementRef<HTMLElement>;
 
   get isLock(): boolean { return this.gameCharacter.isLock; }
+  get isCurrentCombatTurn(): boolean {
+    return this.initiativeService.isCombatActive &&
+      this.initiativeService.getCurrentTurnIdentifier() === this.gameCharacter.identifier;
+  }
   set isLock(isLock: boolean) { this.gameCharacter.isLock = isLock; }
 
   get name(): string { return this.gameCharacter.name; }
@@ -181,6 +190,8 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
     private tabletopService: TabletopService,
     private tabletopUndoService: TabletopUndoService,
     private tabletopSelectionService: TabletopSelectionService,
+    private initiativeService: InitiativeService,
+    private chatMessageService: ChatMessageService,
   ) { }
 
   ngOnChanges() {
@@ -215,6 +226,10 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
         let object = ObjectStore.instance.get(event.data.identifier);
         if (!this.gameCharacter || !object) return;
         if (this.gameCharacter === object || (object instanceof ObjectNode && this.gameCharacter.contains(object))) {
+          this.changeDetector.markForCheck();
+        }
+        // GameTableの戦闘状態変更時も再描画（イニシアチブ同期用）
+        if (object instanceof GameTable) {
           this.changeDetector.markForCheck();
         }
       })
@@ -266,6 +281,9 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
         if (objct == this.gameCharacter) {
           this.changeDetector.detectChanges();
         }
+      })
+      .on('COMBAT_STATE_CHANGED', event => {
+        this.changeDetector.markForCheck();
       })
 
       .on('HIGHTLIGHT_TABLETOP_OBJECT', event => {
@@ -509,6 +527,15 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
           }
         ]
       },
+      ...(this.isAdvancedRoom ? [
+        ContextMenuSeparator,
+        {
+          name: '🎲 イニシアチブ', action: null, subActions: [
+            { name: '📋 登録式でロール', action: () => this.rollInitiativeByFormula() },
+            { name: '✏️ 手入力でロール...', action: () => this.openInitiativeDiceRoller([this.gameCharacter]) },
+          ]
+        },
+      ] : []),
     ], this.name);
   }
 
@@ -677,6 +704,15 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
       {
         name: 'コピーを作る', action: () => this.cloneBatchCharacters(characters)
       },
+      ContextMenuSeparator,
+      ...(this.isAdvancedRoom ? [
+      {
+        name: '🎲 イニシアチブロール', action: null, subActions: [
+          { name: '📋 登録式でロール', action: () => this.rollInitiativeBatchByFormula(characters) },
+          { name: '✏️ 手入力でロール...', action: () => this.openInitiativeDiceRoller(characters) },
+        ]
+      },
+      ] : []),
     ];
 
     this.contextMenuService.open(position, actions, `${characters.length}体選択中`);
@@ -731,6 +767,176 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
     SoundEffect.play(sound);
     EventSystem.trigger('UPDATE_INVENTORY', null);
     this.changeDetector.markForCheck();
+  }
+
+  private rollInitiativeBatch(characters: GameCharacter[], diceSize: number) {
+    const visibleResults: string[] = [];
+    const gmResults: string[] = [];
+    for (const character of characters) {
+      const formulaResult = this.initiativeService.rollInitiativeFormula(character);
+      let roll: number;
+      let detail: string;
+      if (formulaResult) {
+        roll = formulaResult.value;
+        detail = formulaResult.detail;
+      } else {
+        roll = Math.floor(Math.random() * diceSize) + 1;
+        detail = `1d${diceSize}`;
+      }
+      character.initiative = roll;
+      const isGmOnly = (character.visibility || 'public') === 'gmOnly';
+      const line = `${character.name}: ${roll} (${detail})`;
+      if (isGmOnly) {
+        gmResults.push(line);
+      } else {
+        visibleResults.push(line);
+      }
+    }
+    this.updateBatchCharacters(characters, PresetSound.diceRoll1);
+    EventSystem.trigger('COMBAT_STATE_CHANGED', {});
+
+    // チャットログに送信
+    const diceNotation = `1d${diceSize}`;
+    if (visibleResults.length > 0) {
+      this.sendInitiativeChat(`🎲 イニシアチブロール（${diceNotation}）`, visibleResults, false);
+    }
+    if (gmResults.length > 0) {
+      this.sendInitiativeChat(`🎲 イニシアチブロール（${diceNotation}）【GM限定】`, gmResults, true);
+    }
+  }
+
+  private promptInitiativeBatch(characters: GameCharacter[]) {
+    const input = prompt(`${characters.length}体のキャラクターのイニシアチブを設定\nカンマ区切りで入力してください\n例: 15,12,8,3`);
+    if (!input) return;
+    const values = input.split(',').map(v => parseInt(v.trim())).filter(v => !isNaN(v));
+    if (values.length === 0) return;
+    const visibleResults: string[] = [];
+    const gmResults: string[] = [];
+    for (let i = 0; i < characters.length && i < values.length; i++) {
+      characters[i].initiative = values[i];
+      const isGmOnly = (characters[i].visibility || 'public') === 'gmOnly';
+      const line = `${characters[i].name}: ${values[i]}`;
+      if (isGmOnly) {
+        gmResults.push(line);
+      } else {
+        visibleResults.push(line);
+      }
+    }
+    this.updateBatchCharacters(characters, PresetSound.sweep);
+    EventSystem.trigger('COMBAT_STATE_CHANGED', {});
+
+    if (visibleResults.length > 0) {
+      this.sendInitiativeChat('✏️ イニシアチブ設定', visibleResults, false);
+    }
+    if (gmResults.length > 0) {
+      this.sendInitiativeChat('✏️ イニシアチブ設定【GM限定】', gmResults, true);
+    }
+  }
+
+  private openInitiativeDiceRoller(characters: GameCharacter[]) {
+    const option: PanelOption = { width: 400, height: 220, left: 200, top: 200, title: 'イニシアチブロール' };
+    const component = this.panelService.open<InitiativeDiceRollerComponent>(InitiativeDiceRollerComponent, option);
+    if (component) {
+      component.characters = characters;
+    }
+  }
+
+  private sendInitiativeChat(title: string, lines: string[], secret: boolean) {
+    const text = `${title}\n${lines.join(' / ')}`;
+    const chatTabList = ObjectStore.instance.get<ChatTabList>('ChatTabList');
+    const sysTab = chatTabList ? chatTabList.systemMessageTab : null;
+    this.chatMessageService.sendSystemMessage(sysTab, text, '#4B0082', secret);
+  }
+
+  private rollInitiativeSingle(diceSize: number) {
+    const char = this.gameCharacter;
+    const formulaResult = this.initiativeService.rollInitiativeFormula(char);
+    let roll: number;
+    let detail: string;
+    if (formulaResult) {
+      roll = formulaResult.value;
+      detail = formulaResult.detail;
+    } else {
+      roll = Math.floor(Math.random() * diceSize) + 1;
+      detail = `1d${diceSize}`;
+    }
+    char.initiative = roll;
+    char.update();
+    SoundEffect.play(PresetSound.diceRoll1);
+    EventSystem.trigger('COMBAT_STATE_CHANGED', {});
+
+    const isGmOnly = (char.visibility || 'public') === 'gmOnly';
+    const line = `${char.name}: ${roll} (${detail})`;
+    const title = `🎲 イニシアチブロール`;
+    this.sendInitiativeChat(isGmOnly ? `${title}【GM限定】` : title, [line], isGmOnly);
+  }
+
+  private rollInitiativeByFormula() {
+    const char = this.gameCharacter;
+    const formulaResult = this.initiativeService.rollInitiativeFormula(char);
+    if (!formulaResult) {
+      const input = prompt(`${char.name}のイニシアチブ計算式が登録されていません。\n共通データの「initiativeFormula」に式を入力してください。\n例: 1d20+{敏捷度}`);
+      return;
+    }
+    char.initiative = formulaResult.value;
+    char.update();
+    SoundEffect.play(PresetSound.diceRoll1);
+    EventSystem.trigger('COMBAT_STATE_CHANGED', {});
+
+    const isGmOnly = (char.visibility || 'public') === 'gmOnly';
+    const line = `${char.name}: ${formulaResult.value} (${formulaResult.detail})`;
+    const title = `🎲 イニシアチブロール（登録式）`;
+    this.sendInitiativeChat(isGmOnly ? `${title}【GM限定】` : title, [line], isGmOnly);
+  }
+
+  private rollInitiativeBatchByFormula(characters: GameCharacter[]) {
+    const visibleResults: string[] = [];
+    const gmResults: string[] = [];
+    let hasNoFormula = false;
+    for (const character of characters) {
+      const formulaResult = this.initiativeService.rollInitiativeFormula(character);
+      if (!formulaResult) {
+        hasNoFormula = true;
+        continue;
+      }
+      character.initiative = formulaResult.value;
+      const isGmOnly = (character.visibility || 'public') === 'gmOnly';
+      const line = `${character.name}: ${formulaResult.value} (${formulaResult.detail})`;
+      if (isGmOnly) {
+        gmResults.push(line);
+      } else {
+        visibleResults.push(line);
+      }
+    }
+    this.updateBatchCharacters(characters, PresetSound.diceRoll1);
+    EventSystem.trigger('COMBAT_STATE_CHANGED', {});
+
+    if (visibleResults.length > 0) {
+      this.sendInitiativeChat('🎲 イニシアチブロール（登録式）', visibleResults, false);
+    }
+    if (gmResults.length > 0) {
+      this.sendInitiativeChat('🎲 イニシアチブロール（登録式）【GM限定】', gmResults, true);
+    }
+    if (hasNoFormula) {
+      alert('計算式が未登録のコマがあります。\n共通データの「initiativeFormula」に式を入力してください。');
+    }
+  }
+
+  private promptInitiativeSingle() {
+    const char = this.gameCharacter;
+    const input = prompt(`${char.name}のイニシアチブを入力`);
+    if (!input) return;
+    const value = parseInt(input.trim());
+    if (isNaN(value)) return;
+    char.initiative = value;
+    char.update();
+    SoundEffect.play(PresetSound.sweep);
+    EventSystem.trigger('COMBAT_STATE_CHANGED', {});
+
+    const isGmOnly = (char.visibility || 'public') === 'gmOnly';
+    const line = `${char.name}: ${value}`;
+    const title = '✏️ イニシアチブ設定';
+    this.sendInitiativeChat(isGmOnly ? `${title}【GM限定】` : title, [line], isGmOnly);
   }
 
   private cloneBatchCharacters(characters: GameCharacter[]) {

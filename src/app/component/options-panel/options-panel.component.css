@@ -228,3 +228,31 @@
 .operation-help-body li {
   margin-bottom: 2px;
 }
+
+/* combat toggle */
+.option-toggle.combat {
+  background: #2a0a0a;
+  color: #ff6666;
+  border-color: #8B0000;
+}
+.option-toggle.combat.on {
+  background: #8B0000;
+  color: #fff;
+  border-color: #ff4444;
+  animation: combat-pulse 2s ease-in-out infinite;
+}
+
+@keyframes combat-pulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(255, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 12px rgba(255, 68, 68, 0.7); }
+}
+
+.compact-btn.combat {
+  background: rgba(139, 0, 0, 0.3);
+  color: #ff9999;
+}
+.compact-btn.combat.on {
+  background: #8B0000;
+  color: #fff;
+  animation: combat-pulse 2s ease-in-out infinite;
+}

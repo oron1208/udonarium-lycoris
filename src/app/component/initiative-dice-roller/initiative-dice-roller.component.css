@@ -1,0 +1,151 @@
+.init-dice-roller {
+  padding: 10px;
+  background: #f5e6d3;
+  border-radius: 8px;
+  color: #333;
+  font-size: 13px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.title {
+  font-weight: 700;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.target-names {
+  font-size: 11px;
+  color: #888;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ダイスボタン */
+.dice-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.dice-btn {
+  padding: 6px 10px;
+  background: #d4a76a;
+  border: 1px solid #8B6914;
+  border-radius: 5px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  min-width: 38px;
+  transition: all 0.1s;
+}
+
+.dice-btn:hover {
+  background: #c4955a;
+}
+
+.dice-btn:active {
+  transform: scale(0.95);
+}
+
+.util-btn {
+  padding: 6px 8px;
+  background: #e0d0b0;
+  border: 1px solid #998866;
+  border-radius: 5px;
+  color: #555;
+  font-size: 13px;
+  cursor: pointer;
+  min-width: 32px;
+}
+
+.util-btn:hover {
+  background: #d0c0a0;
+}
+
+.util-btn.backspace {
+  background: #ccc;
+}
+
+.util-btn.clear {
+  background: #cc6666;
+  color: #fff;
+  border-color: #aa4444;
+}
+
+/* 入力欄 */
+.expression-display {
+  margin-bottom: 8px;
+}
+
+.expression-input {
+  width: 100%;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid #998866;
+  border-radius: 5px;
+  color: #333;
+  font-size: 14px;
+  font-family: monospace;
+  box-sizing: border-box;
+}
+
+.expression-input:focus {
+  outline: none;
+  border-color: #8B6914;
+  box-shadow: 0 0 4px rgba(139, 105, 20, 0.3);
+}
+
+/* アクション */
+.actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.action-btn {
+  padding: 6px 16px;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid;
+}
+
+.action-btn.cancel {
+  background: #e0d0b0;
+  border-color: #998866;
+  color: #666;
+}
+
+.action-btn.roll {
+  background: #8B4513;
+  border-color: #5a2d0a;
+  color: #fff;
+}
+
+.action-btn.roll:disabled {
+  background: #ccc;
+  border-color: #999;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.action-btn.roll:not(:disabled):hover {
+  background: #a0522d;
+}
+
+.hint {
+  text-align: right;
+  font-size: 10px;
+  color: #aaa;
+  margin-top: 4px;
+}

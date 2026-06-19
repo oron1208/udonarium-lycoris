@@ -85,6 +85,9 @@ import { LightingLayerComponent } from 'component/lighting-layer/lighting-layer.
 import { LightingPanelComponent } from 'component/lighting-panel/lighting-panel.component';
 import { DiceCutinComponent } from 'component/dice-cutin/dice-cutin.component';
 import { OptionsPanelComponent } from 'component/options-panel/options-panel.component';
+import { InitiativeTrackerComponent } from 'component/initiative-tracker/initiative-tracker.component';
+import { InitiativePanelComponent } from 'component/initiative-panel/initiative-panel.component';
+import { InitiativeDiceRollerComponent } from 'component/initiative-dice-roller/initiative-dice-roller.component';
 
 import { AlarmMenuComponent } from 'component/alarm-menu/alarm-menu.component';
 import { AlarmWindowComponent } from 'component/alarm-window/alarm-window.component';
@@ -160,6 +163,9 @@ import { AppComponent } from './app.component';
     LightingPanelComponent,
     DiceCutinComponent,
     OptionsPanelComponent,
+    InitiativeTrackerComponent,
+    InitiativePanelComponent,
+    InitiativeDiceRollerComponent,
 
     AlarmMenuComponent,
     AlarmWindowComponent,

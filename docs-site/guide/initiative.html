@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
+<title>イニシアチブ・戦闘管理 操作説明 - ユドナリウムリコリス</title>
+<meta name="description" content="ユドナリウムリコリスのイニシアチブ・戦闘管理機能の使い方を解説。ターン管理、ラウンドトラッカー、ダイスロール、計算式登録。">
+<link rel="canonical" href="https://udonarium-lycoris.ddns.net/docs/guide/initiative.html">
+<meta property="og:title" content="イニシアチブ・戦闘管理 操作説明 - ユドナリウムリコリス">
+<meta property="og:description" content="イニシアチブ順のターン管理、ラウンドトラッカー、ダイスロール機能。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+
+<!-- 背景固定レイヤー -->
+<div class="bg-fixed">
+  <div class="bg-layer bg-layer-1"></div>
+  <div class="bg-layer bg-layer-2"></div>
+</div>
+
+<!-- パーティクル -->
+<canvas id="particles"></canvas>
+
+<!-- ナビ -->
+<nav class="nav scrolled">
+  <div class="nav-inner">
+    <a href="../" class="nav-logo"><span class="logo-icon">◈</span> ユドナリウムリコリス</a>
+    <div class="nav-links">
+      <a href="../#about">概要</a>
+      <a href="../#connect">接続先</a>
+      <a href="../#updates">更新履歴</a>
+      <a href="index.html" class="nav-link-github">操作説明</a>
+    </div>
+  </div>
+</nav>
+
+<!-- 目次 -->
+<aside class="guide-toc fade-up" id="toc">
+  <details open>
+    <summary>📑 目次</summary>
+    <ol>
+      <li><a href="#overview">イニシアチブ・戦闘管理とは</a></li>
+      <li><a href="#requirement">アドバンスモードが必要</a></li>
+      <li><a href="#panel">戦闘管理パネルを開く</a></li>
+      <li><a href="#start">戦闘を開始する</a></li>
+      <li><a href="#turn">ターンを進める</a></li>
+      <li><a href="#tracker">ラウンドトラッカー</a></li>
+      <li><a href="#marker">現在ターンのコママーカー</a></li>
+      <li><a href="#initiative-value">イニシアチブ値の設定</a></li>
+      <li><a href="#dice-roll">イニシアチブロール</a></li>
+      <li><a href="#formula">計算式の登録</a></li>
+      <li><a href="#manual-roll">手入力でロール</a></li>
+      <li><a href="#gm-only">GMだけに見せるコマ</a></li>
+      <li><a href="#tips">Tips</a></li>
+    </ol>
+  </details>
+</aside>
+
+<!-- 記事本文 -->
+<article class="section guide-article" style="padding-top: 100px;">
+  <div class="container">
+
+    <!-- ページヘッダー -->
+    <div class="guide-page-header fade-up">
+      <span class="section-tag">GUIDE</span>
+      <h2 class="section-title">⚔️ イニシアチブ・戦闘管理</h2>
+      <p class="section-sub">イニシアチブ順のターン管理で、戦闘をスムーズに進行できます。</p>
+    </div>
+
+    <!-- セクション1: 概要 -->
+    <section id="overview" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">01</span>
+        <h3>イニシアチブ・戦闘管理とは</h3>
+      </div>
+      <p>TRPGの戦闘で「誰が次に行動できるか」を管理する機能です。キャラクターごとに<strong>イニシアチブ値</strong>を設定し、その順番でターンを進めます。</p>
+      <ul class="guide-feature-list">
+        <li><span class="guide-feature-icon">⚔️</span>ワンクリックで戦闘開始・終了</li>
+        <li><span class="guide-feature-icon">📋</span>イニシアチブ順の自動ソート</li>
+        <li><span class="guide-feature-icon">🔄</span>ターン進行ボタンで次のキャラへ</li>
+        <li><span class="guide-feature-icon">📊</span>画面上部にラウンドトラッカー表示</li>
+        <li><span class="guide-feature-icon">✨</span>現在ターンのコマを金色にマーク</li>
+        <li><span class="guide-feature-icon">🎲</span>ダイスロールでイニシアチブ値を自動決定</li>
+        <li><span class="guide-feature-icon">📝</span>計算式の登録で複雑なイニシアチブも対応</li>
+        <li><span class="guide-feature-icon">🔒</span>GM非公開コマの秘密管理</li>
+      </ul>
+    </section>
+
+    <!-- セクション2: アドバンスモード -->
+    <section id="requirement" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">02</span>
+        <h3>アドバンスモードが必要</h3>
+      </div>
+      <div class="guide-callout callout-tip">
+        <div class="callout-icon">⚠️</div>
+        <div class="callout-body">
+          <p>イニシアチブ・戦闘管理機能は<strong>アドバンスモード</strong>の部屋でのみ使用できます。スタンダードモードの部屋ではサイドメニューに表示されません。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- セクション3: パネルを開く -->
+    <section id="panel" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">03</span>
+        <h3>戦闘管理パネルを開く</h3>
+      </div>
+      <div class="guide-steps">
+        <ol>
+          <li>画面左のサイドメニューから「<strong>戦闘管理</strong>」ボタンをクリック</li>
+          <li>戦闘管理パネルが開く</li>
+        </ol>
+        <p class="guide-note">パネルが開いていない時は、ボタンに「戦闘管理」と表示されます。開いている時は「戦闘管理中」に切り替わります。</p>
+      </div>
+    </section>
+
+    <!-- セクション4: 戦闘開始 -->
+    <section id="start" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">04</span>
+        <h3>戦闘を開始する</h3>
+      </div>
+      <div class="guide-steps">
+        <ol>
+          <li>各キャラクターのイニシアチブ値を設定しておく（共通データの <code>initiative</code>）</li>
+          <li>戦闘管理パネルの「<strong>戦闘開始</strong>」ボタンをクリック</li>
+          <li>テーブル上の全キャラクターがイニシアチブ降順で並び、戦闘モードに入る</li>
+        </ol>
+        <p>戦闘が始まると、画面上部にラウンドトラッカーが表示され、現在のターンのキャラクターが金色に光ります。</p>
+        <p class="guide-note">戦闘を終了する時は「<strong>戦闘終了</strong>」ボタンをクリックします。</p>
+      </div>
+    </section>
+
+    <!-- セクション5: ターン進行 -->
+    <section id="turn" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">05</span>
+        <h3>ターンを進める</h3>
+      </div>
+      <div class="guide-steps">
+        <p>戦闘管理パネル内のターン制御ボタンで進行します（<strong>GM限定</strong>）。</p>
+        <ul>
+          <li><strong>◀ 前ターン</strong>: 前のキャラクターのターンに戻る</li>
+          <li><strong>次ターン ▶</strong>: 次のキャラクターのターンに進む</li>
+        </ul>
+        <p>全員のターンが終わると、自動的にラウンド数が+1され、先頭のキャラクターに戻ります。</p>
+        <p>ターンが切り替わるたび、システムメッセージでチャットに通知されます。</p>
+      </div>
+    </section>
+
+    <!-- セクション6: ラウンドトラッカー -->
+    <section id="tracker" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">06</span>
+        <h3>ラウンドトラッカー</h3>
+      </div>
+      <p>戦闘中、画面上部中央に<strong>ラウンドトラッカー</strong>が表示されます。イニシアチブ順にキャラクターが並び、現在のターンのキャラクターがハイライトされます。</p>
+      <ul>
+        <li>現在の<strong>ラウンド数</strong>が表示される</li>
+        <li>各キャラクターの<strong>立ち絵・名前・イニシアチブ値</strong>が表示</li>
+        <li>現在ターンのキャラクターが<strong>金色にハイライト</strong></li>
+        <li>折りたたみボタンで最小化可能</li>
+      </ul>
+      <div class="guide-callout callout-tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <p>トラッカーは全プレイヤーに同期表示されます。GM非公開コマはPLには表示されません。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- セクション7: コママーカー -->
+    <section id="marker" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">07</span>
+        <h3>現在ターンのコママーカー</h3>
+      </div>
+      <p>戦闘中、現在ターンのキャラクターのコマが<strong>金色の枠で光り、上部に矢印マーカー</strong>が表示されます。盤面上で誰のターンか一目でわかります。</p>
+      <p>このマーカーは全プレイヤーに同期表示されます。</p>
+    </section>
+
+    <!-- セクション8: イニシアチブ値 -->
+    <section id="initiative-value" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">08</span>
+        <h3>イニシアチブ値の設定</h3>
+      </div>
+      <p>キャラクターの<strong>共通データ</strong>にある <code>initiative</code> フィールドに値を入力します。</p>
+      <div class="guide-steps">
+        <ul>
+          <li>キャラクターシートのポップアップで直接編集可能</li>
+          <li>戦闘管理パネルのリストからも直接編集可能</li>
+          <li>値を変更すると、戦闘中は自動的に順序が再ソートされる</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- セクション9: ダイスロール -->
+    <section id="dice-roll" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">09</span>
+        <h3>イニシアチブロール</h3>
+      </div>
+      <p>コマを右クリック（単体・複数選択対応）して「<strong>🎲 イニシアチブ</strong>」からロールできます。</p>
+
+      <h4 class="guide-subhead">📋 登録式でロール</h4>
+      <p>キャラクターに計算式が登録されている場合、その式でイニシアチブを自動計算します。詳しくは<a href="#formula">計算式の登録</a>を参照。</p>
+
+      <h4 class="guide-subhead">✏️ 手入力でロール</h4>
+      <p>ダイスローラーパネルが開き、ダイスボタンで式を組み立ててロールできます。詳しくは<a href="#manual-roll">手入力でロール</a>を参照。</p>
+
+      <div class="guide-callout callout-tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <p>ロール結果はチャットログに送信されます。GM非公開コマの結果はシークレット送信され、GMにのみ表示されます。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- セクション10: 計算式の登録 -->
+    <section id="formula" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">10</span>
+        <h3>計算式の登録 <span class="guide-section-badge">便利機能</span></h3>
+      </div>
+      <p>キャラクターの共通データの <code>initiativeFormula</code> に計算式を登録しておくと、各ゲームシステムに合わせたイニシアチブ計算ができます。</p>
+
+      <h4 class="guide-subhead">式の書き方</h4>
+      <ul>
+        <li><strong>ダイス式</strong>: <code>1d20</code>, <code>2d6+3</code>, <code>3d6</code></li>
+        <li><strong>固定値</strong>: <code>15</code>, <code>10</code></li>
+        <li><strong>ステータス参照</strong>: <code>{パラメータ名}</code> でキャラクターのステータスを参照</li>
+        <li><strong>計算式</strong>: <code>1d20+{敏捷度}</code>, <code>2d6+{敏捷度}+{冒険者レベル}</code></li>
+      </ul>
+
+      <h4 class="guide-subhead">対応するステータス</h4>
+      <p>共通データ・詳細データの両方から検索します。<code>{敏捷度}</code> や <code>{器用度}</code> など、キャラクターシートにある項目名をそのまま使えます。</p>
+
+      <h4 class="guide-subhead">式の例</h4>
+      <ul>
+        <li><strong>D&D 5e</strong>: <code>1d20+{敏捷ボーナス}</code></li>
+        <li><strong>ソードワールド</strong>: <code>2d6+{敏捷度}+{冒険者レベル}</code></li>
+        <li><strong>クトゥルフ</strong>: <code>1d100</code></li>
+        <li><strong>固定値</strong>: <code>15</code></li>
+      </ul>
+    </section>
+
+    <!-- セクション11: 手入力ロール -->
+    <section id="manual-roll" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">11</span>
+        <h3>手入力でロール</h3>
+      </div>
+      <p>「✏️ 手入力でロール...」を選ぶと、<strong>ダイスローラーパネル</strong>が開きます。</p>
+      <ul>
+        <li><strong>d4 ～ d100</strong>のダイスボタンをクリックして式を組み立て</li>
+        <li><strong>+ / −</strong> ボタンで修正値を追加</li>
+        <li>入力欄に直接式を入力することも可能（<code>{パラメータ名}</code>対応）</li>
+        <li><strong>Enter</strong>または<strong>ロール</strong>ボタンで全コマを一括ロール</li>
+        <li>ロール後、パネルは自動的に閉じる</li>
+      </ul>
+      <div class="guide-callout callout-tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <p>複数選択したコマに対して一括でロールできます。各コマごとに個別にダイスが振られ、結果がチャットログにまとめて表示されます。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- セクション12: GM非公開コマ -->
+    <section id="gm-only" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">12</span>
+        <h3>GMだけに見せるコマ</h3>
+      </div>
+      <p>「GMだけに見せる」設定のコマは、戦闘管理でも秘密として扱われます。</p>
+      <ul>
+        <li><strong>ラウンドトラッカー</strong>: PLには非表示（GMには表示）</li>
+        <li><strong>コママーカー</strong>: PLには表示されない</li>
+        <li><strong>システムメッセージ</strong>: 「???のターン」と表示</li>
+        <li><strong>ロール結果</strong>: シークレット送信でGMにのみ表示</li>
+      </ul>
+      <div class="guide-callout callout-tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <p>PLには「誰が何をしたか」が一切漏れません。隠し敵やNPCの戦闘参加も安全です。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tips -->
+    <section id="tips" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">13</span>
+        <h3>Tips</h3>
+      </div>
+      <ul class="guide-tips-list">
+        <li>🔄 イニシアチブ値を変更すると、戦闘中は自動的に順序が再ソートされる</li>
+        <li>📋 戦闘管理パネルのリストから直接イニシアチブ値を編集できる</li>
+        <li>✕ 戦闘管理パネルの✕ボタンで特定のキャラクターを戦闘から除外できる</li>
+        <li>🎲 複数選択 → 右クリックで一括イニシアチブロール</li>
+        <li>📝 計算式を登録しておけば、毎回同じルールで自動計算</li>
+        <li>🔒 GM非公開コマはPLに一切情報が漏れない</li>
+        <li>💬 ターン切り替え時のシステムメッセージで進行がわかりやすい</li>
+      </ul>
+    </section>
+
+    <!-- ナビ -->
+    <div class="guide-nav fade-up">
+      <a href="index.html" class="guide-nav-back">← 操作説明一覧に戻る</a>
+    </div>
+  </div>
+</article>
+
+<!-- フッター -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand"><span class="logo-icon">◈</span> ユドナリウムリコリス</div>
+      <div class="footer-links">
+        <a href="https://cylinder-lily.com" target="_blank">リリィ</a>
+        <a href="https://github.com/TK11235/udonarium" target="_blank">オリジナル版</a>
+        <a href="https://github.com/oron1208/udonarium-lycoris" target="_blank">GitHub</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 Udonarium Lycoris.</div>
+    </div>
+  </div>
+</footer>
+
+<script src="../main.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // フェードイン
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+  // 画像ライトボックス
+  const lightbox = document.createElement('div');
+  lightbox.className = 'guide-lightbox';
+  lightbox.innerHTML = '<img src="" alt="">';
+  document.body.appendChild(lightbox);
+  lightbox.addEventListener('click', () => lightbox.classList.remove('active'));
+
+  document.querySelectorAll('.guide-image-card img').forEach(img => {
+    img.style.cursor = 'zoom-in';
+    img.addEventListener('click', () => {
+      lightbox.querySelector('img').src = img.src;
+      lightbox.classList.add('active');
+    });
+  });
+});
+</script>
+</body>
+</html>

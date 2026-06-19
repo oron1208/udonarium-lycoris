@@ -1,0 +1,34 @@
+<div class="init-dice-roller">
+  <div class="header">
+    <span class="title">🎲 イニシアチブロール</span>
+    <span class="target-names">{{ characterNames }}</span>
+  </div>
+
+  <!-- ダイスボタン -->
+  <div class="dice-buttons">
+    <button *ngFor="let d of diceButtons" class="dice-btn" (click)="addDice(d.sides)">{{ d.label }}</button>
+    <button class="util-btn" (click)="addText('+')" title="足す">+</button>
+    <button class="util-btn" (click)="addText('-')" title="引く">−</button>
+    <button class="util-btn backspace" (click)="backspace()" title="一文字削る">⌫</button>
+    <button class="util-btn clear" (click)="clearExpression()" title="クリア">✕</button>
+  </div>
+
+  <!-- 入力欄 -->
+  <div class="expression-display">
+    <input
+      type="text"
+      class="expression-input"
+      [(ngModel)]="diceExpression"
+      (keydown.enter)="roll()"
+      placeholder="ダイスボタンで式を組み立て or 直接入力"
+    >
+  </div>
+
+  <!-- アクションボタン -->
+  <div class="actions">
+    <button class="action-btn cancel" (click)="cancel()">キャンセル</button>
+    <button class="action-btn roll" (click)="roll()" [disabled]="!diceExpression.trim()">ロール</button>
+  </div>
+
+  <div class="hint">Enter でロール / &#123;パラメータ名&#125; でステータス参照可能</div>
+</div>

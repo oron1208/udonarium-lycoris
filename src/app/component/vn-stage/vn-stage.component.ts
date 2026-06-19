@@ -1263,6 +1263,8 @@ export class VnStageComponent implements OnInit, OnDestroy {
   }
   trackByCharacterId(index: number, actor: VnActor): string { return actor.characterId; }
 
+  trackByIndexItem(index: number, item: { name: string; line: number }): string { return item.line + ':' + item.name; }
+
   // Drag & drop reordering
   private dragIndex: number = -1;
   private dropIndex: number = -1;

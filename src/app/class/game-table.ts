@@ -59,6 +59,13 @@ export class GameTable extends ObjectNode {
   @SyncVar() diceCutinEnabled: boolean = true;
   @SyncVar() extendedDiceBotEnabled: boolean = false;
 
+  // イニシアチブ・戦闘管理
+  @SyncVar() combatActive: boolean = false;
+  @SyncVar() combatRound: number = 1;
+  @SyncVar() combatTurnIndex: number = 0;
+  @SyncVar() combatOrder: string = '[]'; // JSON array of character identifiers
+  @SyncVar() combatBgmIdentifier: string = '';
+
   gridClipRect: {top: number, right: number, bottom: number, left: number} = null;
 
   get terrains(): Terrain[] {

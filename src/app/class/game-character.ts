@@ -115,6 +115,8 @@ export class GameCharacter extends TabletopObject {
 
   get name(): string { return this.getCommonValue('name', ''); }
   get size(): number { return this.getCommonValue('size', 1); }
+  get initiative(): number { return this.getCommonValue('initiative', 0); }
+  get initiativeFormula(): string { return this.getCommonValue('initiativeFormula', ''); }
   get chatPalette(): ChatPalette {
     for (let child of this.children) {
       if (child instanceof ChatPalette) return child;
@@ -124,6 +126,8 @@ export class GameCharacter extends TabletopObject {
 
   set name(value:string) { this.setCommonValue('name', value); }
   set size(value: number) { this.setCommonValue('size', value); }
+  set initiative(value: number) { this.setCommonValue('initiative', value); }
+  set initiativeFormula(value: string) { this.setCommonValue('initiativeFormula', value); }
 
   TestExec() {
     console.log('TestExec');
@@ -158,6 +162,8 @@ export class GameCharacter extends TabletopObject {
     gameCharacter.commonDataElement.appendChild(DataElement.create('name', name, {}, 'name_' + gameCharacter.identifier));
     gameCharacter.commonDataElement.appendChild(DataElement.create('size', 1, {}, 'size_' + gameCharacter.identifier));
     gameCharacter.commonDataElement.appendChild(DataElement.create('altitude', 0, {}, 'altitude_' + gameCharacter.identifier));
+    gameCharacter.commonDataElement.appendChild(DataElement.create('initiative', 0, {}, 'initiative_' + gameCharacter.identifier));
+    gameCharacter.commonDataElement.appendChild(DataElement.create('initiativeFormula', '', {}, 'initiativeFormula_' + gameCharacter.identifier));
 
     if (gameCharacter.imageDataElement.getFirstElementByName('imageIdentifier')) {
       gameCharacter.imageDataElement.getFirstElementByName('imageIdentifier').value = imageIdentifier;
@@ -354,6 +360,22 @@ export class GameCharacter extends TabletopObject {
 
     this.addBuffDataElement();
 
+    // 既存キャラクターにイニシアチブフィールドがなかったら追加（マイグレーション）
+    if (this.commonDataElement) {
+      let initElm = this.commonDataElement.getElementsByName('initiative');
+      if (initElm.length === 0) {
+        this.commonDataElement.appendChild(
+          DataElement.create('initiative', 0, {}, 'initiative_' + this.identifier)
+        );
+      }
+      let formulaElm = this.commonDataElement.getElementsByName('initiativeFormula');
+      if (formulaElm.length === 0) {
+        this.commonDataElement.appendChild(
+          DataElement.create('initiativeFormula', '', {}, 'initiativeFormula_' + this.identifier)
+        );
+      }
+    }
+
     let istachie = this.detailDataElement.getElementsByName('立ち絵位置');
     if( istachie.length == 0 ){
       let testElement: DataElement = DataElement.create('立ち絵位置', '', {}, '立ち絵位置' + this.identifier);
@@ -445,6 +467,8 @@ export class GameCharacter extends TabletopObject {
     let nameElement: DataElement = DataElement.create('name', name, {}, 'name_' + this.identifier);
     let sizeElement: DataElement = DataElement.create('size', size, {}, 'size_' + this.identifier);
     let altitudeElement: DataElement = DataElement.create('altitude', 0, {}, 'altitude_' + this.identifier);
+    let initiativeElement: DataElement = DataElement.create('initiative', 0, {}, 'initiative_' + this.identifier);
+    let initiativeFormulaElement: DataElement = DataElement.create('initiativeFormula', '', {}, 'initiativeFormula_' + this.identifier);
 
     if (this.imageDataElement.getFirstElementByName('imageIdentifier')) {
       this.imageDataElement.getFirstElementByName('imageIdentifier').value = imageIdentifier;
@@ -458,6 +482,8 @@ export class GameCharacter extends TabletopObject {
     this.commonDataElement.appendChild(nameElement);
     this.commonDataElement.appendChild(sizeElement);
     this.commonDataElement.appendChild(altitudeElement);
+    this.commonDataElement.appendChild(initiativeElement);
+    this.commonDataElement.appendChild(initiativeFormulaElement);
 
     this.detailDataElement.appendChild(resourceElement);
     resourceElement.appendChild(hpElement);
@@ -519,6 +545,7 @@ export class GameCharacter extends TabletopObject {
     let nameElement: DataElement = DataElement.create('name', name, {}, 'name_' + this.identifier);
     let sizeElement: DataElement = DataElement.create('size', size, {}, 'size_' + this.identifier);
     let altitudeElement: DataElement = DataElement.create('altitude', 0, {}, 'altitude_' + this.identifier);
+    let initiativeElement: DataElement = DataElement.create('initiative', 0, {}, 'initiative_' + this.identifier);
 
     if (this.imageDataElement.getFirstElementByName('imageIdentifier')) {
       this.imageDataElement.getFirstElementByName('imageIdentifier').value = imageIdentifier;
@@ -531,6 +558,7 @@ export class GameCharacter extends TabletopObject {
     this.commonDataElement.appendChild(nameElement);
     this.commonDataElement.appendChild(sizeElement);
     this.commonDataElement.appendChild(altitudeElement);
+    this.commonDataElement.appendChild(initiativeElement);
 
     this.detailDataElement.appendChild(resourceElement);
     resourceElement.appendChild(hpElement);
@@ -618,6 +646,7 @@ export class GameCharacter extends TabletopObject {
     let nameElement: DataElement = DataElement.create('name', name, {}, 'name_' + this.identifier);
     let sizeElement: DataElement = DataElement.create('size', size, {}, 'size_' + this.identifier);
     let altitudeElement: DataElement = DataElement.create('altitude', 0, {}, 'altitude_' + this.identifier);
+    let initiativeElement: DataElement = DataElement.create('initiative', 0, {}, 'initiative_' + this.identifier);
 
     if (this.imageDataElement.getFirstElementByName('imageIdentifier')) {
       this.imageDataElement.getFirstElementByName('imageIdentifier').value = imageIdentifier;
@@ -630,6 +659,7 @@ export class GameCharacter extends TabletopObject {
     this.commonDataElement.appendChild(nameElement);
     this.commonDataElement.appendChild(sizeElement);
     this.commonDataElement.appendChild(altitudeElement);
+    this.commonDataElement.appendChild(initiativeElement);
 
 //    this.detailDataElement.appendChild(resourceElement);
 //    resourceElement.appendChild(hpElement);

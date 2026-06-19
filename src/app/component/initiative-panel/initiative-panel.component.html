@@ -1,0 +1,126 @@
+<div class="initiative-panel">
+  <!-- 戦闘状態ヘッダー -->
+  <div class="combat-header">
+    <button
+      type="button"
+      class="combat-toggle"
+      [class.active]="isCombatActive"
+      (click)="isCombatActive ? endCombat() : startCombat()"
+    >
+      <span class="combat-icon">⚔️</span>
+      {{ isCombatActive ? '戦闘終了' : '戦闘開始' }}
+    </button>
+    <div class="round-info" *ngIf="isCombatActive">
+      <span class="round-label">Round</span>
+      <span class="round-number">{{ currentRound }}</span>
+    </div>
+  </div>
+
+  <!-- ターン制御（GM限定） -->
+  <div class="turn-controls" *ngIf="isCombatActive && isGm">
+    <button class="turn-btn" (click)="prevTurn()" title="前のターン">◀ 前ターン</button>
+    <button class="turn-btn" (click)="nextTurn()" title="次のターン">次ターン ▶</button>
+  </div>
+
+  <!-- イニシアチブ表 -->
+  <div class="initiative-list" *ngIf="isCombatActive">
+    <div class="list-header">
+      <span class="col-portrait">コマ</span>
+      <span class="col-name">名前</span>
+      <span class="col-init">Init</span>
+      <span class="col-action"></span>
+    </div>
+    <div
+      *ngFor="let entry of getVisibleEntries(); let i = index; trackBy: trackById"
+      class="list-row"
+      [class.current-turn]="i === currentTurnIndex"
+      [class.hidden-char]="entry.isHidden"
+    >
+      <div class="col-portrait">
+        <img *ngIf="getCharacterIcon(entry.identifier)" [src]="getCharacterIcon(entry.identifier) | safe: 'resourceUrl'" [alt]="entry.name">
+        <div class="portrait-placeholder" *ngIf="!getCharacterIcon(entry.identifier)">{{ entry.name.charAt(0) }}</div>
+      </div>
+      <div class="col-name">
+        <span class="name-text">{{ entry.name }}</span>
+        <span class="gm-tag" *ngIf="entry.isHidden && isGm"> (GM)</span>
+      </div>
+      <div class="col-init">
+        <input
+          type="number"
+          class="init-input"
+          [value]="getInitiativeValue(entry.identifier)"
+          (change)="setInitiative(entry.identifier, +$event.target.value)"
+        >
+      </div>
+      <div class="col-action">
+        <button class="remove-btn" (click)="removeEntry(entry.identifier)" title="戦闘から除外">✕</button>
+      </div>
+    </div>
+    <div class="empty-list" *ngIf="getVisibleEntries().length === 0">
+      テーブル上にキャラクターがいません
+    </div>
+  </div>
+
+  <!-- 参加していないキャラクター -->
+  <div class="add-section" *ngIf="isCombatActive && isGm && getUnlistedCharacters().length > 0">
+    <button class="add-toggle-btn" (click)="showAddList = !showAddList">
+      ➕ 戦闘に追加 ({{ getUnlistedCharacters().length }})
+    </button>
+    <div class="add-list" *ngIf="showAddList">
+      <div
+        *ngFor="let char of getUnlistedCharacters(); trackBy: trackByCharId"
+        class="add-list-row"
+      >
+        <div class="col-portrait">
+          <img *ngIf="char.imageFile?.url" [src]="char.imageFile.url | safe: 'resourceUrl'" [alt]="char.name">
+          <div class="portrait-placeholder" *ngIf="!char.imageFile?.url">{{ char.name.charAt(0) }}</div>
+        </div>
+        <div class="col-name">
+          <span class="name-text">{{ char.name }}</span>
+        </div>
+        <div class="col-init">
+          <input
+            type="number"
+            class="init-input"
+            [value]="char.initiative || 0"
+            (change)="char.initiative = +$event.target.value"
+          >
+        </div>
+        <div class="col-action">
+          <button class="add-btn" (click)="addEntry(char.identifier)" title="戦闘に追加">＋</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ダイスロール for イニシアチブ -->
+  <div class="dice-section" *ngIf="isCombatActive && isGm">
+    <button class="dice-toggle-btn" (click)="toggleDiceRoller()">
+      🎲 一括イニシアチブロール
+    </button>
+    <div class="dice-roller" *ngIf="showDiceRoller">
+      <div class="dice-types">
+        <button
+          *ngFor="let dt of diceTypes"
+          class="dice-type-btn"
+          [class.selected]="selectedDice === dt"
+          (click)="selectedDice = dt"
+        >{{ dt }}</button>
+      </div>
+      <div class="dice-modifier">
+        <label>修正値:</label>
+        <input type="number" class="modifier-input" [(ngModel)]="diceModifier">
+      </div>
+      <button class="roll-btn" (click)="rollInitiativeForAll()">
+        🎲 全コマのイニシアチブをロール
+      </button>
+    </div>
+  </div>
+
+  <!-- 非戦闘時 -->
+  <div class="combat-inactive" *ngIf="!isCombatActive">
+    <p>戦闘管理パネルです。</p>
+    <p>「戦闘開始」を押すと、テーブル上のキャラクターを<br>イニシアチブ順に行動できます。</p>
+    <p class="hint">キャラクターの共通データの<br>「initiative」に値を入れてください。</p>
+  </div>
+</div>

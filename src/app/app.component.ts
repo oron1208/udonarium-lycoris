@@ -47,6 +47,7 @@ import { GameTableSettingComponent } from 'component/game-table-setting/game-tab
 import { JukeboxComponent } from 'component/jukebox/jukebox.component';
 import { DataImportMenuComponent } from 'component/data-import-menu/data-import-menu.component';
 import { OptionsPanelComponent } from 'component/options-panel/options-panel.component';
+import { InitiativePanelComponent } from 'component/initiative-panel/initiative-panel.component';
 import { LightingPanelComponent } from 'component/lighting-panel/lighting-panel.component';
 import { ModalComponent } from 'component/modal/modal.component';
 import { PeerMenuComponent } from 'component/peer-menu/peer-menu.component';
@@ -749,6 +750,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         component = LightingPanelComponent;
         option = { width: 400, height: 500, left: 120, title: '照明視覚' };
         break;
+      case 'InitiativePanelComponent':
+        this.toggleInitiativePanel();
+        return;
       case 'OptionsPanelComponent':
         component = OptionsPanelComponent;
         option = { width: 400, height: 520, left: 120, title: 'オプション' };
@@ -804,6 +808,26 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
   get isLightingPanelOpen(): boolean { return this.lightingPanelOpen; }
   get isOptionsPanelOpen(): boolean { return this.optionsPanelOpen; }
+  get isInitiativePanelOpen(): boolean { return this.initiativePanelOpen; }
+
+  private initiativePanelOpen: boolean = false;
+
+  private toggleInitiativePanel() {
+    if (this.initiativePanelOpen) {
+      EventSystem.trigger('CLOSE_INITIATIVE_PANEL', {});
+      return;
+    }
+    this.initiativePanelOpen = true;
+    const option: PanelOption = { width: 380, height: 500, left: 120, title: '戦闘管理' };
+    option.top = (this.openPanelCount % 10 + 1) * 20;
+    option.left = 100 + (this.openPanelCount % 20 + 1) * 5;
+    this.openPanelCount++;
+    const ref = this.panelService.open(InitiativePanelComponent, option);
+    EventSystem.register(this).on('CLOSE_INITIATIVE_PANEL', () => {
+      this.initiativePanelOpen = false;
+      EventSystem.unregister(this);
+    });
+  }
 
   async save() {
     if (this.isSaveing) return;

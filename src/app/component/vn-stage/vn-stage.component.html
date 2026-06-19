@@ -229,7 +229,7 @@
       (pointercancel)="onSubResizeEnd('palette', $event)"></div>
     <div class="vn-index-sidebar" *ngIf="indexExpanded && selectedPaletteIndex.length > 0"
       [class.vn-index-faded]="!indexVisible">
-      <button *ngFor="let idx of selectedPaletteIndex" type="button" class="vn-index-btn"
+      <button *ngFor="let idx of selectedPaletteIndex; trackBy: trackByIndexItem" type="button" class="vn-index-btn"
         (mousedown)="jumpToIndex(idx); $event.preventDefault()">
         {{ idx.name }}
       </button>
