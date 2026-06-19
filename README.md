@@ -6,11 +6,11 @@
 
 **Udonarium Lycoris** — ブラウザだけで、どこでもTRPGを。
 
-[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/oron1208/udonarium-lycoris/blob/main/LICENSE)
+[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/oron1208/udonarium-lycoris/blob/master/LICENSE)
 [![GitHub release](https://img.shields.io/github/v/tag/oron1208/udonarium-lycoris?label=latest&color=e63946)](https://github.com/oron1208/udonarium-lycoris/releases)
-[![Made with Angular](https://img.shields.io/badge/Angular-12-dd0031?logo=angular)](https://angular.io/)
+[![Made with Angular](https://img.shields.io/badge/Angular-13-dd0031?logo=angular)](https://angular.io/)
 
-### [▶ 今すぐ使う](https://udonarium-lycoris.ddns.net/docs/) · [📖 取り扱い説明書](https://udonarium-lycoris.ddns.net/docs/) · [💾 ダウンロード](https://github.com/oron1208/udonarium-lycoris/releases)
+### [▶ 今すぐ使う](https://udonarium-lycoris.ddns.net/) · [📖 取り扱い説明書](https://udonarium-lycoris.ddns.net/#guide) · [📦 更新履歴](https://udonarium-lycoris.ddns.net/#updates)
 
 ---
 
@@ -28,25 +28,24 @@
 
 | 機能 | 説明 |
 |------|------|
+| ⚔️ **イニシアチブ・戦闘管理** | ターン進行、ラウンドトラッカー、ダイスロール、計算式登録、GM秘密管理 |
 | 🕯️ **照明エンジン** | 松明・魔法の光・懐中電灯・レーザー。壁による光遮断もレイキャストで再現 |
 | 🎵 **ジュークボックス** | BGM・SE・環境音の3モード。ワンクリックで雰囲気をチェンジ |
-| 🎭 **VNモード** | ビジュアルノベル風の立ち絵表示。表情切り替えでシーンを彩る |
-| 🎲 **ダイスカットイン** | ダイスロール時の演出アニメーション |
+| 🎭 **VNモード** | ビジュアルノベル風の立ち絵表示。自由配置・リサイズ・表情切り替え・チャットパレット連携 |
+| 🎲 **ダイスカットイン** | ダイスロール時の演出アニメーション。BCDice全システム対応 |
 | 🧭 **コマ演出** | 正面マーク表示・回転操作・高度な部屋設定 |
-| 👁️ **視線・所有権** | ピースごとの所有権設定と視線管理 |
-| 📝 **更新ノート** | バージョン更新内容をアプリ内で確認可能 |
+| ⌨️ **ホットバー** | よく使うマクロを登録してワンクリック発動 |
+| 👁️ **視界・所有権管理** | ピースごとの所有権設定と視線管理（アドバンスモード） |
+| 📝 **インベントリソート** | 任意の数で段階ソート、ドラッグ&ドロップで並び替え |
 
 ---
 
 ## 📸 スクリーンショット
 
-<!-- TODO: 以下の画像を実際のスクショに差し替えてください -->
-
 <table>
 <tr>
 <td align="center" width="50%">
 
-<!-- TODO: 照明システムのスクショ -->
 **🕯️ 照明システム**
 <img src="docs/images/lighting.png" width="100%">
 <em>松明・レーザー・壁の光遮断</em>
@@ -54,7 +53,6 @@
 </td>
 <td align="center" width="50%">
 
-<!-- TODO: ジュークボックスのスクショ -->
 **🎵 ジュークボックス**
 <img src="docs/images/jukebox.png" width="100%">
 <em>BGM / SE / 環境音の3モード</em>
@@ -64,7 +62,6 @@
 <tr>
 <td align="center" width="50%">
 
-<!-- TODO: VNモードのスクショ -->
 **🎭 VNモード**
 <img src="docs/images/vn-mode.png" width="100%">
 <em>ビジュアルノベル風の立ち絵表示</em>
@@ -72,7 +69,6 @@
 </td>
 <td align="center" width="50%">
 
-<!-- TODO: ダイスカットインのGIF -->
 **🎲 ダイスカットイン**
 <img src="docs/images/dice-cutin.png" width="100%">
 <em>ダイスロール演出</em>
@@ -89,24 +85,28 @@
 
 ブラウザでアクセスするだけ。アカウント登録不要。
 
-👉 **[https://udonarium-lycoris.ddns.net/docs/](https://udonarium-lycoris.ddns.net/docs/)**
+👉 **[https://udonarium-lycoris.ddns.net/](https://udonarium-lycoris.ddns.net/)**
 
 ### 自前サーバーに設置する
 
 1. [Releases](https://github.com/oron1208/udonarium-lycoris/releases) から最新版をダウンロード
 2. Webサーバーに配置して `index.html` にアクセス
-3. [SkyWay](https://webrtc.ecl.ntt.com/) のAPIキーを取得し、`src/assets/config.yaml` に設定
+3. [SkyWay](https://webrtc.ecl.ntt.com/) のAPIキーを取得し、設定ファイルに記述
 
-詳細は [📖 取り扱い説明書](https://udonarium-lycoris.ddns.net/docs/) をご覧ください。
+詳細は [📖 取り扱い説明書](https://udonarium-lycoris.ddns.net/#guide) をご覧ください。
 
 ### Docker で立てる
 
 ```bash
+# ビルド
+docker build -t udonarium-lycoris:latest .
+
+# 起動（env-fileでSkyWay鍵などを指定）
 docker run -d \
   --name udonarium-lycoris \
   -p 12081:12081 \
   --env-file /path/to/env \
-  ghcr.io/oron1208/udonarium-lycoris:latest
+  udonarium-lycoris:latest
 ```
 
 ---
@@ -121,10 +121,10 @@ npm install
 ng serve
 
 # プロダクションビルド
-ng build --prod
+ng build --configuration=production
 ```
 
-> ビルドには `--prod` フラグが必須です（3rdpartylicenses.txt の自動生成のため）。
+> ビルドには Node.js 16+ と Angular CLI 13 が必要です。
 
 ---
 
