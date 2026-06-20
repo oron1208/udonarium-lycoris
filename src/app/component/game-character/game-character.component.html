@@ -16,7 +16,8 @@
         <img class="flat-character-image chrome-smooth-image-trick" *ngIf="0 < imageFile.url.length" [src]="imageFile.url | safe: 'resourceUrl'">
         <div class="flat-character-initial" *ngIf="imageFile.url.length <= 0">{{simpleInitial}}</div>
         <div class="flat-target-crosshair" *ngIf="gameCharacter.targeted"><span></span></div>
-        <div class="flat-character-name" *ngIf="0 < name.length && showSideNameLabel">{{name}}
+        <div class="flat-character-name" *ngIf="0 < name.length && showSideNameLabel">
+          <span class="flat-character-name-text">{{name}}</span>
           <button *ngIf="canUseVnStageButton" type="button" class="vn-stage-select-button flat-vn-button" title="VNでこのコマを選択"
             (mousedown)="selectForVnStage($event)" (click)="selectForVnStage($event)">VN</button>
         </div>

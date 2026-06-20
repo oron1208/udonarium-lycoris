@@ -103,7 +103,7 @@ export class InitiativeService {
 
     // 戦闘開始BGM再生
     if (table.combatBgmIdentifier) {
-      EventSystem.trigger('COMBAT_BGM_PLAY', { identifier: table.combatBgmIdentifier });
+      EventSystem.call('COMBAT_BGM_PLAY', { identifier: table.combatBgmIdentifier });
     }
 
     // システムメッセージ
@@ -128,7 +128,7 @@ export class InitiativeService {
     table.update();
 
     // 戦闘終了BGM停止
-    EventSystem.trigger('COMBAT_BGM_STOP', {});
+    EventSystem.call('COMBAT_BGM_STOP', {});
 
     this.sendCombatSystemMessage('⚔️ 戦闘終了！');
 
@@ -343,11 +343,18 @@ export class InitiativeService {
   resolveFormulaVariables(formula: string, char: GameCharacter): string {
     return formula.replace(/[\{｛]\s*([^\{｝]+)\s*[\}｝]/g, (match, name) => {
       const trimmed = name.trim();
-      // commonから探す
-      let val = this.findStatusValue(char, trimmed);
-      if (val === null) val = this.findStatusValue(char, trimmed, true); // detailから
-      if (val === null) return '0';
-      return String(val);
+      // パレット変数から検索
+      if (char?.chatPalette) {
+        for (let variable of char.chatPalette.paletteVariables) {
+          if (variable.name === trimmed) return variable.value;
+        }
+      }
+      // コマデータ要素から検索（common + detail統合）
+      let element = char.rootDataElement.getFirstElementByName(trimmed);
+      if (element) {
+        return element.isNumberResource ? (element.currentValue + '') : (element.value + '');
+      }
+      return '0';
     });
   }
 

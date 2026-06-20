@@ -254,6 +254,7 @@
               title="{{ line }}">
               {{ line.length > 36 ? line.substring(0, 36) + '…' : line }}
             </button>
+            <div *ngIf="!line" class="vn-palette-spacer"></div>
           </ng-container>
         </div>
       </div>

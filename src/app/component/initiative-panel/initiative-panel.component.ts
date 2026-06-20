@@ -3,6 +3,8 @@ import { EventSystem } from '@udonarium/core/system';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { GameCharacter } from '@udonarium/game-character';
 import { GameTable } from '@udonarium/game-table';
+import { AudioStorage } from '@udonarium/core/file-storage/audio-storage';
+import { AudioFile } from '@udonarium/core/file-storage/audio-file';
 import { InitiativeService, CombatEntry } from 'service/initiative.service';
 import { PanelService } from 'service/panel.service';
 import { GmModeService } from 'service/gm-mode.service';
@@ -184,5 +186,33 @@ export class InitiativePanelComponent implements OnInit, OnDestroy {
 
   trackById(index: number, entry: CombatEntry): string {
     return entry.identifier;
+  }
+
+  get combatBgmIdentifier(): string {
+    const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected);
+    return table?.combatBgmIdentifier || '';
+  }
+
+  set combatBgmIdentifier(value: string) {
+    const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected);
+    if (table) {
+      table.combatBgmIdentifier = value;
+      table.update();
+    }
+  }
+
+  get audioFiles(): AudioFile[] {
+    return AudioStorage.instance.audios.filter(a => !a.isHidden);
+  }
+
+  getAudioName(identifier: string): string {
+    if (!identifier) return 'なし';
+    const audio = AudioStorage.instance.get(identifier);
+    return audio?.name || audio?.identifier?.slice(0, 8) || '不明';
+  }
+
+  previewCombatBgm() {
+    if (!this.combatBgmIdentifier) return;
+    EventSystem.trigger('COMBAT_BGM_PLAY', { identifier: this.combatBgmIdentifier });
   }
 }

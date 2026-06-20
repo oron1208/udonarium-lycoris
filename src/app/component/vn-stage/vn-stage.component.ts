@@ -1648,12 +1648,15 @@ export class VnStageComponent implements OnInit, OnDestroy {
     setTimeout(() => {
       try {
         const el = document.querySelector('.vn-palette-scroll');
-        if (el) {
-          const items = el.querySelectorAll('.vn-palette-line');
-          if (items[idx.line]) items[idx.line].scrollIntoView({ block: 'center' });
+        if (!el) return;
+        // DOM childrenは空行含む全行に対応する要素を持つ
+        // paletteIndex.line == visiblePaletteLinesのインデックス == DOM childrenのインデックス
+        const children = el.children;
+        if (children[idx.line]) {
+          (children[idx.line] as HTMLElement).scrollIntoView({ block: 'center' });
         }
-      } catch (_) { }
-    }, 100);
+      } catch (e) { console.warn('jumpToIndex error', e); }
+    }, 200);
   }
 
   selectPaletteLine(line: string) {

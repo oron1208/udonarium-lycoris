@@ -16,6 +16,19 @@
     </div>
   </div>
 
+  <!-- 戦闘BGM設定（GM限定、常時表示） -->
+  <div class="combat-bgm-section" *ngIf="isGm">
+    <label class="bgm-label">⚔️ 戦闘BGM</label>
+    <div class="bgm-controls">
+      <select class="bgm-select" [(ngModel)]="combatBgmIdentifier">
+        <option value="">なし</option>
+        <option *ngFor="let a of audioFiles" [value]="a.identifier">{{ a.name }}</option>
+      </select>
+      <button class="bgm-preview-btn" (click)="previewCombatBgm()" title="試聴">▶</button>
+    </div>
+    <p class="bgm-hint" *ngIf="!combatBgmIdentifier">戦闘開始時に再生するBGMを設定できます</p>
+  </div>
+
   <!-- ターン制御（GM限定） -->
   <div class="turn-controls" *ngIf="isCombatActive && isGm">
     <button class="turn-btn" (click)="prevTurn()" title="前のターン">◀ 前ターン</button>

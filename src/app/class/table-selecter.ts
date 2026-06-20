@@ -1,5 +1,5 @@
 import { SyncObject, SyncVar } from './core/synchronize-object/decorator';
-import { GameObject } from './core/synchronize-object/game-object';
+import { GameObject, ObjectContext } from './core/synchronize-object/game-object';
 import { ObjectStore } from './core/synchronize-object/object-store';
 import { EventSystem } from './core/system';
 import { GameTable } from './game-table';
@@ -49,5 +49,14 @@ export class TableSelecter extends GameObject {
       }
     }
     return table;
+  }
+
+  // SyncVarの変更を検知してローカルでイベント発火（全クライアントのBGM・照明などを同期）
+  apply(context: ObjectContext) {
+    const oldIdentifier = this.viewTableIdentifier;
+    super.apply(context);
+    if (oldIdentifier !== this.viewTableIdentifier && this.viewTableIdentifier) {
+      EventSystem.trigger('SELECT_GAME_TABLE', { identifier: this.viewTableIdentifier });
+    }
   }
 }

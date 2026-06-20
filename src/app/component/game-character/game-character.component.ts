@@ -40,6 +40,7 @@ import { TabletopUndoService } from 'service/tabletop-undo.service';
 import { TabletopSelectionService } from 'service/tabletop-selection.service';
 import { InitiativeService } from 'service/initiative.service';
 import { ChatMessageService } from 'service/chat-message.service';
+import { DiceBot } from '@udonarium/dice-bot';
 
 @Component({
   selector: 'game-character',
@@ -712,6 +713,10 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
           { name: '✏️ 手入力でロール...', action: () => this.openInitiativeDiceRoller(characters) },
         ]
       },
+      ContextMenuSeparator,
+      {
+        name: '🎲 ダイス一括ロール (開発中)', action: () => alert('この機能は現在開発中です。')
+      },
       ] : []),
     ];
 
@@ -846,6 +851,40 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
     const chatTabList = ObjectStore.instance.get<ChatTabList>('ChatTabList');
     const sysTab = chatTabList ? chatTabList.systemMessageTab : null;
     this.chatMessageService.sendSystemMessage(sysTab, text, '#4B0082', secret);
+  }
+
+  private openBatchDiceRoller(characters: GameCharacter[]) {
+    const formula = prompt('ダイス一括ロール\n計算式またはチャパレの行を入力してください\n（例: 1d20+{筋力}、AR{敏セーヴ}>=0）');
+    if (!formula || !formula.trim()) return;
+    const trimmed = formula.trim();
+
+    const chatTabList = ObjectStore.instance.get<ChatTabList>('ChatTabList');
+    const sysTab = chatTabList ? chatTabList.systemMessageTab : null;
+    const gameType = this.chatMessageService.gameType;
+    const tables = ObjectStore.instance.getObjects<GameTable>(GameTable);
+    const table = tables.find(t => t.selected) || tables[0];
+    const enableExtended = table?.extendedDiceBotEnabled ?? false;
+
+    DiceBot.loadGameSystemAsync(gameType).then(gameSystem => {
+      for (const character of characters) {
+        try {
+          // チャパレのevaluateで変数解決（ネスト{}, 関数, 拡張ダイスボット対応）
+          let resolved = trimmed;
+          if (character.chatPalette) {
+            resolved = character.chatPalette.evaluate(trimmed, null, character, enableExtended);
+          } else {
+            resolved = this.initiativeService.resolveFormulaVariables(trimmed, character);
+          }
+          const isGmOnly = (character.visibility || 'public') === 'gmOnly';
+          this.chatMessageService.sendMessage(
+            sysTab, resolved, gameSystem, null, null, 0, '#4B0082', null, isGmOnly
+          );
+        } catch (e) {
+          console.warn('Batch dice roll error', character.name, e);
+        }
+      }
+      SoundEffect.play(PresetSound.diceRoll1);
+    });
   }
 
   private rollInitiativeSingle(diceSize: number) {

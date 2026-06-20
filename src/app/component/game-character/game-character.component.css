@@ -298,6 +298,17 @@
 .flat-character-name {
   z-index: 2;
   pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.flat-character-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 
 .simple-full-button {
@@ -771,9 +782,10 @@
 }
 
 .flat-vn-button {
-  margin-left: 4px;
+  margin-left: 2px;
   padding: 0 4px;
   font-size: 9px;
+  flex-shrink: 0;
 }
 
 .is-current-turn {

@@ -33,8 +33,10 @@ export class Jukebox extends GameObject {
   private audioPlayer: AudioPlayer = new AudioPlayer();
   private tableAudioPlayers: AudioPlayer[] = [];
   private jukeboxLayerPlayers: AudioPlayer[] = [];
+  private combatAudioPlayer: AudioPlayer = null;
   private currentTableAudioIdentifier: string = '';
   private _jukeboxLayerOverrideActive = false;
+  private _combatBgmActive = false;
 
   get config(): Config { return ObjectStore.instance.get<Config>('Config'); }
 
@@ -54,6 +56,12 @@ export class Jukebox extends GameObject {
       .on('SELECT_GAME_TABLE', event => {
         const table = ObjectStore.instance.get<GameTable>(event.data.identifier);
         this.playTableAudio(table);
+      })
+      .on('COMBAT_BGM_PLAY', event => {
+        this.playCombatBgm(event.data.identifier);
+      })
+      .on('COMBAT_BGM_STOP', event => {
+        this.stopCombatBgm();
       });
   }
 
@@ -100,6 +108,9 @@ export class Jukebox extends GameObject {
     if (!table) return;
     if (this.currentTableAudioIdentifier === table.identifier) return;
     this.currentTableAudioIdentifier = table.identifier;
+
+    // 戦闘BGM中はテーブルBGMを上書きしない
+    if (this._combatBgmActive) return;
 
     const layers = Jukebox.getTableAudioLayers(table).filter(layer => layer.enabled && layer.audioIdentifier);
     this.stopTableAudio();
@@ -166,6 +177,48 @@ export class Jukebox extends GameObject {
     for (const player of this.jukeboxLayerPlayers) player.stop();
     this.jukeboxLayerPlayers = [];
     this._jukeboxLayerOverrideActive = false;
+  }
+
+  // ===== Combat BGM =====
+
+  playCombatBgm(identifier: string) {
+    // 現在の音を全部止める（テーブルBGM含む）
+    this.stopTableAudio();
+    this.stopJukeboxLayers();
+    this.stop();
+    // 戦闘BGMが既にあれば個別に停止のみ（再開処理なし）
+    if (this.combatAudioPlayer) {
+      this.combatAudioPlayer.stop();
+      this.combatAudioPlayer = null;
+    }
+
+    if (!identifier) return;
+    const audio = AudioStorage.instance.get(identifier);
+    if (!audio || !audio.isReady) return;
+
+    this._combatBgmActive = true;
+    this.combatAudioPlayer = new AudioPlayer(audio);
+    this.combatAudioPlayer.loop = true;
+    this.combatAudioPlayer.volume = 0.6;
+    this.combatAudioPlayer.play(audio);
+  }
+
+  stopCombatBgm() {
+    if (this.combatAudioPlayer) {
+      this.combatAudioPlayer.stop();
+      this.combatAudioPlayer = null;
+    }
+    this._combatBgmActive = false;
+
+    // 元のテーブルBGMを再開
+    if (this.currentTableAudioIdentifier) {
+      const table = ObjectStore.instance.get<GameTable>(this.currentTableAudioIdentifier);
+      if (table) {
+        const prev = this.currentTableAudioIdentifier;
+        this.currentTableAudioIdentifier = '';
+        this.playTableAudio(table);
+      }
+    }
   }
 
   // ===== Audio Folder System =====
