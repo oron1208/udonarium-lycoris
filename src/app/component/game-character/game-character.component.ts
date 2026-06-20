@@ -30,6 +30,7 @@ import { RotableOption } from 'directive/rotable.directive';
 import { ContextMenuAction, ContextMenuSeparator, ContextMenuService } from 'service/context-menu.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { InitiativeDiceRollerComponent } from 'component/initiative-dice-roller/initiative-dice-roller.component';
+import { BatchDiceRollerComponent } from 'component/batch-dice-roller/batch-dice-roller.component';
 import { PointerDeviceService } from 'service/pointer-device.service';
 import { GmModeService } from 'service/gm-mode.service';
 import { RemoteControllerComponent } from 'component/remote-controller/remote-controller.component';
@@ -40,7 +41,6 @@ import { TabletopUndoService } from 'service/tabletop-undo.service';
 import { TabletopSelectionService } from 'service/tabletop-selection.service';
 import { InitiativeService } from 'service/initiative.service';
 import { ChatMessageService } from 'service/chat-message.service';
-import { DiceBot } from '@udonarium/dice-bot';
 
 @Component({
   selector: 'game-character',
@@ -715,7 +715,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
       },
       ContextMenuSeparator,
       {
-        name: '🎲 ダイス一括ロール (開発中)', action: () => alert('この機能は現在開発中です。')
+        name: '🎲 ダイス一括ロール', action: () => this.openBatchDiceRoller(characters)
       },
       ] : []),
     ];
@@ -774,11 +774,11 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
     this.changeDetector.markForCheck();
   }
 
-  private rollInitiativeBatch(characters: GameCharacter[], diceSize: number) {
+  private async rollInitiativeBatch(characters: GameCharacter[], diceSize: number) {
     const visibleResults: string[] = [];
     const gmResults: string[] = [];
     for (const character of characters) {
-      const formulaResult = this.initiativeService.rollInitiativeFormula(character);
+      const formulaResult = await this.initiativeService.rollInitiativeFormulaAsync(character);
       let roll: number;
       let detail: string;
       if (formulaResult) {
@@ -854,42 +854,16 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
   }
 
   private openBatchDiceRoller(characters: GameCharacter[]) {
-    const formula = prompt('ダイス一括ロール\n計算式またはチャパレの行を入力してください\n（例: 1d20+{筋力}、AR{敏セーヴ}>=0）');
-    if (!formula || !formula.trim()) return;
-    const trimmed = formula.trim();
-
-    const chatTabList = ObjectStore.instance.get<ChatTabList>('ChatTabList');
-    const sysTab = chatTabList ? chatTabList.systemMessageTab : null;
-    const gameType = this.chatMessageService.gameType;
-    const tables = ObjectStore.instance.getObjects<GameTable>(GameTable);
-    const table = tables.find(t => t.selected) || tables[0];
-    const enableExtended = table?.extendedDiceBotEnabled ?? false;
-
-    DiceBot.loadGameSystemAsync(gameType).then(gameSystem => {
-      for (const character of characters) {
-        try {
-          // チャパレのevaluateで変数解決（ネスト{}, 関数, 拡張ダイスボット対応）
-          let resolved = trimmed;
-          if (character.chatPalette) {
-            resolved = character.chatPalette.evaluate(trimmed, null, character, enableExtended);
-          } else {
-            resolved = this.initiativeService.resolveFormulaVariables(trimmed, character);
-          }
-          const isGmOnly = (character.visibility || 'public') === 'gmOnly';
-          this.chatMessageService.sendMessage(
-            sysTab, resolved, gameSystem, null, null, 0, '#4B0082', null, isGmOnly
-          );
-        } catch (e) {
-          console.warn('Batch dice roll error', character.name, e);
-        }
-      }
-      SoundEffect.play(PresetSound.diceRoll1);
-    });
+    const option: PanelOption = { width: 450, height: 500, left: 200, top: 150, title: 'ダイス一括ロール' };
+    const component = this.panelService.open<BatchDiceRollerComponent>(BatchDiceRollerComponent, option);
+    if (component) {
+      component.characters = characters;
+    }
   }
 
-  private rollInitiativeSingle(diceSize: number) {
+  private async rollInitiativeSingle(diceSize: number) {
     const char = this.gameCharacter;
-    const formulaResult = this.initiativeService.rollInitiativeFormula(char);
+    const formulaResult = await this.initiativeService.rollInitiativeFormulaAsync(char);
     let roll: number;
     let detail: string;
     if (formulaResult) {
@@ -902,7 +876,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
     char.initiative = roll;
     char.update();
     SoundEffect.play(PresetSound.diceRoll1);
-    EventSystem.trigger('COMBAT_STATE_CHANGED', {});
+    this.initiativeService.resortCombatByInitiative();
 
     const isGmOnly = (char.visibility || 'public') === 'gmOnly';
     const line = `${char.name}: ${roll} (${detail})`;
@@ -910,9 +884,9 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
     this.sendInitiativeChat(isGmOnly ? `${title}【GM限定】` : title, [line], isGmOnly);
   }
 
-  private rollInitiativeByFormula() {
+  private async rollInitiativeByFormula() {
     const char = this.gameCharacter;
-    const formulaResult = this.initiativeService.rollInitiativeFormula(char);
+    const formulaResult = await this.initiativeService.rollInitiativeFormulaAsync(char);
     if (!formulaResult) {
       const input = prompt(`${char.name}のイニシアチブ計算式が登録されていません。\n共通データの「initiativeFormula」に式を入力してください。\n例: 1d20+{敏捷度}`);
       return;
@@ -920,7 +894,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
     char.initiative = formulaResult.value;
     char.update();
     SoundEffect.play(PresetSound.diceRoll1);
-    EventSystem.trigger('COMBAT_STATE_CHANGED', {});
+    this.initiativeService.resortCombatByInitiative();
 
     const isGmOnly = (char.visibility || 'public') === 'gmOnly';
     const line = `${char.name}: ${formulaResult.value} (${formulaResult.detail})`;
@@ -928,12 +902,12 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
     this.sendInitiativeChat(isGmOnly ? `${title}【GM限定】` : title, [line], isGmOnly);
   }
 
-  private rollInitiativeBatchByFormula(characters: GameCharacter[]) {
+  private async rollInitiativeBatchByFormula(characters: GameCharacter[]) {
     const visibleResults: string[] = [];
     const gmResults: string[] = [];
     let hasNoFormula = false;
     for (const character of characters) {
-      const formulaResult = this.initiativeService.rollInitiativeFormula(character);
+      const formulaResult = await this.initiativeService.rollInitiativeFormulaAsync(character);
       if (!formulaResult) {
         hasNoFormula = true;
         continue;
@@ -948,7 +922,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
       }
     }
     this.updateBatchCharacters(characters, PresetSound.diceRoll1);
-    EventSystem.trigger('COMBAT_STATE_CHANGED', {});
+    this.initiativeService.resortCombatByInitiative();
 
     if (visibleResults.length > 0) {
       this.sendInitiativeChat('🎲 イニシアチブロール（登録式）', visibleResults, false);

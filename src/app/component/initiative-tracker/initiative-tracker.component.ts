@@ -98,6 +98,14 @@ export class InitiativeTrackerComponent implements OnInit, OnDestroy {
     return char?.imageFile?.url || '';
   }
 
+  isActed(identifier: string): boolean {
+    return this.initiativeService.isActed(identifier);
+  }
+
+  toggleActed(identifier: string) {
+    this.initiativeService.toggleActed(identifier);
+  }
+
   trackById(index: number, entry: CombatEntry): string {
     return entry.identifier;
   }

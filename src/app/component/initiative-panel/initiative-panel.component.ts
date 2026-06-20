@@ -93,6 +93,14 @@ export class InitiativePanelComponent implements OnInit, OnDestroy {
     this.initiativeService.prevTurn();
   }
 
+  nextRound() {
+    this.initiativeService.nextRound();
+  }
+
+  prevRound() {
+    this.initiativeService.prevRound();
+  }
+
   getCharacterIcon(identifier: string): string {
     const char = ObjectStore.instance.get<GameCharacter>(identifier);
     return char?.imageFile?.url || '';
@@ -130,14 +138,14 @@ export class InitiativePanelComponent implements OnInit, OnDestroy {
     this.showDiceRoller = !this.showDiceRoller;
   }
 
-  rollInitiativeForAll() {
+  async rollInitiativeForAll() {
     const order = this.initiativeService.getCombatOrder();
     const visibleResults: string[] = [];
     const gmResults: string[] = [];
     for (const id of order) {
       const char = ObjectStore.instance.get<GameCharacter>(id);
       if (!char) continue;
-      const formulaResult = this.initiativeService.rollInitiativeFormula(char);
+      const formulaResult = await this.initiativeService.rollInitiativeFormulaAsync(char);
       let roll: number;
       let detail: string;
       if (formulaResult) {
@@ -186,6 +194,48 @@ export class InitiativePanelComponent implements OnInit, OnDestroy {
 
   trackById(index: number, entry: CombatEntry): string {
     return entry.identifier;
+  }
+
+  // ===== ドラッグ&ドロップ =====
+  dragIndex: number = -1;
+  dragOverIndex: number = -1;
+
+  onDragStart(e: DragEvent, index: number) {
+    if (!this.isGm) { e.preventDefault(); return; }
+    this.dragIndex = index;
+    e.dataTransfer.effectAllowed = 'move';
+  }
+
+  onDragOver(e: DragEvent, index: number) {
+ if (!this.isGm) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    this.dragOverIndex = index;
+  }
+
+  onDragLeave(e: DragEvent) {
+    this.dragOverIndex = -1;
+  }
+
+  onDrop(e: DragEvent, index: number) {
+    e.preventDefault();
+    if (!this.isGm || this.dragIndex < 0 || this.dragIndex === index) {
+      this.dragIndex = -1;
+      this.dragOverIndex = -1;
+      return;
+    }
+    // 順序を入れ替え
+    const order = this.initiativeService.getCombatOrder();
+    const moved = order.splice(this.dragIndex, 1)[0];
+    order.splice(index, 0, moved);
+    this.initiativeService.reorderCombat(order);
+    this.dragIndex = -1;
+    this.dragOverIndex = -1;
+  }
+
+  onDragEnd(e: DragEvent) {
+    this.dragIndex = -1;
+    this.dragOverIndex = -1;
   }
 
   get combatBgmIdentifier(): string {

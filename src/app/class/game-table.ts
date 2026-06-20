@@ -65,6 +65,7 @@ export class GameTable extends ObjectNode {
   @SyncVar() combatTurnIndex: number = 0;
   @SyncVar() combatOrder: string = '[]'; // JSON array of character identifiers
   @SyncVar() combatBgmIdentifier: string = '';
+  @SyncVar() combatActedSet: string = '[]'; // JSON array of acted character identifiers
 
   gridClipRect: {top: number, right: number, bottom: number, left: number} = null;
 

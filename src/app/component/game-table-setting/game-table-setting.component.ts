@@ -15,6 +15,7 @@ import { FileSelecterComponent } from 'component/file-selecter/file-selecter.com
 import { ImageService } from 'service/image.service';
 import { ModalService } from 'service/modal.service';
 import { PanelService } from 'service/panel.service';
+import { TabletopService } from 'service/tabletop.service';
 import { SaveDataService } from 'service/save-data.service';
 import { BatchService } from 'service/batch.service';
 
@@ -124,7 +125,8 @@ export class GameTableSettingComponent implements OnInit, OnDestroy, AfterViewIn
     private modalService: ModalService,
     private saveDataService: SaveDataService,
     private imageService: ImageService,
-    private panelService: PanelService
+    private panelService: PanelService,
+    private tabletopService: TabletopService
   ) { }
 
   ngOnInit() {
@@ -191,15 +193,13 @@ export class GameTableSettingComponent implements OnInit, OnDestroy, AfterViewIn
   }
 
   playSelectedTableAudioNow() {
-    const jukebox = ObjectStore.instance.get<Jukebox>('Jukebox');
-    if (jukebox && this.selectedTable) {
-      jukebox.replayTableAudio(this.selectedTable);
+    if (this.selectedTable) {
+      EventSystem.call('TABLE_AUDIO_PLAY', { identifier: this.selectedTable.identifier });
     }
   }
 
   stopTableAudioNow() {
-    const jukebox = ObjectStore.instance.get<Jukebox>('Jukebox');
-    if (jukebox) jukebox.stopTableAudio();
+    EventSystem.call('TABLE_AUDIO_STOP', {});
   }
 
   getGameTables(): GameTable[] {
@@ -269,6 +269,11 @@ export class GameTableSettingComponent implements OnInit, OnDestroy, AfterViewIn
     let gameTable = new GameTable();
     gameTable.name = '白紙のテーブル';
     gameTable.imageIdentifier = 'testTableBackgroundImage_image';
+    // 現在のテーブルの部屋モードを引き継ぐ
+    const currentTable = this.tabletopService.currentTable;
+    if (currentTable) {
+      gameTable.roomMode = currentTable.roomMode;
+    }
     gameTable.initialize();
     gameTable.setAttribute(this.tableOrderAttribute, (this.getGameTables().length + 1) + '');
     this.selectGameTable(gameTable.identifier);

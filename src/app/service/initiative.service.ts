@@ -6,6 +6,7 @@ import { GameTable } from '@udonarium/game-table';
 import { DataElement } from '@udonarium/data-element';
 import { ChatMessageService } from './chat-message.service';
 import { ChatTabList } from '@udonarium/chat-tab-list';
+import { DiceBot } from '@udonarium/dice-bot';
 
 export interface CombatEntry {
   identifier: string;
@@ -23,9 +24,30 @@ export class InitiativeService {
     private chatMessageService: ChatMessageService
   ) {}
 
-  private getSelectedTable(): GameTable | null {
+  /**
+   * 戦闘がアクティブな場合はそのテーブルを返す。
+   * 戦闘中にテーブルを切り替えても、元のテーブルの戦闘状態を維持する。
+   * 戦闘がアクティブでない場合は選中テーブルを返す（新規戦闘開始用）。
+   */
+  private getCombatTable(): GameTable | null {
+    const tables = ObjectStore.instance.getObjects<GameTable>(GameTable);
+    // 戦闘中のテーブルがあれば、それを使う
+    const activeTable = tables.find(t => t.combatActive);
+    if (activeTable) return activeTable;
+    // 戦闘中でなければ選中テーブルを返す
+    return tables.find(t => t.selected) || tables[0] || null;
+  }
+
+  /**
+   * 実際に選択中のテーブルを返す（戦闘開始時のBGM取得などで使用）
+   */
+  private getCurrentlySelectedTable(): GameTable | null {
     const tables = ObjectStore.instance.getObjects<GameTable>(GameTable);
     return tables.find(t => t.selected) || tables[0] || null;
+  }
+
+  private getSelectedTable(): GameTable | null {
+    return this.getCombatTable();
   }
 
   get isCombatActive(): boolean {
@@ -48,6 +70,42 @@ export class InitiativeService {
     } catch {
       return [];
     }
+  }
+
+  getActedSet(): Set<string> {
+    const table = this.getSelectedTable();
+    if (!table) return new Set();
+    try {
+      return new Set(JSON.parse(table.combatActedSet || '[]'));
+    } catch {
+      return new Set();
+    }
+  }
+
+  private setActedSet(set: Set<string>) {
+    const table = this.getSelectedTable();
+    if (!table) return;
+    table.combatActedSet = JSON.stringify([...set]);
+    table.update();
+    EventSystem.trigger('COMBAT_STATE_CHANGED', {});
+  }
+
+  toggleActed(identifier: string) {
+    const set = this.getActedSet();
+    if (set.has(identifier)) {
+      set.delete(identifier);
+    } else {
+      set.add(identifier);
+    }
+    this.setActedSet(set);
+  }
+
+  isActed(identifier: string): boolean {
+    return this.getActedSet().has(identifier);
+  }
+
+  clearActedSet() {
+    this.setActedSet(new Set());
   }
 
   getCombatEntries(): CombatEntry[] {
@@ -106,6 +164,9 @@ export class InitiativeService {
       EventSystem.call('COMBAT_BGM_PLAY', { identifier: table.combatBgmIdentifier });
     }
 
+    // 行動済みセットをクリア
+    table.combatActedSet = '[]';
+
     // システムメッセージ
     const firstChar = tableChars[0];
     const firstName = firstChar ? this.getDisplayName(firstChar) : '';
@@ -125,6 +186,7 @@ export class InitiativeService {
     table.combatRound = 1;
     table.combatTurnIndex = 0;
     table.combatOrder = '[]';
+    table.combatActedSet = '[]';
     table.update();
 
     // 戦闘終了BGM停止
@@ -136,7 +198,7 @@ export class InitiativeService {
   }
 
   /**
-   * 次のターンへ
+   * 次のターンへ（行動済みスキップ、ラウンド跨ぎなし）
    */
   nextTurn() {
     const table = this.getSelectedTable();
@@ -145,24 +207,78 @@ export class InitiativeService {
     const order = this.getCombatOrder();
     if (order.length === 0) return;
 
-    let nextIndex = table.combatTurnIndex + 1;
-    let nextRound = table.combatRound;
+    // 現在のキャラを行動済みにする
+    const actedSet = this.getActedSet();
+    const currentId = order[table.combatTurnIndex];
+    if (currentId) actedSet.add(currentId);
 
-    if (nextIndex >= order.length) {
-      nextIndex = 0;
-      nextRound++;
-      // ラウンド終了時のバフ処理など
-      EventSystem.trigger('COMBAT_ROUND_END', { round: table.combatRound });
+    // 行動済みでない次のキャラを探す
+    let nextIndex = table.combatTurnIndex;
+    let found = false;
+    for (let i = 0; i < order.length; i++) {
+      nextIndex = (nextIndex + 1) % order.length;
+      if (!actedSet.has(order[nextIndex])) { found = true; break; }
     }
 
+    if (!found) {
+      // 全員行動済みなら次ラウンドへ
+      this.nextRound();
+      return;
+    }
+
+    table.combatActedSet = JSON.stringify([...actedSet]);
     table.combatTurnIndex = nextIndex;
-    table.combatRound = nextRound;
     table.update();
 
     const currentChar = ObjectStore.instance.get<GameCharacter>(order[nextIndex]);
     const name = currentChar ? this.getDisplayName(currentChar) : '';
-    this.sendCombatSystemMessage(`⚔️ Round ${nextRound} — ${name}のターン`);
+    this.sendCombatSystemMessage(`⚔️ Round ${table.combatRound} — ${name}のターン`);
 
+    EventSystem.trigger('COMBAT_STATE_CHANGED', {});
+  }
+
+  /**
+   * 次のラウンドへ
+   */
+  nextRound() {
+    const table = this.getSelectedTable();
+    if (!table || !table.combatActive) return;
+
+    const order = this.getCombatOrder();
+    if (order.length === 0) return;
+
+    const oldRound = table.combatRound;
+    table.combatActedSet = '[]';
+    table.combatTurnIndex = 0;
+    table.combatRound = oldRound + 1;
+    table.update();
+    EventSystem.trigger('COMBAT_ROUND_END', { round: oldRound });
+
+    const currentChar = ObjectStore.instance.get<GameCharacter>(order[0]);
+    const name = currentChar ? this.getDisplayName(currentChar) : '';
+    this.sendCombatSystemMessage(`⚔️ Round ${table.combatRound} — ${name}のターン`);
+    EventSystem.trigger('COMBAT_STATE_CHANGED', {});
+  }
+
+  /**
+   * 前のラウンドへ
+   */
+  prevRound() {
+    const table = this.getSelectedTable();
+    if (!table || !table.combatActive) return;
+    if (table.combatRound <= 1) return;
+
+    const order = this.getCombatOrder();
+    if (order.length === 0) return;
+
+    table.combatActedSet = '[]';
+    table.combatTurnIndex = 0;
+    table.combatRound--;
+    table.update();
+
+    const currentChar = ObjectStore.instance.get<GameCharacter>(order[0]);
+    const name = currentChar ? this.getDisplayName(currentChar) : '';
+    this.sendCombatSystemMessage(`⚔️ Round ${table.combatRound} — ${name}のターン`);
     EventSystem.trigger('COMBAT_STATE_CHANGED', {});
   }
 
@@ -257,6 +373,19 @@ export class InitiativeService {
   }
 
   /**
+   * イニシアチブ値で戦闘順序を再ソート
+   */
+  resortCombatByInitiative() {
+    const table = this.getSelectedTable();
+    if (!table || !table.combatActive) return;
+
+    const order = this.getCombatOrder();
+    const chars = order.map(id => ObjectStore.instance.get<GameCharacter>(id)).filter(c => c);
+    chars.sort((a, b) => (b.initiative || 0) - (a.initiative || 0));
+    this.reorderCombat(chars.map(c => c.identifier));
+  }
+
+  /**
    * 順序を手動で並び替え
    */
   reorderCombat(newOrder: string[]) {
@@ -282,10 +411,10 @@ export class InitiativeService {
   }
 
   /**
-   * 戦闘開始BGMを設定
+   * 戦闘開始BGMを設定（現在選択中のテーブルに設定）
    */
   setCombatBgm(identifier: string) {
-    const table = this.getSelectedTable();
+    const table = this.getCurrentlySelectedTable();
     if (!table) return;
     table.combatBgmIdentifier = identifier;
     table.update();
@@ -305,24 +434,53 @@ export class InitiativeService {
 
   /**
    * イニシアチブ計算式を評価して値を返す
-   * 例: "1d20+{敏捷度}" → ダイスロール + 敏捷度の値
-   * 例: "15" → 固定値15
+   * chatPalette.dicebotのゲームシステムでBCDice評価
+   */
+  async rollInitiativeFormulaAsync(char: GameCharacter): Promise<{ value: number; detail: string } | null> {
+    const formula = char.initiativeFormula;
+    console.log('[InitiativeRoll] start', char.name, 'formula:', formula, 'dicebot:', char.chatPalette?.dicebot);
+    if (!formula || !formula.trim()) return null;
+
+    // {パラメータ名} を解決（チャパレのevaluateを使用）
+    let resolved = formula;
+    if (char.chatPalette) {
+      resolved = char.chatPalette.evaluate(formula, char.rootDataElement, char, false);
+    } else {
+      resolved = this.resolveFormulaVariables(formula, char);
+    }
+
+    // ゲームシステムを取得してBCDiceで評価
+    const gameType = char.chatPalette?.dicebot || 'DiceBot';
+    try {
+      const gameSystem = await DiceBot.loadGameSystemAsync(gameType);
+      const rollResult = await DiceBot.diceRollAsync(resolved, gameSystem);
+      console.log('[InitiativeRoll]', char.name, 'gameType:', gameType, 'resolved:', resolved, 'result:', rollResult?.result);
+      if (rollResult && rollResult.result) {
+        const value = this.extractNumber(rollResult.result);
+        return { value, detail: `${formula} → ${rollResult.result}` };
+      }
+    } catch (e) {
+      console.warn('rollInitiativeFormulaAsync error', e);
+    }
+
+    // フォールバック: 簡易評価
+    return this.rollInitiativeFormulaSimple(char);
+  }
+
+  /**
+   * イニシアチブ計算式を簡易評価（フォールバック用）
    */
   rollInitiativeFormula(char: GameCharacter): { value: number; detail: string } | null {
     const formula = char.initiativeFormula;
     if (!formula || !formula.trim()) return null;
 
-    // {パラメータ名} を解決
     const resolved = this.resolveFormulaVariables(formula, char);
 
-    // ダイス式か判定
     if (/\d*d\d+/i.test(resolved)) {
-      // ダイスロール
       const detail = this.evaluateDiceExpression(resolved);
       const value = this.extractNumber(detail);
       return { value, detail: `${formula} → ${resolved} → ${value}` };
     } else {
-      // 固定値または数式
       try {
         const cleaned = resolved.replace(/[^0-9+\-*/().\s]/g, '');
         if (!cleaned.trim()) return null;
@@ -335,6 +493,10 @@ export class InitiativeService {
       }
     }
     return null;
+  }
+
+  private rollInitiativeFormulaSimple(char: GameCharacter): { value: number; detail: string } | null {
+    return this.rollInitiativeFormula(char);
   }
 
   /**

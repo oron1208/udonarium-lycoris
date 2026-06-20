@@ -18,7 +18,10 @@
         *ngFor="let entry of getVisibleEntries(); let i = index; trackBy: trackById"
         class="tracker-entry"
         [class.active]="i === currentTurnIndex"
+        [class.acted]="isActed(entry.identifier)"
         [class.hidden]="entry.isHidden"
+        (click)="toggleActed(entry.identifier)"
+        title="クリックで行動済み切り替え"
       >
         <div class="entry-portrait">
           <img *ngIf="getCharacterIcon(entry.identifier)" [src]="getCharacterIcon(entry.identifier) | safe: 'resourceUrl'" [alt]="entry.name">

@@ -88,6 +88,7 @@ import { OptionsPanelComponent } from 'component/options-panel/options-panel.com
 import { InitiativeTrackerComponent } from 'component/initiative-tracker/initiative-tracker.component';
 import { InitiativePanelComponent } from 'component/initiative-panel/initiative-panel.component';
 import { InitiativeDiceRollerComponent } from 'component/initiative-dice-roller/initiative-dice-roller.component';
+import { BatchDiceRollerComponent } from 'component/batch-dice-roller/batch-dice-roller.component';
 
 import { AlarmMenuComponent } from 'component/alarm-menu/alarm-menu.component';
 import { AlarmWindowComponent } from 'component/alarm-window/alarm-window.component';
@@ -166,6 +167,7 @@ import { AppComponent } from './app.component';
     InitiativeTrackerComponent,
     InitiativePanelComponent,
     InitiativeDiceRollerComponent,
+    BatchDiceRollerComponent,
 
     AlarmMenuComponent,
     AlarmWindowComponent,

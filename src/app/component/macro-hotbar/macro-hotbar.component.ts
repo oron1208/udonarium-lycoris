@@ -12,6 +12,7 @@ import { ChatMessageService } from 'service/chat-message.service';
 import { ModalService } from 'service/modal.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
 import { TabletopService } from 'service/tabletop.service';
+import { Config } from '@udonarium/config';
 
 interface MacroHotbarSlot {
   label: string;
@@ -367,7 +368,8 @@ export class MacroHotbarComponent {
     const character = this.selectedCharacter;
     const palette = character ? character.chatPalette : null;
     const sendFrom = character ? character.identifier : (PeerCursor.myCursor ? PeerCursor.myCursor.identifier : '');
-    const gameType = palette ? palette.dicebot : '';
+    const charDice = palette ? palette.dicebot : '';
+    const gameType = (charDice && charDice !== 'DiceBot') ? charDice : Config.instance.defaultDiceBot;
     const tachieNum = character ? character.selectedTachieNum : 0;
     const messageColor = character && character.chatColorCode && character.chatColorCode.length ? character.chatColorCode[0] : '#000000';
 

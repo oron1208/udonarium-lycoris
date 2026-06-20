@@ -6,6 +6,8 @@ import { InitiativeService } from 'service/initiative.service';
 import { PanelService } from 'service/panel.service';
 import { ChatMessageService } from 'service/chat-message.service';
 import { ChatTabList } from '@udonarium/chat-tab-list';
+import { DiceBot } from '@udonarium/dice-bot';
+import { Config } from '@udonarium/config';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
 
 @Component({
@@ -16,7 +18,7 @@ import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
 export class InitiativeDiceRollerComponent implements OnInit, OnDestroy {
   diceExpression: string = '';
   characters: GameCharacter[] = [];
-  private _expression: string = '';
+  isRolling: boolean = false;
 
   diceButtons = [
     { label: 'd4', sides: 4 },
@@ -64,32 +66,60 @@ export class InitiativeDiceRollerComponent implements OnInit, OnDestroy {
     this.diceExpression = this.diceExpression.slice(0, -1);
   }
 
-  roll() {
-    if (!this.diceExpression.trim() || this.characters.length === 0) return;
+  async roll() {
+    if (!this.diceExpression.trim() || this.characters.length === 0 || this.isRolling) return;
+    this.isRolling = true;
 
     const visibleResults: string[] = [];
     const gmResults: string[] = [];
 
     for (const char of this.characters) {
-      // {パラメータ}を解決してからダイスロール
-      const resolved = this.initiativeService['resolveFormulaVariables'](this.diceExpression, char);
-      const detail = this.initiativeService['evaluateDiceExpression'](resolved);
-      const value = this.initiativeService['extractNumber'](detail);
+      try {
+        // チャパレのevaluateで変数解決
+        let resolved = this.diceExpression;
+        const charDice = char.chatPalette?.dicebot;
+        const gameType = (charDice && charDice !== 'DiceBot') ? charDice : Config.instance.defaultDiceBot;
 
-      char.initiative = value;
-      char.update();
+        if (char.chatPalette) {
+          resolved = char.chatPalette.evaluate(this.diceExpression, char.rootDataElement, char, false);
+        } else {
+          resolved = this.initiativeService.resolveFormulaVariables(this.diceExpression, char);
+        }
 
-      const isGmOnly = (char.visibility || 'public') === 'gmOnly';
-      const line = `${char.name}: ${value} (${this.diceExpression} → ${detail})`;
-      if (isGmOnly) {
-        gmResults.push(line);
-      } else {
-        visibleResults.push(line);
+        // BCDiceで評価
+        const gameSystem = await DiceBot.loadGameSystemAsync(gameType);
+        const rollResult = await DiceBot.diceRollAsync(resolved, gameSystem);
+
+        let value: number;
+        let detail: string;
+        if (rollResult && rollResult.result) {
+          value = this.initiativeService.extractNumber(rollResult.result);
+          detail = rollResult.result;
+        } else {
+          // フォールバック
+          detail = this.initiativeService.evaluateDiceExpression(resolved);
+          value = this.initiativeService.extractNumber(detail);
+        }
+
+        char.initiative = value;
+        char.update();
+
+        const isGmOnly = (char.visibility || 'public') === 'gmOnly';
+        const line = `${char.name}: ${value} (${detail})`;
+        if (isGmOnly) {
+          gmResults.push(line);
+        } else {
+          visibleResults.push(line);
+        }
+
+        await new Promise(r => setTimeout(r, 200));
+      } catch (e) {
+        console.warn('Initiative dice roll error', char.name, e);
       }
     }
 
     SoundEffect.play(PresetSound.diceRoll1);
-    EventSystem.trigger('COMBAT_STATE_CHANGED', {});
+    this.initiativeService.resortCombatByInitiative();
 
     // チャットログに送信
     if (visibleResults.length > 0) {
@@ -99,6 +129,7 @@ export class InitiativeDiceRollerComponent implements OnInit, OnDestroy {
       this.sendChat(`🎲 イニシアチブロール（${this.diceExpression}）【GM限定】`, gmResults, true);
     }
 
+    this.isRolling = false;
     // パネルを閉じる
     this.panelService.close();
   }

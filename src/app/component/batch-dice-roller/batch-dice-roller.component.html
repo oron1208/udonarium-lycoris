@@ -1,0 +1,50 @@
+<div class="batch-dice-roller">
+  <!-- ヘッダー -->
+  <div class="bdr-header">
+    <span class="bdr-title">🎲 ダイス一括ロール</span>
+    <span class="bdr-count">{{ characterCount }}体選択中</span>
+  </div>
+
+  <!-- 送信先タブ選択 -->
+  <div class="bdr-tab-select">
+    <label>送信先:</label>
+    <select [(ngModel)]="selectedTabId">
+      <option *ngFor="let tab of chatTabs" [value]="tab.identifier">{{ tab.name }}</option>
+    </select>
+  </div>
+
+  <!-- 式入力 -->
+  <div class="bdr-input-area">
+    <input type="text" class="bdr-input" [(ngModel)]="diceExpression"
+      placeholder="AR{敏セーヴ}>=0、1d20+{筋力} 等"
+      (keydown.enter)="rollAll()">
+
+    <div class="bdr-dice-buttons">
+      <button *ngFor="let d of diceButtons" type="button" class="bdr-dice-btn"
+        (click)="addDice(d.sides)">{{ d.label }}</button>
+      <button type="button" class="bdr-op-btn" (click)="addText('+')">+</button>
+      <button type="button" class="bdr-op-btn" (click)="addText('-')">−</button>
+      <button type="button" class="bdr-op-btn" (click)="addText('{')">&lbrace;</button>
+      <button type="button" class="bdr-op-btn" (click)="addText('}')">&rbrace;</button>
+      <button type="button" class="bdr-op-btn" (click)="addText('>=')">≧</button>
+      <button type="button" class="bdr-clear-btn" (click)="clearExpression()">クリア</button>
+    </div>
+  </div>
+
+  <!-- ロールボタン -->
+  <button type="button" class="bdr-roll-btn" [disabled]="isRolling || !diceExpression.trim()"
+    (click)="rollAll()">
+    {{ isRolling ? 'ロール中...' : '🎲 一括ロール' }}
+  </button>
+
+  <!-- 結果表示 -->
+  <div class="bdr-results" *ngIf="results.length > 0">
+    <div class="bdr-results-header">結果</div>
+    <div class="bdr-result-row" *ngFor="let r of results; let i = index"
+      [class.bdr-error]="r.error" [class.bdr-secret]="r.isGmOnly">
+      <span class="bdr-result-name">{{ r.name }}</span>
+      <span class="bdr-secret-tag" *ngIf="r.isGmOnly">[GM]</span>
+      <span class="bdr-result-detail">{{ r.result }}</span>
+    </div>
+  </div>
+</div>

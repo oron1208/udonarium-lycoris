@@ -31,8 +31,10 @@
 
   <!-- ターン制御（GM限定） -->
   <div class="turn-controls" *ngIf="isCombatActive && isGm">
-    <button class="turn-btn" (click)="prevTurn()" title="前のターン">◀ 前ターン</button>
-    <button class="turn-btn" (click)="nextTurn()" title="次のターン">次ターン ▶</button>
+    <button class="turn-btn" (click)="prevRound()" title="前のラウンド">◀◀ 前R</button>
+    <button class="turn-btn" (click)="prevTurn()" title="前のターン">◀ 前T</button>
+    <button class="turn-btn" (click)="nextTurn()" title="次のターン">次T ▶</button>
+    <button class="turn-btn" (click)="nextRound()" title="次のラウンド">次R ▶▶</button>
   </div>
 
   <!-- イニシアチブ表 -->
@@ -48,6 +50,14 @@
       class="list-row"
       [class.current-turn]="i === currentTurnIndex"
       [class.hidden-char]="entry.isHidden"
+      [class.dragging]="dragIndex === i"
+      [class.drag-over]="dragOverIndex === i"
+      draggable="true"
+      (dragstart)="onDragStart($event, i)"
+      (dragover)="onDragOver($event, i)"
+      (dragleave)="onDragLeave($event)"
+      (drop)="onDrop($event, i)"
+      (dragend)="onDragEnd($event)"
     >
       <div class="col-portrait">
         <img *ngIf="getCharacterIcon(entry.identifier)" [src]="getCharacterIcon(entry.identifier) | safe: 'resourceUrl'" [alt]="entry.name">

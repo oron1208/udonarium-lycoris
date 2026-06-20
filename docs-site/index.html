@@ -221,6 +221,27 @@
     </div>
     <div class="timeline">
       <div class="timeline-item fade-up">
+        <div class="timeline-badge">v1.42</div>
+        <div class="timeline-content">
+          <div class="timeline-date">2026-06-21</div>
+          <h3>戦闘管理強化・ダイス一括ロール・BGM協調制御</h3>
+          <ul>
+            <li>行動済みシステム — ラウンドトラッカーのキャラカードをクリックで行動済みON/OFF、次ターンで自動スキップ</li>
+            <li>ターン進行ボタンを4つに分割 — 前R / 前T / 次T / 次R</li>
+            <li>イニシアチブ順をドラッグ&ドロップで手動並び替え（GM限定）</li>
+            <li>ダイス一括ロール機能 — 複数コマ選択時に右クリックから専用パネルを開いて一括ダイスロール</li>
+            <li>イニシアチブロールをBCDice評価に統一 — 各キャラのダイスボット設定を参照</li>
+            <li>新規テーブル作成時にアドバンスモードを引き継ぐよう修正</li>
+            <li>テーブルBGMの「今すぐ再生」「停止」を全プレイヤーに同期</li>
+            <li>ジュークボックスとテーブルBGMの協調制御を改善 — 再生/停止時に全プレイヤーで切り替え</li>
+            <li>ダイスボット優先順位を統一 — VNチャット・ホットバー・一括ロール・イニシアチブロールの全4箇所で「キャラ個別設定 → 部屋のデフォルト → DiceBot」の順で参照するよう統一</li>
+            <li>BGM優先度システムを再構築 — 戦闘BGM ＞ テーブル設定BGM ＞ ジュークボックスBGMの優先順位を導入。上位が停止したら下位が自動で復帰</li>
+            <li>新規ログイン時のBGM同期を改善 — 全BGMソース（戦闘・テーブル・ジュークボックス）の再生状態が新規参加者に正しく反映されるよう修正</li>
+            <li>戦闘管理がテーブルをまたぐよう修正 — 戦闘中にテーブルを切り替えても戦闘状態が維持されるよう修正</li>
+          </ul>
+        </div>
+      </div>
+      <div class="timeline-item fade-up">
         <div class="timeline-badge">v1.41</div>
         <div class="timeline-content">
           <div class="timeline-date">2026-06-20</div>

@@ -9,6 +9,7 @@ import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { EventSystem, Network } from '@udonarium/core/system';
 import { GameCharacter } from '@udonarium/game-character';
 import { DiceBot } from '@udonarium/dice-bot';
+import { Config } from '@udonarium/config';
 import { ChatMessageService } from 'service/chat-message.service';
 import { GmModeService } from 'service/gm-mode.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
@@ -1416,8 +1417,8 @@ export class VnStageComponent implements OnInit, OnDestroy {
 
     let evaluatedText = coreText;
     let messageTargetContext: ChatMessageTargetContext[] = [{ text: coreText, object: null }];
-    let gameType = this.selectedDiceBot || 'DiceBot';
     let messageColor: string = null;
+    let gameType: string = 'DiceBot';
     if (character instanceof GameCharacter) {
       const palette = character.chatPalette;
       const prepared = this.prepareVnChatText(coreText, character);
@@ -1427,9 +1428,17 @@ export class VnStageComponent implements OnInit, OnDestroy {
       // dice-bot.ts の checkResourceEditCommand が認識できるようにする
       if (isSecret) this.applySecretPrefixToContexts(messageTargetContext);
       if (palette) {
-        if (!this.selectedDiceBot || this.selectedDiceBot === 'DiceBot') {
-          gameType = palette.dicebot || 'DiceBot';
+        const charDice = palette.dicebot;
+        const selDice = this.selectedDiceBot;
+        if (selDice && selDice !== 'DiceBot') {
+          gameType = selDice;
+        } else if (charDice && charDice !== 'DiceBot') {
+          gameType = charDice;
+        } else {
+          gameType = Config.instance.defaultDiceBot;
         }
+      } else {
+        gameType = Config.instance.defaultDiceBot;
       }
       if (character.chatColorCode && character.chatColorCode.length > 0) {
         messageColor = character.chatColorCode[0];
@@ -1701,7 +1710,16 @@ export class VnStageComponent implements OnInit, OnDestroy {
     const shouldSendPortrait = this.sendPortrait && onStage;
     const tachieNum = shouldSendPortrait ? this.selectedTachieIndex : null;
     const messageColor = character.chatColorCode?.length ? character.chatColorCode[0] : null;
-    const gameType = palette.dicebot || this.selectedDiceBot || 'DiceBot';
+    const charDice = palette ? palette.dicebot : '';
+    const selDice = this.selectedDiceBot;
+    let gameType: string;
+    if (selDice && selDice !== 'DiceBot') {
+      gameType = selDice;
+    } else if (charDice && charDice !== 'DiceBot') {
+      gameType = charDice;
+    } else {
+      gameType = Config.instance.defaultDiceBot;
+    }
 
     if (actor) {
       actor.text = evaluated;

@@ -291,6 +291,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       })
       .on('UPDATE_GAME_OBJECT', event => { this.syncAdvancedRoomUiClass(); this.lazyNgZoneUpdate(event.isSendFromSelf); })
       .on('DELETE_GAME_OBJECT', event => { this.syncAdvancedRoomUiClass(); this.lazyNgZoneUpdate(event.isSendFromSelf); })
+      .on('SELECT_GAME_TABLE', event => { this.syncAdvancedRoomUiClass(); this.closePanelsIfNotAdvanced(); })
       .on('SYNCHRONIZE_AUDIO_LIST', event => { if (event.isSendFromSelf) this.lazyNgZoneUpdate(false); })
       .on('VN_STAGE_VISIBILITY_CHANGED', event => {
         this.ngZone.run(() => { this.isVnStageVisible = !!event.data?.visible; });
@@ -1064,6 +1065,17 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     const enabled = !!viewTable && viewTable.roomMode === 'advanced';
     this.isAdvancedRoom = enabled;
     document.body.classList.toggle('udonarium-advanced-room', enabled);
+  }
+
+  private closePanelsIfNotAdvanced() {
+    if (!this.isAdvancedRoom) {
+      if (this.lightingPanelOpen) {
+        EventSystem.trigger('LIGHTING_PANEL_CLOSED', {});
+      }
+      if (this.initiativePanelOpen) {
+        EventSystem.trigger('CLOSE_INITIATIVE_PANEL', {});
+      }
+    }
   }
 }
 

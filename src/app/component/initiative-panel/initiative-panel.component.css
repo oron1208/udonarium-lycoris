@@ -72,12 +72,13 @@
 
 .turn-btn {
   flex: 1;
-  padding: 8px;
+  min-width: 0;
+  padding: 6px 4px;
   background: rgba(180, 140, 0, 0.15);
   border: 1px solid rgba(180, 140, 0, 0.4);
   border-radius: 4px;
   color: #8B6914;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -106,6 +107,19 @@
   padding: 4px;
   border-radius: 4px;
   transition: background 0.15s;
+  cursor: grab;
+}
+
+.list-row:active {
+  cursor: grabbing;
+}
+
+.list-row.dragging {
+  opacity: 0.4;
+}
+
+.list-row.drag-over {
+  border-top: 2px solid rgba(255, 215, 0, 0.8);
 }
 
 .list-row.current-turn {

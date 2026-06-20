@@ -106,6 +106,21 @@
   opacity: 0.6;
 }
 
+.tracker-entry.acted {
+  opacity: 0.4;
+  filter: grayscale(0.7);
+}
+
+.tracker-entry.acted.active {
+  opacity: 1;
+  filter: none;
+}
+
+.tracker-entry {
+  cursor: pointer;
+  transition: opacity 0.2s, filter 0.2s;
+}
+
 .entry-portrait {
   width: 36px;
   height: 36px;
