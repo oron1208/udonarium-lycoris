@@ -7,6 +7,7 @@ import { DataElement } from '@udonarium/data-element';
 import { ChatMessageService } from './chat-message.service';
 import { ChatTabList } from '@udonarium/chat-tab-list';
 import { DiceBot } from '@udonarium/dice-bot';
+import { TabletopSelectionService } from 'service/tabletop-selection.service';
 
 export interface CombatEntry {
   identifier: string;
@@ -21,7 +22,8 @@ export interface CombatEntry {
 export class InitiativeService {
   constructor(
     private ngZone: NgZone,
-    private chatMessageService: ChatMessageService
+    private chatMessageService: ChatMessageService,
+    private tabletopSelectionService: TabletopSelectionService
   ) {}
 
   /**
@@ -138,9 +140,27 @@ export class InitiativeService {
     const table = this.getSelectedTable();
     if (!table) return;
 
-    // テーブル上のキャラクターを取得
-    const tableChars = ObjectStore.instance.getObjects<GameCharacter>(GameCharacter)
+    // 戦闘開始設定に従って参加対象を集める
+    const allTableChars = ObjectStore.instance.getObjects<GameCharacter>(GameCharacter)
       .filter(c => c.location.name === 'table');
+    const charMap: { [identifier: string]: GameCharacter } = {};
+
+    if (table.combatJoinAllTableCharacters) {
+      for (const char of allTableChars) charMap[char.identifier] = char;
+    }
+
+    if (table.combatJoinSelectedCharacters) {
+      for (const char of allTableChars) {
+        if (this.tabletopSelectionService.isSelected(char.identifier)) {
+          charMap[char.identifier] = char;
+        }
+      }
+    }
+
+    let tableChars = Object.values(charMap);
+    if (!table.combatIncludeHiddenInventoryCharacters) {
+      tableChars = tableChars.filter(c => !c.hideInventory);
+    }
 
     // イニシアチブ降順でソート
     tableChars.sort((a, b) => {
@@ -169,8 +189,12 @@ export class InitiativeService {
 
     // システムメッセージ
     const firstChar = tableChars[0];
-    const firstName = firstChar ? this.getDisplayName(firstChar) : '';
-    this.sendCombatSystemMessage(`⚔️ 戦闘開始！ Round 1 — ${firstName}のターン`);
+    if (firstChar) {
+      const firstName = this.getDisplayName(firstChar);
+      this.sendCombatSystemMessage(`⚔️ 戦闘開始！ Round 1 — ${firstName}のターン`);
+    } else {
+      this.sendCombatSystemMessage('⚔️ 戦闘開始！ 参加キャラクターは手動で追加してください');
+    }
 
     EventSystem.trigger('COMBAT_STATE_CHANGED', {});
   }

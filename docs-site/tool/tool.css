@@ -178,6 +178,66 @@
 }
 .drop-icon { font-size: 2rem; }
 
+/* ===== Migrator ===== */
+.notice-list {
+  color: var(--text-dim);
+  line-height: 1.8;
+  margin: 0;
+  padding-left: 1.2em;
+}
+.notice-list strong {
+  color: var(--accent);
+}
+.small-note {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+.selected-file {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-dark);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+.migration-summary {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.summary-item {
+  color: var(--text-dim);
+  line-height: 1.7;
+}
+.summary-item code {
+  color: var(--text);
+  background: rgba(255,255,255,0.06);
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+.summary-icon { margin-right: 6px; }
+.tool-main-btn {
+  width: 100%;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+}
+.tool-main-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.result-log {
+  white-space: pre-wrap;
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 14px;
+  overflow: auto;
+  line-height: 1.6;
+}
+
 /* ===== Image Preview ===== */
 .image-preview {
   display: flex;

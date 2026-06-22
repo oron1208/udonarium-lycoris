@@ -63,6 +63,36 @@
   color: #8B6914;
 }
 
+/* 戦闘開始設定 */
+.combat-start-settings {
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  background: rgba(139, 69, 19, 0.06);
+  border: 1px solid rgba(139, 69, 19, 0.18);
+  border-radius: 6px;
+}
+
+.combat-start-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8B4513;
+  margin-bottom: 5px;
+}
+
+.combat-start-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #5f3b1f;
+  cursor: pointer;
+  margin: 3px 0;
+}
+
+.combat-start-option input {
+  margin: 0;
+}
+
 /* ターン制御 */
 .turn-controls {
   display: flex;

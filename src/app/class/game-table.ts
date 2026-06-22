@@ -66,6 +66,9 @@ export class GameTable extends ObjectNode {
   @SyncVar() combatOrder: string = '[]'; // JSON array of character identifiers
   @SyncVar() combatBgmIdentifier: string = '';
   @SyncVar() combatActedSet: string = '[]'; // JSON array of acted character identifiers
+  @SyncVar() combatJoinAllTableCharacters: boolean = true; // 戦闘開始時、テーブル上の全キャラクターを参加対象にする
+  @SyncVar() combatJoinSelectedCharacters: boolean = false; // 戦闘開始時、選択状態のキャラクターを参加対象にする
+  @SyncVar() combatIncludeHiddenInventoryCharacters: boolean = true; // テーブルインベントリ非表示キャラクターも参加対象に含める
 
   gridClipRect: {top: number, right: number, bottom: number, left: number} = null;
 

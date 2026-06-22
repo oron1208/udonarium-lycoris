@@ -66,6 +66,45 @@ export class InitiativePanelComponent implements OnInit, OnDestroy {
     return this.gmModeService.isGm;
   }
 
+  get combatJoinAllTableCharacters(): boolean {
+    const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected);
+    return table?.combatJoinAllTableCharacters ?? true;
+  }
+
+  set combatJoinAllTableCharacters(value: boolean) {
+    const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected);
+    if (table) {
+      table.combatJoinAllTableCharacters = value;
+      table.update();
+    }
+  }
+
+  get combatJoinSelectedCharacters(): boolean {
+    const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected);
+    return table?.combatJoinSelectedCharacters ?? false;
+  }
+
+  set combatJoinSelectedCharacters(value: boolean) {
+    const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected);
+    if (table) {
+      table.combatJoinSelectedCharacters = value;
+      table.update();
+    }
+  }
+
+  get combatIncludeHiddenInventoryCharacters(): boolean {
+    const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected);
+    return table?.combatIncludeHiddenInventoryCharacters ?? true;
+  }
+
+  set combatIncludeHiddenInventoryCharacters(value: boolean) {
+    const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected);
+    if (table) {
+      table.combatIncludeHiddenInventoryCharacters = value;
+      table.update();
+    }
+  }
+
   get entries(): CombatEntry[] {
     return this.initiativeService.getCombatEntries();
   }

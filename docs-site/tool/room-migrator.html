@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
+<title>アドバンス部屋データ変換ツール - ユドナリウムリコリス</title>
+<meta name="description" content="ユドナリウム系の部屋データzipを、ユドナリウムリコリスのアドバンス部屋向けにブラウザ内で変換します。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="../guide/guide.css">
+<link rel="stylesheet" href="tool.css">
+</head>
+<body>
+
+<div class="bg-fixed">
+  <div class="bg-layer bg-layer-1"></div>
+  <div class="bg-layer bg-layer-2"></div>
+</div>
+<canvas id="particles"></canvas>
+
+<nav class="nav scrolled">
+  <div class="nav-inner">
+    <a href="../" class="nav-logo"><span class="logo-icon">◈</span> ユドナリウムリコリス</a>
+    <div class="nav-links">
+      <a href="../#about">概要</a>
+      <a href="../#connect">接続</a>
+      <a href="../guide/index.html">操作説明</a>
+      <a href="index.html" class="nav-link-github">ツール</a>
+    </div>
+  </div>
+</nav>
+
+<section class="section tool-section" style="padding-top: 100px;">
+  <div class="container">
+    <div class="breadcrumb">
+      <a href="../">トップ</a><span class="breadcrumb-sep">›</span><a href="index.html">ツール</a><span class="breadcrumb-sep">›</span><span>部屋データ変換</span>
+    </div>
+
+    <div class="tool-header">
+      <span class="section-tag">MIGRATION TOOL</span>
+      <h1 class="tool-title">アドバンス部屋データ変換ツール</h1>
+      <p class="tool-desc">
+        ユドナリウム / FLY / 2D / リコリス通常部屋のzipを、<br>
+        ユドナリウムリコリスのアドバンス部屋向けzipへ変換します。
+      </p>
+    </div>
+
+    <div class="tool-card notice-card">
+      <div class="card-header">
+        <span class="card-step">IMPORTANT</span>
+        <h2>安全性について</h2>
+      </div>
+      <ul class="notice-list">
+        <li>変換処理はすべてブラウザ内で行われます。zipはサーバーへ送信されません。</li>
+        <li>ファイルサイズ上限は <strong>50MB</strong> です。</li>
+        <li>元zipは変更されません。変換後zipを別名でダウンロードします。</li>
+        <li>このツールは変換後データの動作を保証するものではありません。特殊な派生版データは一部変換できない場合があります。</li>
+        <li>必ず元データを保管し、変換後は実際の卓で使う前に動作確認してください。</li>
+      </ul>
+    </div>
+
+    <div class="tool-card">
+      <div class="card-header">
+        <span class="card-step">STEP 1</span>
+        <h2>部屋データzipを選択</h2>
+      </div>
+      <label id="dropZone" class="drop-zone migrator-drop-zone">
+        <input type="file" id="roomFileInput" accept=".zip,.xml" hidden>
+        <div class="drop-zone-content">
+          <div class="drop-icon">📦</div>
+          <div><strong>ここにzipをドラッグ&ドロップ</strong></div>
+          <div>またはクリックして選択</div>
+          <div class="small-note">対応: .zip / .xml（上限50MB）</div>
+        </div>
+      </label>
+      <div id="selectedFile" class="selected-file" hidden></div>
+    </div>
+
+    <div class="tool-card">
+      <div class="card-header">
+        <span class="card-step">STEP 2</span>
+        <h2>変換内容</h2>
+      </div>
+      <div class="migration-summary">
+        <div class="summary-item"><span class="summary-icon">✅</span> 各 <code>game-table</code> をアドバンス部屋化（<code>roomMode="advanced"</code>）</div>
+        <div class="summary-item"><span class="summary-icon">✅</span> 照明・視界・戦闘管理・ダイスカットイン系の不足属性を初期値で補完</div>
+        <div class="summary-item"><span class="summary-icon">✅</span> 画像・音声などXML以外のファイルはそのまま維持</div>
+      </div>
+      <button id="convertBtn" class="btn btn-primary tool-main-btn" disabled>変換してダウンロード</button>
+    </div>
+
+    <div id="resultCard" class="tool-card result-card" hidden>
+      <div class="card-header">
+        <span class="card-step">RESULT</span>
+        <h2>変換結果</h2>
+      </div>
+      <pre id="resultLog" class="result-log"></pre>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand"><span class="logo-icon">◈</span> ユドナリウムリコリス</div>
+      <div class="footer-links">
+        <a href="https://cylinder-lily.com" target="_blank">リリィ</a>
+        <a href="https://github.com/TK11235/udonarium" target="_blank">オリジナル版</a>
+        <a href="https://github.com/oron1208/udonarium-lycoris" target="_blank">GitHub</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 Udonarium Lycoris.</div>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<script src="room-migrator.js"></script>
+<script src="../main.js"></script>
+</body>
+</html>

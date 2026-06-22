@@ -34,6 +34,23 @@
     <p class="bgm-hint" *ngIf="!combatBgmIdentifier">戦闘開始時に再生するBGMを設定できます</p>
   </div>
 
+  <!-- 戦闘開始設定（GM限定） -->
+  <div class="combat-start-settings" *ngIf="!isCombatActive">
+    <div class="combat-start-title">戦闘開始時の参加対象</div>
+    <label class="combat-start-option">
+      <input type="checkbox" [(ngModel)]="combatJoinAllTableCharacters">
+      <span>テーブル上のすべてのキャラ</span>
+    </label>
+    <label class="combat-start-option">
+      <input type="checkbox" [(ngModel)]="combatJoinSelectedCharacters">
+      <span>選択状態のキャラ</span>
+    </label>
+    <label class="combat-start-option">
+      <input type="checkbox" [(ngModel)]="combatIncludeHiddenInventoryCharacters">
+      <span>テーブルインベントリ非表示キャラを含める</span>
+    </label>
+  </div>
+
   <!-- ターン制御（GM限定） -->
   <div class="turn-controls" *ngIf="isCombatActive && isGm">
     <button class="turn-btn" (click)="prevRound()" title="前のラウンド">◀◀ 前R</button>
