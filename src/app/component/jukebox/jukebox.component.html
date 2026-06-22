@@ -1,75 +1,193 @@
-<div class="jukebox-section">
-  <div class="volume-row">試聴音量：<input [(ngModel)]="auditionVolume" type="range" min="0" max="1" step="0.01" /></div>
-  <div class="volume-row">BGM音量：<input [(ngModel)]="volume" type="range" min="0" max="1" step="0.01" /></div>
+<!-- Tab Switcher -->
+<div class="tab-switcher">
+  <button class="tab-btn" [class.active]="activeTab === 'upload'" (click)="switchTab('upload')">アップロード</button>
+  <button class="tab-btn" [class.active]="activeTab === 'library'" (click)="switchTab('library')">ライブラリ</button>
+</div>
+
+<!-- ==================== Upload Tab ==================== -->
+<div *ngIf="activeTab === 'upload'">
+  <div class="jukebox-section">
+    <div class="volume-row">試聴音量：<input [(ngModel)]="auditionVolume" type="range" min="0" max="1" step="0.01" /></div>
+    <div class="volume-row">BGM音量：<input [(ngModel)]="volume" type="range" min="0" max="1" step="0.01" /></div>
+    <hr/>
+    <div class="volume-row">全体音量：<input [(ngModel)]="roomVolume" type="range" min="0" max="2" step="0.01" disabled={{!roomVolumeChange}}/><br>
+      <font style="font-size: 12px;">※全プレイヤー共通 GM制御用：変更を有効にする<input type="checkbox" id="roomVolumeChange" value="roomVolumeChange" [(ngModel)]="roomVolumeChange"></font>
+    </div>
+  </div>
+
   <hr/>
-  <div class="volume-row">全体音量：<input [(ngModel)]="roomVolume" type="range" min="0" max="2" step="0.01" disabled={{!roomVolumeChange}}/><br>
-    <font style="font-size: 12px;">※全プレイヤー共通 GM制御用：変更を有効にする<input type="checkbox" id="roomVolumeChange" value="roomVolumeChange" [(ngModel)]="roomVolumeChange"></font>
+
+  <!-- Folder System -->
+  <div class="jukebox-section">
+    <div class="section-header">
+      <b>フォルダ</b>
+      <div class="folder-add-row">
+        <input class="is-caret" [(ngModel)]="editingFolderName" placeholder="フォルダ名" style="width:8em;">
+        <button (click)="addFolder()">追加</button>
+      </div>
+    </div>
+    <div class="folder-tabs">
+      <button *ngFor="let folder of getFolders()" [class.active]="selectedFolder === folder || (!selectedFolder && folder === 'すべて')"
+        (click)="selectedFolder = folder === 'すべて' ? '' : folder">{{folder}}</button>
+      <button *ngIf="selectedFolder && selectedFolder !== 'すべて'" class="danger" (click)="removeFolder(selectedFolder)">削除</button>
+    </div>
   </div>
+
+  <hr/>
+
+  <!-- Audio List -->
+  <div class="jukebox-section">
+    <div *ngFor="let audio of getFilteredAudios()" class="audio-row">
+      <div class="audio-controls">
+        <button *ngIf="audio !== auditionPlayer?.audio || auditionPlayer?.paused" (click)="play(audio)" [disabled]="!audio.isReady">試聴</button>
+        <button *ngIf="audio === auditionPlayer?.audio && !auditionPlayer?.paused" (click)="stop()" [disabled]="!audio.isReady">停止</button>
+        <button *ngIf="audio !== jukebox?.audio" (click)="playBGM(audio)" [disabled]="!audio.isReady">BGM</button>
+        <button *ngIf="audio === jukebox?.audio" (click)="stopBGM(audio)" [disabled]="!audio.isReady">■BGM</button>
+        <button (click)="playOnce(audio)" [disabled]="!audio.isReady" title="1回だけ再生">SE</button>
+        <button *ngIf="audio === sePlayer?.audio && !sePlayer?.paused" (click)="stopSE()">■SE</button>
+        <button *ngIf="audio !== ambientPlayer?.audio || ambientPlayer?.paused" (click)="playAmbient(audio)" [disabled]="!audio.isReady" title="ループ再生">環境音</button>
+        <button *ngIf="audio === ambientPlayer?.audio && !ambientPlayer?.paused" (click)="stopAmbient()">■環境</button>
+      </div>
+      <div class="audio-info">
+        <span *ngIf="audio === auditionPlayer?.audio && !auditionPlayer?.paused" class="badge">試聴中</span>
+        <span *ngIf="audio === jukebox?.audio" class="badge bgm-badge">BGM</span>
+        <span *ngIf="audio === ambientPlayer?.audio && !ambientPlayer?.paused" class="badge ambient-badge">環境音</span>
+        <span class="audio-name">{{audio.name}}</span>
+      </div>
+      <div class="audio-folder-assign">
+        <select [ngModel]="getAudioFolder(audio.identifier)" (ngModelChange)="setAudioFolder(audio.identifier, $event)">
+          <option value="">--</option>
+          <ng-container *ngFor="let f of getFolders()">
+            <option *ngIf="f !== 'すべて'" [value]="f">{{f}}</option>
+          </ng-container>
+        </select>
+      </div>
+    </div>
+    <div *ngIf="audios.length < 1">アップロードされた音楽ファイルはここに表示されます。</div>
+  </div>
+
+  <!-- Pinned Library Tracks (shown in upload tab) -->
+  <div *ngIf="pinnedLibraryTracks.length > 0" class="jukebox-section">
+    <hr/>
+    <div class="section-header"><b>🎵 ライブラリ（選択中）</b></div>
+    <div *ngFor="let track of pinnedLibraryTracks" class="audio-row">
+      <div class="audio-controls">
+        <button *ngIf="libraryPreviewId !== track.id" (click)="previewTrack(track)">試聴</button>
+        <button *ngIf="libraryPreviewId === track.id" (click)="stopLibraryPreview()">停止</button>
+        <button *ngIf="'server:' + track.id !== jukebox?.audioIdentifier" (click)="useLibraryTrack(track)">BGM</button>
+        <button *ngIf="'server:' + track.id === jukebox?.audioIdentifier" (click)="jukebox.stop()">■BGM</button>
+      </div>
+      <div class="audio-info">
+        <span *ngIf="libraryPreviewId === track.id" class="badge">試聴中</span>
+        <span *ngIf="'server:' + track.id === jukebox?.audioIdentifier" class="badge bgm-badge">BGM</span>
+        <span class="audio-name">{{track.name}}</span>
+        <span class="library-track-cat">{{track.category}} / {{formatDuration(track.duration)}}</span>
+      </div>
+      <div class="audio-folder-assign">
+        <button (click)="togglePin(track)" title="選択解除" style="font-size:11px;">✕</button>
+      </div>
+    </div>
+  </div>
+
+  <hr/>
+
+  <button (click)="openCutInList()">カットイン編集</button>
+
+  <label>
+    <div class="drop-zone">
+      <div><i class="material-icons large-font">playlist_add</i></div>
+      <div>ここに音楽をドロップ</div>
+      <div class="small-font">またはここをクリックして選択</div>
+      <input type="file" style="display: none;" (change)="handleFileSelect($event)" multiple accept="audio/*"/>
+      <div class="small-font"><br>１ファイルにつき10MBまで</div>
+    </div>
+  </label>
+  <div style="font-size: 12px;">※「試聴」は自分だけ。「BGM」は全員でループ。「SE」は全員で1回再生。「環境音」は自分だけループ。</div>
+  <div style="font-size: 12px;">※音楽ファイルはセーブデータに含まれません。</div>
 </div>
 
-<hr/>
+<!-- ==================== Library Tab ==================== -->
+<div *ngIf="activeTab === 'library'">
 
-<!-- Folder System -->
-<div class="jukebox-section">
-  <div class="section-header">
-    <b>フォルダ</b>
-    <div class="folder-add-row">
-      <input class="is-caret" [(ngModel)]="editingFolderName" placeholder="フォルダ名" style="width:8em;">
-      <button (click)="addFolder()">追加</button>
+  <!-- Password Gate -->
+  <div *ngIf="!libraryAuthed" class="library-password-gate">
+    <div class="library-warning-box">
+      <div class="library-warning-icon">🔒</div>
+      <div class="library-warning-title">ミュージックライブラリ</div>
+      <div class="library-warning-text">
+        この機能はパスワードが必要です。<br>
+        利用をご希望の方は <b>oron1208</b> のX(Twitter)DMへご連絡ください。
+      </div>
+      <div class="library-password-input-row">
+        <input
+          [(ngModel)]="libraryPassword"
+          (keyup.enter)="checkLibraryPassword()"
+          type="password"
+          placeholder="パスワード"
+          class="library-password-input"
+        />
+        <button (click)="checkLibraryPassword()">認証</button>
+      </div>
+      <div *ngIf="libraryPasswordError" class="library-password-error">パスワードが違います</div>
     </div>
   </div>
-  <div class="folder-tabs">
-    <button *ngFor="let folder of getFolders()" [class.active]="selectedFolder === folder || (!selectedFolder && folder === 'すべて')"
-      (click)="selectedFolder = folder === 'すべて' ? '' : folder">{{folder}}</button>
-    <button *ngIf="selectedFolder && selectedFolder !== 'すべて'" class="danger" (click)="removeFolder(selectedFolder)">削除</button>
+
+  <!-- Library Content (after auth) -->
+  <div *ngIf="libraryAuthed">
+    <!-- AI Warning -->
+    <div class="library-ai-warning">
+      ⚠️ このライブラリの楽曲は<b>生成AIを用いて作成</b>されたものです。<br>
+      利用をご希望の方は <b>oron1208</b> のX(Twitter)DMへご連絡ください。
+    </div>
+
+    <!-- Volume Controls -->
+    <div class="jukebox-section">
+      <div class="volume-row">試聴音量：<input [(ngModel)]="auditionVolume" type="range" min="0" max="1" step="0.01" /></div>
+      <div class="volume-row">BGM音量：<input [(ngModel)]="volume" type="range" min="0" max="1" step="0.01" /></div>
+    </div>
+
+    <hr/>
+
+    <!-- Search & Category Filter -->
+    <div class="library-controls">
+      <div class="library-search-row">
+        <input
+          [(ngModel)]="librarySearchQuery"
+          placeholder="曲名・カテゴリで検索"
+          class="library-search-input"
+        />
+      </div>
+      <div class="library-category-row">
+        <label>カテゴリー：</label>
+        <select [(ngModel)]="libraryCategoryFilter">
+          <option *ngFor="let cat of libraryCategories" [value]="cat">{{cat}}</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Track List -->
+    <div class="library-track-list">
+      <div *ngFor="let track of getFilteredLibraryTracks()" class="library-track-row">
+        <div class="library-track-info">
+          <span class="library-track-icon">{{ libraryPreviewId === track.id ? '⏸' : '▶' }}</span>
+          <div class="library-track-text">
+            <div class="library-track-name">{{track.name}}</div>
+            <div class="library-track-meta">{{track.category}} / {{formatDuration(track.duration)}}</div>
+          </div>
+        </div>
+        <div class="library-track-actions">
+          <button (click)="previewTrack(track)" class="library-preview-btn">
+            {{ libraryPreviewId === track.id ? '停止' : '試聴' }}
+          </button>
+          <button (click)="togglePin(track)" class="library-pin-btn" [class.pinned]="isTrackPinned(track.id)">
+            {{ isTrackPinned(track.id) ? '✓選択中' : '選択' }}
+          </button>
+          <button (click)="useLibraryTrack(track)" class="library-use-btn">BGM</button>
+        </div>
+      </div>
+      <div *ngIf="getFilteredLibraryTracks().length === 0" class="library-empty">
+        曲が見つかりませんでした。
+      </div>
+    </div>
   </div>
 </div>
-
-<hr/>
-
-<!-- Audio List -->
-<div class="jukebox-section">
-  <div *ngFor="let audio of getFilteredAudios()" class="audio-row">
-    <div class="audio-controls">
-      <button *ngIf="audio !== auditionPlayer?.audio || auditionPlayer?.paused" (click)="play(audio)" [disabled]="!audio.isReady">試聴</button>
-      <button *ngIf="audio === auditionPlayer?.audio && !auditionPlayer?.paused" (click)="stop()" [disabled]="!audio.isReady">停止</button>
-      <button *ngIf="audio !== jukebox?.audio" (click)="playBGM(audio)" [disabled]="!audio.isReady">BGM</button>
-      <button *ngIf="audio === jukebox?.audio" (click)="stopBGM(audio)" [disabled]="!audio.isReady">■BGM</button>
-      <button (click)="playOnce(audio)" [disabled]="!audio.isReady" title="1回だけ再生">SE</button>
-      <button *ngIf="audio === sePlayer?.audio && !sePlayer?.paused" (click)="stopSE()">■SE</button>
-      <button *ngIf="audio !== ambientPlayer?.audio || ambientPlayer?.paused" (click)="playAmbient(audio)" [disabled]="!audio.isReady" title="ループ再生">環境音</button>
-      <button *ngIf="audio === ambientPlayer?.audio && !ambientPlayer?.paused" (click)="stopAmbient()">■環境</button>
-    </div>
-    <div class="audio-info">
-      <span *ngIf="audio === auditionPlayer?.audio && !auditionPlayer?.paused" class="badge">試聴中</span>
-      <span *ngIf="audio === jukebox?.audio" class="badge bgm-badge">BGM</span>
-      <span *ngIf="audio === ambientPlayer?.audio && !ambientPlayer?.paused" class="badge ambient-badge">環境音</span>
-      <span class="audio-name">{{audio.name}}</span>
-    </div>
-    <div class="audio-folder-assign">
-      <select [ngModel]="getAudioFolder(audio.identifier)" (ngModelChange)="setAudioFolder(audio.identifier, $event)">
-        <option value="">--</option>
-        <ng-container *ngFor="let f of getFolders()">
-          <option *ngIf="f !== 'すべて'" [value]="f">{{f}}</option>
-        </ng-container>
-      </select>
-    </div>
-  </div>
-  <div *ngIf="audios.length < 1">アップロードされた音楽ファイルはここに表示されます。</div>
-</div>
-
-<hr/>
-
-<button (click)="openCutInList()">カットイン編集</button>
-
-<label>
-  <div class="drop-zone">
-    <div><i class="material-icons large-font">playlist_add</i></div>
-    <div>ここに音楽をドロップ</div>
-    <div class="small-font">またはここをクリックして選択</div>
-    <input type="file" style="display: none;" (change)="handleFileSelect($event)" multiple accept="audio/*"/>
-    <div class="small-font"><br>１ファイルにつき10MBまで</div>
-  </div>
-</label>
-<div style="font-size: 12px;">※「試聴」は自分だけ。「BGM」は全員でループ。「SE」は全員で1回再生。「環境音」は自分だけループ。</div>
-<div style="font-size: 12px;">※音楽ファイルはセーブデータに含まれません。</div>

@@ -324,6 +324,86 @@ function cleanupUnreferencedMedia() {
   stats.savedMedia = countSavedMedia();
 }
 
+// ===== Audio Library API =====
+const AUDIO_LIBRARY_ROOT = path.join(__dirname, 'audio-library');
+let audioLibraryCache = null;
+let audioLibraryCacheTime = 0;
+const AUDIO_LIBRARY_CACHE_TTL = 5 * 60 * 1000; // 5分キャッシュ
+
+function buildAudioLibraryIndex() {
+  const tracks = [];
+  let categories = [];
+  try {
+    categories = fs.readdirSync(AUDIO_LIBRARY_ROOT, { withFileTypes: true })
+      .filter(d => d.isDirectory())
+      .map(d => d.name);
+  } catch (error) {
+    if (error.code !== 'ENOENT') console.warn('[audio-library] failed to read root', error.message);
+    return { tracks: [] };
+  }
+
+  for (const category of categories) {
+    const catDir = path.join(AUDIO_LIBRARY_ROOT, category);
+    // meta.jsonがあれば読み込む
+    let meta = {};
+    const metaPath = path.join(catDir, 'meta.json');
+    try {
+      if (fs.existsSync(metaPath)) {
+        meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+        if (Array.isArray(meta)) {
+          // 配列形式の場合はオブジェクトに変換
+          const obj = {};
+          for (const item of meta) {
+            if (item.file) obj[item.file] = item;
+          }
+          meta = obj;
+        }
+      }
+    } catch (error) {
+      console.warn('[audio-library] failed to read meta.json', category, error.message);
+    }
+
+    // ディレクトリ内の音声ファイルをスキャン
+    let files = [];
+    try {
+      files = fs.readdirSync(catDir).filter(f => /\.(mp3|ogg|wav|m4a|aac|flac)$/i.test(f));
+    } catch (error) {
+      if (error.code !== 'ENOENT') console.warn('[audio-library] failed to read category dir', category, error.message);
+      continue;
+    }
+
+    for (const file of files) {
+      const m = meta[file] || {};
+      const id = m.id || `${category}-${path.parse(file).name}`;
+      const name = m.name || path.parse(file).name;
+      const duration = m.duration || null;
+      tracks.push({
+        id,
+        name,
+        category: m.category || category,
+        url: `/audio-library/${category}/${file}`,
+        duration,
+      });
+    }
+  }
+
+  console.log(`[audio-library] index built: ${tracks.length} tracks, ${categories.length} categories`);
+  return { tracks };
+}
+
+function handleAudioLibraryList(req, res) {
+  const now = Date.now();
+  if (audioLibraryCache && now - audioLibraryCacheTime < AUDIO_LIBRARY_CACHE_TTL) {
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=300' });
+    res.end(JSON.stringify(audioLibraryCache));
+    return;
+  }
+  audioLibraryCache = buildAudioLibraryIndex();
+  audioLibraryCacheTime = now;
+  res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=300' });
+    res.end(JSON.stringify(audioLibraryCache));
+}
+
 function send(ws, message) {
   if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(message));
 }
@@ -1197,6 +1277,40 @@ function createAppHandler() {
     };
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache' });
     res.end(JSON.stringify({ ok: true, peers: peers.size, rooms, roomDetails, media, ...stats }));
+    return;
+  }
+
+  // ===== Audio Library API =====
+  if (requestPath === '/api/audio-library' && req.method === 'GET') {
+    handleAudioLibraryList(req, res);
+    return;
+  }
+
+  // ===== Audio Library 静的配信 =====
+  if (requestPath.startsWith('/audio-library/')) {
+    const subPath = requestPath.substring('/audio-library/'.length);
+    const safeSub = path.normalize(subPath).replace(/^(\.\.[/\\])+/, '');
+    const filePath = path.join(AUDIO_LIBRARY_ROOT, safeSub);
+    // ディレクトリトラバーサル対策
+    if (!filePath.startsWith(AUDIO_LIBRARY_ROOT)) {
+      res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Forbidden');
+      return;
+    }
+    fs.readFile(filePath, (err, data) => {
+      if (err) {
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end('Not found');
+        return;
+      }
+      const ext = path.extname(filePath).toLowerCase();
+      res.writeHead(200, {
+        'Content-Type': MIME[ext] || 'application/octet-stream',
+        'Cache-Control': 'public, max-age=3600',
+        'Access-Control-Allow-Origin': '*',
+      });
+      res.end(data);
+    });
     return;
   }
 

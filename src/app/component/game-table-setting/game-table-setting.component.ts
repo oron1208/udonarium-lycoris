@@ -21,6 +21,7 @@ import { BatchService } from 'service/batch.service';
 
 import { DiceBot } from '@udonarium/dice-bot';
 import { Config } from '@udonarium/config';
+import { AudioLibraryService, ServerAudioTrack } from 'service/audio-library.service';
 
 @Component({
   selector: 'game-table-setting',
@@ -58,6 +59,16 @@ export class GameTableSettingComponent implements OnInit, OnDestroy, AfterViewIn
 
   get diceBotInfos() { return DiceBot.diceBotInfos }
   get audios(): AudioFile[] { return AudioStorage.instance.audios.filter(audio => !audio.isHidden); }
+
+  get libraryTracks(): ServerAudioTrack[] {
+    // ピン留め（選択中）の曲のみ表示
+    const jukebox = ObjectStore.instance.get<Jukebox>('Jukebox');
+    if (!jukebox) return [];
+    const pinnedIds = jukebox.getPinnedLibraryTrackIds();
+    return pinnedIds
+      .map(id => this.audioLibraryService.getTrack(id))
+      .filter(t => t !== null) as ServerAudioTrack[];
+  }
 
   get tableBackgroundImage(): ImageFile {
     return this.imageService.getEmptyOr(this.selectedTable ? this.selectedTable.imageIdentifier : null);
@@ -126,7 +137,8 @@ export class GameTableSettingComponent implements OnInit, OnDestroy, AfterViewIn
     private saveDataService: SaveDataService,
     private imageService: ImageService,
     private panelService: PanelService,
-    private tabletopService: TabletopService
+    private tabletopService: TabletopService,
+    private audioLibraryService: AudioLibraryService
   ) { }
 
   ngOnInit() {

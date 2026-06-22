@@ -22,7 +22,12 @@
     <div class="bgm-controls">
       <select class="bgm-select" [(ngModel)]="combatBgmIdentifier">
         <option value="">なし</option>
-        <option *ngFor="let a of audioFiles" [value]="a.identifier">{{ a.name }}</option>
+        <optgroup label="アップロード" *ngIf="audioFiles.length > 0">
+          <option *ngFor="let a of audioFiles" [value]="a.identifier">{{ a.name }}</option>
+        </optgroup>
+        <optgroup label="ライブラリ" *ngIf="libraryTracks.length > 0">
+          <option *ngFor="let track of libraryTracks" [value]="'server:' + track.id">{{ track.name }}</option>
+        </optgroup>
       </select>
       <button class="bgm-preview-btn" (click)="previewCombatBgm()" title="試聴">▶</button>
     </div>

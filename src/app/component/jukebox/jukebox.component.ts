@@ -1,7 +1,7 @@
 import { Component, NgZone, OnDestroy, OnInit } from '@angular/core';
 
 import { AudioFile } from '@udonarium/core/file-storage/audio-file';
-import { AudioPlayer, VolumeType } from '@udonarium/core/file-storage/audio-player';
+import { AudioPlayer, HttpAudioPlayer, VolumeType } from '@udonarium/core/file-storage/audio-player';
 import { AudioStorage } from '@udonarium/core/file-storage/audio-storage';
 import { FileArchiver } from '@udonarium/core/file-storage/file-archiver';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
@@ -15,6 +15,7 @@ import { PointerDeviceService } from 'service/pointer-device.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 
 import { CutInLauncher } from '@udonarium/cut-in-launcher';
+import { AudioLibraryService, ServerAudioTrack } from 'service/audio-library.service';
 
 @Component({
   selector: 'app-jukebox',
@@ -27,6 +28,20 @@ export class JukeboxComponent implements OnInit, OnDestroy {
 
   selectedFolder: string = '';
   editingFolderName: string = '';
+
+  // ===== Library Tab =====
+  activeTab: 'upload' | 'library' = 'upload';
+  libraryPassword: string = '';
+  libraryAuthed: boolean = false;
+  libraryPasswordError: boolean = false;
+  librarySearchQuery: string = '';
+  libraryCategoryFilter: string = 'すべて';
+  libraryTracks: ServerAudioTrack[] = [];
+  libraryPreviewPlayer: HttpAudioPlayer | null = null;
+  libraryPreviewId: string | null = null;
+
+  private static readonly LIBRARY_PASSWORD = 'yaminoma';
+  private static readonly SESSION_KEY = 'audio_library_authed';
 
   get roomVolume(): number { 
     let conf = ObjectStore.instance.get<Config>('Config');
@@ -73,12 +88,15 @@ export class JukeboxComponent implements OnInit, OnDestroy {
     private modalService: ModalService,
     private panelService: PanelService,
     private pointerDeviceService: PointerDeviceService,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    private audioLibraryService: AudioLibraryService
   ) { }
 
   ngOnInit() {
     Promise.resolve().then(() => this.modalService.title = this.panelService.title = 'ジュークボックス');
     this.auditionPlayer.volumeType = VolumeType.AUDITION;
+    // セッションストレージから認証状態を復元
+    this.libraryAuthed = sessionStorage.getItem(JukeboxComponent.SESSION_KEY) === '1';
     EventSystem.register(this)
       .on('*', event => {
         if (event.eventName.startsWith('FILE_')) this.lazyNgZoneUpdate();
@@ -88,6 +106,7 @@ export class JukeboxComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     EventSystem.unregister(this);
     this.stop();
+    this.stopLibraryPreview();
   }
 
   play(audio: AudioFile) {
@@ -236,6 +255,118 @@ export class JukeboxComponent implements OnInit, OnDestroy {
     let coordinate = this.pointerDeviceService.pointers[0];
     let option: PanelOption = { left: coordinate.x+25, top: coordinate.y+25, width: 650, height: 740 };
     this.panelService.open<CutInListComponent>(CutInListComponent, option);
+  }
+
+  // ===== Library Tab Methods =====
+
+  switchTab(tab: 'upload' | 'library') {
+    if (this.activeTab === tab) return;
+    this.activeTab = tab;
+    if (tab === 'library' && this.libraryAuthed && this.libraryTracks.length === 0) {
+      this.loadLibraryTracks();
+    }
+  }
+
+  checkLibraryPassword() {
+    if (this.libraryPassword === JukeboxComponent.LIBRARY_PASSWORD) {
+      this.libraryAuthed = true;
+      this.libraryPasswordError = false;
+      this.libraryPassword = '';
+      sessionStorage.setItem(JukeboxComponent.SESSION_KEY, '1');
+      this.loadLibraryTracks();
+    } else {
+      this.libraryPasswordError = true;
+    }
+  }
+
+  async loadLibraryTracks() {
+    this.libraryTracks = await this.audioLibraryService.fetchTracks();
+  }
+
+  get libraryCategories(): string[] {
+    return ['すべて', ...this.audioLibraryService.categories];
+  }
+
+  getFilteredLibraryTracks(): ServerAudioTrack[] {
+    let tracks = this.libraryTracks;
+    if (this.libraryCategoryFilter && this.libraryCategoryFilter !== 'すべて') {
+      tracks = tracks.filter(t => t.category === this.libraryCategoryFilter);
+    }
+    if (this.librarySearchQuery.trim()) {
+      const q = this.librarySearchQuery.toLowerCase();
+      tracks = tracks.filter(t =>
+        t.name.toLowerCase().includes(q) ||
+        t.category.toLowerCase().includes(q)
+      );
+    }
+    return tracks;
+  }
+
+  formatDuration(seconds: number): string {
+    if (!seconds || seconds <= 0) return '--:--';
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
+  previewTrack(track: ServerAudioTrack) {
+    if (this.libraryPreviewId === track.id) {
+      this.stopLibraryPreview();
+      return;
+    }
+    this.stopLibraryPreview();
+    const url = this.audioLibraryService.getTrackUrl(track.id);
+    if (!url) return;
+    this.libraryPreviewPlayer = new HttpAudioPlayer();
+    this.libraryPreviewPlayer.loop = false;
+    this.libraryPreviewPlayer.volume = this.auditionVolume * this.roomVolume;
+    this.libraryPreviewPlayer.play(url);
+    this.libraryPreviewId = track.id;
+    // 再生終了時にステートをリセット
+    const audioElm = (this.libraryPreviewPlayer as any).audioElm as HTMLAudioElement;
+    if (audioElm) {
+      audioElm.onended = () => {
+        this.libraryPreviewId = null;
+        this.libraryPreviewPlayer = null;
+        this.ngZone.run(() => {});
+      };
+    }
+  }
+
+  stopLibraryPreview() {
+    if (this.libraryPreviewPlayer) {
+      this.libraryPreviewPlayer.stop();
+      this.libraryPreviewPlayer = null;
+    }
+    this.libraryPreviewId = null;
+  }
+
+  useLibraryTrack(track: ServerAudioTrack) {
+    this.stopLibraryPreview();
+    const sourceId = 'server:' + track.id;
+    this.cutInLauncher.stopBlankTagCutIn();
+    this.jukebox.play(sourceId, true);
+  }
+
+  isTrackPinned(trackId: string): boolean {
+    return this.jukebox.isPinnedLibraryTrack(trackId);
+  }
+
+  togglePin(track: ServerAudioTrack) {
+    // 再生中の曲を選択解除したら停止する
+    const sourceId = 'server:' + track.id;
+    if (this.jukebox.audioIdentifier === sourceId) {
+      this.jukebox.stop();
+    }
+    this.stopLibraryPreview();
+    this.jukebox.togglePinnedLibraryTrack(track.id);
+  }
+
+  get pinnedLibraryTracks(): ServerAudioTrack[] {
+    const pinnedIds = this.jukebox.getPinnedLibraryTrackIds();
+    return pinnedIds
+      .map(id => this.audioLibraryService.getTrack(id))
+      .filter(t => t !== null) as ServerAudioTrack[];
   }
 
 }

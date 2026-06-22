@@ -12,6 +12,84 @@
 
 ---
 
+## v1.42のBGM優先度システムとの統合（重要）
+
+v1.42でBGM優先度エンジン（`_updateBgmPlayback()`）を再構築した。本機能はこのエンジンに統合する。
+
+### 現在のBGM優先度アーキテクチャ
+
+```
+優先度: 戦闘BGM ＞ テーブル設定BGM ＞ ジュークボックスBGM
+
+_updateBgmPlayback()
+  ├─ _startCombatPlayback()   → combatAudioPlayer
+  ├─ _startTablePlayback()    → tableAudioPlayers[]
+  └─ _startJukeboxPlayback()  → audioPlayer / jukeboxLayerPlayers[]
+```
+
+### サーバー音声導入後の変更点
+
+各`_startXxxPlayback()`メソッド内で、音源IDのプレフィックスを判定して再生プレイヤーを分岐する。
+
+```
+_startXxxPlayback()
+  ├─ server: 場合 → HttpAudioPlayer でVPSから直接ストリーミング
+  └─ upload: 場合 → 従来の AudioPlayer + AudioStorage で再生
+```
+
+### 重要：サーバー音声は「準備完了待ち」が不要
+
+従来の`upload:`音声はP2Pでファイル転送が完了するまで再生できない。そのため：
+- `_startXxxPlayback()`の戻り値`actuallyStarted`が`false`になる場合がある
+- `_currentBgmSource = null`にして、`UPDATE_AUDIO_RESOURE`イベントで再評価
+
+`server:`音声はURLを叩けば即再生できるため：
+- `actuallyStarted`は常に`true`
+- ファイル準備待ちの仕組み（`playAfterFileUpdate()`）は不要
+
+---
+
+## 同期用SyncVarとサーバー音声の連携
+
+### 現在の同期仕組み（v1.42）
+
+| SyncVar | 用途 | サーバー音声の扱い |
+|---------|------|-------------------|
+| `activeBgmSource` | 現在再生中のソース（`'combat'`/`'table'`/`'jukebox'`） | 変更なし（ソース種別のみ） |
+| `combatBgmIdentifierSync` | 戦闘BGMの音声ID | `server:battle-001` がそのまま入る |
+| `activeTableIdentifier` | 再生中のテーブルID | 変更なし |
+| `audioIdentifier` | ジュークボックス再生中の音声ID | `server:town-003` がそのまま入る |
+| `isPlaying` | ジュークボックス再生フラグ | 変更なし |
+
+### 新規ログイン時の復元フロー
+
+```
+新規ユーザーが部屋にログイン
+  ↓
+Jukebox.apply() でSyncVarを受信
+  ├─ activeBgmSource = "table"
+  ├─ combatBgmIdentifierSync = "" （戦闘中でなければ空）
+  └─ audioIdentifier = "server:battle-001"
+  ↓
+_updateBgmPlayback() が優先度を評価
+  ↓
+_startXxxPlayback() で音源IDを判定
+  ├─ "server:" → HttpAudioPlayer.play(url)
+  └─ "upload:" → AudioStorage から取得（ファイル準備待ちの場合あり）
+```
+
+### テーブル属性の遅延同期との連携
+
+v1.42で`UPDATE_GAME_OBJECT`イベントリスナーを追加し、テーブル属性（BGM設定）が後から同期された場合に自動でBGM再評価する仕組みがある。
+
+テーブルBGMレイヤーに`server:xxx`が入る場合も、同じ仕組みでキャッチされるため追加変更は不要。
+
+### 戦闘管理のテーブルまたぎとの連携
+
+v1.42で`getCombatTable()`が戦闘中テーブルを自動追跡するようになった。`combatBgmIdentifierSync`に`server:xxx`が入っても、テーブルをまたいで正しく追跡・再生される。
+
+---
+
 ## 要件
 
 ### 1. サーバー側
@@ -130,6 +208,8 @@ upload:<identifier>   → 従来のP2P同期音声（AudioStorage）
 server:<trackId>      → サーバーストリーミング音声
 ```
 
+プレフィックスなしの既存IDは`upload:`として扱う（後方互換性参照）。
+
 #### 対象UI
 
 | 場所 | 現在 | 変更後 |
@@ -159,7 +239,7 @@ server:<trackId>      → サーバーストリーミング音声
 #### 基本方針
 
 - 音声データはP2Pで送らない
-- 再生コマンド（何を再生するか）だけSyncVar / EventSystem.callで同期
+- 再生コマンド（何を再生するか）だけSyncVarで同期
 - 各クライアントがサーバーから各自ストリーミング
 
 #### 再生フロー
@@ -167,22 +247,26 @@ server:<trackId>      → サーバーストリーミング音声
 ```
 GMが「使用」ボタン押下
   ↓
-SyncVar更新: currentTrackId = "server:battle-001"
+Jukebox.play("server:battle-001") またはテーブルBGMレイヤーに "server:battle-001" を設定
   ↓
-各クライアントのJukeboxがSyncVar変更を検知
+_updateBgmPlayback() が優先度を評価
   ↓
-server: プレフィックスを判定 → HttpAudioPlayerでVPSから再生
+_startXxxPlayback() で音源IDを判定
+  ├─ "server:" → HttpAudioPlayer.play(url)  ← 即再生
+  └─ "upload:" → AudioPlayer.play(audio)    ← ファイル準備待ちの場合あり
   ↓
-upload: プレフィックス → 従来のAudioPlayerで再生
+activeBgmSource 等 SyncVar で全ピアに通知
+  ↓
+他ピアの apply() → _updateBgmPlayback() → 同様に再生
 ```
 
 #### 3レイヤー対応
 
 | レイヤー | 再生メソッド | サーバー曲対応 |
 |----------|-------------|---------------|
-| テーブルBGM | `playTableAudio` | ✅ |
-| 戦闘BGM | `playCombatBgm` | ✅ |
-| ジュークボックス | `play` / `playJukeboxLayers` | ✅ |
+| テーブルBGM | `_startTablePlayback()` | ✅ |
+| 戦闘BGM | `_startCombatPlayback()` | ✅ |
+| ジュークボックス | `_startJukeboxPlayback()` | ✅ |
 
 ---
 
@@ -259,57 +343,131 @@ class HttpAudioPlayer {
 }
 ```
 
-#### インターフェース統一
+#### サーバー音声の特徴
 
-将来的に`AudioPlayer`と`HttpAudioPlayer`を統合するインターフェース：
-
-```typescript
-interface IAudioPlayer {
-  loop: boolean;
-  volume: number;
-  play(source: AudioFile | string): void;
-  stop(): void;
-}
-```
+| 項目 | upload: (P2P) | server: (HTTP) |
+|------|---------------|----------------|
+| ファイル準備 | P2P転送完了後に再生可能 | **即再生可能** |
+| `actuallyStarted`戻り値 | `false`の場合あり（ファイル未準備） | **常に`true`** |
+| `playAfterFileUpdate()` | 必要（`UPDATE_AUDIO_RESOURE`で再評価） | **不要** |
+| 同期方式 | AudioStorage + SyncVar | URLのみSyncVar |
 
 ---
 
-### 8. Jukebox拡張
+### 8. Jukebox拡張（v1.42アーキテクチャ準拠）
 
-#### 変更点
+#### 各_startXxxPlayback()メソッドの拡張
+
+`_startCombatPlayback()`, `_startTablePlayback()`, `_startJukeboxPlayback()`の各メソッド内で、音源IDのプレフィックスを判定して再生プレイヤーを分岐する。
 
 ```typescript
-// Jukebox.ts
+/**
+ * 音源IDから適切なプレイヤーで再生
+ * @returns 実際に再生開始したか
+ */
+private _playBySourceId(
+  sourceId: string,
+  players: AudioPlayer[] | HttpAudioPlayer[],
+  loop: boolean,
+  volume: number
+): boolean {
+  const resolved = resolveAudioSource(sourceId); // プレフィックス補完
 
-// サーバー曲を判別して適切なプレイヤーで再生
-private playBySourceId(sourceId: string, loop: boolean, volume: number): void {
-  if (sourceId.startsWith('server:')) {
-    const trackId = sourceId.substring(7);
-    const track = this.audioLibraryCache.get(trackId);
-    if (track) {
-      const player = new HttpAudioPlayer();
-      player.loop = loop;
-      player.volume = volume;
-      player.play(track.url);
-      // プレイヤーを適切なリストに追加
-    }
+  if (resolved.startsWith('server:')) {
+    const trackId = resolved.substring(7);
+    const track = AudioLibraryService.instance.getTrack(trackId);
+    if (!track) return false;
+    const player = new HttpAudioPlayer();
+    player.loop = loop;
+    player.volume = volume;
+    player.play(track.url);
+    (players as any[]).push(player);
+    return true; // 即再生開始
   } else {
-    // 従来のアップロード音声
-    const identifier = sourceId.substring(7); // "upload:" を除去
-    // AudioStorage から取得して再生
+    const identifier = resolved.substring(7);
+    const audio = AudioStorage.instance.get(identifier);
+    if (!audio || !audio.isReady) return false; // ファイル未準備
+    const player = new AudioPlayer(audio);
+    player.loop = loop;
+    player.volume = volume;
+    player.play(audio);
+    (players as any[]).push(player);
+    return true;
   }
 }
 ```
 
-各メソッド（`playTableAudio`, `playCombatBgm`, `play`, `playJukeboxLayers`）で、`playBySourceId`を使用するように変更。
+各メソッドでの使用例：
+
+```typescript
+private _startCombatPlayback(): boolean {
+  const sourceId = resolveAudioSource(this._combatBgmIdentifier);
+  return this._playBySourceId(sourceId, [/* combatAudioPlayer */], true, 0.6);
+  // ※ combatAudioPlayerは単一なので配列ではなく直接代入
+}
+
+private _startTablePlayback(): boolean {
+  const table = ObjectStore.instance.get<GameTable>(this.activeTableIdentifier);
+  if (!table) return false;
+  const layers = Jukebox.getTableAudioLayers(table)
+    .filter(layer => layer.enabled && layer.audioIdentifier);
+  let started = false;
+  for (const layer of layers) {
+    if (this._playBySourceId(
+      resolveAudioSource(layer.audioIdentifier),
+      this.tableAudioPlayers,
+      layer.mode === 'loop',
+      layer.volume
+    )) started = true;
+  }
+  if (!started) this.playAfterFileUpdate();
+  return started;
+}
+
+private _startJukeboxPlayback(): boolean {
+  // メインジュークボックス
+  const sourceId = resolveAudioSource(this.audioIdentifier);
+  return this._playBySourceId(sourceId, [/* audioPlayer */], true, this.volume);
+}
+```
+
+#### 曲切り替え検知（_jukeboxAudioLoadedFor）
+
+v1.42でジュークボックス内の曲切り替えを検知するため`_jukeboxAudioLoadedFor`を導入済み。
+`server:`音声でも同じ仕組みで曲切り替えを検知できる（`audioIdentifier`の値が変わるため）。
+
+```typescript
+// _updateBgmPlayback() 内の判定（変更なし）
+if (desired === 'jukebox') {
+  const currentJukeboxId = this._jukeboxLayerOverrideActive
+    ? '__layers__'
+    : this.audioIdentifier; // "server:town-003" 等が入る
+  if (currentJukeboxId !== this._jukeboxAudioLoadedFor) {
+    // 再スタート
+  }
+}
+```
 
 ---
 
 ### 9. テーブルBGM・戦闘BGMのSyncVar拡張
 
-現在のテーブルBGMは `table.getAttribute('lycorisTableAudioLayers')` にJSONで保存。戦闘BGMは `table.combatBgmIdentifier` に保存。
+現在のテーブルBGMは `table.getAttribute('lycorisTableAudioLayers')` にJSONで保存。戦闘BGMは `combatBgmIdentifierSync`（SyncVar）に保存。
 
 これらの値に `server:` プレフィックスのIDも保存できるようにするだけ（既存の仕組みを変更なし、IDの形式だけ拡張）。
+
+---
+
+## 後方互換性
+
+既存の部屋の音声IDにはプレフィックスがない。移行対応：
+
+```typescript
+function resolveAudioSource(id: string): string {
+  if (id.startsWith('server:') || id.startsWith('upload:')) return id;
+  return 'upload:' + id;  // プレフィックスなしは従来のアップロード音声
+}
+```
 
 ---
 
@@ -317,9 +475,9 @@ private playBySourceId(sourceId: string, loop: boolean, volume: number): void {
 
 | ファイル | 修正内容 |
 |----------|---------|
-| `unified-server.js` | `/api/audio-library` エンドポイント追加 |
-| nginx設定 | `/audio/` の静的配信設定 |
-| `src/app/class/Jukebox.ts` | サーバー曲再生対応、`playBySourceId` |
+| `unified-server.js` | `/api/audio-library` エンドポイント追加、index.json自動生成 |
+| nginx設定（VPS） | `/audio/` の静的配信設定 |
+| `src/app/class/Jukebox.ts` | `_playBySourceId()`追加、各`_startXxxPlayback()`拡張 |
 | `src/app/class/core/file-storage/audio-player.ts` | `HttpAudioPlayer` クラス追加 |
 | `src/app/service/audio-library.service.ts` | **新規** API取得・キャッシュ管理 |
 | `src/app/component/jukebox/jukebox.component.*` | ライブラリタブUI |
@@ -333,10 +491,10 @@ private playBySourceId(sourceId: string, loop: boolean, volume: number): void {
 
 | フェーズ | 内容 | 優先度 |
 |----------|------|--------|
-| **1** | サーバー側: API + nginx配信設定 | 高 |
+| **1** | サーバー側: API + nginx配信設定 + 音源配置 | 高 |
 | **2** | HttpAudioPlayer実装 | 高 |
 | **3** | AudioLibraryService実装（API取得・キャッシュ） | 高 |
-| **4** | Jukebox拡張（再生・同期） | 高 |
+| **4** | Jukebox拡張（`_playBySourceId`・各`_startXxxPlayback`） | 高 |
 | **5** | ジュークボックスUI（ライブラリタブ・検索・カテゴリ） | 中 |
 | **6** | 既存UI統合（戦闘BGM・テーブルBGMのドロップダウン） | 中 |
 | **7** | AI利用確認ダイアログ | 中 |
@@ -375,19 +533,6 @@ private playBySourceId(sourceId: string, loop: boolean, volume: number): void {
 
 ---
 
-## 後方互換性
-
-既存の部屋の音声IDにはプレフィックスがない。移行対応：
-
-```typescript
-function resolveAudioSource(id: string): string {
-  if (id.startsWith('server:') || id.startsWith('upload:')) return id;
-  return 'upload:' + id;  // プレフィックスなしは従来のアップロード音声
-}
-```
-
----
-
 ## 今後の拡張候補
 
 - ライブラリ曲の追加・削除UI（管理画面）
@@ -395,17 +540,3 @@ function resolveAudioSource(id: string): string {
 - クロスフェード再生
 - 音量フェードイン/アウト
 - 再生キュー（プレイリスト）
-
----
-
-## 開発メモ（v1.42以降のタスク）
-
-### ダイス一括ロール機能（開発中）
-- 現状：チャットのシステムメッセージとして送信
-- 課題：専用パネルを作成して結果をパネル内に表示
-  - 式入力欄
-  - 送信先タブ選択（メイン/サブ）
-  - ロール結果表示エリア
-  - キャラごとのゲームシステム（chatPalette.dicebot）を参照してBCDice評価
-  - ダイスカットイン一時OFF→終了後に元の設定に戻す
-  - 1体ずつ順次処理（300ms間隔）

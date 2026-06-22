@@ -1,5 +1,5 @@
 import { AudioFile } from './core/file-storage/audio-file';
-import { AudioPlayer } from './core/file-storage/audio-player';
+import { AudioPlayer, HttpAudioPlayer } from './core/file-storage/audio-player';
 import { AudioStorage } from './core/file-storage/audio-storage';
 import { SyncObject, SyncVar } from './core/synchronize-object/decorator';
 import { GameObject, ObjectContext } from './core/synchronize-object/game-object';
@@ -7,6 +7,21 @@ import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { EventSystem } from './core/system';
 import { Config } from '@udonarium/config';
 import { GameTable } from './game-table';
+
+// 型ガード: 統合音源ID
+function isServerAudio(id: string): boolean { return id && id.startsWith('server:'); }
+function isUploadAudio(id: string): boolean { return !id || id.startsWith('upload:') || (!id.startsWith('server:')); }
+function resolveAudioSource(id: string): string {
+  if (!id) return '';
+  if (id.startsWith('server:') || id.startsWith('upload:')) return id;
+  return 'upload:' + id; // プレフィックスなしは従来のアップロード音声
+}
+function stripPrefix(id: string): string {
+  const resolved = resolveAudioSource(id);
+  if (resolved.startsWith('upload:')) return resolved.substring(7);
+  if (resolved.startsWith('server:')) return resolved.substring(7);
+  return resolved;
+}
 
 export type TableAudioMode = 'loop' | 'once';
 
@@ -27,6 +42,7 @@ export class Jukebox extends GameObject {
   @SyncVar() jukeboxLayersJson: string = '[]';
   @SyncVar() audioFolderMapJson: string = '{}';
   @SyncVar() customFolderNamesJson: string = '[]';
+  @SyncVar() pinnedLibraryTrackIdsJson: string = '[]'; // ライブラリから選択中の曲IDリスト（全員共有）
 
   // ===== BGM同期用SyncVar =====
   // 新規ログインユーザーが「今どのBGMが再生中か」を知るため
@@ -41,6 +57,35 @@ export class Jukebox extends GameObject {
   private tableAudioPlayers: AudioPlayer[] = [];
   private jukeboxLayerPlayers: AudioPlayer[] = [];
   private combatAudioPlayer: AudioPlayer = null;
+  // HttpAudioPlayer for server-side audio (server: prefix)
+  private tableHttpPlayers: HttpAudioPlayer[] = [];
+  private jukeboxHttpPlayers: HttpAudioPlayer[] = [];
+  private combatHttpPlayer: HttpAudioPlayer = null;
+  // AudioLibraryServiceのURL解決用
+  private static _audioLibraryService: any = null;
+  static setAudioLibraryService(svc: any) { Jukebox._audioLibraryService = svc; }
+  static getServerAudioUrl(trackId: string): string | null {
+    if (!Jukebox._audioLibraryService) return null;
+    return Jukebox._audioLibraryService.getTrackUrl(trackId);
+  }
+  static getUploadAudioUrl(identifier: string): string | null {
+    if (!Jukebox._audioLibraryService) return null;
+    return Jukebox._audioLibraryService.getUploadAudioUrl(identifier);
+  }
+
+  /**
+   * 音源IDからURLを解決（server:もupload:も統一的にHTTP URLを返す）
+   */
+  private static _resolveAudioUrl(resolvedSourceId: string): string | null {
+    if (isServerAudio(resolvedSourceId)) {
+      const trackId = stripPrefix(resolvedSourceId);
+      return Jukebox.getServerAudioUrl(trackId);
+    }
+    // upload: 音声もサーバーから直接配信
+    const identifier = stripPrefix(resolvedSourceId);
+    if (!identifier) return null;
+    return Jukebox.getUploadAudioUrl(identifier);
+  }
 
   // ===== BGM Priority System =====
   private _combatBgmIdentifier: string = '';
@@ -112,8 +157,11 @@ export class Jukebox extends GameObject {
   // ===== Jukebox BGM (lowest priority) =====
 
   play(identifier: string, isLoop: boolean = false) {
-    let audio = AudioStorage.instance.get(identifier);
-    if (!audio || !audio.isReady) return;
+    // server: プレフィックスの場合はAudioStorageをチェックしない
+    if (!identifier.startsWith('server:')) {
+      let audio = AudioStorage.instance.get(identifier);
+      if (!audio || !audio.isReady) return;
+    }
     this._jukeboxLayerOverrideActive = false;
     for (const p of this.jukeboxLayerPlayers) p.stop();
     this.jukeboxLayerPlayers = [];
@@ -272,19 +320,27 @@ export class Jukebox extends GameObject {
     for (const p of this.jukeboxLayerPlayers) p.stop();
     this.jukeboxLayerPlayers = [];
     if (this.combatAudioPlayer) { this.combatAudioPlayer.stop(); this.combatAudioPlayer = null; }
+    // HttpAudioPlayer達も停止
+    for (const p of this.tableHttpPlayers) p.stop();
+    this.tableHttpPlayers = [];
+    for (const p of this.jukeboxHttpPlayers) p.stop();
+    this.jukeboxHttpPlayers = [];
+    if (this.combatHttpPlayer) { this.combatHttpPlayer.stop(); this.combatHttpPlayer = null; }
   }
 
   private _startCombatPlayback(): boolean {
     if (!this._combatBgmIdentifier) return false;
-    const audio = AudioStorage.instance.get(this._combatBgmIdentifier);
-    if (!audio || !audio.isReady) {
+    const resolved = resolveAudioSource(this._combatBgmIdentifier);
+    const url = Jukebox._resolveAudioUrl(resolved);
+    if (!url) {
+      console.warn('[BGM] audio source not found:', resolved);
       this.playAfterFileUpdate();
       return false;
     }
-    this.combatAudioPlayer = new AudioPlayer(audio);
-    this.combatAudioPlayer.loop = true;
-    this.combatAudioPlayer.volume = 0.6;
-    this.combatAudioPlayer.play(audio);
+    this.combatHttpPlayer = new HttpAudioPlayer();
+    this.combatHttpPlayer.loop = true;
+    this.combatHttpPlayer.volume = 0.6;
+    this.combatHttpPlayer.play(url);
     return true;
   }
 
@@ -296,20 +352,22 @@ export class Jukebox extends GameObject {
     }
     const layers = Jukebox.getTableAudioLayers(table).filter(layer => layer.enabled && layer.audioIdentifier);
     if (layers.length === 0) {
-      // テーブル属性がまだ同期されていない可能性 → ファイル更新イベントで再評価
       console.log('Table audio layers not yet available, waiting for sync...');
       this.playAfterFileUpdate();
       return false;
     }
     let started = false;
     for (const layer of layers) {
-      const audio = AudioStorage.instance.get(layer.audioIdentifier);
-      if (!audio || !audio.isReady) continue;
-      const player = new AudioPlayer(audio);
-      player.loop = layer.mode === 'loop';
-      player.volume = Number.isFinite(layer.volume) ? Math.max(0, Math.min(1, layer.volume)) : 0.5;
-      player.play(audio);
-      this.tableAudioPlayers.push(player);
+      const resolved = resolveAudioSource(layer.audioIdentifier);
+      const loop = layer.mode === 'loop';
+      const vol = Number.isFinite(layer.volume) ? Math.max(0, Math.min(1, layer.volume)) : 0.5;
+      const url = Jukebox._resolveAudioUrl(resolved);
+      if (!url) continue;
+      const player = new HttpAudioPlayer();
+      player.loop = loop;
+      player.volume = vol;
+      player.play(url);
+      this.tableHttpPlayers.push(player);
       started = true;
     }
     if (!started) this.playAfterFileUpdate();
@@ -321,24 +379,32 @@ export class Jukebox extends GameObject {
       const layers = this.getJukeboxLayers().filter(l => l.enabled && l.audioIdentifier);
       let started = false;
       for (const layer of layers) {
-        const audio = AudioStorage.instance.get(layer.audioIdentifier);
-        if (!audio || !audio.isReady) continue;
-        const player = new AudioPlayer(audio);
-        player.loop = layer.mode === 'loop';
-        player.volume = Number.isFinite(layer.volume) ? Math.max(0, Math.min(1, layer.volume)) : 0.5;
-        player.play(audio);
-        this.jukeboxLayerPlayers.push(player);
+        const resolved = resolveAudioSource(layer.audioIdentifier);
+        const loop = layer.mode === 'loop';
+        const vol = Number.isFinite(layer.volume) ? Math.max(0, Math.min(1, layer.volume)) : 0.5;
+        const url = Jukebox._resolveAudioUrl(resolved);
+        if (!url) continue;
+        const player = new HttpAudioPlayer();
+        player.loop = loop;
+        player.volume = vol;
+        player.play(url);
+        this.jukeboxHttpPlayers.push(player);
         started = true;
       }
       if (!started) this.playAfterFileUpdate();
       return started;
     } else if (this.isPlaying && this.audioIdentifier) {
-      if (!this.audio || !this.audio.isReady) {
+      const resolved = resolveAudioSource(this.audioIdentifier);
+      const url = Jukebox._resolveAudioUrl(resolved);
+      if (!url) {
         this.playAfterFileUpdate();
         return false;
       }
-      this.audioPlayer.loop = true;
-      this.audioPlayer.play(this.audio);
+      const player = new HttpAudioPlayer();
+      player.loop = true;
+      player.volume = this.volume;
+      player.play(url);
+      this.jukeboxHttpPlayers.push(player);
       return true;
     }
     return false;
@@ -365,6 +431,34 @@ export class Jukebox extends GameObject {
 
   setCustomFolderNames(names: string[]) {
     this.customFolderNamesJson = JSON.stringify(names || []);
+  }
+
+  // ===== Pinned Library Tracks =====
+
+  getPinnedLibraryTrackIds(): string[] {
+    try {
+      const ids = JSON.parse(this.pinnedLibraryTrackIdsJson || '[]');
+      return Array.isArray(ids) ? ids : [];
+    } catch { return []; }
+  }
+
+  setPinnedLibraryTrackIds(ids: string[]) {
+    this.pinnedLibraryTrackIdsJson = JSON.stringify(ids || []);
+  }
+
+  togglePinnedLibraryTrack(trackId: string) {
+    const ids = this.getPinnedLibraryTrackIds();
+    const idx = ids.indexOf(trackId);
+    if (idx >= 0) {
+      ids.splice(idx, 1);
+    } else {
+      ids.push(trackId);
+    }
+    this.setPinnedLibraryTrackIds(ids);
+  }
+
+  isPinnedLibraryTrack(trackId: string): boolean {
+    return this.getPinnedLibraryTrackIds().includes(trackId);
   }
 
   // ===== Table Audio Layer Helpers =====

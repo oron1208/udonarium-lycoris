@@ -237,3 +237,55 @@ export class AudioPlayer {
     document.addEventListener('mousedown', callback, true);
   }
 }
+
+/**
+ * URL直接再生用プレイヤー（サーバーストリーミング音声用）
+ * AudioStorage（P2P同期）に依存せず、HTTP URLから直接ストリーミング再生する。
+ * AudioPlayerと同じ AudioContext のマスターゲインを経由して再生する。
+ */
+export class HttpAudioPlayer {
+  private audioElm: HTMLAudioElement = null;
+  private mediaElementSource: MediaElementAudioSourceNode = null;
+  private _volume: number = 0.5;
+  private _loop: boolean = false;
+  private _muted: boolean = false;
+
+  get volume(): number { return this._volume; }
+  set volume(v: number) {
+    this._volume = v;
+    if (this.audioElm && !this._muted) this.audioElm.volume = v;
+  }
+
+  get loop(): boolean { return this._loop; }
+  set loop(loop: boolean) {
+    this._loop = loop;
+    if (this.audioElm) this.audioElm.loop = loop;
+  }
+
+  play(url: string) {
+    this.stop();
+    this.audioElm = new Audio();
+    this.audioElm.crossOrigin = 'anonymous';
+    this.audioElm.loop = this._loop;
+    this.audioElm.volume = this._muted ? 0 : this._volume;
+    // AudioContext のマスターゲインに接続
+    this.mediaElementSource = AudioPlayer.audioContext.createMediaElementSource(this.audioElm);
+    this.mediaElementSource.connect(AudioPlayer.rootNode);
+    this.audioElm.src = url;
+    this.audioElm.load();
+    this.audioElm.play().catch(reason => { console.warn('HttpAudioPlayer play error:', reason); });
+  }
+
+  stop() {
+    if (!this.audioElm) return;
+    this.audioElm.pause();
+    this.audioElm.currentTime = 0;
+    this.audioElm.src = '';
+    this.audioElm.load();
+    if (this.mediaElementSource) {
+      this.mediaElementSource.disconnect();
+      this.mediaElementSource = null;
+    }
+    this.audioElm = null;
+  }
+}

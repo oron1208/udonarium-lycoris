@@ -10,6 +10,8 @@ import { PanelService } from 'service/panel.service';
 import { GmModeService } from 'service/gm-mode.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
 import { ContextMenuService } from 'service/context-menu.service';
+import { AudioLibraryService, ServerAudioTrack } from 'service/audio-library.service';
+import { Jukebox } from '@udonarium/Jukebox';
 
 @Component({
   selector: 'initiative-panel',
@@ -27,7 +29,8 @@ export class InitiativePanelComponent implements OnInit, OnDestroy {
     private initiativeService: InitiativeService,
     private panelService: PanelService,
     private gmModeService: GmModeService,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    private audioLibraryService: AudioLibraryService
   ) {}
 
   ngOnInit() {
@@ -255,8 +258,21 @@ export class InitiativePanelComponent implements OnInit, OnDestroy {
     return AudioStorage.instance.audios.filter(a => !a.isHidden);
   }
 
+  get libraryTracks(): ServerAudioTrack[] {
+    const jukebox = ObjectStore.instance.get<Jukebox>('Jukebox');
+    if (!jukebox) return [];
+    const pinnedIds = jukebox.getPinnedLibraryTrackIds();
+    return pinnedIds
+      .map(id => this.audioLibraryService.getTrack(id))
+      .filter(t => t !== null) as ServerAudioTrack[];
+  }
+
   getAudioName(identifier: string): string {
     if (!identifier) return 'なし';
+    if (identifier.startsWith('server:')) {
+      const track = this.audioLibraryService.getTrack(identifier.substring(7));
+      return track?.name || '不明';
+    }
     const audio = AudioStorage.instance.get(identifier);
     return audio?.name || audio?.identifier?.slice(0, 8) || '不明';
   }

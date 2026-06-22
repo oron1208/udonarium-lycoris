@@ -158,3 +158,200 @@
 .box {
   border-bottom: 1px dotted #888;
 }
+
+/* ===== Tab Switcher ===== */
+.tab-switcher {
+  display: flex;
+  gap: 0;
+  margin-bottom: 8px;
+  border-bottom: 2px solid #ccc;
+}
+
+.tab-btn {
+  padding: 4px 16px;
+  font-size: 13px;
+  border: 1px solid #ccc;
+  border-bottom: none;
+  background: rgba(0,0,0,0.05);
+  cursor: pointer;
+  border-radius: 4px 4px 0 0;
+}
+
+.tab-btn.active {
+  background: rgba(80, 120, 180, 0.25);
+  font-weight: bold;
+  border-color: rgba(80, 120, 180, 0.5);
+}
+
+/* ===== Library: Password Gate ===== */
+.library-password-gate {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 30px 10px;
+}
+
+.library-warning-box {
+  text-align: center;
+  max-width: 320px;
+}
+
+.library-warning-icon {
+  font-size: 40px;
+  margin-bottom: 8px;
+}
+
+.library-warning-title {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.library-warning-text {
+  font-size: 12px;
+  line-height: 1.6;
+  margin-bottom: 14px;
+  color: #555;
+}
+
+.library-password-input-row {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+
+.library-password-input {
+  width: 140px;
+  padding: 3px 6px;
+  font-size: 13px;
+}
+
+.library-password-error {
+  color: #c00;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+/* ===== Library: AI Warning ===== */
+.library-ai-warning {
+  background: rgba(200, 150, 50, 0.15);
+  border: 1px solid rgba(200, 150, 50, 0.4);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+/* ===== Library: Controls ===== */
+.library-controls {
+  margin-bottom: 8px;
+}
+
+.library-search-row {
+  margin-bottom: 4px;
+}
+
+.library-search-input {
+  width: 100%;
+  padding: 3px 6px;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.library-category-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.library-category-row select {
+  font-size: 12px;
+}
+
+/* ===== Library: Track List ===== */
+.library-track-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.library-track-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px dotted #888;
+  gap: 4px;
+}
+
+.library-track-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.library-track-icon {
+  font-size: 14px;
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.library-track-text {
+  overflow: hidden;
+}
+
+.library-track-name {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.library-track-meta {
+  font-size: 11px;
+  color: #777;
+}
+
+.library-track-actions {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.library-preview-btn,
+.library-use-btn {
+  padding: 1px 8px;
+  font-size: 12px;
+}
+
+.library-pin-btn {
+  padding: 1px 6px;
+  font-size: 11px;
+  background: rgba(0,0,0,0.05);
+}
+
+.library-pin-btn.pinned {
+  background: rgba(80, 160, 80, 0.25);
+  font-weight: bold;
+}
+
+.library-use-btn {
+  font-weight: bold;
+}
+
+.library-track-cat {
+  font-size: 11px;
+  color: #999;
+  margin-left: 4px;
+}
+
+.library-empty {
+  text-align: center;
+  font-size: 12px;
+  color: #888;
+  padding: 20px;
+}

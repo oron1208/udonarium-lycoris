@@ -124,7 +124,12 @@
               <div class="table-audio-layer-body">
                 <select [(ngModel)]="layer.audioIdentifier" (ngModelChange)="saveTableAudioLayers()" [attr.disabled]="!isEditable ? '' : null">
                   <option value="">音声なし</option>
-                  <option *ngFor="let audio of audios" [value]="audio.identifier">{{audio.name}}</option>
+                  <optgroup label="アップロード" *ngIf="audios.length > 0">
+                    <option *ngFor="let audio of audios" [value]="audio.identifier">{{audio.name}}</option>
+                  </optgroup>
+                  <optgroup label="ライブラリ" *ngIf="libraryTracks.length > 0">
+                    <option *ngFor="let track of libraryTracks" [value]="'server:' + track.id">{{track.name}}</option>
+                  </optgroup>
                 </select>
                 <select [(ngModel)]="layer.mode" (ngModelChange)="saveTableAudioLayers()" [attr.disabled]="!isEditable ? '' : null">
                   <option value="loop">ループ</option>

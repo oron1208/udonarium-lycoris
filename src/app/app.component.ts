@@ -25,6 +25,7 @@ import { DiceBot } from '@udonarium/dice-bot';
 import { GameCharacter } from '@udonarium/game-character';
 import { GameTable } from '@udonarium/game-table';
 import { Jukebox } from '@udonarium/Jukebox';
+import { AudioLibraryService } from 'service/audio-library.service';
 import { PeerCursor } from '@udonarium/peer-cursor';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
 import { ReloadCheck } from '@udonarium/reload-check';
@@ -163,8 +164,14 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     private saveDataService: SaveDataService,
     public gmModeService: GmModeService,
     private ngSelectConfig: NgSelectConfig,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    private audioLibraryService: AudioLibraryService
   ) {
+
+    // AudioLibraryServiceをJukeboxに注入
+    Jukebox.setAudioLibraryService(this.audioLibraryService);
+    // 初回フェッチ
+    this.audioLibraryService.fetchTracks();
 
     this.ngZone.runOutsideAngular(() => {
       EventSystem;
