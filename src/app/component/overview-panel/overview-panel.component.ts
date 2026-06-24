@@ -22,7 +22,11 @@ import { PointerDeviceService } from 'service/pointer-device.service';
 import { GmModeService } from 'service/gm-mode.service';
 import { TabletopService } from 'service/tabletop.service';
 
-import { GameCharacter } from '@udonarium/game-character'; //
+import { GameCharacter, AutoBuffEntry, AutoBuffOperation } from '@udonarium/game-character'; //
+import { ChatMessageService } from 'service/chat-message.service';
+import { ChatTabList } from '@udonarium/chat-tab-list';
+import { Config } from '@udonarium/config';
+import { DiceBot } from '@udonarium/dice-bot';
 import { TextNote } from '@udonarium/text-note'; //
 import { Card } from '@udonarium/card'; //
 import { CardStack } from '@udonarium/card-stack'; //
@@ -71,8 +75,68 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
   get rangeElms(): DataElement[] { return this.tabletopObject && this.tabletopObject.commonDataElement ? this.tabletopObject.commonDataElement.children as DataElement[] : []; }
   get hasRangeElms(): boolean { return 0 < this.rangeElms.length; }
   get buffElms(): DataElement[] { return this.tabletopObject instanceof GameCharacter && this.tabletopObject.buffDataElement ? this.collectBuffElements(this.tabletopObject.buffDataElement) : []; }
-  get hasBuffElms(): boolean { return 0 < this.buffElms.length; }
+  get autoBuffs(): AutoBuffEntry[] { return this.tabletopService.currentTable?.roomMode === 'advanced' && this.tabletopObject instanceof GameCharacter ? this.tabletopObject.getAutoBuffs() : []; }
+  get hasBuffElms(): boolean { return 0 < this.buffElms.length || 0 < this.autoBuffs.length; }
   get statusMarkers(): StatusMarkerDefinition[] { return this.tabletopObject instanceof GameCharacter ? parseStatusMarkerIds(this.tabletopObject.statusMarkerIds).map(id => findStatusMarkerDefinition(id, this.tabletopService.currentTable.statusMarkerDictionary)).filter(marker => !!marker) : []; }
+
+  autoBuffLabel(buff: AutoBuffEntry): string {
+    const op = this.autoBuffOperationLabel(buff.operation);
+    let value = '';
+    if (buff.operation === 'add' || buff.operation === 'append') value = `${buff.value >= 0 ? '+' : ''}${buff.value}`;
+    else if (buff.operation === 'replace') value = `=${buff.value}`;
+    else if (buff.operation === 'create') value = `${buff.newElementType === '' ? '通常' : 'リソース'}=${buff.value}`;
+    else if (buff.operation === 'palette') return '';
+    else value = `記録`;
+    return `${buff.targetStat} / ${op}${value} / ${buff.rounds}R`;
+  }
+
+  autoBuffOperationLabel(op: AutoBuffOperation): string {
+    switch (op) {
+      case 'add': return '加算';
+      case 'append': return '最大値追加';
+      case 'current': return '現状記録';
+      case 'replace': return '置換';
+      case 'create': return '新規要素';
+      case 'palette': return 'チャパレ';
+    }
+  }
+
+  removeAutoBuff(buff: AutoBuffEntry, event: Event) {
+    if (event) { event.preventDefault(); event.stopPropagation(); }
+    if (!(this.tabletopObject instanceof GameCharacter) || !buff) return;
+    this.tabletopObject.removeAutoBuff(buff.id);
+    this.changeDetector.markForCheck();
+  }
+
+  removeManualBuff(buff: DataElement, event: Event) {
+    if (event) { event.preventDefault(); event.stopPropagation(); }
+    if (!buff) return;
+    buff.destroy();
+    this.changeDetector.markForCheck();
+  }
+
+  rollAutoBuffPalette(buff: AutoBuffEntry, event: Event) {
+    if (event) { event.preventDefault(); event.stopPropagation(); }
+    if (!(this.tabletopObject instanceof GameCharacter) || !buff.paletteCommand) return;
+    const character = this.tabletopObject;
+    const palette = character.chatPalette;
+    const charDice = palette ? palette.dicebot : '';
+    const gameType = (charDice && charDice !== 'DiceBot') ? charDice : Config.instance.defaultDiceBot;
+    const sendFrom = character.identifier;
+    const tachieNum = character.selectedTachieNum || 0;
+    const messageColor = character.chatColorCode && character.chatColorCode.length ? character.chatColorCode[0] : '#000000';
+
+    let evaluated = buff.paletteCommand;
+    if (palette) {
+      evaluated = palette.evaluate(buff.paletteCommand, character.rootDataElement, character, true);
+    }
+    const chatTab = ChatTabList.instance.children[0] as any;
+    if (!chatTab) return;
+
+    DiceBot.loadGameSystemAsync(gameType).then(gameSystem => {
+      this.chatMessageService.sendMessage(chatTab, evaluated, gameSystem, sendFrom, '', tachieNum, messageColor);
+    });
+  }
 
   get newLineString(): string { return this.inventoryService.newLineString; }
   get isPointerDragging(): boolean { return this.pointerDeviceService.isDragging; }
@@ -90,7 +154,8 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
     private pointerDeviceService: PointerDeviceService,
     private domSanitizer: DomSanitizer,
     public gmModeService: GmModeService,
-    private tabletopService: TabletopService
+    private tabletopService: TabletopService,
+    private chatMessageService: ChatMessageService
   ) { }
 
   ngAfterViewInit() {

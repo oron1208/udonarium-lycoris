@@ -7,6 +7,7 @@ import {
   OnDestroy,
   OnInit,
   HostListener,
+  HostBinding,
   ViewChild,
   ElementRef,
 } from '@angular/core';
@@ -20,8 +21,11 @@ import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { FileSelecterComponent } from 'component/file-selecter/file-selecter.component';
 import { ModalService } from 'service/modal.service';
 import { PanelService } from 'service/panel.service';
+import { TabletopService } from 'service/tabletop.service';
 
 import { SafeHtml, DomSanitizer } from '@angular/platform-browser';
+
+import { GameCharacter } from '@udonarium/game-character';
 
 @Component({
   selector: 'game-data-element, [game-data-element]',
@@ -39,6 +43,10 @@ export class GameDataElementComponent implements OnInit, OnDestroy, AfterViewIni
   @Input() indexNum: number = 0;
 
   @ViewChild('bulkFileInput') bulkFileInput: ElementRef<HTMLInputElement>;
+
+  @HostBinding('class.auto-buff-row-up') get isAutoBuffRowUp(): boolean { return this.autoBuffClass === 'auto-buffed-up'; }
+  @HostBinding('class.auto-buff-row-down') get isAutoBuffRowDown(): boolean { return this.autoBuffClass === 'auto-buffed-down'; }
+  @HostBinding('class.auto-buff-row-neutral') get isAutoBuffRowNeutral(): boolean { return this.autoBuffClass === 'auto-buffed-neutral'; }
 
   private _name: string = '';
   get name(): string { return this._name; }
@@ -58,7 +66,8 @@ export class GameDataElementComponent implements OnInit, OnDestroy, AfterViewIni
     private panelService: PanelService,
     private modalService: ModalService,
     private changeDetector: ChangeDetectorRef,
-    private domSanitizer: DomSanitizer
+    private domSanitizer: DomSanitizer,
+    private tabletopService: TabletopService
   ) { }
 
   ngOnInit() {
@@ -73,6 +82,13 @@ export class GameDataElementComponent implements OnInit, OnDestroy, AfterViewIni
       })
       .on('DELETE_GAME_OBJECT', event => {
         if (this.gameDataElement && this.gameDataElement.identifier === event.data.identifier) {
+          this.changeDetector.markForCheck();
+        }
+      })
+      .on('UPDATE_GAME_OBJECT', event => {
+        // 親キャラクターのautoBuffs変更を監視
+        const char = this.findOwningCharacter();
+        if (char && event.data.identifier === char.identifier) {
           this.changeDetector.markForCheck();
         }
       });
@@ -309,6 +325,40 @@ export class GameDataElementComponent implements OnInit, OnDestroy, AfterViewIni
   textFocus( dataElmIdentifier ){
     let box = <HTMLInputElement>document.getElementById(dataElmIdentifier);
     box.checked = true;
+  }
+
+  // ===== 自動計算バフ表示用 =====
+
+  private _owningCharacter: GameCharacter | null = null;
+  private _owningCharacterChecked: boolean = false;
+
+  private findOwningCharacter(): GameCharacter | null {
+    if (this._owningCharacterChecked) return this._owningCharacter;
+    this._owningCharacterChecked = true;
+    if (!this.gameDataElement) return null;
+    // 親チェーンを辿ってルートを探す
+    let el: any = this.gameDataElement;
+    const allChars = ObjectStore.instance.getObjects<GameCharacter>(GameCharacter);
+    for (const char of allChars) {
+      // detailDataElementの階層にこのDataElementが含まれているか
+      if (char.detailDataElement && char.detailDataElement.contains(this.gameDataElement)) {
+        this._owningCharacter = char;
+        return char;
+      }
+    }
+    return null;
+  }
+
+  /** このステータスが自動計算バフで変更されているか */
+  get autoBuffClass(): string {
+    if (this.tabletopService.currentTable?.roomMode !== 'advanced') return '';
+    if (!this.gameDataElement || this.gameDataElement.children.length > 0) return '';
+    if (this.gameDataElement.type !== 'numberResource' && this.gameDataElement.type !== '') return '';
+    const char = this.findOwningCharacter();
+    if (!char) return '';
+    const effect = char.getAutoBuffEffect(this.gameDataElement.name);
+    if (!effect.isModified) return '';
+    return effect.netDelta > 0 ? 'auto-buffed-up' : effect.netDelta < 0 ? 'auto-buffed-down' : 'auto-buffed-neutral';
   }
   
 }

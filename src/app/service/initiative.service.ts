@@ -8,6 +8,7 @@ import { ChatMessageService } from './chat-message.service';
 import { ChatTabList } from '@udonarium/chat-tab-list';
 import { DiceBot } from '@udonarium/dice-bot';
 import { TabletopSelectionService } from 'service/tabletop-selection.service';
+import { TabletopService } from 'service/tabletop.service';
 
 export interface CombatEntry {
   identifier: string;
@@ -23,7 +24,8 @@ export class InitiativeService {
   constructor(
     private ngZone: NgZone,
     private chatMessageService: ChatMessageService,
-    private tabletopSelectionService: TabletopSelectionService
+    private tabletopSelectionService: TabletopSelectionService,
+    private tabletopService: TabletopService
   ) {}
 
   /**
@@ -246,6 +248,33 @@ export class InitiativeService {
 
     if (!found) {
       // 全員行動済みなら次ラウンドへ
+      // ただし最後のキャラの turn_end バフを先に処理する
+      if (table.roomMode === 'advanced' && table.combatAutoBuffDecay && currentId) {
+        for (const id of order) {
+          const char = ObjectStore.instance.get<GameCharacter>(id);
+          if (!char) continue;
+          char.decreaseAutoBuffRoundsByTrigger(currentId, 'turn_end');
+          char.decreaseBuffRound('turn_end', currentId);
+          char.deleteZeroRoundBuff();
+        }
+      }
+      // 範囲バフの turn_end 処理（最後のキャラをトリガーとする）
+      if (table.roomMode === 'advanced' && currentId) {
+        for (const range of this.tabletopService.ranges) {
+          if (!range.areaBuffEnabled || !range.areaBuffConfirmed) continue;
+          if (range.areaBuffExpireTiming === 'turn_end' && range.areaBuffTriggerIdentifier === currentId) {
+            range.areaBuffRounds = (range.areaBuffRounds || 1) - 1;
+            if (range.areaBuffRounds <= 0) {
+              range.areaBuffEnabled = false;
+              range.areaBuffConfirmed = false;
+              this.tabletopService.clearAreaBuff(range);
+            } else {
+              range.update();
+            }
+          }
+        }
+        this.tabletopService.updateAreaBuffs();
+      }
       this.nextRound();
       return;
     }
@@ -257,6 +286,64 @@ export class InitiativeService {
     const currentChar = ObjectStore.instance.get<GameCharacter>(order[nextIndex]);
     const name = currentChar ? this.getDisplayName(currentChar) : '';
     this.sendCombatSystemMessage(`⚔️ Round ${table.combatRound} — ${name}のターン`);
+
+    // ターン切替時のバフ減少処理（アドバンスモード用）
+    const turnCharId = order[nextIndex];
+    if (table.roomMode === 'advanced' && table.combatAutoBuffDecay) {
+      // 前のターンキャラの turn_end バフを先に処理
+      if (currentId) {
+        for (const id of order) {
+          const char = ObjectStore.instance.get<GameCharacter>(id);
+          if (!char) continue;
+          char.decreaseAutoBuffRoundsByTrigger(currentId, 'turn_end');
+          char.decreaseBuffRound('turn_end', currentId);
+          char.deleteZeroRoundBuff();
+        }
+      }
+      // 新ターンキャラの turn_start バフを処理
+      for (const id of order) {
+        const char = ObjectStore.instance.get<GameCharacter>(id);
+        if (!char) continue;
+        char.decreaseAutoBuffRoundsByTrigger(turnCharId, 'turn_start');
+        char.decreaseBuffRound('turn_start', turnCharId);
+        char.deleteZeroRoundBuff();
+      }
+    }
+
+    // 範囲バフの turn_end / turn_start 処理（アドバンスモード用）
+    if (table.roomMode === 'advanced') {
+      // 前のターンキャラの turn_end 範囲バフを処理
+      if (currentId) {
+        for (const range of this.tabletopService.ranges) {
+          if (!range.areaBuffEnabled || !range.areaBuffConfirmed) continue;
+          if (range.areaBuffExpireTiming === 'turn_end' && range.areaBuffTriggerIdentifier === currentId) {
+            range.areaBuffRounds = (range.areaBuffRounds || 1) - 1;
+            if (range.areaBuffRounds <= 0) {
+              range.areaBuffEnabled = false;
+              range.areaBuffConfirmed = false;
+              this.tabletopService.clearAreaBuff(range);
+            } else {
+              range.update();
+            }
+          }
+        }
+      }
+      // 新ターンキャラの turn_start 範囲バフを処理
+      for (const range of this.tabletopService.ranges) {
+        if (!range.areaBuffEnabled || !range.areaBuffConfirmed) continue;
+        if (range.areaBuffExpireTiming === 'turn_start' && range.areaBuffTriggerIdentifier === turnCharId) {
+          range.areaBuffRounds = (range.areaBuffRounds || 1) - 1;
+          if (range.areaBuffRounds <= 0) {
+            range.areaBuffEnabled = false;
+            range.areaBuffConfirmed = false;
+            this.tabletopService.clearAreaBuff(range);
+          } else {
+            range.update();
+          }
+        }
+      }
+      this.tabletopService.updateAreaBuffs();
+    }
 
     EventSystem.trigger('COMBAT_STATE_CHANGED', {});
   }
@@ -277,6 +364,35 @@ export class InitiativeService {
     table.combatRound = oldRound + 1;
     table.update();
     EventSystem.trigger('COMBAT_ROUND_END', { round: oldRound });
+
+    // バフR自動減少（アドバンスモード用）— round_end タイミングのみ
+    if (table.roomMode === 'advanced' && table.combatAutoBuffDecay) {
+      for (const id of order) {
+        const char = ObjectStore.instance.get<GameCharacter>(id);
+        if (!char) continue;
+        char.decreaseBuffRound('round_end');
+        char.deleteZeroRoundBuff();
+        char.decreaseAutoBuffRounds();
+      }
+    }
+
+    // 範囲バフのラウンド管理（アドバンスモード用）— round_end タイミングのみ
+    if (table.roomMode === 'advanced') {
+      for (const range of this.tabletopService.ranges) {
+        if (!range.areaBuffEnabled || !range.areaBuffConfirmed) continue;
+        const timing = range.areaBuffExpireTiming || 'round_end';
+        if (timing !== 'round_end') continue;
+        range.areaBuffRounds = (range.areaBuffRounds || 1) - 1;
+        if (range.areaBuffRounds <= 0) {
+          range.areaBuffEnabled = false;
+          range.areaBuffConfirmed = false;
+          this.tabletopService.clearAreaBuff(range);
+        } else {
+          range.update();
+        }
+      }
+      this.tabletopService.updateAreaBuffs();
+    }
 
     const currentChar = ObjectStore.instance.get<GameCharacter>(order[0]);
     const name = currentChar ? this.getDisplayName(currentChar) : '';

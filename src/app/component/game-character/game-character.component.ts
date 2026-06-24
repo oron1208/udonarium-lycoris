@@ -18,8 +18,10 @@ import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ObjectNode } from '@udonarium/core/synchronize-object/object-node';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { ChatTabList } from '@udonarium/chat-tab-list';
+import { Config } from '@udonarium/config';
+import { DiceBot } from '@udonarium/dice-bot';
 import { EventSystem, Network } from '@udonarium/core/system';
-import { GameCharacter } from '@udonarium/game-character';
+import { GameCharacter, AutoBuffEntry, AutoBuffOperation } from '@udonarium/game-character';
 import { GameTable } from '@udonarium/game-table';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
 import { ChatPaletteComponent } from 'component/chat-palette/chat-palette.component';
@@ -1176,10 +1178,76 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
     this.foldingBuff = flag;
   }
 
+  get isAdvancedMode(): boolean {
+    return this.tabletopService.currentTable?.roomMode === 'advanced';
+  }
+
+  get autoBuffs(): AutoBuffEntry[] {
+    return this.isAdvancedMode && this.gameCharacter ? this.gameCharacter.getAutoBuffs() : [];
+  }
+
+  get hasAutoBuffs(): boolean {
+    return 0 < this.autoBuffs.length;
+  }
+
+  get hasBuffTags(): boolean {
+    return this.buffNum > 0 || this.hasAutoBuffs;
+  }
+
   get buffNum(): number{
-    if ( this.gameCharacter.buffDataElement.children.length == 0){
-      return 0;
+    let textBuffNum = 0;
+    if (this.gameCharacter.buffDataElement && this.gameCharacter.buffDataElement.children.length > 0){
+      textBuffNum = this.gameCharacter.buffDataElement.children[0].children.length;
     }
-    return this.gameCharacter.buffDataElement.children[0].children.length;
+    return textBuffNum + this.autoBuffs.length;
+  }
+
+  autoBuffLabel(buff: AutoBuffEntry): string {
+    const op = this.autoBuffOperationLabel(buff.operation);
+    let value = '';
+    if (buff.operation === 'add' || buff.operation === 'append') value = `${buff.value >= 0 ? '+' : ''}${buff.value}`;
+    else if (buff.operation === 'replace') value = `=${buff.value}`;
+    else if (buff.operation === 'create') value = `${buff.newElementType === '' ? '通常' : 'リソース'}=${buff.value}`;
+    else if (buff.operation === 'palette') return '';
+    else value = `記録`;
+    return `${buff.name} ${buff.targetStat}/${op}${value}/${buff.rounds}R`;
+  }
+
+  get hasAutoBuffPalette(): boolean {
+    return this.autoBuffs.some(b => b.paletteCommand);
+  }
+
+  rollAutoBuffPalette(buff: AutoBuffEntry, event: Event) {
+    if (event) { event.preventDefault(); event.stopPropagation(); }
+    if (!this.gameCharacter || !buff.paletteCommand) return;
+    const character = this.gameCharacter;
+    const palette = character.chatPalette;
+    const charDice = palette ? palette.dicebot : '';
+    const gameType = (charDice && charDice !== 'DiceBot') ? charDice : Config.instance.defaultDiceBot;
+    const sendFrom = character.identifier;
+    const tachieNum = character.selectedTachieNum || 0;
+    const messageColor = character.chatColorCode && character.chatColorCode.length ? character.chatColorCode[0] : '#000000';
+
+    let evaluated = buff.paletteCommand;
+    if (palette) {
+      evaluated = palette.evaluate(buff.paletteCommand, character.rootDataElement, character, true);
+    }
+    const chatTab = ChatTabList.instance.children[0] as any;
+    if (!chatTab) return;
+
+    DiceBot.loadGameSystemAsync(gameType).then(gameSystem => {
+      this.chatMessageService.sendMessage(chatTab, evaluated, gameSystem, sendFrom, '', tachieNum, messageColor);
+    });
+  }
+
+  autoBuffOperationLabel(op: AutoBuffOperation): string {
+    switch (op) {
+      case 'add': return '加算';
+      case 'append': return '最大値追加';
+      case 'current': return '現状記録';
+      case 'replace': return '置換';
+      case 'create': return '新規要素';
+      case 'palette': return 'チャパレ';
+    }
   }
 }

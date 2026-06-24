@@ -216,22 +216,63 @@
 
 .buff-side-row {
   display: flex;
-  justify-content: space-between;
-  gap: 6px;
+  flex-direction: column;
+  gap: 2px;
   padding: 4px 7px;
   border-top: 1px solid rgba(120, 100, 80, 0.35);
+}
+
+.buff-name-area {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+}
+
+.buff-actions {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
 }
 
 .buff-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .buff-values {
   flex: 0 0 auto;
   color: #6b3a22;
   font-weight: bold;
+}
+
+.auto-buff-side-row .buff-values {
+  color: #1f5f9f;
+}
+
+.buff-palette-dice-btn {
+  background: none; border: 1px solid #2980b9; border-radius: 3px; cursor: pointer; font-size: 12px;
+  padding: 0 4px; flex: 0 0 auto;
+}
+.buff-palette-dice-btn:hover {
+  background: rgba(41, 128, 185, 0.15);
+}
+
+.buff-delete-icon {
+  flex: 0 0 auto;
+  background: rgba(255, 100, 100, 0.75);
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  padding: 2px 4px;
+}
+.buff-delete-icon:hover {
+  background: rgba(255, 70, 70, 0.9);
 }
 
 .buff-side-empty {

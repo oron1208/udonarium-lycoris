@@ -117,8 +117,23 @@
       </div>
       <div class="buff-side-empty" *ngIf="!hasBuffElms">なし</div>
       <div class="buff-side-row" *ngFor="let buff of buffElms">
-        <span class="buff-name">{{buff.name}}</span>
-        <span class="buff-values">{{buff.currentValue}} / {{buff.value}}R</span>
+        <div class="buff-name-area">
+          <span class="buff-name" [title]="buff.name">{{buff.name}}</span>
+          <span class="buff-values">{{buff.currentValue}} / {{buff.value}}R</span>
+        </div>
+        <div class="buff-actions">
+          <button class="buff-delete-icon" (mousedown)="removeManualBuff(buff, $event)" title="削除">✕</button>
+        </div>
+      </div>
+      <div class="buff-side-row auto-buff-side-row" *ngFor="let buff of autoBuffs">
+        <div class="buff-name-area">
+          <span class="buff-name" [title]="buff.name">{{buff.name}}</span>
+          <span class="buff-values">{{autoBuffLabel(buff)}}</span>
+        </div>
+        <div class="buff-actions">
+          <button *ngIf="buff.paletteCommand" class="buff-palette-dice-btn" (mousedown)="rollAutoBuffPalette(buff, $event)" title="{{buff.paletteCommand}}">{{buff.name}} {{buff.rounds}}R</button>
+          <button class="buff-delete-icon" (mousedown)="removeAutoBuff(buff, $event)" title="削除">✕</button>
+        </div>
       </div>
     </div>
   </div>

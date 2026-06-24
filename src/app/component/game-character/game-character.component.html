@@ -59,38 +59,46 @@
             <div class="is-3d" *ngIf="this.gameCharacter.buffDataElement" >
               <ng-container *ngIf="this.gameCharacter.buffDataElement.children.length == 1">
                 <ng-container *ngFor="let child of this.gameCharacter.buffDataElement.children">
-                  <ng-container *ngIf="child.children.length > 0">
+                  <ng-container *ngIf="hasBuffTags">
                     <div style="" *ngIf="this.gameCharacter.buffDataElement" class="buff-tag is-nowrap is-buff-background is-3d will-change backface-off"
                       [ngStyle]="{'transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px) translateY(-100%)'}">
                       <div [hidden]="!this.gameCharacter.targeted" class="target-icon-buff scrolldown5"><img src="./assets/images/target/target.png"></div>
                       <div [hidden]="foldingBuff">
                         <div class="buff-folding-icon " (mousedown)="foldingBuffFlag(true)">▼</div>
-                        <div class="!table is-3d">
-                          <div class="flex-item is-3d" *ngFor="let childElement of this.gameCharacter.buffDataElement.children">
-                            <div class="table-row fornt-tag is-3d" game-data-element-buff [gameDataElement]="childElement" [isEdit]="isEdit" [isPieceMode]="true"></div>
-                          </div>
-                        </div>
-                      </div>
-                      <div [hidden]="!foldingBuff">
-                        <div class="buff-folding-icon" (mousedown)="foldingBuffFlag(false)">▲</div>
-                        <div class="table is-3d">
-                          <div class="flex-item is-3d">
-                            <div class="table-row fornt-tag is-3d" style="font-family: Cambria, Georgia; font-size: 12px;">簡易表示中/バフ{{buffNum}}個</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div style="" *ngIf="this.gameCharacter.buffDataElement" class="buff-tag is-nowrap is-buff-background is-3d will-change backface-off" 
-                     [ngStyle]="{'transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px) translateY(-100%) rotateY(180deg)'}">
-                      <div class="target-icon-buff2 scrolldown5" [hidden]="!this.gameCharacter.targeted"
-                      [ngStyle]="{'transform': 'rotateY(180deg)'}"><img src="./assets/images/target/target.png"></div>
-                      <div [hidden]="foldingBuff">
-                        <div class="buff-folding-icon" (mousedown)="foldingBuffFlag(true)">▼</div>
-                        <div class="table is-3d">
-                          <div class="flex-item is-3d" *ngFor="let childElement of this.gameCharacter.buffDataElement.children">
-                            <div class="table-row fornt-tag is-3d" game-data-element-buff [gameDataElement]="childElement" [isEdit]="isEdit" [isPieceMode]="true"></div>
-                          </div>
-                        </div>
+                       <div class="!table is-3d">
+                         <div class="flex-item is-3d" *ngFor="let childElement of this.gameCharacter.buffDataElement.children">
+                           <div class="table-row fornt-tag is-3d" game-data-element-buff [gameDataElement]="childElement" [isEdit]="isEdit" [isPieceMode]="true"></div>
+                         </div>
+                         <div class="flex-item is-3d" *ngFor="let buff of autoBuffs">
+                           <div class="table-row fornt-tag is-3d" style="font-family: Cambria, Georgia; font-size: 12px;">{{autoBuffLabel(buff)}}</div>
+                           <button *ngIf="buff.paletteCommand" class="buff-palette-btn is-3d" (mousedown)="rollAutoBuffPalette(buff, $event)" title="{{buff.paletteCommand}}" style="font-size:11px;padding:0 3px;">{{buff.name}} {{buff.rounds}}R</button>
+                         </div>
+                       </div>
+                     </div>
+                     <div [hidden]="!foldingBuff">
+                       <div class="buff-folding-icon" (mousedown)="foldingBuffFlag(false)">▲</div>
+                       <div class="table is-3d">
+                         <div class="flex-item is-3d">
+                           <div class="table-row fornt-tag is-3d" style="font-family: Cambria, Georgia; font-size: 12px;">簡易表示中/バフ{{buffNum}}個</div>
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                   <div style="" *ngIf="this.gameCharacter.buffDataElement" class="buff-tag is-nowrap is-buff-background is-3d will-change backface-off" 
+                    [ngStyle]="{'transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px) translateY(-100%) rotateY(180deg)'}">
+                     <div class="target-icon-buff2 scrolldown5" [hidden]="!this.gameCharacter.targeted"
+                     [ngStyle]="{'transform': 'rotateY(180deg)'}"><img src="./assets/images/target/target.png"></div>
+                     <div [hidden]="foldingBuff">
+                       <div class="buff-folding-icon" (mousedown)="foldingBuffFlag(true)">▼</div>
+                       <div class="table is-3d">
+                         <div class="flex-item is-3d" *ngFor="let childElement of this.gameCharacter.buffDataElement.children">
+                           <div class="table-row fornt-tag is-3d" game-data-element-buff [gameDataElement]="childElement" [isEdit]="isEdit" [isPieceMode]="true"></div>
+                         </div>
+                         <div class="flex-item is-3d" *ngFor="let buff of autoBuffs">
+                           <div class="table-row fornt-tag is-3d" style="font-family: Cambria, Georgia; font-size: 12px;">{{autoBuffLabel(buff)}}</div>
+                           <button *ngIf="buff.paletteCommand" class="buff-palette-btn is-3d" (mousedown)="rollAutoBuffPalette(buff, $event)" title="{{buff.paletteCommand}}" style="font-size:11px;padding:0 3px;">{{buff.name}} {{buff.rounds}}R</button>
+                         </div>
+                       </div>
                       </div>
                       <div [hidden]="!foldingBuff">
                         <div class="buff-folding-icon" (mousedown)="foldingBuffFlag(false)">▲</div>

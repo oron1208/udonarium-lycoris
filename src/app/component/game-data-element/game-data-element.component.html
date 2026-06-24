@@ -40,9 +40,16 @@
       <ng-container [ngSwitch]="gameDataElement.type">
         <ng-container *ngSwitchCase="'numberResource'">
           <input [style]="'font-size: 1.0em; min-width: 90px; width: 90%; --min: 0; --max: ' + value + '; --val:' + currentValue +';' | safe: 'style'"
+            [class.auto-buffed-up]="autoBuffClass === 'auto-buffed-up'"
+            [class.auto-buffed-down]="autoBuffClass === 'auto-buffed-down'"
+            [class.auto-buffed-neutral]="autoBuffClass === 'auto-buffed-neutral'"
             [(ngModel)]="currentValue" type="range" min="0" max="{{value}}" />
           <br>
-          <input class="is-caret" style="width: 5em; text-align: right;" size="1" type="number" [(ngModel)]="currentValue" placeholder="Value" />
+          <input class="is-caret" style="width: 5em; text-align: right;" size="1" type="number"
+            [class.auto-buffed-up]="autoBuffClass === 'auto-buffed-up'"
+            [class.auto-buffed-down]="autoBuffClass === 'auto-buffed-down'"
+            [class.auto-buffed-neutral]="autoBuffClass === 'auto-buffed-neutral'"
+            [(ngModel)]="currentValue" placeholder="Value" />
           /
           <input class="is-caret" style="width: 5em;" size="1" type="number" [(ngModel)]="value" placeholder="Value" />
         </ng-container>

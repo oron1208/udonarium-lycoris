@@ -56,6 +56,9 @@ export class GameCharacter extends TabletopObject {
   @SyncVar() superiorDarknessEnabled: boolean = false;
   @SyncVar() superiorDarknessRadius: number = 3;
 
+  // 自動計算バフ（アドバンスモード用）
+  @SyncVar() autoBuffsJson: string = '[]';
+
   _targeted: boolean = false;
   get targeted(): boolean {
     return this._targeted;
@@ -717,10 +720,17 @@ export class GameCharacter extends TabletopObject {
     return false;
   }
 
-  decreaseBuffRound(){
+  decreaseBuffRound(timing?: BuffExpireTiming, triggerIdentifier?: string){
     if (this.buffDataElement.children){
       const dataElm = this.buffDataElement.children[0];
       for (const data  of dataElm.children){
+        // タイミングフィルタ: expireTiming属性がない場合はround_endとして扱う
+        // 旧タイミング値（user_turn_start, target_turn_start, user_turn_end）もround_end扱い
+        const rawTiming = (data.getAttribute('expireTiming') as string) || 'round_end';
+        const elTiming: BuffExpireTiming = (rawTiming === 'user_turn_start' || rawTiming === 'target_turn_start' || rawTiming === 'user_turn_end') ? 'round_end' : rawTiming as BuffExpireTiming;
+        const elTrigger = (data.getAttribute('triggerIdentifier') as string) || (data.getAttribute('sourceIdentifier') as string) || '';
+        if (timing && elTiming !== timing) continue;
+        if (triggerIdentifier && elTrigger !== triggerIdentifier) continue;
         let oldNumS = '';
         let sum: number;
         oldNumS = (data.value as string);
@@ -930,4 +940,240 @@ export class GameCharacter extends TabletopObject {
     return text;
   }
 
+  // ===== 自動計算バフ（アドバンスモード用） =====
+
+  getAutoBuffs(): AutoBuffEntry[] {
+    try {
+      return JSON.parse(this.autoBuffsJson || '[]');
+    } catch { return []; }
+  }
+
+  private saveAutoBuffs(buffs: AutoBuffEntry[]) {
+    this.autoBuffsJson = JSON.stringify(buffs);
+    this.update();
+  }
+
+  /**
+   * 自動計算バフを追加・適用する
+   * operation:
+   *   'add'      = 現在値に加算（バフ解除で減算して戻す）
+   *   'append'   = 最大値に加算（バフ解除で減算して戻す）
+   *   'current'  = 現状記録（付与時の現在値を記録し、解除で記録値に戻す）
+   *   'replace'  = 現在値を置き換え（バフ解除で元の値に戻す）
+   *   'create'   = 新規要素を追加（バフ解除で要素を削除）
+   */
+  applyAutoBuff(name: string, targetStat: string, operation: AutoBuffOperation, value: number, rounds: number, targetGroup: string = 'リソース', newElementType: 'numberResource' | '' = 'numberResource', triggerIdentifier?: string, triggerName?: string, expireTiming?: BuffExpireTiming): string | null {
+    const data = operation === 'create' || operation === 'palette' ? null : this.detailDataElement.getFirstElementByName(targetStat);
+    if (operation !== 'create' && operation !== 'palette' && !data) return null;
+
+    const buffs = this.getAutoBuffs();
+    const entry: AutoBuffEntry = {
+      id: UUID.generateUuid(),
+      name,
+      targetStat,
+      operation,
+      value,
+      rounds,
+      snapshotCurrent: operation === 'create' ? null : this.getStatusValue(targetStat, 'now'),
+      snapshotMax: data && data.type === 'numberResource' ? parseInt(data.value as string) : null,
+      targetGroup,
+      newElementType,
+      createdElementId: null,
+      triggerIdentifier: triggerIdentifier || '',
+      triggerName: triggerName || '',
+      expireTiming: expireTiming || 'round_end',
+    };
+
+    // 即時適用
+    this._applyBuffEffect(entry);
+    buffs.push(entry);
+    this.saveAutoBuffs(buffs);
+    return entry.id;
+  }
+
+  /** バフ効果をステータスに反映 */
+  private _applyBuffEffect(entry: AutoBuffEntry) {
+    if (entry.operation === 'palette') return; // チャパレはステータス変更なし
+    if (entry.operation === 'create') {
+      this._createAutoBuffElement(entry);
+      return;
+    }
+    const data = this.detailDataElement.getFirstElementByName(entry.targetStat);
+    if (!data) return;
+    if (entry.operation === 'add') {
+      const cur = this.getStatusValue(entry.targetStat, 'now');
+      if (cur != null) this.setStatusValue(entry.targetStat, 'now', cur + entry.value);
+    } else if (entry.operation === 'append') {
+      if (data.type === 'numberResource') {
+        const max = parseInt(data.value as string);
+        data.value = max + entry.value;
+        // 現在値も上限分増やす
+        const cur = this.getStatusValue(entry.targetStat, 'now');
+        if (cur != null) this.setStatusValue(entry.targetStat, 'now', cur + entry.value);
+      }
+    } else if (entry.operation === 'replace') {
+      this.setStatusValue(entry.targetStat, 'now', entry.value);
+    }
+    // 'current'（現状記録）は適用時に値変更なし（記録のみ）
+  }
+
+  /** 自動計算バフ用の新規要素を作成 */
+  private _createAutoBuffElement(entry: AutoBuffEntry) {
+    const groupName = entry.targetGroup || 'リソース';
+    let group = this.detailDataElement.getFirstElementByName(groupName);
+    if (!group) {
+      group = DataElement.create(groupName, '', {});
+      this.detailDataElement.appendChild(group);
+    }
+
+    let elementName = entry.targetStat || entry.name || '一時効果';
+    if (this.detailDataElement.getFirstElementByName(elementName)) {
+      const baseName = elementName + '(バフ)';
+      elementName = baseName;
+      let index = 2;
+      while (this.detailDataElement.getFirstElementByName(elementName)) {
+        elementName = `${baseName}${index}`;
+        index++;
+      }
+    }
+
+    const element = entry.newElementType === ''
+      ? DataElement.create(elementName, entry.value, {})
+      : DataElement.create(elementName, entry.value, { type: 'numberResource', currentValue: entry.value });
+    group.appendChild(element);
+    entry.targetStat = elementName;
+    entry.createdElementId = element.identifier;
+  }
+
+  /** バフ効果を巻き戻す（削除時） */
+  private _revertBuffEffect(entry: AutoBuffEntry) {
+    if (entry.operation === 'palette') return; // チャパレは巻き戻し不要
+    if (entry.operation === 'create') {
+      const created = entry.createdElementId ? ObjectStore.instance.get<DataElement>(entry.createdElementId) : null;
+      if (created) {
+        created.destroy();
+      } else {
+        const fallback = this.detailDataElement.getFirstElementByName(entry.targetStat);
+        if (fallback) fallback.destroy();
+      }
+      return;
+    }
+    const data = this.detailDataElement.getFirstElementByName(entry.targetStat);
+    if (!data) return;
+    if (entry.operation === 'add') {
+      const cur = this.getStatusValue(entry.targetStat, 'now');
+      if (cur != null) this.setStatusValue(entry.targetStat, 'now', cur - entry.value);
+    } else if (entry.operation === 'append') {
+      if (data.type === 'numberResource') {
+        const max = parseInt(data.value as string);
+        data.value = max - entry.value;
+        const cur = this.getStatusValue(entry.targetStat, 'now');
+        if (cur != null) {
+          // 元の最大値を超えていたら最大値にクランプ
+          const restored = cur - entry.value;
+          const newMax = max - entry.value;
+          this.setStatusValue(entry.targetStat, 'now', Math.min(restored, newMax));
+        }
+      }
+    } else if (entry.operation === 'replace' || entry.operation === 'current') {
+      // snapshotCurrentに戻す
+      if (entry.snapshotCurrent != null) {
+        this.setStatusValue(entry.targetStat, 'now', entry.snapshotCurrent);
+      }
+    }
+  }
+
+  /** 指定IDの自動計算バフを削除（効果を巻き戻す） */
+  removeAutoBuff(id: string) {
+    const buffs = this.getAutoBuffs();
+    const idx = buffs.findIndex(b => b.id === id);
+    if (idx < 0) return;
+    this._revertBuffEffect(buffs[idx]);
+    buffs.splice(idx, 1);
+    this.saveAutoBuffs(buffs);
+  }
+
+  /** 全自動計算バフのRを減少（ラウンド終了時: round_end タイミングのみ） */
+  decreaseAutoBuffRounds() {
+    const buffs = this.getAutoBuffs();
+    if (buffs.length === 0) return;
+    // 旧タイミング（user_turn_start等）もround_end扱いで処理
+    const targetBuffs = buffs.filter(b => {
+      const t = String(b.expireTiming || 'round_end');
+      return t === 'round_end' || t === 'user_turn_start' || t === 'target_turn_start' || t === 'user_turn_end';
+    });
+    if (targetBuffs.length === 0) return;
+    for (const b of targetBuffs) {
+      b.rounds--;
+    }
+    // R切れのバフを削除（効果巻き戻し）
+    const expired = targetBuffs.filter(b => b.rounds <= 0);
+    for (const e of expired) {
+      this._revertBuffEffect(e);
+    }
+    const remaining = buffs.filter(b => b.rounds > 0);
+    this.saveAutoBuffs(remaining);
+  }
+
+  /** 指定トリガーキャラの手番で発動するバフのRを減少 */
+  decreaseAutoBuffRoundsByTrigger(triggerIdentifier: string, timing: 'turn_start' | 'turn_end') {
+    const buffs = this.getAutoBuffs();
+    if (buffs.length === 0) return;
+    // 旧タイミング（user_turn_start, target_turn_start, user_turn_end）は round_end として扱うためここでは対象外
+    const targetBuffs = buffs.filter(b => {
+      const t = String(b.expireTiming || 'round_end');
+      if (t === 'user_turn_start' || t === 'target_turn_start' || t === 'user_turn_end') return false;
+      return t === timing && b.triggerIdentifier === triggerIdentifier;
+    });
+    if (targetBuffs.length === 0) return;
+    for (const b of targetBuffs) b.rounds--;
+    const expired = targetBuffs.filter(b => b.rounds <= 0);
+    for (const e of expired) this._revertBuffEffect(e);
+    const remaining = buffs.filter(b => b.rounds > 0);
+    this.saveAutoBuffs(remaining);
+  }
+
+  /** 指定ステータスが自動計算バフで変更されているか */
+  getAutoBuffEffect(statName: string): { netDelta: number; isModified: boolean } {
+    const buffs = this.getAutoBuffs();
+    let netDelta = 0;
+    let isModified = false;
+    for (const b of buffs) {
+      if (b.targetStat !== statName) continue;
+      if (b.operation === 'palette') continue;
+      isModified = true;
+      if (b.operation === 'add' || b.operation === 'append') {
+        netDelta += b.value;
+      } else if (b.operation === 'replace' && b.snapshotCurrent != null) {
+        netDelta += (b.value - b.snapshotCurrent);
+      }
+    }
+    return { netDelta, isModified };
+  }
+
+}
+
+/** 自動計算バフの操作タイプ */
+export type AutoBuffOperation = 'add' | 'append' | 'current' | 'replace' | 'create' | 'palette'; // current はUI上「現状記録」, palette はUI上「チャパレ」
+
+/** バフの消失タイミング */
+export type BuffExpireTiming = 'round_end' | 'turn_start' | 'turn_end';
+
+/** 自動計算バフのエントリ */
+export interface AutoBuffEntry {
+  id: string;
+  name: string;
+  targetStat: string;
+  operation: AutoBuffOperation;
+  value: number;
+  rounds: number;
+  snapshotCurrent: number | null;  // 適用時の現在値
+  snapshotMax: number | null;      // 適用時の最大値
+  targetGroup?: string;            // create時の追加先カテゴリ
+  newElementType?: 'numberResource' | ''; // create時の要素種別
+  createdElementId?: string | null; // create時に作成したDataElement ID
+  paletteCommand?: string;         // チャパレコマンド（空以外ならボタン表示、クリックでダイスロール）
+  triggerIdentifier?: string;      // どのキャラの手番で発動するか（turn_start/turn_end用）
+  triggerName?: string;            // トリガーキャラ名（表示用）
+  expireTiming?: BuffExpireTiming; // 消失タイミング（デフォルト: 'round_end'）
 }

@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, Input, OnDestroy, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { AfterViewInit, Component, Input, OnDestroy, OnInit, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 
 import { EventSystem, Network } from '@udonarium/core/system';
 import { DataElement } from '@udonarium/data-element';
@@ -14,10 +14,12 @@ import { ModalService } from 'service/modal.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { SaveDataService } from 'service/save-data.service';
 import { TabletopService } from 'service/tabletop.service';
+import { InitiativeService } from 'service/initiative.service';
 
 import { GameCharacter } from '@udonarium/game-character';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 import { DiceSymbol } from '@udonarium/dice-symbol';
+import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 
 import { RangeArea } from '@udonarium/range';
 import { GameTableScratchMask } from '@udonarium/game-table-scratch-mask';
@@ -42,12 +44,134 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
     private panelService: PanelService,
     private modalService: ModalService,
     private pointerDeviceService: PointerDeviceService,
-    private tabletopService: TabletopService
+    private tabletopService: TabletopService,
+    private initiativeService: InitiativeService,
+    private changeDetector: ChangeDetectorRef
   ) { }
 
   get isAdvancedRoom(): boolean { return this.tabletopService.currentTable?.roomMode === 'advanced'; }
   get isCharacter(): boolean { return this.tabletopObject instanceof GameCharacter; }
   get character(): GameCharacter { return this.tabletopObject as GameCharacter; }
+  get isRangeArea(): boolean { return this.tabletopObject instanceof RangeArea; }
+  get rangeArea(): RangeArea { return this.tabletopObject as RangeArea; }
+  get rangeBuffGroups(): string[] { return ['リソース', '能力値', '技能', '情報']; }
+
+  get rangeBuffCandidateStats(): string[] {
+    const stats = new Set<string>();
+    for (const character of this.tabletopService.characters) {
+      const collect = (parent: any) => {
+        if (!parent || !parent.children) return;
+        for (const child of parent.children) {
+          if (child instanceof DataElement) {
+            if (child.children.length === 0 && (child.type === 'numberResource' || child.type === '')) stats.add(child.name);
+            else collect(child);
+          }
+        }
+      };
+      collect(character.detailDataElement);
+    }
+    return [...stats].sort();
+  }
+
+  get combatCharacters(): { id: string; name: string }[] {
+    const chars = this.tabletopService.characters;
+    return chars.filter(c => c.location.name === 'table' && !c.hideInventory)
+      .map(c => ({ id: c.identifier, name: c.name }));
+  }
+
+  get currentTurnCharId(): string {
+    const order = this.initiativeService.getCombatOrder();
+    const idx = this.initiativeService.currentTurnIndex;
+    return order[idx] || '';
+  }
+
+  get currentTurnCharName(): string {
+    const id = this.currentTurnCharId;
+    if (!id) return '';
+    const char = ObjectStore.instance.get<GameCharacter>(id);
+    return char ? char.name : '';
+  }
+
+  /** トリガーキャラの有効なID（未設定なら現在の手番キャラ） */
+  get effectiveTriggerId(): string {
+    return this.rangeTriggerAsCurrent ? this.currentTurnCharId : this.rangeArea.areaBuffTriggerIdentifier;
+  }
+
+  /** トリガーキャラの有効な名前 */
+  get effectiveTriggerName(): string {
+    const id = this.effectiveTriggerId;
+    if (!id) return '';
+    const char = ObjectStore.instance.get<GameCharacter>(id);
+    return char ? char.name : '';
+  }
+
+  /** 現在手番キャラをトリガーとするか（デフォルトtrue） */
+  rangeTriggerAsCurrent: boolean = true;
+
+  onTriggerCharChanged() {
+    if (!this.isRangeArea) return;
+    const id = this.rangeArea.areaBuffTriggerIdentifier;
+    const char = this.tabletopService.characters.find(c => c.identifier === id);
+    this.rangeArea.areaBuffTriggerName = char ? char.name : '';
+    this.onRangeBuffChanged();
+    this.changeDetector.markForCheck();
+  }
+
+  /** 消失タイミング変更時 */
+  onExpireTimingChanged() {
+    if (!this.isRangeArea) return;
+    if (this.rangeArea.areaBuffExpireTiming !== 'round_end') {
+      // turn_start/turn_endの時: チェックONなら手番キャラを、OFFなら選択中キャラを使う
+      if (this.rangeTriggerAsCurrent) {
+        this.rangeArea.areaBuffTriggerIdentifier = this.currentTurnCharId;
+        this.rangeArea.areaBuffTriggerName = this.currentTurnCharName;
+      } else if (!this.rangeArea.areaBuffTriggerIdentifier) {
+        // 未選択なら現在の手番キャラを初期値に
+        this.rangeArea.areaBuffTriggerIdentifier = this.currentTurnCharId;
+        this.rangeArea.areaBuffTriggerName = this.currentTurnCharName;
+      }
+    }
+    this.onRangeBuffChanged();
+    this.changeDetector.markForCheck();
+  }
+
+  /** チェックボックス切替時 */
+  onTriggerAsCurrentChanged() {
+    if (!this.isRangeArea) return;
+    if (this.rangeTriggerAsCurrent) {
+      this.rangeArea.areaBuffTriggerIdentifier = this.currentTurnCharId;
+      this.rangeArea.areaBuffTriggerName = this.currentTurnCharName;
+    } else {
+      if (!this.rangeArea.areaBuffTriggerIdentifier) {
+        this.rangeArea.areaBuffTriggerIdentifier = this.currentTurnCharId;
+        this.rangeArea.areaBuffTriggerName = this.currentTurnCharName;
+      }
+    }
+    this.onRangeBuffChanged();
+    this.changeDetector.markForCheck();
+  }
+
+  onRangeBuffChanged() {
+    if (!this.isRangeArea) return;
+    if (!this.rangeArea.areaBuffEnabled) {
+      this.rangeArea.areaBuffConfirmed = false;
+      this.tabletopService.clearAreaBuff(this.rangeArea);
+    } else {
+      // 設定編集中は付与済み効果を掃除し、新規反映は確定ボタンまで待つ
+      this.rangeArea.areaBuffConfirmed = false;
+      this.tabletopService.clearAreaBuff(this.rangeArea);
+    }
+    this.rangeArea.update();
+  }
+
+  confirmRangeBuff() {
+    if (!this.isRangeArea || !this.rangeArea.areaBuffEnabled) return;
+    // 旧設定で付与済みの効果を一度掃除してから、新設定を確定・即時反映
+    this.tabletopService.clearAreaBuff(this.rangeArea);
+    this.rangeArea.areaBuffConfirmed = true;
+    this.rangeArea.update();
+    this.tabletopService.updateAreaBuffs();
+  }
 
   get isMyPiece(): boolean {
     if (!this.isCharacter) return false;
@@ -101,6 +225,10 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
   }
 
   ngOnInit() {
+    if (this.isRangeArea && this.rangeArea.areaBuffEnabled && this.rangeArea.areaBuffExpireTiming !== 'round_end' && !this.rangeArea.areaBuffTriggerIdentifier) {
+      this.rangeArea.areaBuffTriggerIdentifier = this.currentTurnCharId;
+      this.rangeArea.areaBuffTriggerName = this.currentTurnCharName;
+    }
     EventSystem.register(this)
       .on('DELETE_GAME_OBJECT', event => {
         if (this.tabletopObject && this.tabletopObject.identifier === event.data.identifier) {

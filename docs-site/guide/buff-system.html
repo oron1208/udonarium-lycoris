@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
+<title>バフ機能強化 操作説明 - ユドナリウムリコリス</title>
+<meta name="description" content="ユドナリウムリコリスのバフ機能強化の使い方を解説。自動計算バフ、消失タイミング、バフマネージャー、チャットコマンド拡張。">
+<link rel="canonical" href="https://udonarium-lycoris.ddns.net/docs/guide/buff-system.html">
+<meta property="og:title" content="バフ機能強化 操作説明 - ユドナリウムリコリス">
+<meta property="og:description" content="自動計算バフ、消失タイミング、バフマネージャー、チャットコマンド拡張。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+
+<!-- 背景固定レイヤー -->
+<div class="bg-fixed">
+  <div class="bg-layer bg-layer-1"></div>
+  <div class="bg-layer bg-layer-2"></div>
+</div>
+
+<!-- パーティクル -->
+<canvas id="particles"></canvas>
+
+<!-- ナビ -->
+<nav class="nav scrolled">
+  <div class="nav-inner">
+    <a href="../" class="nav-logo"><span class="logo-icon">◈</span> ユドナリウムリコリス</a>
+    <div class="nav-links">
+      <a href="../#about">概要</a>
+      <a href="../#connect">接続先</a>
+      <a href="../#updates">更新履歴</a>
+      <a href="index.html" class="nav-link-github">操作説明</a>
+    </div>
+  </div>
+</nav>
+
+<!-- 目次 -->
+<aside class="guide-toc fade-up" id="toc">
+  <details open>
+    <summary>📑 目次</summary>
+    <ol>
+      <li><a href="#overview">バフ/デバフとは</a></li>
+      <li><a href="#auto-buff">自動計算バフ（アドバンスモード限定）</a></li>
+      <li><a href="#timing">消失タイミングシステム</a></li>
+      <li><a href="#manager">バフマネージャー（ガントチャート）</a></li>
+      <li><a href="#area-buff">範囲バフとの連携</a></li>
+      <li><a href="#hover">ホバー窓でのバフ管理</a></li>
+      <li><a href="#commands">チャットコマンド（&構文）リファレンス</a></li>
+      <li><a href="#palette-gen">チャパレ生成ツール</a></li>
+    </ol>
+  </details>
+</aside>
+
+<!-- メイン -->
+<section class="section guide-section" style="padding-top: 100px;" id="overview">
+  <div class="container">
+    <span class="section-tag">GUIDE</span>
+    <h2 class="section-title">バフ機能強化 <span class="guide-section-badge">NEW</span></h2>
+    <p class="section-subtitle">自動計算バフ、消失タイミング、バフマネージャー、チャットコマンド拡張による強力なバフ管理システム。</p>
+
+    <div class="guide-content fade-up">
+      <h3>バフ/デバフとは</h3>
+      <p>バフはキャラクターにプラスの効果を与え、デバフはマイナスの効果を与えます。効果は<b>R（ラウンド）</b>で管理され、戦闘の進行に合わせて自動で減少・消失します。</p>
+      <p>リコリスには2種類のバフがあります：</p>
+      <ul>
+        <li><b>手動バフ（テキストバフ）</b>：効果名と補正テキストを記録するシンプルなバフ。すべてのモードで使用可能。</li>
+        <li><b>自動計算バフ</b>：ステータスを自動で増減するバフ。アドバンスモード限定。</li>
+      </ul>
+
+      <h3 id="auto-buff">自動計算バフ（アドバンスモード限定）</h3>
+      <p>自動計算バフは、キャラクターのステータス（HP、攻撃力など）を自動で増減します。バフが切れると自動的に元の値に戻ります。</p>
+      <p>コマの設定シートから「バフ/デバフ」セクションで設定できます。</p>
+
+      <figure class="guide-figure">
+        <img src="assets/buff-auto-calc.png" alt="自動計算バフの適用状態" loading="lazy">
+        <figcaption>自動計算バフが適用されると、キャラクターシートの該当ステータスが青色で表示され、バフがかかっていることがひと目で分かる。</figcaption>
+      </figure>
+
+      <h4>操作の種類</h4>
+      <table class="guide-table">
+        <thead><tr><th>操作</th><th>説明</th><th>例</th></tr></thead>
+        <tbody>
+          <tr><td><b>加算（add）</b></td><td>現在値に値を加算。バフ解除で元に戻る</td><td>攻撃力+10</td></tr>
+          <tr><td><b>最大値追加（append）</b></td><td>最大値を増加。現在値も同様に増加</td><td>最大HP+10</td></tr>
+          <tr><td><b>現状記録（current）</b></td><td>現在の値を記録。バフ解除で記録時の値に戻る</td><td>HP記録</td></tr>
+          <tr><td><b>置換（replace）</b></td><td>値を指定値に置き換え。バフ解除で元の値に戻る</td><td>AC=18</td></tr>
+          <tr><td><b>新規要素（create）</b></td><td>新しいステータス要素を作成。バフ解除で削除</td><td>一時HP新規作成</td></tr>
+          <tr><td><b>チャパレ（palette）</b></td><td>チャットパレットコマンドをボタン化</td><td>セーブボタン</td></tr>
+        </tbody>
+      </table>
+
+      <figure class="guide-figure">
+        <img src="assets/buff-add-form.png" alt="バフ追加フォーム" loading="lazy">
+        <figcaption>コマの設定シートからバフを追加。効果名、操作、値、ラウンド数、消失タイミングを設定できる。</figcaption>
+      </figure>
+
+      <h3 id="timing">消失タイミングシステム</h3>
+      <p>バフがいつ切れるかを3種類から選べます。システムに合わせて柔軟に対応できます。</p>
+
+      <table class="guide-table">
+        <thead><tr><th>タイミング</th><th>アイコン</th><th>説明</th><th>対応システム例</th></tr></thead>
+        <tbody>
+          <tr><td><b>ラウンド終了時</b></td><td>🔄</td><td>ラウンドが切り替わる時にRが減少</td><td>D&D、一般</td></tr>
+          <tr><td><b>トリガーキャラ手番開始時</b></td><td>▶</td><td>指定したキャラの手番が来た瞬間にRが減少</td><td>ソードワールド</td></tr>
+          <tr><td><b>トリガーキャラ手番終了時</b></td><td>⏹</td><td>指定したキャラの手番が終わった時にRが減少</td><td>一部バフ</td></tr>
+        </tbody>
+      </table>
+
+      <h4>トリガーキャラの選択</h4>
+      <p>手番開始時・手番終了時を選んだ場合、どのキャラのターンで発動するかを「トリガーキャラ」として指定します。</p>
+      <ul>
+        <li>プルダウンから戦闘参加キャラを選択</li>
+        <li>「現在手番」チェックボックス（デフォルトON）→ 常に現在の手番キャラを自動設定</li>
+        <li>チェックを外すと、固定のキャラを手動選択できる</li>
+      </ul>
+
+      <div class="guide-callout">
+        <p>💡 <b>ソードワールドの例</b>：「プロテクション（3R）」を魔術師が使用 → 消失タイミングを「トリガーキャラ手番開始時」、トリガーを魔術師に設定。毎ラウンド、魔術師の手番が来るたびにRが減少します。</p>
+      </div>
+
+      <h3 id="manager">バフマネージャー（ガントチャート）</h3>
+      <p>イニシアチブパネルの「⚔️ バフマネージャー(β)」ボタンから開ける、全バフを一覧管理するパネルです。</p>
+
+      <h4>特徴</h4>
+      <ul>
+        <li><b>ガントチャート表示</b>：行＝キャラクター（立ち絵付き）、列＝ラウンド番号。バフが有効な区間が色付きバーで視覚的に分かる。</li>
+        <li><b>色分け</b>：緑＝バフ、赤＝デバフ、青＝チャパレ</li>
+        <li><b>残り1R警告</b>：次のラウンドで切れるバフは⚠️マーク＋点滅アニメーション</li>
+        <li><b>インライン編集</b>：バーをクリック → 下に展開して効果名・残りR・値を直接編集</li>
+        <li><b>即削除</b>：バーの✕ボタンでワンクリック削除</li>
+        <li><b>フィルタ</b>：全員/キャラ別、バフのみ/デバフのみ、効果名検索</li>
+        <li><b>バフ追加</b>：フォームから対象キャラを選んでバフを追加</li>
+      </ul>
+
+      <figure class="guide-figure">
+        <img src="assets/buff-manager-gantt.png" alt="バフマネージャー ガントチャート画面" loading="lazy">
+        <figcaption>バフマネージャー：各キャラのバフがタイムライン上に表示される。バーの長さ＝残りラウンド数。</figcaption>
+      </figure>
+
+      <h3 id="area-buff">範囲バフとの連携</h3>
+      <p>RangeArea（範囲オブジェクト）の設定シートで「範囲バフを有効にする」をチェックすると、範囲内のコマに自動でバフを付与します。</p>
+      <ul>
+        <li>範囲内に入ると自動付与、範囲外に出ると自動解除</li>
+        <li>範囲バフにも<b>消失タイミング</b>を設定可能</li>
+        <li>飛行/高高度のコマを含めるか選択可能</li>
+        <li>「確定」ボタンを押すまで反映されない（誤操作防止）</li>
+      </ul>
+
+      <h3 id="hover">ホバー窓でのバフ管理</h3>
+      <p>コマにマウスオーバーすると表示されるホバー窓（Overview Panel）の右側に、バフサイドパネルが表示されます。</p>
+
+      <figure class="guide-figure">
+        <img src="assets/buff-hover-panel.png" alt="ホバー窓のバフサイドパネル" loading="lazy">
+        <figcaption>コマにマウスオーバーすると、右側にバフ/デバフ一覧が表示される。各バフの✕ボタンで削除可能。</figcaption>
+      </figure>
+
+      <ul>
+        <li>バフ名、値、残りRが一覧表示</li>
+        <li>各バフの✕ボタンで削除可能</li>
+        <li>バフ名が長い場合は2段組みで表示、マウスホバーで全文表示</li>
+      </ul>
+
+      <h3 id="commands">チャットコマンド（&構文）リファレンス</h3>
+      <p>チャットパレットやチャット送信で <code>&</code> を使ってバフを操作できます。VNチャパレ・通常チャパレ両方で動作します。</p>
+
+      <h4>既存構文（手動バフ）</h4>
+      <pre><code>&バフ名/補正テキスト/R    → バフを付与（R省略時=3）
+&バフ名/補正              → バフを付与（R省略時=3）
+&R-                       → 全バフのRを減少
+&R+                       → 全バフのRを増加
+&D                        → 0R以下のバフを削除
+&バフ名-                  → 指定したバフを削除
+t&バフ名/補正/R           → ターゲット中のコマに付与</code></pre>
+
+      <h4>新規構文：自動計算バフ付与（&!）</h4>
+      <p><code>&!</code> で始めると、自動計算バフとして付与されます。ステータスが自動で増減し、バフ解除で元に戻ります。</p>
+      <pre><code>&!効果名/対象ステータス/操作/値/R
+&!効果名/対象ステータス/操作/値/R/タイミング
+&!効果名/対象ステータス/操作/値/R/タイミング/トリガー名
+t&!効果名/対象ステータス/操作/値/R    → ターゲット中のコマに付与</code></pre>
+
+      <h5>操作（英語指定）</h5>
+      <table class="guide-table">
+        <thead><tr><th>指定</th><th>操作</th></tr></thead>
+        <tbody>
+          <tr><td><code>add</code></td><td>加算（現在値に加算）</td></tr>
+          <tr><td><code>append</code></td><td>最大値追加</td></tr>
+          <tr><td><code>current</code></td><td>現状記録</td></tr>
+          <tr><td><code>replace</code></td><td>置換</td></tr>
+          <tr><td><code>create</code></td><td>新規要素追加</td></tr>
+          <tr><td><code>palette</code></td><td>チャパレ</td></tr>
+        </tbody>
+      </table>
+
+      <h5>タイミング（省略時=round_end）</h5>
+      <table class="guide-table">
+        <thead><tr><th>指定</th><th>タイミング</th></tr></thead>
+        <tbody>
+          <tr><td><code>round_end</code></td><td>ラウンド終了時</td></tr>
+          <tr><td><code>turn_start</code></td><td>トリガーキャラ手番開始時</td></tr>
+          <tr><td><code>turn_end</code></td><td>トリガーキャラ手番終了時</td></tr>
+        </tbody>
+      </table>
+
+      <h5>トリガー名</h5>
+      <p>タイミングが <code>turn_start</code> / <code>turn_end</code> の場合のみ指定可能。キャラクター名で指定（部分一致で検索）。省略時は発動者自身がトリガーになります。</p>
+
+      <h5>使用例</h5>
+      <pre><code>&!マッスルベアー/攻撃力/add/10/3
+→ 自分の攻撃力+10、3R（ラウンド終了時消失）
+
+&!プロテクション/防護力/add/4/3/turn_start
+→ 自分の防護力+4、3R（自分の手番開始時にR減少）
+
+&!プロテクション/防護力/add/4/3/turn_start/魔術師
+→ 魔術師の手番開始時にR減少
+
+t&!ウィークネス/攻撃力/add/-5/3
+→ ターゲット中のコマの攻撃力-5、3R（デバフ）
+
+&!一時HP/HP/create/10/3
+→ HPという新規要素を作成、値10、3R
+
+&!毒/HP/add/-3/5/round_end
+→ 自分のHP-3、5R（ラウンド終了時に減少、毎R持続）</code></pre>
+
+      <div class="guide-callout">
+        <p>💡 <b>t&!</b> について：<code>t</code> を付けると、現在ターゲット中のコマにバフを付与します。敵にデバフをかけたい時に便利です。</p>
+      </div>
+
+      <figure class="guide-figure">
+        <img src="assets/buff-chat-command.png" alt="チャットコマンドでバフ付与" loading="lazy">
+        <figcaption>チャットで&t!構文を送信すると、ターゲット中のコマにバフが付与される。結果がチャットに表示される。</figcaption>
+      </figure>
+
+      <h3 id="palette-gen">チャパレ生成ツール</h3>
+      <p>バフマネージャーの「🔧 チャパレ生成」タブから、GUIで <code>&!</code> 構文を自動生成できます。</p>
+
+      <figure class="guide-figure">
+        <img src="assets/buff-palette-gen.png" alt="チャパレ生成ツール" loading="lazy">
+        <figcaption>フォームでバフ設定を作ると、リアルタイムで&!構文が自動生成される。コピーボタンかチャパレ直接登録が可能。</figcaption>
+      </figure>
+
+      <h4>使い方</h4>
+      <ol>
+        <li>効果名、対象ステータス、操作、値、R、消失タイミングをフォームに入力</li>
+        <li>リアルタイムで <code>&!</code> 構文が自動生成される</li>
+        <li>📋ボタンでクリップボードにコピー → チャパレに貼り付け</li>
+        <li>「現在の手番キャラのチャパレに追加」ボタンで直接登録</li>
+        <li>付与対象を「ターゲット（t&!）」か「自分（&!）」かラジオボタンで切替</li>
+      </ol>
+
+      <div class="guide-callout">
+        <p>💡 生成されたコマンドをチャパレに登録しておけば、戦闘中にワンクリックでバフを付与できます。よく使うバフをプリセットとして登録しておくのがおすすめです。</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- フッター -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand"><span class="logo-icon">◈</span> ユドナリウムリコリス</div>
+      <div class="footer-links">
+        <a href="https://cylinder-lily.com" target="_blank">リリィ</a>
+        <a href="https://github.com/TK11235/udonarium" target="_blank">オリジナル版</a>
+        <a href="https://github.com/oron1208/udonarium-lycoris" target="_blank">GitHub</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 Udonarium Lycoris.</div>
+    </div>
+  </div>
+</footer>
+
+<script src="../main.js"></script>
+</body>
+</html>

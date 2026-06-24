@@ -1,4 +1,4 @@
-<div [@flyInOut]="'in'" [ngClass]="{'pointer-events-none': isPointerDragging}" class="draggable-panel no-caret"
+<div [@flyInOut]="'in'" [ngClass]="{'pointer-events-none': isPointerDragging, 'panel-transparent': isTransparent}" class="draggable-panel no-caret"
   [style.left.px]="left" [style.top.px]="top" [style.width.px]="width" [style.height.px]="height"
   [resizable.disable]="isMinimized || isFullScreen"
   [draggable.stack]="'.draggable-panel'" appDraggable appResizable #draggablePanel

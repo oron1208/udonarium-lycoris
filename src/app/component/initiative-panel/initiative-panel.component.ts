@@ -7,6 +7,7 @@ import { AudioStorage } from '@udonarium/core/file-storage/audio-storage';
 import { AudioFile } from '@udonarium/core/file-storage/audio-file';
 import { InitiativeService, CombatEntry } from 'service/initiative.service';
 import { PanelService } from 'service/panel.service';
+import { EffectManagerComponent } from 'component/effect-manager/effect-manager.component';
 import { GmModeService } from 'service/gm-mode.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
 import { ContextMenuService } from 'service/context-menu.service';
@@ -43,11 +44,15 @@ export class InitiativePanelComponent implements OnInit, OnDestroy {
         if (object instanceof GameTable) {
           this.ngZone.run(() => {});
         }
+      })
+      .on('CLOSE_INITIATIVE_PANEL', event => {
+        this.ngZone.run(() => { this.panelService.close(); });
       });
   }
 
   ngOnDestroy() {
     EventSystem.unregister(this);
+    EventSystem.trigger('INITIATIVE_PANEL_CLOSED', {});
   }
 
   get isCombatActive(): boolean {
@@ -103,6 +108,24 @@ export class InitiativePanelComponent implements OnInit, OnDestroy {
       table.combatIncludeHiddenInventoryCharacters = value;
       table.update();
     }
+  }
+
+  get combatAutoBuffDecay(): boolean {
+    const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected);
+    return table?.combatAutoBuffDecay ?? false;
+  }
+
+  set combatAutoBuffDecay(value: boolean) {
+    const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected);
+    if (table) {
+      table.combatAutoBuffDecay = value;
+      table.update();
+    }
+  }
+
+  get isAdvancedMode(): boolean {
+    const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected);
+    return table?.roomMode === 'advanced';
   }
 
   get entries(): CombatEntry[] {
@@ -319,5 +342,13 @@ export class InitiativePanelComponent implements OnInit, OnDestroy {
   previewCombatBgm() {
     if (!this.combatBgmIdentifier) return;
     EventSystem.trigger('COMBAT_BGM_PLAY', { identifier: this.combatBgmIdentifier });
+  }
+
+  openEffectManager() {
+    this.panelService.open(EffectManagerComponent, {
+      title: '⚔️ バフマネージャー(β版)',
+      width: 800,
+      height: 600
+    });
   }
 }

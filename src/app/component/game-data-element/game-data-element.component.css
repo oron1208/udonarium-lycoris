@@ -290,3 +290,39 @@ input[type='range']::-ms-tooltip {
 .is-caret {
   caret-color: rgba(0,0,0,0.95);
 }
+
+/* 自動計算バフ適用状態 */
+:host.auto-buff-row-up {
+  background: linear-gradient(90deg, rgba(0, 153, 255, 0.22), rgba(0, 153, 255, 0.04));
+  border-left: 3px solid #008cff;
+}
+
+:host.auto-buff-row-down {
+  background: linear-gradient(90deg, rgba(255, 51, 0, 0.22), rgba(255, 51, 0, 0.04));
+  border-left: 3px solid #e13b20;
+}
+
+:host.auto-buff-row-neutral {
+  background: linear-gradient(90deg, rgba(128, 128, 128, 0.18), rgba(128, 128, 128, 0.04));
+  border-left: 3px solid #888;
+}
+
+.auto-buffed-up {
+  color: #0066cc !important;
+  font-weight: bold;
+  background-color: rgba(0, 153, 255, 0.12);
+  border-radius: 3px;
+}
+
+.auto-buffed-down {
+  color: #cc0000 !important;
+  font-weight: bold;
+  background-color: rgba(255, 51, 0, 0.12);
+  border-radius: 3px;
+}
+
+.auto-buffed-neutral {
+  font-weight: bold;
+  background-color: rgba(128, 128, 128, 0.12);
+  border-radius: 3px;
+}

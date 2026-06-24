@@ -1,0 +1,249 @@
+<div class="effect-manager" *ngIf="isCombatActive && isAdvancedMode">
+  <!-- フィルタバー -->
+  <div class="em-filters">
+    <select class="em-filter-select" [(ngModel)]="filterCharacter">
+      <option value="">全員</option>
+      <option *ngFor="let c of combatCharacters" [ngValue]="c.id">{{ c.name }}</option>
+    </select>
+    <select class="em-filter-select" [(ngModel)]="filterType">
+      <option value="all">全て</option>
+      <option value="buff">バフのみ</option>
+      <option value="debuff">デバフのみ</option>
+    </select>
+    <input
+      type="text"
+      class="em-search-input"
+      placeholder="検索..."
+      [(ngModel)]="searchText"
+    >
+  </div>
+  <div class="em-divider"></div>
+
+  <!-- ガントチャート -->
+  <div class="em-gantt-wrapper">
+    <div class="em-gantt-scroll">
+      <div class="em-gantt-grid" *ngIf="getEffectRows().length > 0">
+        <!-- ラウンドヘッダー行 -->
+        <div class="em-gantt-header-row">
+          <div class="em-gantt-name-cell-header">キャラクター</div>
+          <div
+            *ngFor="let r of roundColumns; let ci = index"
+            class="em-gantt-round-cell-header"
+            [class.em-current-round]="ci === 0"
+          >
+            R{{ r }}
+          </div>
+        </div>
+
+        <!-- 各キャラクター行 -->
+        <div
+          *ngFor="let row of getEffectRows(); trackBy: trackByCharId"
+          class="em-gantt-char-block"
+        >
+          <!-- キャラ名ヘッダー -->
+          <div class="em-gantt-char-header">
+            <div class="em-char-avatar">
+              <img *ngIf="getCharImageUrl(row.characterId)" [src]="getCharImageUrl(row.characterId) | safe: 'resourceUrl'" />
+              <span *ngIf="!getCharImageUrl(row.characterId)" class="em-char-avatar-placeholder">{{ row.characterName.charAt(0) }}</span>
+            </div>
+            <span class="em-char-name">{{ row.characterName }}</span>
+            <span class="em-buff-count" *ngIf="row.buffs.length > 0">{{ row.buffs.length }}</span>
+          </div>
+
+          <!-- バフごとの独立したバー行 -->
+          <div class="em-gantt-buff-rows">
+            <!-- 各バフ1行＝1バー（wrapperでラップしてインライン展開を含む） -->
+            <div *ngFor="let bar of getBuffBars(row.characterId); trackBy: trackByBuffId" class="em-buff-line-wrapper">
+              <div class="em-buff-line">
+                <!-- キャラ名列（空スペーサー） -->
+                <div class="em-buff-line-spacer"></div>
+                <!-- ラウンドトラック -->
+                <div class="em-buff-track">
+                  <!-- ラウンド背景グリッド -->
+                  <div
+                    *ngFor="let r of roundColumns; let ci = index"
+                    class="em-round-bg"
+                    [class.em-current-round-bg]="ci === 0"
+                  ></div>
+                  <!-- 実際のバー -->
+                  <div
+                    class="em-buff-bar"
+                    [class.em-buff-positive]="!bar.buff.isDebuff"
+                    [class.em-buff-negative]="bar.buff.isDebuff"
+                    [class.em-buff-palette]="bar.buff.operation === 'palette'"
+                    [class.em-expiring]="bar.buff.rounds <= 1"
+                    [style.width.%]="(bar.span / roundColumns.length) * 100"
+                    (click)="onBarClick(bar.buff)"
+                    [title]="bar.buff.name + ' | ' + bar.buff.shortLabel + ' | 残り' + bar.buff.rounds + 'R | ' + getExpireTimingLabel(bar.buff.expireTiming) + (bar.buff.triggerName ? ' | トリガー:' + bar.buff.triggerName : '')"
+                  >
+                    <span class="em-bar-icon" *ngIf="bar.buff.rounds <= 1">⚠️</span>
+                    <span class="em-bar-text">{{ bar.buff.name }} {{ bar.buff.shortLabel }}</span>
+                    <span class="em-bar-rounds">{{ bar.buff.rounds }}R</span>
+                    <span class="em-bar-timing-icon">{{ getExpireTimingIcon(bar.buff.expireTiming) }}</span>
+                    <span class="em-bar-trigger" *ngIf="bar.buff.triggerName">▶{{ bar.buff.triggerName }}</span>
+                    <button class="em-bar-delete" (click)="deleteBuff(bar.buff); $event.stopPropagation()">✕</button>
+                  </div>
+                </div>
+              </div>
+              <!-- インライン展開パネル -->
+              <div class="em-buff-expand" *ngIf="isExpanded(bar.buff.id)">
+                <div class="em-expand-content">
+                  <div class="em-expand-row">
+                    <label>効果名</label>
+                    <input type="text" [value]="bar.buff.name" (change)="updateBuffName(bar.buff, $event.target.value)" />
+                  </div>
+                  <div class="em-expand-row">
+                    <label>残りR</label>
+                    <input type="number" min="0" [value]="bar.buff.rounds" (change)="updateBuffRounds(bar.buff, +$event.target.value)" />
+                  </div>
+                  <div class="em-expand-row" *ngIf="!bar.buff.isManual && bar.buff.operation !== 'palette' && bar.buff.operation !== 'create' && bar.buff.operation !== 'current'">
+                    <label>値</label>
+                    <input type="number" [value]="bar.buff.value" (change)="updateBuffValue(bar.buff, +$event.target.value)" />
+                  </div>
+                  <div class="em-expand-info">
+                    <span>{{ getOperationLabel(bar.buff.operation) }}</span>
+                    <span>{{ getExpireTimingIcon(bar.buff.expireTiming) }} {{ getExpireTimingLabel(bar.buff.expireTiming) }}</span>
+                    <span *ngIf="bar.buff.triggerName">▶{{ bar.buff.triggerName }}</span>
+                  </div>
+                  <div class="em-expand-actions">
+                    <button class="em-expand-delete" (click)="deleteBuff(bar.buff)">削除</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- バフがない場合 -->
+            <div class="em-no-buffs" *ngIf="row.buffs.length === 0">
+              <span style="color:#666;font-size:11px;padding:2px 8px;">バフなし</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 空状態 -->
+      <div class="em-empty" *ngIf="getEffectRows().length === 0">
+        <p>表示するバフ/デバフがありません</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 追加ボタン -->
+  <div class="em-add-section">
+    <div class="em-tab-buttons">
+      <button class="em-add-toggle-btn" [class.em-tab-active]="showAddForm" (click)="toggleAddForm()" *ngIf="!showPaletteGen || showAddForm">
+        {{ showAddForm ? '✕ 閉じる' : '+ バフ追加' }}
+      </button>
+      <button class="em-add-toggle-btn" [class.em-tab-active]="showPaletteGen" (click)="togglePaletteGen()">
+        🔧 チャパレ生成
+      </button>
+    </div>
+
+    <!-- チャパレ生成フォーム -->
+    <div class="em-add-form" *ngIf="showPaletteGen">
+      <div class="em-palgen-row">
+        <label>効果名</label>
+        <input type="text" class="em-form-input" [(ngModel)]="palName" (input)="generatePaletteCommand()" placeholder="例: マッスルベアー">
+      </div>
+      <div class="em-palgen-row" *ngIf="palOperation !== 'palette' && palOperation !== 'create'">
+        <label>対象ステータス</label>
+        <input type="text" class="em-form-input" [(ngModel)]="palTargetStat" (input)="generatePaletteCommand()" placeholder="例: 攻撃力">
+      </div>
+      <div class="em-palgen-row">
+        <label>操作</label>
+        <select class="em-form-select" [(ngModel)]="palOperation" (change)="generatePaletteCommand()">
+          <option *ngFor="let op of operationLabels" [ngValue]="op.value">{{op.label}}</option>
+        </select>
+      </div>
+      <div class="em-palgen-row" *ngIf="palOperation !== 'palette'">
+        <label>値</label>
+        <input type="number" class="em-form-input" [(ngModel)]="palValue" (input)="generatePaletteCommand()">
+      </div>
+      <div class="em-palgen-row">
+        <label>ラウンド数</label>
+        <input type="number" class="em-form-input" [(ngModel)]="palRounds" min="1" (input)="generatePaletteCommand()">
+      </div>
+      <div class="em-palgen-row">
+        <label>消失タイミング</label>
+        <select class="em-form-select" [(ngModel)]="palExpireTiming" (change)="generatePaletteCommand()">
+          <option *ngFor="let t of expireTimingOptions" [ngValue]="t.value">{{t.icon}} {{t.label}}</option>
+        </select>
+      </div>
+      <div class="em-palgen-row" *ngIf="palExpireTiming !== 'round_end'">
+        <label>トリガー名（空=発動者）</label>
+        <input type="text" class="em-form-input" [(ngModel)]="palTriggerName" (input)="generatePaletteCommand()" placeholder="空なら発動者自身">
+      </div>
+      <div class="em-palgen-row">
+        <label>付与対象</label>
+        <label class="em-palgen-radio"><input type="radio" [(ngModel)]="palTargetSelf" [value]="false"> ターゲット (t&!)</label>
+        <label class="em-palgen-radio"><input type="radio" [(ngModel)]="palTargetSelf" [value]="true"> 自分 (&!)</label>
+      </div>
+
+      <!-- 生成結果 -->
+      <div class="em-palgen-result" *ngIf="palGenerated">
+        <label>生成コマンド</label>
+        <div class="em-palgen-output">
+          <code>{{ palGenerated }}</code>
+          <button class="em-palgen-copy" (click)="copyPaletteCommand()">{{ palCopied ? '✓' : '📋' }}</button>
+        </div>
+        <button class="em-palgen-add" (click)="addPaletteToCharacter()">📋 現在手番キャラのチャパレに追加</button>
+      </div>
+    </div>
+
+    <!-- 追加フォーム -->
+    <div class="em-add-form" *ngIf="showAddForm">
+      <div class="em-form-row">
+        <label>対象キャラ</label>
+        <select class="em-form-select" [(ngModel)]="addTargetCharacter">
+          <option *ngFor="let c of combatCharacters" [ngValue]="c.id">{{ c.name }}</option>
+        </select>
+      </div>
+      <div class="em-form-row">
+        <label>効果名</label>
+        <input type="text" class="em-form-input" [(ngModel)]="addName" placeholder="例: マッスルベアー">
+      </div>
+      <div class="em-form-row" *ngIf="addOperation !== 'palette' && addOperation !== 'create'">
+        <label>対象ステータス</label>
+        <select class="em-form-select" [(ngModel)]="addTargetStat">
+          <option value="">選択...</option>
+          <option *ngFor="let s of availableStats" [ngValue]="s">{{ s }}</option>
+        </select>
+      </div>
+      <div class="em-form-row">
+        <label>操作</label>
+        <select class="em-form-select" [(ngModel)]="addOperation">
+          <option *ngFor="let op of operationLabels" [ngValue]="op.value">{{ op.label }}</option>
+        </select>
+      </div>
+      <div class="em-form-row" *ngIf="addOperation !== 'palette'">
+        <label>値</label>
+        <input type="number" class="em-form-input" [(ngModel)]="addValue">
+      </div>
+      <div class="em-form-row">
+        <label>ラウンド数</label>
+        <input type="number" class="em-form-input" [(ngModel)]="addRounds" min="1">
+      </div>
+      <div class="em-form-row">
+        <label>消失タイミング</label>
+        <select class="em-form-select" [(ngModel)]="addExpireTiming">
+          <option *ngFor="let t of expireTimingOptions" [ngValue]="t.value">{{ t.icon }} {{ t.label }}</option>
+        </select>
+      </div>
+      <div class="em-form-row" *ngIf="addExpireTiming !== 'round_end'">
+        <label>トリガーキャラ</label>
+        <select class="em-form-select" [(ngModel)]="addTriggerId">
+          <option *ngFor="let c of combatCharacters" [ngValue]="c.id">{{ c.name }}</option>
+        </select>
+      </div>
+      <button class="em-form-submit" (click)="addBuff()">追加</button>
+    </div>
+  </div>
+</div>
+
+<!-- 非戦闘時・非アドバンスモード -->
+<div class="effect-manager em-inactive" *ngIf="!isCombatActive || !isAdvancedMode">
+  <div class="em-empty">
+    <p *ngIf="!isAdvancedMode">⚠️ アドバンスモードでのみ使用できます</p>
+    <p *ngIf="isAdvancedMode && !isCombatActive">戦闘中のみ使用できます</p>
+  </div>
+</div>
+
+

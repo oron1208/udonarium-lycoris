@@ -6,7 +6,7 @@ import { ChatMessage, ChatMessageContext, ChatMessageTargetContext } from './cha
 import { ChatTab } from './chat-tab';
 import { SyncObject } from './core/synchronize-object/decorator';
 import { GameObject } from './core/synchronize-object/game-object';
-import { GameCharacter } from './game-character';
+import { GameCharacter, AutoBuffOperation, BuffExpireTiming } from './game-character';
 import { DataElement } from './data-element';
 
 import { ObjectStore } from './core/synchronize-object/object-store';
@@ -874,6 +874,97 @@ export class DiceBot extends GameObject {
     return;
   }
 
+  /** &!構文で自動計算バフを付与 */
+  private autoBuffEdit(buff: BuffEdit, character: GameCharacter): string {
+    let command = buff.command;
+    let text = '';
+    if (buff.targeted) {
+      text += '[' + character.name + '] ';
+    }
+
+    // &!を削除してパース
+    const payload = command.replace(/^[tTｔＴ]?&!/i, '');
+    const parts = payload.split('/');
+
+    if (parts.length < 5) {
+      return text + '⚠️&!構文エラー: &!効果名/対象ステータス/操作/値/R が必要です    ';
+    }
+
+    const name = parts[0];
+    const targetStat = parts[1];
+    const opStr = parts[2].toLowerCase();
+    const value = parseInt(parts[3]) || 0;
+    const rounds = parseInt(parts[4]) || 3;
+    const timingStr = parts.length > 5 ? parts[5].toLowerCase() : 'round_end';
+    const triggerName = parts.length > 6 ? parts[6] : '';
+
+    // 操作マッピング
+    const opMap: { [key: string]: AutoBuffOperation } = {
+      'add': 'add', 'append': 'append', 'current': 'current',
+      'replace': 'replace', 'create': 'create', 'palette': 'palette'
+    };
+    const operation = opMap[opStr] || 'add';
+
+    // タイミングマッピング
+    let expireTiming: BuffExpireTiming = 'round_end';
+    if (timingStr === 'turn_start') expireTiming = 'turn_start';
+    else if (timingStr === 'turn_end') expireTiming = 'turn_end';
+
+    // トリガーキャラ解決
+    let triggerIdentifier = '';
+    let resolvedTriggerName = '';
+    if (expireTiming !== 'round_end') {
+      if (triggerName) {
+        const triggerChar = this.findCharacterByName(triggerName);
+        if (triggerChar) {
+          triggerIdentifier = triggerChar.identifier;
+          resolvedTriggerName = triggerChar.name;
+        }
+      } else {
+        triggerIdentifier = buff.object.identifier;
+        resolvedTriggerName = buff.object.name;
+      }
+    }
+
+    // バフ付与
+    const newId = character.applyAutoBuff(
+      name,
+      operation === 'palette' ? '' : targetStat,
+      operation,
+      value,
+      rounds,
+      'リソース',
+      'numberResource',
+      triggerIdentifier || undefined,
+      resolvedTriggerName || undefined,
+      expireTiming
+    );
+
+    if (newId) {
+      text += `バフ付与: ${name}`;
+      if (operation !== 'palette' && operation !== 'create') {
+        text += ` ${targetStat}${value >= 0 ? '+' : ''}${value}`;
+      }
+      text += ` ${rounds}R`;
+      if (expireTiming !== 'round_end') {
+        text += ` (${expireTiming === 'turn_start' ? '手番開始' : '手番終了'}: ${resolvedTriggerName})`;
+      }
+    } else {
+      text += `⚠️バフ付与失敗: ${name}`;
+    }
+    text += '    ';
+    return text;
+  }
+
+  /** 名前でキャラクターを検索（完全一致優先、次に部分一致） */
+  private findCharacterByName(name: string): GameCharacter {
+    const characters = ObjectStore.instance.getObjects<GameCharacter>(GameCharacter);
+    let found = characters.find(c => c.name === name);
+    if (found) return found;
+    found = characters.find(c => c.name.includes(name) || name.includes(c.name));
+    return found || null;
+  }
+
   private resourceTextEdit(edit: ResourceEdit, character: GameCharacter): string{
     character.setStatusText(edit.target, edit.replace);
     let ansText = edit.target + '＞' + edit.replace + '    ';
@@ -940,6 +1031,10 @@ export class DiceBot extends GameObject {
     let text = '';
     if (buff.targeted) {
       text += '[' + character.name + '] ';
+    }
+    // === 自動計算バフ付与 (&!) ===
+    if (command.match(/^[tTｔＴ]?&!/i)) {
+      return this.autoBuffEdit(buff, character);
     }
     if ( command.match(/^[tTｔＴ]?&[RＲrｒ]-$/i) ){
       character.decreaseBuffRound();

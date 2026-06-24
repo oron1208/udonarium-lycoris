@@ -95,6 +95,7 @@ import { AlarmWindowComponent } from 'component/alarm-window/alarm-window.compon
 import { ChatMessageFixComponent } from 'component/chat-message-fix/chat-message-fix.component';
 import { MacroHotbarComponent } from 'component/macro-hotbar/macro-hotbar.component';
 import { DataImportMenuComponent } from 'component/data-import-menu/data-import-menu.component';
+import { EffectManagerComponent } from 'component/effect-manager/effect-manager.component';
 
 import { ImportCharacterImgComponent } from 'component/import-character-img/import-character-img.component';
 
@@ -175,6 +176,7 @@ import { AppComponent } from './app.component';
     ChatMessageFixComponent,
     MacroHotbarComponent,
     DataImportMenuComponent,
+    EffectManagerComponent,
 
     ImportCharacterImgComponent,
 

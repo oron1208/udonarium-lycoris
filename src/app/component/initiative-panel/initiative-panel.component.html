@@ -51,6 +51,15 @@
     </label>
   </div>
 
+  <!-- バフ自動減少設定（アドバンスモード限定・GM限定） -->
+  <div class="combat-start-settings" *ngIf="!isCombatActive && isGm && isAdvancedMode">
+    <div class="combat-start-title">ラウンド進行時の自動処理</div>
+    <label class="combat-start-option">
+      <input type="checkbox" [(ngModel)]="combatAutoBuffDecay">
+      <span>バフR自動減少（0Rで自動削除）</span>
+    </label>
+  </div>
+
   <!-- ターン制御（GM限定） -->
   <div class="turn-controls" *ngIf="isCombatActive && isGm">
     <button class="turn-btn" (click)="prevRound()" title="前のラウンド">◀◀ 前R</button>
@@ -160,6 +169,13 @@
         🎲 全コマのイニシアチブをロール
       </button>
     </div>
+  </div>
+
+  <!-- エフェクトマネージャー（アドバンスモード限定） -->
+  <div class="effect-manager-section" *ngIf="isCombatActive && isAdvancedMode">
+    <button class="effect-manager-btn" (click)="openEffectManager()">
+      ⚔️ バフマネージャー(β)
+    </button>
   </div>
 
   <!-- 非戦闘時 -->

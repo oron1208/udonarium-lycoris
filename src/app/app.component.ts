@@ -316,6 +316,12 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       .on('LIGHTING_PANEL_CLOSED', event => {
         this.lightingPanelOpen = false;
       })
+      .on('CLOSE_INITIATIVE_PANEL', event => {
+        this.initiativePanelOpen = false;
+      })
+      .on('INITIATIVE_PANEL_CLOSED', event => {
+        this.initiativePanelOpen = false;
+      })
       .on('OPTIONS_PANEL_RESIZE', event => {
         // PanelService doesn't support runtime resize easily,
         // so close and reopen with adjusted size
@@ -830,11 +836,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     option.top = (this.openPanelCount % 10 + 1) * 20;
     option.left = 100 + (this.openPanelCount % 20 + 1) * 5;
     this.openPanelCount++;
-    const ref = this.panelService.open(InitiativePanelComponent, option);
-    EventSystem.register(this).on('CLOSE_INITIATIVE_PANEL', () => {
-      this.initiativePanelOpen = false;
-      EventSystem.unregister(this);
-    });
+    this.panelService.open(InitiativePanelComponent, option);
   }
 
   async save() {

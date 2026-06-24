@@ -1,5 +1,100 @@
    <ng-container *ngIf="character">
      <div class="controller">
+
+       <!-- 自動計算バフ（アドバンスモード用） -->
+       <div class="auto-buff-panel" *ngIf="gameCharacter && isAdvancedMode">
+         <div class="panel-title">🔢 自動計算バフ</div>
+         <div class="auto-buff-form">
+           <label class="auto-buff-field auto-buff-field-wide" *ngIf="autoBuffOperation !== 'palette'">
+             <span>{{autoBuffOperation === 'create' ? '新規要素名' : '対象ステータス'}}</span>
+             <input class="auto-buff-stat" [attr.list]="autoBuffOperation === 'create' ? null : 'autoBuffStatList'" [(ngModel)]="autoBuffTargetStat" [placeholder]="autoBuffOperation === 'create' ? '例: 一時HP' : '入力で絞り込み'">
+             <datalist id="autoBuffStatList">
+               <option *ngFor="let s of availableStats" [value]="s"></option>
+             </datalist>
+           </label>
+           <label class="auto-buff-field">
+             <span>操作</span>
+             <select class="auto-buff-op" [(ngModel)]="autoBuffOperation">
+               <option value="add">加算</option>
+               <option value="append">最大値追加</option>
+               <option value="current">現状記録</option>
+               <option value="replace">置き換え</option>
+               <option value="create">新規要素追加</option>
+               <option value="palette">チャパレ</option>
+             </select>
+           </label>
+           <label class="auto-buff-field" *ngIf="autoBuffOperation === 'create'">
+             <span>追加先カテゴリ</span>
+             <input class="auto-buff-group" list="autoBuffGroupList" [(ngModel)]="autoBuffTargetGroup" placeholder="例: リソース">
+             <datalist id="autoBuffGroupList">
+               <option *ngFor="let g of autoBuffGroups" [value]="g"></option>
+             </datalist>
+           </label>
+           <label class="auto-buff-field" *ngIf="autoBuffOperation === 'create'">
+             <span>要素種別</span>
+             <select [(ngModel)]="autoBuffNewElementType">
+               <option value="numberResource">リソース</option>
+               <option value="">通常</option>
+             </select>
+           </label>
+           <label class="auto-buff-field" *ngIf="autoBuffOperation !== 'palette'">
+             <span>効果名</span>
+             <input class="auto-buff-name" [(ngModel)]="autoBuffName" [placeholder]="autoBuffOperation === 'create' ? '空なら新規要素名' : '例: マッスルベアー'">
+           </label>
+           <label class="auto-buff-field" *ngIf="autoBuffOperation !== 'palette'">
+             <span>値</span>
+             <input class="auto-buff-value" type="number" [(ngModel)]="autoBuffValue" placeholder="値">
+           </label>
+           <label class="auto-buff-field">
+             <span>ラウンド</span>
+             <input class="auto-buff-round" type="number" min="1" [(ngModel)]="autoBuffRounds" placeholder="R">
+           </label>
+           <label class="auto-buff-field">
+             <span>消失タイミング</span>
+             <select class="auto-buff-timing" [(ngModel)]="autoBuffExpireTiming">
+               <option *ngFor="let opt of expireTimingOptions" [value]="opt.value">{{opt.icon}} {{opt.label}}</option>
+             </select>
+           </label>
+           <label class="auto-buff-field" *ngIf="autoBuffExpireTiming !== 'round_end'">
+             <span>トリガー</span>
+             <select [(ngModel)]="autoBuffTriggerId" [disabled]="autoBuffTriggerAsCurrent" (change)="onTriggerManuallyChanged()">
+               <option *ngFor="let c of combatCharacters" [ngValue]="c.id">{{c.name}}</option>
+             </select>
+             <label class="auto-buff-source-toggle"><input type="checkbox" [(ngModel)]="autoBuffTriggerAsCurrent" (change)="onTriggerAsCurrentChanged()"> 現在手番: {{currentTurnCharName || '（不在）'}}</label>
+           </label>
+           <label class="auto-buff-field auto-buff-field-wide" *ngIf="autoBuffOperation === 'palette'">
+             <span>ボタン名</span>
+             <input class="auto-buff-name" [(ngModel)]="autoBuffName" placeholder="例: 耐久セーブ">
+           </label>
+           <label class="auto-buff-field auto-buff-field-wide" *ngIf="autoBuffOperation === 'palette'">
+             <span>チャパレコマンド（必須）</span>
+             <input class="auto-buff-palette" [(ngModel)]="autoBuffPaletteCommand" placeholder="例: 1d20+{耐久力} 魔法に対する抵抗">
+           </label>
+           <button type="button" (mousedown)="stopButtonEvent($event)" (click)="addAutoBuff($event)">追加</button>
+         </div>
+         <div class="auto-buff-list" *ngIf="autoBuffs.length > 0">
+           <div class="auto-buff-item auto-buff-item-palette" *ngFor="let b of autoBuffs" [class.palette-only]="b.operation === 'palette'">
+             <ng-container *ngIf="b.operation === 'palette'">
+               <button type="button" class="auto-buff-palette-btn" (mousedown)="rollBuffPalette(b, $event)" title="{{b.paletteCommand}}">{{b.name}} {{b.rounds}}R</button>
+               <button type="button" class="auto-buff-delete" (mousedown)="removeAutoBuff(b, $event)">✕</button>
+             </ng-container>
+             <ng-container *ngIf="b.operation !== 'palette'">
+               <span class="auto-buff-badge" [class.op-add]="b.operation==='add'" [class.op-append]="b.operation==='append'" [class.op-current]="b.operation==='current'" [class.op-replace]="b.operation==='replace'" [class.op-create]="b.operation==='create'">{{operationLabel(b.operation)}}</span>
+               <span class="auto-buff-target">{{b.targetStat}}</span>
+               <span class="auto-buff-delta" *ngIf="b.operation==='add' || b.operation==='append'">{{b.value >= 0 ? '+' : ''}}{{b.value}}</span>
+               <span class="auto-buff-delta" *ngIf="b.operation==='replace'">→{{b.value}}</span>
+               <span class="auto-buff-delta" *ngIf="b.operation==='current'">記録</span>
+               <span class="auto-buff-delta" *ngIf="b.operation==='create'">{{b.newElementType === '' ? '通常' : 'リソース'}}={{b.value}}</span>
+               <span class="auto-buff-round">{{b.rounds}}R</span>
+               <span class="auto-buff-timing-badge" title="{{expireTimingLabel(b.expireTiming)}}">{{expireTimingIcon(b.expireTiming)}}</span>
+               <span class="auto-buff-source" *ngIf="b.triggerName">👤{{b.triggerName}}</span>
+               <button type="button" class="auto-buff-dice-btn" *ngIf="b.paletteCommand" (mousedown)="rollBuffPalette(b, $event)" title="{{b.paletteCommand}}">{{b.name || '🎲'}}</button>
+               <button type="button" class="auto-buff-delete" (mousedown)="removeAutoBuff(b, $event)">✕</button>
+             </ng-container>
+           </div>
+         </div>
+       </div>
+
        <div class="buff-add-panel" *ngIf="gameCharacter">
          <div class="panel-title">バフ/デバフ追加</div>
          <input class="buff-name-input" [(ngModel)]="newBuffName" placeholder="効果名">

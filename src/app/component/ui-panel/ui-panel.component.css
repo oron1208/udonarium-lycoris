@@ -21,6 +21,22 @@
   z-index: 9000;
 }
 
+.draggable-panel.panel-transparent {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: none;
+}
+
+.draggable-panel.panel-transparent .scrollable-panel {
+  background: transparent;
+  padding: 0;
+}
+
+.draggable-panel.panel-transparent .title {
+  background: rgba(20, 22, 40, 0.85);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
 .scrollable-panel {
   box-sizing: border-box;
   overflow: auto;

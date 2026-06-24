@@ -50,6 +50,7 @@ export class UIPanelComponent implements OnInit {
   get top() { return this.panelService.top; }
   get width() { return this.panelService.width; }
   get height() { return this.panelService.height; }
+  get isTransparent() { return this.panelService.transparent; }
 
   private preLeft: number = 0
   private preTop: number = 0;

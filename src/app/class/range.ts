@@ -26,6 +26,26 @@ export class RangeArea extends TabletopObject {
   @SyncVar() fillOutLine: boolean = false;
   @SyncVar() subDivisionSnapPolygonal: boolean = true;
 
+  // 範囲バフ（アドバンスモード用）
+  @SyncVar() areaBuffEnabled: boolean = false;
+  @SyncVar() areaBuffConfirmed: boolean = false;
+  @SyncVar() areaBuffKind: 'text' | 'auto' | 'palette' = 'text';
+  @SyncVar() areaBuffIncludeFlying: boolean = false;
+  @SyncVar() areaBuffRounds: number = 3;
+  @SyncVar() areaBuffAppliedJson: string = '{}'; // { [characterId]: { textName?: string, autoBuffId?: string } }
+  @SyncVar() areaBuffTextName: string = '範囲効果';
+  @SyncVar() areaBuffTextValue: string = '';
+  @SyncVar() areaBuffAutoName: string = '範囲効果';
+  @SyncVar() areaBuffAutoTargetStat: string = '';
+  @SyncVar() areaBuffAutoOperation: 'add' | 'append' | 'current' | 'replace' | 'create' = 'add';
+  @SyncVar() areaBuffAutoValue: number = 0;
+  @SyncVar() areaBuffAutoTargetGroup: string = 'リソース';
+  @SyncVar() areaBuffAutoNewElementType: 'numberResource' | '' = 'numberResource';
+  @SyncVar() areaBuffPaletteCommand: string = '';
+  @SyncVar() areaBuffExpireTiming: 'round_end' | 'turn_start' | 'turn_end' = 'round_end';
+  @SyncVar() areaBuffTriggerIdentifier: string = '';
+  @SyncVar() areaBuffTriggerName: string = '';
+
   get name(): string { return this.getCommonValue('name', ''); }
   get length(): number { return this.getCommonValue('length', 1); }
   get width(): number { return this.getCommonValue('width', 1); }

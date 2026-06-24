@@ -7,7 +7,7 @@ import { ObjectSerializer } from '@udonarium/core/synchronize-object/object-seri
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { EventSystem, Network } from '@udonarium/core/system';
 import { DiceSymbol } from '@udonarium/dice-symbol';
-import { GameCharacter } from '@udonarium/game-character';
+import { AutoBuffOperation, GameCharacter } from '@udonarium/game-character';
 import { GameTable } from '@udonarium/game-table';
 import { GameTableMask } from '@udonarium/game-table-mask';
 import { GameTableScratchMask } from '@udonarium/game-table-scratch-mask';
@@ -94,6 +94,8 @@ export class TabletopService {
           this.refreshCache(event.data.aliasName);
           this.updateMap(object);
         }
+
+        this.updateAreaBuffsIfNeeded(event.data.aliasName);
       })
       .on('DELETE_GAME_OBJECT', event => {
         let aliasName = event.data.aliasName;
@@ -136,6 +138,144 @@ export class TabletopService {
         }
 
       });
+  }
+
+  /** アドバンス部屋の範囲バフを更新 */
+  private updateAreaBuffsIfNeeded(aliasName?: string) {
+    if (this.currentTable?.roomMode !== 'advanced') return;
+    if (aliasName && !['character', 'range'].includes(aliasName)) return;
+    this.updateAreaBuffs();
+  }
+
+  /** 全範囲バフを再評価し、入場で付与・退出で解除する */
+  updateAreaBuffs() {
+    if (this.currentTable?.roomMode !== 'advanced') return;
+    for (const range of this.ranges) {
+      if (!range.areaBuffEnabled || !range.areaBuffConfirmed) continue;
+      this.updateAreaBuff(range);
+    }
+  }
+
+  clearAreaBuff(range: RangeArea) {
+    const applied = this.parseAreaBuffApplied(range);
+    for (const characterId of Object.keys(applied)) {
+      const character = ObjectStore.instance.get<GameCharacter>(characterId);
+      if (!character) continue;
+      this.removeAreaBuffFromCharacter(range, character, applied[characterId]);
+    }
+    range.areaBuffAppliedJson = '{}';
+    range.update();
+  }
+
+  private updateAreaBuff(range: RangeArea) {
+    const applied = this.parseAreaBuffApplied(range);
+    let changed = false;
+    const alive = new Set<string>();
+    for (const character of this.characters) {
+      if (!character || character.location.name !== 'table') continue;
+      const inside = this.isCharacterInsideRange(range, character);
+      if (inside) alive.add(character.identifier);
+      if (inside && !applied[character.identifier]) {
+        const info = this.applyAreaBuffToCharacter(range, character);
+        if (info) {
+          applied[character.identifier] = info;
+          changed = true;
+        }
+      } else if (!inside && applied[character.identifier]) {
+        this.removeAreaBuffFromCharacter(range, character, applied[character.identifier]);
+        delete applied[character.identifier];
+        changed = true;
+      }
+    }
+
+    // 消えた/非表示になったコマ分も掃除
+    for (const characterId of Object.keys(applied)) {
+      if (alive.has(characterId)) continue;
+      const character = ObjectStore.instance.get<GameCharacter>(characterId);
+      if (character) this.removeAreaBuffFromCharacter(range, character, applied[characterId]);
+      delete applied[characterId];
+      changed = true;
+    }
+
+    if (changed) {
+      range.areaBuffAppliedJson = JSON.stringify(applied);
+      range.update();
+    }
+  }
+
+  private parseAreaBuffApplied(range: RangeArea): { [characterId: string]: { textName?: string; autoBuffId?: string } } {
+    try { return JSON.parse(range.areaBuffAppliedJson || '{}'); } catch { return {}; }
+  }
+
+  private applyAreaBuffToCharacter(range: RangeArea, character: GameCharacter): { textName?: string; autoBuffId?: string } | null {
+    if (range.areaBuffKind === 'palette') {
+      const paletteCommand = range.areaBuffPaletteCommand || '';
+      if (!paletteCommand) return null;
+      const name = `[範囲] ${range.areaBuffAutoName || range.name || 'ダイス'}`;
+      const id = character.applyAutoBuff(name, '', 'palette', 0, range.areaBuffRounds || 1);
+      if (id) {
+        const buffs = character.getAutoBuffs();
+        const entry = buffs.find(b => b.id === id);
+        if (entry) { entry.paletteCommand = paletteCommand; character['saveAutoBuffs'](buffs); }
+      }
+      return id ? { autoBuffId: id } : null;
+    }
+    if (range.areaBuffKind === 'text') {
+      const textName = `[範囲] ${range.areaBuffTextName || range.name || '範囲効果'}`;
+      character.addBuffRound(textName, range.areaBuffTextValue || '', range.areaBuffRounds || 1);
+      return { textName };
+    }
+    // auto
+    const id = character.applyAutoBuff(
+      `[範囲] ${range.areaBuffAutoName || range.name || '範囲効果'}`,
+      range.areaBuffAutoTargetStat,
+      range.areaBuffAutoOperation as AutoBuffOperation,
+      range.areaBuffAutoValue,
+      range.areaBuffRounds || 1,
+      range.areaBuffAutoTargetGroup || 'リソース',
+      range.areaBuffAutoNewElementType || 'numberResource',
+      range.areaBuffTriggerIdentifier || '',
+      range.areaBuffTriggerName || '',
+      range.areaBuffExpireTiming || 'round_end'
+    );
+    return id ? { autoBuffId: id } : null;
+  }
+
+  private removeAreaBuffFromCharacter(range: RangeArea, character: GameCharacter, info: { textName?: string; autoBuffId?: string }) {
+    if (info.autoBuffId) character.removeAutoBuff(info.autoBuffId);
+    if (info.textName) character.deleteBuff(info.textName);
+  }
+
+  private isCharacterInsideRange(range: RangeArea, character: GameCharacter): boolean {
+    if (!range.areaBuffIncludeFlying && Math.abs(character.altitude || 0) >= 0.5) return false;
+    const grid = this.currentTable?.gridSize || 50;
+    const cx = character.location.x + (character.size || 1) * grid / 2;
+    const cy = character.location.y + (character.size || 1) * grid / 2;
+    const rx = range.location.x;
+    const ry = range.location.y;
+    const dx = cx - rx;
+    const dy = cy - ry;
+    const rot = -((range.rotate || 0) * Math.PI / 180);
+    const lx = dx * Math.cos(rot) - dy * Math.sin(rot);
+    const ly = dx * Math.sin(rot) + dy * Math.cos(rot);
+    const length = Math.max(1, range.length || 1) * grid;
+    const width = Math.max(1, range.width || 1) * grid;
+    switch (range.type) {
+      case 'CIRCLE':
+        return Math.hypot(dx, dy) <= length;
+      case 'SQUARE':
+        return Math.abs(lx) <= length / 2 && Math.abs(ly) <= width / 2;
+      case 'DIAMOND':
+        return (Math.abs(lx) / Math.max(1, length / 2)) + (Math.abs(ly) / Math.max(1, width / 2)) <= 1;
+      case 'LINE':
+        return lx >= 0 && lx <= length && Math.abs(ly) <= width / 2;
+      case 'CORN':
+      default: {
+        if (lx < 0 || lx > length) return false;
+        const halfWidthAtX = (width / 2) * (lx / Math.max(1, length));
+        return Math.abs(ly) <= halfWidthAtX;
+      }
+    }
   }
 
   private findCache(aliasName: string): TabletopCache<any> {

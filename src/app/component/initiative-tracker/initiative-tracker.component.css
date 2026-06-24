@@ -231,3 +231,11 @@
   background: rgba(255, 255, 255, 0.2);
   border-radius: 2px;
 }
+
+/* ドラッグ&ドロップ */
+.tracker-entry.dragging {
+  opacity: 0.4;
+}
+.tracker-entry.drag-over {
+  border-top: 2px solid #ffd700 !important;
+}

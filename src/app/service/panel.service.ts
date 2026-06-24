@@ -13,6 +13,7 @@ export interface PanelOption {
   top?: number;
   width?: number;
   height?: number;
+  transparent?: boolean;
   
   isCutIn?: boolean; //この方式でよいか検討のこと
   cutInIdentifier?: string;
@@ -32,6 +33,7 @@ export class PanelService {
   height: number = 100;
   isCutIn: boolean = false ; //この方式でよいか検討のこと
   cutInIdentifier: string = '';
+  transparent: boolean = false;
   chatTab: ChatTab = null;
   cardStack: CardStack = null;
 
@@ -73,6 +75,9 @@ export class PanelService {
       }
       if (option.cutInIdentifier){
          childPanelService.cutInIdentifier = option.cutInIdentifier;  //この方式でよいか検討のこと
+      }
+      if (option.transparent) {
+         childPanelService.transparent = option.transparent;
       }
       
 //      if (option.chatTab){

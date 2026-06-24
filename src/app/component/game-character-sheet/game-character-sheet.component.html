@@ -94,6 +94,91 @@
       </div>
     </div>
   </ng-container>
+  <ng-container *ngIf="tabletopObject.aliasName === 'range' && isAdvancedRoom">
+    <div class="extra-setting area-buff-section" style="border:1px solid #777;margin:8px 0;padding:8px;max-width:720px;">
+      <b>範囲バフ（アドバンス限定）</b>
+      <div style="margin-top:6px;">
+        <label>範囲バフを有効にする
+          <input type="checkbox" [(ngModel)]="rangeArea.areaBuffEnabled" (change)="onRangeBuffChanged()">
+        </label>
+        <label style="margin-left:12px;">飛行/高度ありを含める
+          <input type="checkbox" [(ngModel)]="rangeArea.areaBuffIncludeFlying" (change)="onRangeBuffChanged()">
+        </label>
+      </div>
+      <ng-container *ngIf="rangeArea.areaBuffEnabled">
+        <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;align-items:end;">
+          <label>種類<br>
+            <select [(ngModel)]="rangeArea.areaBuffKind" (change)="onRangeBuffChanged()">
+              <option value="text">テキストバフ</option>
+              <option value="auto">自動計算バフ</option>
+              <option value="palette">チャパレ</option>
+            </select>
+          </label>
+          <label>ラウンド<br>
+            <input type="number" min="1" [(ngModel)]="rangeArea.areaBuffRounds" (change)="onRangeBuffChanged()" style="width:5em;">
+          </label>
+        </div>
+        <div *ngIf="rangeArea.areaBuffKind === 'text'" style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;align-items:end;">
+          <label>効果名<br><input [(ngModel)]="rangeArea.areaBuffTextName" (change)="onRangeBuffChanged()" placeholder="範囲効果"></label>
+          <label>補正テキスト<br><input [(ngModel)]="rangeArea.areaBuffTextValue" (change)="onRangeBuffChanged()" placeholder="AC+2 など"></label>
+        </div>
+        <div *ngIf="rangeArea.areaBuffKind === 'auto'" style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;align-items:end;">
+          <label>対象ステータス/新規要素名<br>
+            <input list="rangeBuffStats" [(ngModel)]="rangeArea.areaBuffAutoTargetStat" (change)="onRangeBuffChanged()" placeholder="乗ってるコマから候補">
+            <datalist id="rangeBuffStats"><option *ngFor="let s of rangeBuffCandidateStats" [value]="s"></option></datalist>
+          </label>
+          <label>操作<br>
+            <select [(ngModel)]="rangeArea.areaBuffAutoOperation" (change)="onRangeBuffChanged()">
+              <option value="add">加算</option>
+              <option value="append">最大値追加</option>
+              <option value="current">現状記録</option>
+              <option value="replace">置き換え</option>
+              <option value="create">新規要素追加</option>
+            </select>
+          </label>
+          <label>値<br><input type="number" [(ngModel)]="rangeArea.areaBuffAutoValue" (change)="onRangeBuffChanged()" style="width:6em;"></label>
+          <label>効果名<br><input [(ngModel)]="rangeArea.areaBuffAutoName" (change)="onRangeBuffChanged()" placeholder="範囲効果"></label>
+          <label *ngIf="rangeArea.areaBuffAutoOperation === 'create'">追加先カテゴリ<br>
+            <input list="rangeBuffGroups" [(ngModel)]="rangeArea.areaBuffAutoTargetGroup" (change)="onRangeBuffChanged()">
+            <datalist id="rangeBuffGroups"><option *ngFor="let g of rangeBuffGroups" [value]="g"></option></datalist>
+          </label>
+          <label *ngIf="rangeArea.areaBuffAutoOperation === 'create'">要素種別<br>
+            <select [(ngModel)]="rangeArea.areaBuffAutoNewElementType" (change)="onRangeBuffChanged()">
+              <option value="numberResource">リソース</option>
+              <option value="">通常</option>
+            </select>
+          </label>
+        </div>
+        <div *ngIf="rangeArea.areaBuffKind === 'palette'" style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;align-items:end;">
+          <label>ボタン名<br><input [(ngModel)]="rangeArea.areaBuffAutoName" (change)="onRangeBuffChanged()" placeholder="例: 耐久セーブ"></label>
+          <label>チャパレコマンド<br><input [(ngModel)]="rangeArea.areaBuffPaletteCommand" (change)="onRangeBuffChanged()" placeholder="例: 1d20+{耐久力}" style="min-width:200px;"></label>
+        </div>
+        <div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(0,0,0,0.1);">
+          <label style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
+            <span>消失タイミング</span>
+            <select [(ngModel)]="rangeArea.areaBuffExpireTiming" (change)="onExpireTimingChanged()" style="min-width:150px;">
+              <option value="round_end">🔄 ラウンド終了時</option>
+              <option value="turn_start">▶ トリガーキャラ手番開始時</option>
+              <option value="turn_end">⏹ トリガーキャラ手番終了時</option>
+            </select>
+          </label>
+          <label *ngIf="rangeArea.areaBuffExpireTiming !== 'round_end'" style="margin-top:4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <select [(ngModel)]="rangeArea.areaBuffTriggerIdentifier" (change)="onTriggerCharChanged()" [disabled]="rangeTriggerAsCurrent" style="min-width:120px;">
+              <option *ngFor="let c of combatCharacters" [ngValue]="c.id">{{c.name}}</option>
+            </select>
+            <label style="font-size:12px;"><input type="checkbox" [(ngModel)]="rangeTriggerAsCurrent" (change)="onTriggerAsCurrentChanged()"> 現在手番: {{currentTurnCharName || '（不在）'}}</label>
+          </label>
+        </div>
+        <div style="font-size:12px;margin-top:6px;display:flex;gap:8px;align-items:center;">
+          <button type="button" (click)="confirmRangeBuff()">範囲バフを確定して反映</button>
+          <span style="font-size:12px;" [style.color]="rangeArea.areaBuffConfirmed ? '#096' : '#c60'">
+            {{rangeArea.areaBuffConfirmed ? '確定済み・範囲内コマへ反映中' : '未確定：設定後に確定ボタンを押してください'}}
+          </span>
+        </div>
+        <div style="font-size:12px;margin-top:6px;color:#555;">確定後、範囲内に入ると付与、範囲外に出ると解除します。付与名は通常バフと区別するため先頭に [範囲] が付きます。</div>
+      </ng-container>
+    </div>
+  </ng-container>
   <ng-container *ngIf="tabletopObject.aliasName === 'character'">
     <div *ngIf="isAdvancedRoom" class="extra-setting advanced-piece-section" style="border:1px solid #777;margin:8px 0;padding:8px;">
       <b>アドバンス設定</b>

@@ -100,6 +100,23 @@ input {
   white-space: nowrap;
 }
 
+.extra-setting.area-buff-section {
+  text-align: left;
+  color: #222;
+  background: rgba(255, 248, 230, 0.72);
+}
+
+.extra-setting.area-buff-section input,
+.extra-setting.area-buff-section select,
+.extra-setting.area-buff-section textarea,
+.extra-setting.area-buff-section button {
+  color: #222;
+}
+
+.extra-setting.area-buff-section input::placeholder {
+  color: #777;
+}
+
 .table-cell {
   display:table-cell;
 }

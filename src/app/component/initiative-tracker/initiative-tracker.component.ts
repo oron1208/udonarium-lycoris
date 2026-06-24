@@ -14,6 +14,8 @@ import { GmModeService } from 'service/gm-mode.service';
 })
 export class InitiativeTrackerComponent implements OnInit, OnDestroy {
   isCollapsed = false;
+  dragIndex: number = -1;
+  dragOverIndex: number = -1;
 
   constructor(
     private initiativeService: InitiativeService,
@@ -108,5 +110,47 @@ export class InitiativeTrackerComponent implements OnInit, OnDestroy {
 
   trackById(index: number, entry: CombatEntry): string {
     return entry.identifier;
+  }
+
+  onDragStart(event: DragEvent, index: number) {
+    if (!this.isGm) { event.preventDefault(); return; }
+    this.dragIndex = index;
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', String(index));
+  }
+
+  onDragOver(event: DragEvent, index: number) {
+    if (!this.isGm) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    this.dragOverIndex = index;
+  }
+
+  onDragLeave(event: DragEvent) {
+    this.dragOverIndex = -1;
+  }
+
+  onDrop(event: DragEvent, index: number) {
+    event.preventDefault();
+    if (!this.isGm || this.dragIndex < 0 || this.dragIndex === index) {
+      this.dragIndex = -1;
+      this.dragOverIndex = -1;
+      return;
+    }
+    const order = this.initiativeService.getCombatOrder();
+    const draggedId = order[this.dragIndex];
+    if (!draggedId) return;
+    // ドラッグ元を削除してドロップ位置に挿入
+    const newOrder = order.filter(id => id !== draggedId);
+    const insertPos = this.dragIndex < index ? index - 1 : index;
+    newOrder.splice(insertPos, 0, draggedId);
+    this.initiativeService.reorderCombat(newOrder);
+    this.dragIndex = -1;
+    this.dragOverIndex = -1;
+  }
+
+  onDragEnd(event: DragEvent) {
+    this.dragIndex = -1;
+    this.dragOverIndex = -1;
   }
 }
