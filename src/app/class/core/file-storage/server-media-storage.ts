@@ -1,9 +1,11 @@
+import { EventSystem } from '../system';
 import { AudioFile } from './audio-file';
 import { ImageFile } from './image-file';
 
 export class ServerMediaStorage {
   private static uploading: Set<string> = new Set();
   private static fetching: Set<string> = new Set();
+  private static missingNotified: Set<string> = new Set();
 
   static async uploadImage(image: ImageFile): Promise<void> {
     const context = image.toContext();
@@ -56,7 +58,10 @@ export class ServerMediaStorage {
     this.fetching.add(key);
     try {
       const response = await fetch(`/api/media/${kind}/${encodeURIComponent(identifier)}`);
-      if (!response.ok) return null;
+      if (!response.ok) {
+        if (response.status === 404) this.notifyMissing(kind, identifier);
+        return null;
+      }
       return await response.blob();
     } catch (error) {
       console.warn(`media fetch failed ${kind}:${identifier}`, error);
@@ -64,5 +69,12 @@ export class ServerMediaStorage {
     } finally {
       this.fetching.delete(key);
     }
+  }
+
+  private static notifyMissing(kind: 'image' | 'audio', identifier: string) {
+    const key = `${kind}:${identifier}`;
+    if (this.missingNotified.has(key)) return;
+    this.missingNotified.add(key);
+    EventSystem.trigger('SERVER_MEDIA_MISSING', { kind, identifier });
   }
 }

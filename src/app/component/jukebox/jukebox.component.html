@@ -67,10 +67,10 @@
   </div>
 
   <!-- Pinned Library Tracks (shown in upload tab) -->
-  <div *ngIf="pinnedLibraryTracks.length > 0" class="jukebox-section">
+  <div *ngIf="getFilteredPinnedLibraryTracks().length > 0" class="jukebox-section">
     <hr/>
     <div class="section-header"><b>🎵 ライブラリ（選択中）</b></div>
-    <div *ngFor="let track of pinnedLibraryTracks" class="audio-row">
+    <div *ngFor="let track of getFilteredPinnedLibraryTracks()" class="audio-row">
       <div class="audio-controls">
         <button *ngIf="libraryPreviewId !== track.id" (click)="previewTrack(track)">試聴</button>
         <button *ngIf="libraryPreviewId === track.id" (click)="stopLibraryPreview()">停止</button>
@@ -84,6 +84,12 @@
         <span class="library-track-cat">{{track.category}} / {{formatDuration(track.duration)}}</span>
       </div>
       <div class="audio-folder-assign">
+        <select [ngModel]="getLibraryTrackFolder(track.id)" (ngModelChange)="setLibraryTrackFolder(track.id, $event)">
+          <option value="">--</option>
+          <ng-container *ngFor="let f of getFolders()">
+            <option *ngIf="f !== 'すべて'" [value]="f">{{f}}</option>
+          </ng-container>
+        </select>
         <button (click)="togglePin(track)" title="選択解除" style="font-size:11px;">✕</button>
       </div>
     </div>
@@ -104,6 +110,12 @@
   </label>
   <div style="font-size: 12px;">※「試聴」は自分だけ。「BGM」は全員でループ。「SE」は全員で1回再生。「環境音」は自分だけループ。</div>
   <div style="font-size: 12px;">※音楽ファイルはセーブデータに含まれません。</div>
+
+  <!-- オートサウンド再生中表示 -->
+  <div *ngIf="autoSoundActiveCount > 0" class="auto-sound-status">
+    <span class="auto-sound-badge">🔔 自動効果音 {{autoSoundActiveCount}}件再生中</span>
+    <button class="auto-sound-stop-btn" (click)="stopAllAutoSound()">すべて停止</button>
+  </div>
 </div>
 
 <!-- ==================== Library Tab ==================== -->

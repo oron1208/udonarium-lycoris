@@ -60,6 +60,15 @@
     </label>
   </div>
 
+  <!-- システムメッセージ送信先 -->
+  <div class="combat-start-settings" *ngIf="isGm">
+    <div class="combat-start-title">システムメッセージ送信先</div>
+    <select [(ngModel)]="combatMessageTabId" style="width:100%;font-size:0.85em;padding:2px 4px;">
+      <option value="">システム</option>
+      <option *ngFor="let tab of chatTabs" [value]="tab.identifier">{{ tab.name }}</option>
+    </select>
+  </div>
+
   <!-- ターン制御（GM限定） -->
   <div class="turn-controls" *ngIf="isCombatActive && isGm">
     <button class="turn-btn" (click)="prevRound()" title="前のラウンド">◀◀ 前R</button>

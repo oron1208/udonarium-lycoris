@@ -46,6 +46,8 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
   isVnBoardButtonVisible = false;
   isActivePanelForeground = true;
   isTooltipForeground = false;
+  isAutoSoundEnabled = true;
+  hotbarScale = 100;
   isShowSideNameLabel = true;
   isShowTopDownNameLabel = true;
   isShowCharacterDirectionMarker = false;
@@ -76,6 +78,8 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
     try { this.isVnBoardButtonVisible = localStorage.getItem(OptionsPanelComponent.VN_BOARD_BUTTON_VISIBLE_KEY) === '1'; } catch (_) { }
     try { this.isActivePanelForeground = localStorage.getItem(OptionsPanelComponent.ACTIVE_PANEL_FOREGROUND_KEY) !== '0'; } catch (_) { }
     try { this.isTooltipForeground = localStorage.getItem(OptionsPanelComponent.TOOLTIP_FOREGROUND_KEY) !== '0'; } catch (_) { }
+    try { this.isAutoSoundEnabled = localStorage.getItem('udonarium.autoSound.enabled') !== '0'; } catch (_) { }
+    try { this.hotbarScale = Number(localStorage.getItem('udonarium.hotbar.scale') || '100'); } catch (_) { }
     try { this.isBuffTowerCollapsed = localStorage.getItem('udonarium.buffTower.collapsed.v1') !== 'false'; } catch (_) { }
     try { this.isCompactMode = localStorage.getItem('udonarium.options.compact.v3') === '1'; } catch (_) { }
     try { this.isCursorShareDisabled = localStorage.getItem(OptionsPanelComponent.CURSOR_SHARE_DISABLED_KEY) === '1'; } catch (_) { }
@@ -194,6 +198,18 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
   toggleTooltipForeground() {
     this.isTooltipForeground = !this.isTooltipForeground;
     try { localStorage.setItem(OptionsPanelComponent.TOOLTIP_FOREGROUND_KEY, this.isTooltipForeground ? '1' : '0'); } catch (_) { }
+  }
+
+  toggleAutoSound() {
+    this.isAutoSoundEnabled = !this.isAutoSoundEnabled;
+    try { localStorage.setItem('udonarium.autoSound.enabled', this.isAutoSoundEnabled ? '1' : '0'); } catch (_) { }
+  }
+
+  setHotbarScale(event: any) {
+    const val = Number(event.target?.value || event);
+    this.hotbarScale = val;
+    try { localStorage.setItem('udonarium.hotbar.scale', String(val)); } catch (_) { }
+    EventSystem.trigger('MACRO_HOTBAR_SCALE_CHANGED', { scale: val });
   }
 
   resetCamera() {

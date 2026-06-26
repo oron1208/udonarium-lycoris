@@ -3,6 +3,8 @@
   <div class="bdr-header">
     <span class="bdr-title">🎲 ダイス一括ロール</span>
     <span class="bdr-count">{{ characterCount }}体選択中</span>
+    <span class="bdr-target" *ngIf="targetName">🎯 対象: {{ targetName }}</span>
+    <span class="bdr-no-target" *ngIf="!targetName">🎯 対象なし（Alt+クリックで対象指定）</span>
   </div>
 
   <!-- 送信先タブ選択 -->
@@ -26,6 +28,8 @@
       <button type="button" class="bdr-op-btn" (click)="addText('-')">−</button>
       <button type="button" class="bdr-op-btn" (click)="addText('{')">&lbrace;</button>
       <button type="button" class="bdr-op-btn" (click)="addText('}')">&rbrace;</button>
+      <button type="button" class="bdr-op-btn" (click)="addText('t{')">t&lbrace;</button>
+      <button type="button" class="bdr-op-btn" (click)="addText('&{')">&amp;&lbrace;</button>
       <button type="button" class="bdr-op-btn" (click)="addText('>=')">≧</button>
       <button type="button" class="bdr-clear-btn" (click)="clearExpression()">クリア</button>
     </div>

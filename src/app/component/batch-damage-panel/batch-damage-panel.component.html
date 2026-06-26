@@ -1,0 +1,110 @@
+<div class="batch-panel" *ngIf="attacker">
+  <!-- Header -->
+  <div class="bp-header">
+    <span class="bp-attacker">🗡️ {{attacker.name}}</span>
+    <span class="bp-target-count">対象: {{targets.length}}体</span>
+  </div>
+
+  <!-- No targets warning -->
+  <div *ngIf="noTargets" class="bp-no-targets">
+    ⚠️ ターゲット指定されたコマがいません<br>
+    コマを右クリック → 対象指定 してください
+  </div>
+
+  <!-- Input Area -->
+  <div *ngIf="!noTargets" class="bp-section">
+    <div class="bp-form-row">
+      <label>命中式</label>
+      <input [(ngModel)]="hitFormula" placeholder="1d20+5" class="bp-input">
+    </div>
+    <div class="bp-form-row">
+      <label>ダメージ式</label>
+      <input [(ngModel)]="damageFormula" placeholder="2d6+10" class="bp-input">
+    </div>
+    <div class="bp-form-row bp-multi">
+      <div class="bp-field-select">
+        <label>比較</label>
+        <select [(ngModel)]="defenseField" (ngModelChange)="recalcDefenseValues()" class="bp-input-sm">
+          <option *ngFor="let f of availableFieldOptions" [value]="f">{{f}}</option>
+        </select>
+      </div>
+      <div class="bp-field-select">
+        <label>防護</label>
+        <select [(ngModel)]="armorField" (ngModelChange)="recalcDefenseValues()" class="bp-input-sm">
+          <option *ngFor="let f of availableFieldOptions" [value]="f">{{f}}</option>
+        </select>
+      </div>
+      <div class="bp-field-select">
+        <label>HP</label>
+        <select [(ngModel)]="hpField" (ngModelChange)="recalcDefenseValues()" class="bp-input-sm">
+          <option *ngFor="let f of availableFieldOptions" [value]="f">{{f}}</option>
+        </select>
+      </div>
+    </div>
+    <div class="bp-form-row bp-multi">
+      <div class="bp-default-rate">
+        <label>回避時デフォルト</label>
+        <select [(ngModel)]="defaultHitRate" class="bp-select-sm">
+          <option [ngValue]="0">0%</option>
+          <option [ngValue]="100">100%</option>
+          <option [ngValue]="50">50%</option>
+          <option [ngValue]="25">25%</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="bp-roll-btn" (click)="executeRoll()" [disabled]="isRolling">
+      {{ isRolling ? 'ロール中...' : '🎲 ロール実行' }}
+    </button>
+  </div>
+
+  <!-- Roll Results -->
+  <div *ngIf="hasRolled" class="bp-section bp-results-header">
+    <div class="bp-roll-result" *ngIf="!useContestedRoll && hitRollTotal !== null">
+      <span class="bp-label">命中達成値:</span>
+      <span class="bp-value">{{hitRollTotal}}</span>
+      <span class="bp-detail" *ngIf="hitRollResult">{{hitRollResult}}</span>
+    </div>
+    <div class="bp-roll-result" *ngIf="useContestedRoll">
+      <span class="bp-label">命中判定（対抗ロール）:</span>
+      <pre class="bp-contested-detail">{{hitRollResult}}</pre>
+    </div>
+    <div class="bp-roll-result" *ngIf="damageRollTotal !== null">
+      <span class="bp-label">ダメージ:</span>
+      <span class="bp-value">{{damageRollTotal}}</span>
+    </div>
+  </div>
+
+  <!-- Target Results -->
+  <div *ngIf="hasRolled && targets.length" class="bp-section">
+    <div class="bp-target-header">
+      <span>対象ごとの判定結果（倍率を調整して適用）</span>
+    </div>
+
+    <div *ngFor="let t of targets" class="bp-target-row" [class.bp-hit]="t.hit" [class.bp-miss]="!t.hit" [class.bp-applied]="t.applied">
+      <div class="bp-target-info">
+        <span class="bp-target-name">{{t.character.name}}</span>
+        <span class="bp-target-def" *ngIf="t.defenseValue !== null">[{{defenseField}}:{{t.defenseValue}}]</span>
+        <span class="bp-hit-mark">{{t.hit ? '✅命中' : '❌回避'}}</span>
+      </div>
+      <div class="bp-target-dmg" *ngIf="damageRollTotal !== null">
+        <span class="bp-dmg-calc">{{damageRollTotal}} - {{t.armorValue}} = {{maxZero(damageRollTotal - t.armorValue)}}</span>
+        <select [(ngModel)]="t.damageRate" (ngModelChange)="onRateChange(t)" [disabled]="t.applied" class="bp-rate-select">
+          <option [ngValue]="100">100%</option>
+          <option [ngValue]="50">50%</option>
+          <option [ngValue]="25">25%</option>
+          <option [ngValue]="0">0%</option>
+        </select>
+        <span class="bp-hp-change">HP: {{t.currentHP}} → {{t.newHP}}</span>
+        <span class="bp-dmg-final">{{t.appliedDamage}}ダメージ</span>
+      </div>
+      <div class="bp-target-actions">
+        <button (click)="applyOne(t)" [disabled]="t.applied" class="bp-apply-btn">
+          {{t.applied ? '✓適用済' : '適用'}}
+        </button>
+      </div>
+    </div>
+
+    <button class="bp-apply-all-btn" (click)="applyAll()">全員一括適用</button>
+  </div>
+</div>

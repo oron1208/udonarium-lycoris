@@ -1,4 +1,12 @@
 <div *ngIf="!isConnected;else other_content">
+  <div class="rights-notice">
+    <div class="rights-notice-title">素材アップロードについて</div>
+    <div>
+      画像・音楽などの素材は、部屋内での表示/再生・参加者間の同期・再接続のため共有され、サーバーに保存される場合があります。<br>
+      権利のない素材や、利用規約でアップロード/共有が許可されていない素材は使用しないでください。<br>
+      部屋参加者が意図せず素材共有に関わる場合があります。権利侵害のおそれがある素材は、管理者判断で削除される場合があります。音楽のダウンロード機能は提供していません。
+    </div>
+  </div>
   <div>ルーム名 : <input class="input" (input)="calcPeerId($event.target.value, password)" [(ngModel)]="roomName" required minlength="1" maxlength="128" #roomNameValidation="ngModel"
       placeholder="ルームの名前は必須" /></div>
   <div>パスワード: <input class="input" (input)="calcPeerId(roomName, $event.target.value)" [(ngModel)]="password" maxlength="12" #passwordValidation="ngModel" placeholder="空ならパスワードなし"

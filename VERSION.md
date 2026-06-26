@@ -1,18 +1,17 @@
 # Udonarium Lycoris Versioning
 
-Current local development version: **1.21.0-lycoris.0**
+Current local development version: **1.50.0-lycoris.0**
 
 ## Policy
 
 - Upstream-compatible base: Udonarium Lycoris 1.11.0
-- Local Lycoris feature builds use `1.12.0-lycoris.N`
-- Increment `N` for local/pre-release maintenance builds.
-- Use `1.12.0` when the Lycoris feature set is considered stable for ConoHa production.
+- Local Lycoris feature builds use `1.xx.0-lycoris.0` aligned with the visible release line.
+- Update `package.json`, `package-lock.json`, `VERSION.md`, and the in-app options panel display together.
 
-## Included feature themes for 1.12.0-lycoris.0
+## Current feature themes for v1.50
 
-- Self-hosted SkyWay token/backend support
-- Developer/admin panel foundation
-- Developer announcement, room delete, kick, and developer join support
-- iAChara CoC character import improvements
-- CoC palette cleanup and hotbar assignment support
+- バフ機能大幅強化
+- バフマネージャー
+- `&!` 構文
+- トラッカードラッグ
+- ローカル開発中のメディア管理/dev-admin強化

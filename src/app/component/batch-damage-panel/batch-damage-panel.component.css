@@ -1,0 +1,182 @@
+.batch-panel {
+  padding: 8px;
+  font-size: 13px;
+  color: #ddd;
+  background: #1a1a2e;
+}
+
+.bp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+.bp-attacker { font-weight: bold; font-size: 14px; }
+.bp-target-count { font-size: 12px; opacity: 0.8; }
+
+.bp-no-targets {
+  padding: 24px 12px;
+  text-align: center;
+  color: #ff9966;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.bp-section {
+  margin-bottom: 10px;
+}
+
+.bp-form-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.bp-form-row label {
+  width: 70px;
+  font-size: 12px;
+  color: #aaa;
+  flex-shrink: 0;
+}
+.bp-multi { flex-wrap: wrap; }
+.bp-field-select { display: flex; align-items: center; gap: 4px; }
+.bp-field-select label { width: auto; font-size: 11px; }
+.bp-default-rate { display: flex; align-items: center; gap: 4px; }
+.bp-default-rate label { width: auto; font-size: 11px; }
+
+.bp-input {
+  flex: 1;
+  background: #111;
+  border: 1px solid #333;
+  color: #eee;
+  padding: 3px 6px;
+  border-radius: 3px;
+  font-size: 13px;
+  font-family: monospace;
+}
+.bp-input-sm {
+  width: 70px;
+  background: #111;
+  border: 1px solid #333;
+  color: #eee;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+.bp-select-sm {
+  background: #111;
+  border: 1px solid #333;
+  color: #eee;
+  padding: 2px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.bp-roll-btn {
+  width: 100%;
+  padding: 8px;
+  margin-top: 6px;
+  background: linear-gradient(180deg, #c0392b, #922b21);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.bp-roll-btn:hover:not(:disabled) {
+  background: linear-gradient(180deg, #e74c3c, #c0392b);
+}
+.bp-roll-btn:disabled { opacity: 0.5; cursor: default; }
+
+.bp-results-header {
+  background: rgba(255,255,255,0.03);
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+.bp-roll-result { margin-bottom: 4px; }
+.bp-label { color: #aaa; font-size: 12px; }
+.bp-value { font-size: 18px; font-weight: bold; color: #f39c12; margin-left: 6px; }
+.bp-detail { font-size: 10px; color: #888; margin-left: 8px; }
+.bp-contested-detail { font-size: 11px; color: #aaa; white-space: pre-wrap; margin: 4px 0 0 0; font-family: monospace; }
+
+.bp-target-header {
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 4px;
+  padding: 2px 0;
+  border-bottom: 1px solid #333;
+}
+
+.bp-target-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  border-radius: 4px;
+  border-left: 3px solid transparent;
+}
+.bp-target-row.bp-hit { border-left-color: #27ae60; background: rgba(39,174,96,0.08); }
+.bp-target-row.bp-miss { border-left-color: #e74c3c; background: rgba(231,76,60,0.08); }
+.bp-target-row.bp-applied { opacity: 0.6; }
+
+.bp-target-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 200px;
+  flex: 1;
+}
+.bp-target-name { font-weight: bold; }
+.bp-target-def { font-size: 11px; color: #888; }
+.bp-hit-mark { font-size: 12px; }
+
+.bp-target-dmg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.bp-dmg-calc { color: #aaa; font-family: monospace; }
+.bp-rate-select {
+  background: #111;
+  border: 1px solid #333;
+  color: #eee;
+  padding: 1px 3px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+.bp-hp-change { color: #f39c12; }
+.bp-dmg-final { color: #e74c3c; font-weight: bold; }
+
+.bp-target-actions { flex-shrink: 0; }
+.bp-apply-btn {
+  padding: 3px 10px;
+  background: #2c3e50;
+  color: #eee;
+  border: 1px solid #4a6781;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.bp-apply-btn:hover:not(:disabled) { background: #34495e; }
+.bp-apply-btn:disabled { opacity: 0.5; cursor: default; }
+
+.bp-apply-all-btn {
+  width: 100%;
+  padding: 8px;
+  margin-top: 6px;
+  background: linear-gradient(180deg, #2980b9, #1f618d);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.bp-apply-all-btn:hover { background: linear-gradient(180deg, #3498db, #2980b9); }

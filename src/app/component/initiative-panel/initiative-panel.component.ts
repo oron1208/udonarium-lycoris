@@ -13,6 +13,8 @@ import { PointerDeviceService } from 'service/pointer-device.service';
 import { ContextMenuService } from 'service/context-menu.service';
 import { AudioLibraryService, ServerAudioTrack } from 'service/audio-library.service';
 import { Jukebox } from '@udonarium/Jukebox';
+import { ChatTabList } from '@udonarium/chat-tab-list';
+import { ChatTab } from '@udonarium/chat-tab';
 
 @Component({
   selector: 'initiative-panel',
@@ -121,6 +123,17 @@ export class InitiativePanelComponent implements OnInit, OnDestroy {
       table.combatAutoBuffDecay = value;
       table.update();
     }
+  }
+
+  get combatMessageTabId(): string {
+    return this.initiativeService.combatMessageTabId;
+  }
+  set combatMessageTabId(value: string) {
+    this.initiativeService.combatMessageTabId = value;
+  }
+
+  get chatTabs(): ChatTab[] {
+    return ChatTabList.instance.chatTabs;
   }
 
   get isAdvancedMode(): boolean {

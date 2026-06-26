@@ -47,15 +47,19 @@
   <div class="vn-empty" *ngIf="actors.length < 1">VNステージ待機中</div>
 
   <!-- ═══════ VN chat panel (main) ═══════ -->
-  <form class="vn-control" [class.vn-control-hotbar]="isHotbarVisible" [ngStyle]="panelStyle" (submit)="$event.preventDefault(); sendVnChat();">
+  <form class="vn-control" [class.vn-control-hotbar]="isHotbarVisible" [class.vn-control-minimized]="panelMinimized" [ngStyle]="panelStyle" (submit)="$event.preventDefault(); sendVnChat();">
     <div class="vn-panel-header"
       (pointerdown)="onPanelDragStart($event)"
       (pointermove)="onPanelDragMove($event)"
       (pointerup)="onPanelDragEnd($event)"
       (pointercancel)="onPanelDragEnd($event)">
       <span class="vn-panel-title">💬 VNチャット</span>
-      <button type="button" class="vn-panel-reset" [class.pinned]="panelLocked" (pointerdown)="togglePanelLock($event)" [title]="panelLocked ? 'パネル固定を解除' : 'パネルを固定'">📌</button>
-      <button type="button" class="vn-panel-reset" (pointerdown)="resetPanelPosition(); $event.preventDefault(); $event.stopPropagation()" title="位置リセット">↺</button>
+      <div class="vn-panel-buttons">
+        <button type="button" class="vn-panel-btn" [class.active]="panelFrontPinned" (pointerdown)="toggleFrontPin(); $event.preventDefault(); $event.stopPropagation()" [title]="panelFrontPinned ? '前面固定を解除' : '常に前面に表示'">📌</button>
+        <button type="button" class="vn-panel-btn" [class.active]="panelLocked" (pointerdown)="togglePanelLock($event)" [title]="panelLocked ? 'パネル固定を解除' : 'パネルを固定'">🔒</button>
+        <button type="button" class="vn-panel-btn" [class.active]="panelMinimized" (pointerdown)="toggleMinimize(); $event.preventDefault(); $event.stopPropagation()" [title]="panelMinimized ? '展開' : '最小化'">_</button>
+        <button type="button" class="vn-panel-btn" (pointerdown)="resetPanelPosition(); $event.preventDefault(); $event.stopPropagation()" title="位置リセット">↺</button>
+      </div>
     </div>
     <div class="vn-panel-resize-handle"
       (pointerdown)="onPanelResizeStart($event)"
@@ -151,6 +155,7 @@
       <button type="button" class="vn-mini-toggle" [class.on]="affectPiece" (mousedown)="toggleAffectPiece(); $event.preventDefault()" title="ON=選択時に盤面のコマ立ち絵も変更">
         {{ affectPiece ? 'コマ同期' : 'コマ独立' }}
       </button>
+      <button type="button" class="vn-dice vn-dice-restore" *ngIf="diceRowCollapsed" (mousedown)="diceRowCollapsed = false; $event.preventDefault()" title="ダイスを表示">🎲</button>
     </div>
 
     <div class="vn-dice-row">
@@ -159,7 +164,6 @@
       </ng-container>
       <button type="button" class="vn-dice vn-dice-clear" *ngIf="!diceRowCollapsed" (mousedown)="clearDice(); $event.preventDefault()">✕</button>
       <button type="button" class="vn-dice vn-dice-minimize" *ngIf="!diceRowCollapsed" (mousedown)="diceRowCollapsed = true; $event.preventDefault()" title="最小化">ー</button>
-      <button type="button" class="vn-dice vn-dice-restore" *ngIf="diceRowCollapsed" (mousedown)="diceRowCollapsed = false; $event.preventDefault()" title="ダイスを表示">🎲</button>
     </div>
 
     <div class="vn-dicebot-row">
@@ -207,6 +211,7 @@
   <!-- ═══════ Floating Chat Palette Panel ═══════ -->
   <div class="vn-float-panel vn-palette-wrap" *ngIf="paletteExpanded && selectedAllPaletteLines.length > 0"
     [class.vn-front-pinned]="paletteFrontPinned"
+    [class.vn-float-minimized]="paletteMinimized"
     [ngStyle]="paletteFloatStyle"
     (mousedown)="bringSubPanelToFront('palette')">
     <div class="vn-float-header"
@@ -216,10 +221,16 @@
       (pointercancel)="onSubDragEnd('palette', $event)">
       <span>📋 チャパレ</span>
       <div class="vn-float-actions" (pointerdown)="$event.stopPropagation()">
-        <button type="button" class="vn-float-pin" [class.pinned]="paletteFrontPinned"
+        <button type="button" class="vn-float-btn" [class.active]="paletteFrontPinned"
           (click)="toggleSubPanelFrontPin('palette'); $event.preventDefault(); $event.stopPropagation()"
           title="最前面＋画面固定">📌</button>
-        <button type="button" class="vn-float-close" (click)="closeSubPanel('palette', $event)" title="閉じる">✕</button>
+        <button type="button" class="vn-float-btn"
+          (click)="toggleSubPanelLock('palette'); $event.preventDefault(); $event.stopPropagation()"
+          [class.active]="paletteLocked" title="パネル固定">🔒</button>
+        <button type="button" class="vn-float-btn"
+          (click)="toggleSubPanelMinimize('palette'); $event.preventDefault(); $event.stopPropagation()"
+          [class.active]="paletteMinimized" title="最小化">_</button>
+        <button type="button" class="vn-float-btn" (click)="closeSubPanel('palette', $event)" title="閉じる">✕</button>
       </div>
     </div>
     <div class="vn-float-resize-handle"
@@ -264,6 +275,7 @@
   <!-- ═══════ Floating Chat Log Panel ═══════ -->
   <div class="vn-float-panel vn-chat-log" *ngIf="chatLogExpanded"
     [class.vn-front-pinned]="logFrontPinned"
+    [class.vn-float-minimized]="logMinimized"
     [ngStyle]="logFloatStyle"
     (mousedown)="bringSubPanelToFront('log')">
     <div class="vn-float-header"
@@ -273,10 +285,16 @@
       (pointercancel)="onSubDragEnd('log', $event)">
       <span>💬 チャットログ</span>
       <div class="vn-float-actions" (pointerdown)="$event.stopPropagation()">
-        <button type="button" class="vn-float-pin" [class.pinned]="logFrontPinned"
+        <button type="button" class="vn-float-btn" [class.active]="logFrontPinned"
           (click)="toggleSubPanelFrontPin('log'); $event.preventDefault(); $event.stopPropagation()"
           title="最前面＋画面固定">📌</button>
-        <button type="button" class="vn-float-close" (click)="closeSubPanel('log', $event)" title="閉じる">✕</button>
+        <button type="button" class="vn-float-btn"
+          (click)="toggleSubPanelLock('log'); $event.preventDefault(); $event.stopPropagation()"
+          [class.active]="logLocked" title="パネル固定">🔒</button>
+        <button type="button" class="vn-float-btn"
+          (click)="toggleSubPanelMinimize('log'); $event.preventDefault(); $event.stopPropagation()"
+          [class.active]="logMinimized" title="最小化">_</button>
+        <button type="button" class="vn-float-btn" (click)="closeSubPanel('log', $event)" title="閉じる">✕</button>
       </div>
     </div>
     <div class="vn-float-resize-handle"

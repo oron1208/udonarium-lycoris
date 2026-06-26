@@ -62,6 +62,17 @@ export class BatchDiceRollerComponent implements OnInit, OnDestroy {
     return this.characters.length;
   }
 
+  get targetCharacter(): GameCharacter | null {
+    if (!this.characters.length) return null;
+    const locationName = this.characters[0]?.location?.name;
+    const allChars = ObjectStore.instance.getObjects(GameCharacter);
+    return allChars.find(c => c.targeted && c.location?.name === locationName) || null;
+  }
+
+  get targetName(): string {
+    return this.targetCharacter?.name || '';
+  }
+
   addText(text: string) {
     this.diceExpression += text;
   }
@@ -113,7 +124,7 @@ export class BatchDiceRollerComponent implements OnInit, OnDestroy {
         const charGameType = (charDice && charDice !== 'DiceBot') ? charDice : Config.instance.defaultDiceBot;
 
         if (character.chatPalette) {
-          resolved = character.chatPalette.evaluate(trimmed, character.rootDataElement, character, enableExtended);
+          resolved = character.chatPalette.evaluate(trimmed, character.rootDataElement, this.targetCharacter || character, enableExtended);
         }
         result.resolved = resolved;
 

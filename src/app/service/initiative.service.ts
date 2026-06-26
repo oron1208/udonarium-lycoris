@@ -562,9 +562,14 @@ export class InitiativeService {
 
   private sendCombatSystemMessage(text: string) {
     const chatTabList = ObjectStore.instance.get<ChatTabList>('ChatTabList');
-    const sysTab = chatTabList ? chatTabList.systemMessageTab : null;
+    const tabs = chatTabList ? chatTabList.chatTabs : [];
+    const sysTab = this.combatMessageTabId
+      ? tabs.find(t => t.identifier === this.combatMessageTabId) || (chatTabList ? chatTabList.systemMessageTab : null)
+      : (chatTabList ? chatTabList.systemMessageTab : null);
     this.chatMessageService.sendSystemMessage(sysTab, text, '#8B0000');
   }
+
+  combatMessageTabId: string = '';
 
   private getDisplayName(char: GameCharacter): string {
     if (!char) return '';

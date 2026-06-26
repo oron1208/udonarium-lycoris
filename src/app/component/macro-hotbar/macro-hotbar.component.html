@@ -1,10 +1,6 @@
 <ng-container *ngIf="isVisible">
   <div class="macro-hotbar" [class.pointer-events-none]="isPointerDragging" [ngStyle]="panelStyle">
   <div class="macro-hotbar-left-buttons">
-    <div class="macro-hotbar-pin-button"
-      (click)="togglePin()"
-      [class.pinned]="isPinned"
-      title="{{isPinned ? 'ピン止めON: 常に手前に表示' : 'ピン止め: 常に手前に表示'}}">{{isPinned ? '📌' : '📍'}}</div>
     <div class="macro-hotbar-drag-handle"
       (pointerdown)="onPanelDragStart($event)"
       (pointermove)="onPanelDragMove($event)"
@@ -13,20 +9,40 @@
       title="ドラッグで移動">⋮⋮</div>
   </div>
   <div class="macro-hotbar-controls">
-    <button type="button" class="self-character-button" (click)="setTargetedCharacterAsSelf()"
-      title="Altキーで対象にしたコマを自キャラにします">
-      自キャラ設定
-    </button>
-    <div class="current-character-name" [title]="selectedCharacter ? selectedCharacter.name : 'プレイヤー'"
-      [class.has-character]="!!selectedCharacter"
-      [style.background-image]="selectedCharacterImageUrl ? 'url(' + selectedCharacterImageUrl + ')' : ''">
-      <span class="character-name-text">{{selectedCharacter ? (selectedCharacter.name || '名前なし') : 'プレイヤー'}}</span>
+    <div class="hotbar-top-row">
+      <div class="hotbar-tab-select" title="送信先チャットタブ">
+        <select [(ngModel)]="selectedChatTabId">
+          <option *ngFor="let tab of chatTabs" [value]="tab.identifier">{{ tab.name }}</option>
+        </select>
+      </div>
+      <div class="hotbar-top-actions">
+        <div class="macro-hotbar-scale" title="サイズ変更">
+          <button type="button" (click)="adjustScale(-10)">−</button>
+          <span class="scale-label">{{hotbarScale}}%</span>
+          <button type="button" (click)="adjustScale(10)">＋</button>
+        </div>
+        <div class="macro-hotbar-pin-button"
+          (click)="togglePin()"
+          [class.pinned]="isPinned"
+          title="{{isPinned ? 'ピン止めON' : 'ピン止め'}}">{{isPinned ? '📌' : '📍'}}</div>
+      </div>
     </div>
-    <button type="button" class="clear-character-button" (click)="clearSelectedCharacter()" title="自キャラ設定を解除">解除</button>
-    <button type="button" class="target-mode-button" [class.active]="targetMode" (click)="toggleTargetMode()"
-      title="ONにすると、ターゲット中のコマを対象としてマクロを実行します">
-      {{targetMode ? '対象ON' : '対象OFF'}}
-    </button>
+    <div class="hotbar-controls-row">
+      <button type="button" class="self-character-button" (click)="setTargetedCharacterAsSelf()"
+        title="Altキーで対象にしたコマを自キャラにします">
+        <span>自キャラ</span><span>設定</span>
+      </button>
+      <div class="current-character-name" [title]="selectedCharacter ? selectedCharacter.name : 'プレイヤー'"
+        [class.has-character]="!!selectedCharacter"
+        [style.background-image]="selectedCharacterImageUrl ? 'url(' + selectedCharacterImageUrl + ')' : ''">
+        <span class="character-name-text">{{selectedCharacter ? (selectedCharacter.name || '名前なし') : 'プレイヤー'}}</span>
+      </div>
+      <button type="button" class="clear-character-button" (click)="clearSelectedCharacter()" title="自キャラ設定を解除">解除</button>
+      <button type="button" class="target-mode-button" [class.active]="targetMode" (click)="toggleTargetMode()"
+        title="ONにすると、ターゲット中のコマを対象としてマクロを実行します">
+        <span>対象</span><span>{{targetMode ? 'ON' : 'OFF'}}</span>
+      </button>
+    </div>
   </div>
 
   <div class="macro-hotbar-main">

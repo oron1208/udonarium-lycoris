@@ -2,6 +2,68 @@
   display: block;
 }
 
+/* ===== 自動効果音アニメーション ===== */
+@keyframes char-shake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  15% { transform: translateX(-6px) rotate(-4deg); }
+  30% { transform: translateX(6px) rotate(4deg); }
+  45% { transform: translateX(-5px) rotate(-3deg); }
+  60% { transform: translateX(4px) rotate(2deg); }
+  75% { transform: translateX(-3px) rotate(-1deg); }
+}
+@keyframes char-jump {
+  0%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-24px); }
+  50% { transform: translateY(0); }
+  70% { transform: translateY(-12px); }
+}
+@keyframes char-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes char-lunge {
+  0% { transform: translateX(0); }
+  20% { transform: translateX(32px); }
+  60% { transform: translateX(-8px); }
+  100% { transform: translateX(0); }
+}
+@keyframes char-flash-overlay {
+  0%, 100% {
+    opacity: 0;
+    filter: brightness(1) drop-shadow(0 0 0 transparent);
+  }
+  18% {
+    opacity: 0.75;
+    filter: brightness(2.4) drop-shadow(0 0 14px rgba(255,255,255,0.95));
+  }
+  36% {
+    opacity: 0;
+    filter: brightness(1) drop-shadow(0 0 0 transparent);
+  }
+  58% {
+    opacity: 0.55;
+    filter: brightness(2.0) drop-shadow(0 0 10px rgba(255,245,180,0.85));
+  }
+  78% {
+    opacity: 0;
+    filter: brightness(1) drop-shadow(0 0 0 transparent);
+  }
+}
+@keyframes char-flash-token {
+  0%, 100% { box-shadow: 0 1px 3px rgba(0,0,0,0.55); }
+  20% { box-shadow: 0 0 16px 5px rgba(255,255,255,0.9); }
+  60% { box-shadow: 0 0 12px 4px rgba(255,245,180,0.75); }
+}
+
+.component-content.char-anim-shake { animation: char-shake 0.6s ease; }
+.component-content.char-anim-jump { animation: char-jump 0.7s ease; }
+.component-content.char-anim-spin { animation: char-spin 0.7s ease; }
+.component-content.char-anim-lunge { animation: char-lunge 0.6s ease; }
+.component-content.char-anim-flash .image-flash-overlay,
+.component-content.char-anim-flash .flat-character-flash-overlay { animation: char-flash-overlay 0.65s ease; }
+.component-content.char-anim-flash .simple-character-token { animation: char-flash-token 0.65s ease; }
+
+
 .is-grab {
   cursor: -moz-grab;
   cursor: -webkit-grab;
@@ -124,6 +186,7 @@
   height: 100%;
   object-fit: cover;
   border-radius: 50%;
+  transition: transform 120ms ease, object-position 120ms ease;
 }
 
 .topdown-icon-initial {
@@ -262,6 +325,15 @@
   border-radius: 50%;
   object-fit: cover;
   pointer-events: none;
+  transition: transform 120ms ease, object-position 120ms ease;
+}
+
+.flat-character-flash-overlay {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  mix-blend-mode: screen;
+  z-index: 2;
 }
 
 .flat-character-initial {
@@ -405,6 +477,14 @@
 /*  width: 100%;*/
   height: auto;
   vertical-align: bottom;
+}
+
+.image-flash-overlay {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  z-index: 5;
 }
 /*entyu_5*/
 .buff-tag {
@@ -801,19 +881,58 @@
   }
 }
 
-.is-current-turn::before {
-  content: "";
+.turn-marker-floating {
   position: absolute;
-  top: -14px;
+  top: -40px;
   left: 50%;
   transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-top: 12px solid #ffd700;
-  filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.8));
-  z-index: 100;
+  width: 36px;
+  height: 36px;
+  background-image: url('/assets/images/turn-marker.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.8));
+  animation: turn-marker-float 1.8s ease-in-out infinite;
+  z-index: 300;
   pointer-events: none;
+}
+
+@keyframes turn-marker-float {
+  0%, 100% {
+    transform: translateX(-50%) translateY(0px);
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)) drop-shadow(0 0 6px rgba(255, 215, 0, 0.7));
+  }
+  50% {
+    transform: translateX(-50%) translateY(-8px);
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)) drop-shadow(0 0 12px rgba(255, 215, 0, 0.9));
+  }
+}
+
+.turn-marker-3d {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 42px;
+  height: 42px;
+  background-image: url('/assets/images/turn-marker.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.55)) drop-shadow(0 0 8px rgba(255, 215, 0, 0.8));
+  animation: turn-marker-3d-float 1.8s ease-in-out infinite;
+  z-index: 320;
+  pointer-events: none;
+}
+
+@keyframes turn-marker-3d-float {
+  0%, 100% {
+    margin-top: 0;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.55)) drop-shadow(0 0 8px rgba(255, 215, 0, 0.75));
+  }
+  50% {
+    margin-top: -8px;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.45)) drop-shadow(0 0 14px rgba(255, 215, 0, 0.95));
+  }
 }
 

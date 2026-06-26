@@ -1,6 +1,7 @@
 import { Component, ElementRef, ViewChild } from '@angular/core';
 import { ChatMessageTargetContext } from '@udonarium/chat-message';
 import { ChatTab } from '@udonarium/chat-tab';
+import { ChatTabList } from '@udonarium/chat-tab-list';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { EventSystem } from '@udonarium/core/system';
@@ -59,6 +60,12 @@ export class MacroHotbarComponent {
   targetMode = this.settings.targetMode;
   activePage = this.settings.activePage;
   isVisible = this.loadVisibility();
+  _hotbarScale = 100;
+  selectedChatTabId: string = '';
+
+  get chatTabs(): ChatTab[] {
+    return ChatTabList.instance.chatTabs;
+  }
   isPinned = this.loadPinned();
 
   private _posLoaded = false;
@@ -77,8 +84,12 @@ export class MacroHotbarComponent {
     try {
       const saved = localStorage.getItem('udonarium.hotbar.pos.v1');
       if (saved) { const p = JSON.parse(saved); this.panelX = p.x ?? -1; this.panelY = p.y ?? -1; }
+      try { this._hotbarScale = Number(localStorage.getItem('udonarium.hotbar.scale') || '100'); } catch (_) { }
       this._posLoaded = true;
     } catch (_) { }
+    // 送信先デフォルト：一番右のタブ
+    const tabs = ChatTabList.instance.chatTabs;
+    if (tabs.length > 0) this.selectedChatTabId = tabs[tabs.length - 1].identifier;
     EventSystem.register(this)
       .on('MACRO_HOTBAR_VISIBILITY_CHANGED', event => {
         this.isVisible = !!event.data.visible;
@@ -89,6 +100,9 @@ export class MacroHotbarComponent {
         this.isVisible = true;
         this.isPinned = false;
         try { localStorage.removeItem('udonarium.macroHotbar.pos.v1'); localStorage.removeItem('udonarium.macroHotbar.pinned.v1'); } catch (_) { }
+      })
+      .on('MACRO_HOTBAR_SCALE_CHANGED', event => {
+        this._hotbarScale = Number(event.data?.scale || 100);
       })
       .on('IACHARA_HOTBAR_IMPORT', event => {
         this.importIacharaHotbar(event.data || {});
@@ -103,10 +117,25 @@ export class MacroHotbarComponent {
 
   get panelStyle(): { [key: string]: string } {
     const s: { [key: string]: string } = {};
-    if (this.panelX >= 0) { s['left'] = this.panelX + 'px'; s['transform'] = 'none'; }
+    const scale = this.hotbarScale;
+    if (this.panelX >= 0) { s['left'] = this.panelX + 'px'; s['transform'] = scale !== 100 ? `scale(${scale / 100})` : 'none'; s['transform-origin'] = 'bottom left'; }
     if (this.panelY >= 0) { s['bottom'] = 'auto'; s['top'] = this.panelY + 'px'; }
     if (this.isPinned) { s['z-index'] = '2000001'; }
     return s;
+  }
+
+  get hotbarScale(): number { return this._hotbarScale; }
+
+  onScaleInput(event: any) {
+    const val = Number(event.target?.value || 100);
+    this._hotbarScale = val;
+    try { localStorage.setItem('udonarium.hotbar.scale', String(val)); } catch (_) { }
+  }
+
+  adjustScale(delta: number) {
+    const val = Math.max(50, Math.min(150, this._hotbarScale + delta));
+    this._hotbarScale = val;
+    try { localStorage.setItem('udonarium.hotbar.scale', String(val)); } catch (_) { }
   }
 
   togglePin() {
@@ -359,7 +388,8 @@ export class MacroHotbarComponent {
   }
 
   private sendMacro(slot: MacroHotbarSlot) {
-    const chatTab: ChatTab = this.chatMessageService.chatTabs && this.chatMessageService.chatTabs[0];
+    const tabs = this.chatTabs;
+    const chatTab = tabs.find(t => t.identifier === this.selectedChatTabId) || tabs[0];
     if (!chatTab) {
       this.helpText = '送信先チャットタブがありません';
       return;

@@ -3,7 +3,7 @@ import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { EventSystem, Network } from '@udonarium/core/system';
 import { StringUtil } from '@udonarium/core/system/util/string-util';
 import { DataElement } from '@udonarium/data-element';
-import { DataSummarySetting, SortKeyEntry, SortOrder } from '@udonarium/data-summary-setting';
+import { CustomInventoryDefinition, DataSummarySetting, InventorySortSetting, SortKeyEntry, SortOrder } from '@udonarium/data-summary-setting';
 import { GameCharacter } from '@udonarium/game-character';
 import { TabletopObject } from '@udonarium/tabletop-object';
 
@@ -30,6 +30,9 @@ export class GameObjectInventoryService {
   get sortKeys(): SortKeyEntry[] { return this.summarySetting.sortKeys; }
   set sortKeys(keys: SortKeyEntry[]) { this.summarySetting.sortKeys = keys; }
 
+  get customInventories(): CustomInventoryDefinition[] { return this.summarySetting.customInventories; }
+  set customInventories(inventories: CustomInventoryDefinition[]) { this.summarySetting.customInventories = inventories; }
+
   private syncSortKeysFromLegacy() {
     this.summarySetting.sortKeys = [
       { tag: this.summarySetting.sortTag, order: this.summarySetting.sortOrder },
@@ -41,10 +44,11 @@ export class GameObjectInventoryService {
   set dataTag(dataTag: string) { this.summarySetting.dataTag = dataTag; }
   get dataTags(): string[] { return this.summarySetting.dataTags; }
 
-  tableInventory: ObjectInventory = new ObjectInventory(object => { return object.location.name === 'table'; });
-  commonInventory: ObjectInventory = new ObjectInventory(object => { return !this.isAnyLocation(object.location.name); });
-  privateInventory: ObjectInventory = new ObjectInventory(object => { return object.location.name === Network.peerId; });
-  graveyardInventory: ObjectInventory = new ObjectInventory(object => { return object.location.name === 'graveyard'; });
+  tableInventory: ObjectInventory = new ObjectInventory('table', object => { return object.location.name === 'table'; });
+  commonInventory: ObjectInventory = new ObjectInventory('common', object => { return object.location.name === 'common' || !this.isAnyLocation(object.location.name); });
+  privateInventory: ObjectInventory = new ObjectInventory('private', object => { return object.location.name === Network.peerId; });
+  graveyardInventory: ObjectInventory = new ObjectInventory('graveyard', object => { return object.location.name === 'graveyard'; });
+  customInventoryMap: Map<string, ObjectInventory> = new Map();
 
   private locationMap: Map<ObjectIdentifier, LocationName> = new Map();
   private tagNameMap: Map<ObjectIdentifier, ElementName> = new Map();
@@ -126,6 +130,7 @@ export class GameObjectInventoryService {
     this.commonInventory.refreshObjects();
     this.privateInventory.refreshObjects();
     this.graveyardInventory.refreshObjects();
+    for (let inventory of this.customInventoryMap.values()) inventory.refreshObjects();
   }
 
   private refreshDataElements() {
@@ -133,6 +138,7 @@ export class GameObjectInventoryService {
     this.commonInventory.refreshDataElements();
     this.privateInventory.refreshDataElements();
     this.graveyardInventory.refreshDataElements();
+    for (let inventory of this.customInventoryMap.values()) inventory.refreshDataElements();
   }
 
   private refreshSort() {
@@ -140,6 +146,7 @@ export class GameObjectInventoryService {
     this.commonInventory.refreshSort();
     this.privateInventory.refreshSort();
     this.graveyardInventory.refreshSort();
+    for (let inventory of this.customInventoryMap.values()) inventory.refreshSort();
   }
 
   private callInventoryUpdate() {
@@ -148,6 +155,8 @@ export class GameObjectInventoryService {
 
   private isAnyLocation(location: string): boolean {
     if (location === 'table' || location === Network.peerId || location === 'graveyard') return true;
+    if (location === 'common') return true;
+    if (this.customInventories.some(inventory => inventory.id === location)) return true;
     for (let conn of Network.peerContexts) {
       if (conn.isOpen && location === conn.peerId) {
         return true;
@@ -155,9 +164,55 @@ export class GameObjectInventoryService {
     }
     return false;
   }
+
+  getInventoryByLocation(location: string): ObjectInventory {
+    if (location === 'table') return this.tableInventory;
+    if (location === Network.peerId || location === 'private') return this.privateInventory;
+    if (location === 'graveyard') return this.graveyardInventory;
+    const custom = this.customInventories.find(inventory => inventory.id === location);
+    if (custom) return this.getCustomInventory(custom.id);
+    return this.commonInventory;
+  }
+
+  getCustomInventory(location: string): ObjectInventory {
+    if (!this.customInventoryMap.has(location)) {
+      this.customInventoryMap.set(location, new ObjectInventory(location, object => object.location.name === location));
+    }
+    return this.customInventoryMap.get(location);
+  }
+
+  addCustomInventory(name: string): CustomInventoryDefinition {
+    const displayName = (name || '').trim();
+    if (!displayName) return null;
+    const base = 'custom-' + Date.now().toString(36);
+    let id = base;
+    let count = 1;
+    const exists = () => this.customInventories.some(inventory => inventory.id === id);
+    while (exists()) id = `${base}-${count++}`;
+    const inventory = { id, name: displayName };
+    this.customInventories = [...this.customInventories, inventory];
+    this.getCustomInventory(id);
+    this.callInventoryUpdate();
+    return inventory;
+  }
+
+  removeCustomInventory(location: string, moveTo: string = 'common'): boolean {
+    const target = this.customInventories.find(inventory => inventory.id === location);
+    if (!target) return false;
+    for (let object of ObjectStore.instance.getObjects(GameCharacter)) {
+      if (object.location.name === location) object.setLocation(moveTo);
+    }
+    this.customInventories = this.customInventories.filter(inventory => inventory.id !== location);
+    this.customInventoryMap.delete(location);
+    const sortSettings = { ...this.summarySetting.inventorySortSettings };
+    delete sortSettings[location];
+    this.summarySetting.inventorySortSettings = sortSettings;
+    this.refresh();
+    return true;
+  }
 }
 
-class ObjectInventory {
+export class ObjectInventory {
   newLineString: string = '/';
   private newLineDataElement: DataElement = DataElement.create(this.newLineString);
 
@@ -175,7 +230,14 @@ class ObjectInventory {
   get sortOrder2nd(): SortOrder { return this.summarySetting.sortOrder2nd; }
   set sortOrder2nd(sortOrder: SortOrder) { this.summarySetting.sortOrder2nd = sortOrder; }
 
-  get sortKeys(): SortKeyEntry[] { return this.summarySetting.sortKeys; }
+  get inventorySortSetting(): InventorySortSetting { return this.summarySetting.getInventorySortSetting(this.settingKey); }
+  set inventorySortSetting(setting: InventorySortSetting) { this.summarySetting.setInventorySortSetting(this.settingKey, setting); }
+
+  get sortEnabled(): boolean { return this.inventorySortSetting.enabled !== false; }
+  set sortEnabled(enabled: boolean) { this.inventorySortSetting = { ...this.inventorySortSetting, enabled }; }
+
+  get sortKeys(): SortKeyEntry[] { return this.inventorySortSetting.sortKeys || this.summarySetting.sortKeys; }
+  set sortKeys(keys: SortKeyEntry[]) { this.inventorySortSetting = { ...this.inventorySortSetting, sortKeys: keys }; }
 
   get dataTag(): string { return this.summarySetting.dataTag; }
   set dataTag(dataTag: string) { this.summarySetting.dataTag = dataTag; }
@@ -223,6 +285,7 @@ class ObjectInventory {
   private needsSort: boolean = true;
 
   constructor(
+    readonly settingKey: string,
     readonly classifier: (object: TabletopObject) => boolean
   ) { }
 
@@ -249,6 +312,7 @@ class ObjectInventory {
 
   private sortTabletopObjects(objects: TabletopObject[]): TabletopObject[] {
     const sortKeys = this.sortKeys;
+    if (!this.sortEnabled) return objects;
     if (!sortKeys || sortKeys.length < 1) return objects;
     const firstTag = sortKeys[0].tag?.trim();
     if (!firstTag || firstTag.length < 1) return objects;

@@ -9,6 +9,7 @@ import { EventSystem } from '@udonarium/core/system';
 import { Jukebox, TableAudioLayerSetting } from '@udonarium/Jukebox';
 import { Config } from '@udonarium/config';
 import { ModalService } from 'service/modal.service';
+import { AutoSoundService } from 'service/auto-sound.service';
 
 import { CutInListComponent } from 'component/cut-in-list/cut-in-list.component';
 import { PointerDeviceService } from 'service/pointer-device.service';
@@ -97,6 +98,7 @@ export class JukeboxComponent implements OnInit, OnDestroy {
     this.auditionPlayer.volumeType = VolumeType.AUDITION;
     // セッションストレージから認証状態を復元
     this.libraryAuthed = sessionStorage.getItem(JukeboxComponent.SESSION_KEY) === '1';
+    this.setupAutoSoundTracking();
     EventSystem.register(this)
       .on('*', event => {
         if (event.eventName.startsWith('FILE_')) this.lazyNgZoneUpdate();
@@ -129,6 +131,33 @@ export class JukeboxComponent implements OnInit, OnDestroy {
 
   stopSE() {
     this.sePlayer.stop();
+  }
+
+  // ===== オートサウンド管理 =====
+  autoSoundActiveCount = 0;
+
+  private autoSoundInitDone = false;
+  private setupAutoSoundTracking() {
+    if (this.autoSoundInitDone) return;
+    this.autoSoundInitDone = true;
+    EventSystem.register(this)
+      .on('AUTO_SOUND_STARTED', event => {
+        this.autoSoundActiveCount++;
+        this.lazyNgZoneUpdate();
+      })
+      .on('AUTO_SOUND_ENDED', event => {
+        if (this.autoSoundActiveCount > 0) this.autoSoundActiveCount--;
+        this.lazyNgZoneUpdate();
+      })
+      .on('AUTO_SOUND_STOPPED', event => {
+        this.autoSoundActiveCount = 0;
+        this.lazyNgZoneUpdate();
+      });
+  }
+
+  stopAllAutoSound() {
+    AutoSoundService.stopAll();
+    this.autoSoundActiveCount = 0;
   }
 
   playAmbient(audio: AudioFile) {
@@ -367,6 +396,30 @@ export class JukeboxComponent implements OnInit, OnDestroy {
     return pinnedIds
       .map(id => this.audioLibraryService.getTrack(id))
       .filter(t => t !== null) as ServerAudioTrack[];
+  }
+
+  // ===== Library track folder assignment =====
+
+  getLibraryTrackFolder(trackId: string): string {
+    const map = this.jukebox.getAudioFolderMap();
+    return map['server:' + trackId] || '';
+  }
+
+  setLibraryTrackFolder(trackId: string, folder: string) {
+    const map = this.jukebox.getAudioFolderMap();
+    const key = 'server:' + trackId;
+    if (folder) {
+      map[key] = folder;
+    } else {
+      delete map[key];
+    }
+    this.jukebox.setAudioFolderMap(map);
+  }
+
+  getFilteredPinnedLibraryTracks(): ServerAudioTrack[] {
+    const all = this.pinnedLibraryTracks;
+    if (!this.selectedFolder || this.selectedFolder === 'すべて') return all;
+    return all.filter(t => this.getLibraryTrackFolder(t.id) === this.selectedFolder);
   }
 
 }

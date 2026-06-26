@@ -108,6 +108,10 @@ export class VnStageComponent implements OnInit, OnDestroy {
   logZIndex: number = 3001;
   paletteFrontPinned: boolean = false;
   logFrontPinned: boolean = false;
+  paletteLocked: boolean = false;
+  logLocked: boolean = false;
+  paletteMinimized: boolean = false;
+  logMinimized: boolean = false;
   private subPanelZCounter: number = 3001;
   private panelDragTarget: 'palette' | 'log' | null = null;
   private subDragOffsetX = 0;
@@ -136,6 +140,8 @@ export class VnStageComponent implements OnInit, OnDestroy {
   panelW: number = 450;
   panelH: number = -1; // -1 = auto
   panelLocked: boolean = false;
+  panelFrontPinned: boolean = false;
+  panelMinimized: boolean = false;
   isPanelDragging: boolean = false;
   isPanelResizing: boolean = false;
   private dragOffsetX = 0;
@@ -185,6 +191,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
     try {
       const saved = localStorage.getItem('udonarium.vnPanel.pos.v1');
       if (saved) { const p = JSON.parse(saved); this.panelX = p.x ?? -1; this.panelY = p.y ?? -1; this.panelW = Math.max(p.w ?? 450, 450); this.panelH = p.h ?? -1; this.panelLocked = !!p.locked; this.clampMainPanelToViewport(); }
+      try { this.panelFrontPinned = localStorage.getItem('udonarium.vnPanel.frontPinned') === '1'; } catch (_) { }
     } catch (_) { }
     this.loadSubPanelState();
     try { this.sendPortrait = localStorage.getItem('udonarium.vnStage.sendPortrait.v1') !== 'false'; } catch (_) { }
@@ -251,6 +258,22 @@ export class VnStageComponent implements OnInit, OnDestroy {
         const message = ObjectStore.instance.get<ChatMessage>(event.data.messageIdentifier);
         if (!message) return;
         if (event.isSendFromSelf) {
+          // 自分で送ったメッセージでも imageIdentifier が変わっていればアクター画像を更新
+          if (message.imageIdentifier) {
+            const actor = this.findActor(message.sendFrom || message.from);
+            if (actor) {
+              this.ngZone.run(() => {
+                const characterId = message.sendFrom || message.from;
+                const character = ObjectStore.instance.get<GameCharacter>(characterId);
+                const tachieIndex = character instanceof GameCharacter
+                  ? this.findTachieIndexByIdentifier(character, message.imageIdentifier) : actor.tachieIndex;
+                this.setActorImage(actor, message.imageIdentifier);
+                actor.tachieIndex = tachieIndex;
+                this.selectedTachieIndex = tachieIndex;
+                this.selectedImageId = message.imageIdentifier;
+              });
+            }
+          }
           if (this.chatLogExpanded) {
             this.scrollLogToBottom();
             this.refreshChatLogFade();
@@ -394,6 +417,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
     if (this.panelY >= 0) s['top'] = this.panelY + 'px';
     if (this.panelW > 0) s['width'] = this.panelW + 'px';
     if (this.panelH > 0) { s['max-height'] = 'none'; s['height'] = this.panelH + 'px'; }
+    if (this.panelFrontPinned) s['z-index'] = '2000001';
     return s;
   }
 
@@ -481,6 +505,25 @@ export class VnStageComponent implements OnInit, OnDestroy {
     this.panelLocked = !this.panelLocked;
     this.clampMainPanelToViewport();
     this.savePanelState();
+  }
+
+  toggleFrontPin() {
+    this.panelFrontPinned = !this.panelFrontPinned;
+    try { localStorage.setItem('udonarium.vnPanel.frontPinned', this.panelFrontPinned ? '1' : '0'); } catch (_) { }
+  }
+
+  toggleMinimize() {
+    this.panelMinimized = !this.panelMinimized;
+  }
+
+  toggleSubPanelLock(target: 'palette' | 'log') {
+    if (target === 'palette') this.paletteLocked = !this.paletteLocked;
+    else this.logLocked = !this.logLocked;
+  }
+
+  toggleSubPanelMinimize(target: 'palette' | 'log') {
+    if (target === 'palette') this.paletteMinimized = !this.paletteMinimized;
+    else this.logMinimized = !this.logMinimized;
   }
 
   private savePanelState() {
@@ -620,6 +663,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
     if (e.button !== 0) return;
     e.preventDefault(); e.stopPropagation();
     if (this.isSubPanelPositionPinned(target)) return;
+    if ((target === 'palette' && this.paletteLocked) || (target === 'log' && this.logLocked)) return;
     this.bringSubPanelToFront(target);
     this.panelDragTarget = target;
     const sel = target === 'palette' ? '.vn-palette-wrap' : '.vn-chat-log';
@@ -654,6 +698,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
     if (e.button !== 0) return;
     e.preventDefault(); e.stopPropagation();
     if (this.isSubPanelPositionPinned(target)) return;
+    if ((target === 'palette' && this.paletteLocked) || (target === 'log' && this.logLocked)) return;
     this.panelResizeTarget = target;
     const sel = target === 'palette' ? '.vn-palette-wrap' : '.vn-chat-log';
     const rect = (e.currentTarget as HTMLElement).closest(sel)?.getBoundingClientRect();
@@ -1412,16 +1457,67 @@ export class VnStageComponent implements OnInit, OnDestroy {
     const character = ObjectStore.instance.get<GameCharacter>(this.selectedCharacterId);
     const onStage = !!this.findActor(this.selectedCharacterId);
     const shouldSendPortrait = this.sendPortrait && onStage;
+
+    // ═ ═ ═ VN @立ち絵名称マッチング ═ ═ ═
+    // @名称 / @hide / @数字 でVNステージの選択中アクター画像を切り替え
+    let vnTachieText = coreText;
+    if (onStage && character instanceof GameCharacter) {
+      const atMatch = vnTachieText.match(/\s[@\uff20](\S+)\s*$/);
+      if (atMatch) {
+        const tag = atMatch[1];
+        const isHide = /^hide$/i.test(tag);
+        const numMatch = tag.match(/(\d+)$/);
+        let matchedIndex = -1;
+        if (isHide) {
+          matchedIndex = -2; // hide flag
+        } else if (numMatch) {
+          const idx = parseInt(numMatch[1]);
+          if (character.imageDataElement && idx >= 0 && idx < character.imageDataElement.children.length) {
+            matchedIndex = idx;
+          }
+        } else {
+          // 名称マッチング（完全一致 → 前方一致）
+          matchedIndex = this.findTachieIndexByLabel(character, tag);
+        }
+        if (matchedIndex >= 0) {
+          const newImageId = this.findImageIdentifierByIndex(character, matchedIndex);
+          if (newImageId) {
+            this.selectedTachieIndex = matchedIndex;
+            this.selectedImageId = newImageId;
+            const actor = this.findActor(this.selectedCharacterId);
+            if (actor) {
+              actor.tachieIndex = matchedIndex;
+              this.setActorImage(actor, newImageId);
+              EventSystem.call('VN_STAGE_ADD', {
+                characterId: this.selectedCharacterId, name: actor.name, tachieIndex: matchedIndex, imageIdentifier: newImageId, portraitScale: actor.portraitScale
+              });
+            }
+            vnTachieText = vnTachieText.replace(/\s[@\uff20]\S+\s*$/, '');
+          }
+        } else if (matchedIndex === -2) {
+          // @hide: アクターの画像を空にする
+          const actor = this.findActor(this.selectedCharacterId);
+          if (actor) {
+            actor.imageIdentifier = '';
+            EventSystem.call('VN_STAGE_ADD', {
+              characterId: this.selectedCharacterId, name: actor.name, tachieIndex: -1, imageIdentifier: '', portraitScale: actor.portraitScale
+            });
+          }
+          vnTachieText = vnTachieText.replace(/\s[@\uff20]\S+\s*$/, '');
+        }
+      }
+    }
+
     const tachieNum = shouldSendPortrait && character instanceof GameCharacter
       ? this.selectedTachieIndex : null;
 
-    let evaluatedText = coreText;
-    let messageTargetContext: ChatMessageTargetContext[] = [{ text: coreText, object: null }];
+    let evaluatedText = vnTachieText;
+    let messageTargetContext: ChatMessageTargetContext[] = [{ text: vnTachieText, object: null }];
     let messageColor: string = null;
     let gameType: string = 'DiceBot';
     if (character instanceof GameCharacter) {
       const palette = character.chatPalette;
-      const prepared = this.prepareVnChatText(coreText, character);
+      const prepared = this.prepareVnChatText(vnTachieText, character);
       evaluatedText = prepared.text;
       messageTargetContext = prepared.messageTargetContext;
       // シークレットの場合、messageTargetContext の text に s: を付与して
@@ -1999,6 +2095,23 @@ export class VnStageComponent implements OnInit, OnDestroy {
   private tachieLabel(child: any): string {
     if (!child) return '';
     return String(child.currentValue || child.getAttribute?.('currentValue') || '');
+  }
+
+  /** 立ち絵の名称(label)からインデックスを検索。完全一致優先、次に前方一致。 */
+  private findTachieIndexByLabel(character: GameCharacter, name: string): number {
+    if (!character?.imageDataElement || !name) return -1;
+    const children = character.imageDataElement.children || [];
+    // 完全一致
+    for (let i = 0; i < children.length; i++) {
+      const label = this.tachieLabel(children[i]);
+      if (label === name) return i;
+    }
+    // 前方一致
+    for (let i = 0; i < children.length; i++) {
+      const label = this.tachieLabel(children[i]);
+      if (label && label.indexOf(name) === 0) return i;
+    }
+    return -1;
   }
 
   private rebuildDiceBuffer() {

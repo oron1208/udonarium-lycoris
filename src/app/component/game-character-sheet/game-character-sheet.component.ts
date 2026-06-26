@@ -17,7 +17,11 @@ import { TabletopService } from 'service/tabletop.service';
 import { InitiativeService } from 'service/initiative.service';
 
 import { GameCharacter } from '@udonarium/game-character';
+import { AutoSoundTrigger } from '@udonarium/game-character';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
+import { AudioStorage } from '@udonarium/core/file-storage/audio-storage';
+import { AudioLibraryService } from 'service/audio-library.service';
+import { Jukebox } from '@udonarium/Jukebox';
 import { DiceSymbol } from '@udonarium/dice-symbol';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 
@@ -46,10 +50,78 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
     private pointerDeviceService: PointerDeviceService,
     private tabletopService: TabletopService,
     private initiativeService: InitiativeService,
-    private changeDetector: ChangeDetectorRef
+    private changeDetector: ChangeDetectorRef,
+    public audioLibrary: AudioLibraryService
   ) { }
 
   get isAdvancedRoom(): boolean { return this.tabletopService.currentTable?.roomMode === 'advanced'; }
+
+  characterSheetTab: 'basic' | 'display' | 'advanced' = 'basic';
+
+  // ===== 自動効果音・アニメーショントリガー =====
+  private _autoSoundTriggers: AutoSoundTrigger[] = [];
+  private _autoSoundTriggersJsonCache: string = '';
+
+  getAutoSoundTriggers(): AutoSoundTrigger[] {
+    if (!this.character) return [];
+    const json = this.character.autoSoundTriggersJson || '[]';
+    if (json !== this._autoSoundTriggersJsonCache) {
+      this._autoSoundTriggersJsonCache = json;
+      try { this._autoSoundTriggers = JSON.parse(json); } catch { this._autoSoundTriggers = []; }
+    }
+    return this._autoSoundTriggers;
+  }
+  addAutoSoundTrigger() {
+    if (!this.character) return;
+    const newTrigger: AutoSoundTrigger = {
+      id: 'trigger-' + Date.now().toString(36),
+      keyword: '',
+      audioIdentifier: '',
+      animation: ''
+    };
+    this.character.addAutoSoundTrigger(newTrigger);
+    this.character.update();
+    // ローカルキャッシュも即時更新
+    this._autoSoundTriggers = [...this._autoSoundTriggers, newTrigger];
+    this._autoSoundTriggersJsonCache = this.character.autoSoundTriggersJson;
+    setTimeout(() => this.changeDetector.markForCheck(), 0);
+  }
+  removeAutoSoundTrigger(index: number) {
+    if (!this.character) return;
+    this.character.removeAutoSoundTrigger(index);
+    this.character.update();
+    // ローカルキャッシュも即時更新
+    this._autoSoundTriggers = this._autoSoundTriggers.filter((_, i) => i !== index);
+    this._autoSoundTriggersJsonCache = this.character.autoSoundTriggersJson;
+    setTimeout(() => this.changeDetector.markForCheck(), 0);
+  }
+  updateAutoSoundTrigger(index: number, trigger: AutoSoundTrigger) {
+    if (!this.character) return;
+    this.character.updateAutoSoundTrigger(index, trigger);
+    // update()は呼ばない - ngModelChangeで毎呼び出しされるため
+    // パネルを閉じる時やフォーカスが外れた時に同期される
+  }
+  commitAutoSoundTrigger(index: number) {
+    if (!this.character) return;
+    // ローカルキャッシュの内容をSyncVarへ書き戻す
+    this.character.saveAutoSoundTriggers(this._autoSoundTriggers);
+    this.character.update();
+    this._autoSoundTriggersJsonCache = this.character.autoSoundTriggersJson;
+  }
+  get audioStorage() { return AudioStorage.instance; }
+
+  get availableAudios() {
+    return AudioStorage.instance.audios.filter(a =>
+      a.identifier && !a.identifier.startsWith('./assets/')
+    );
+  }
+
+  get pinnedLibraryTracks() {
+    const jukebox = ObjectStore.instance.get<Jukebox>('Jukebox');
+    if (!jukebox) return [];
+    const ids = jukebox.getPinnedLibraryTrackIds();
+    return this.audioLibrary.tracks.filter(t => ids.includes(t.id));
+  }
   get isCharacter(): boolean { return this.tabletopObject instanceof GameCharacter; }
   get character(): GameCharacter { return this.tabletopObject as GameCharacter; }
   get isRangeArea(): boolean { return this.tabletopObject instanceof RangeArea; }

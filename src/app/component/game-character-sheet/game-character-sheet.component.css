@@ -2,6 +2,34 @@
   display: block;
 }
 
+.char-sheet-tabs {
+  display: flex;
+  gap: 0;
+  margin: 4px 0;
+  border-bottom: 2px solid #999;
+}
+
+.char-sheet-tab {
+  padding: 4px 16px;
+  font-size: 0.85em;
+  border: 1px solid #999;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  background: #ddd;
+  cursor: pointer;
+}
+
+.char-sheet-tab.active {
+  background: #fff;
+  font-weight: bold;
+  border-bottom: 2px solid #fff;
+  margin-bottom: -2px;
+}
+
+.char-sheet-tab-content {
+  padding: 4px 0;
+}
+
 .main-image-box {
   /* position: absolute;
   top: 0px;

@@ -6,6 +6,7 @@ import { ChatTabList } from '@udonarium/chat-tab-list';
 import { Config } from '@udonarium/config';
 
 import { FileArchiver } from '@udonarium/core/file-storage/file-archiver';
+import { AudioStorage } from '@udonarium/core/file-storage/audio-storage';
 import { ImageFile, ImageState } from '@udonarium/core/file-storage/image-file';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 import { MimeType } from '@udonarium/core/file-storage/mime-type';
@@ -20,6 +21,8 @@ import { saveAs } from 'file-saver';
 import * as Beautify from 'vkbeautify';
 //本家PR #92より
 import { ImageTagList } from '@udonarium/image-tag-list';
+import { Jukebox } from '@udonarium/Jukebox';
+import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 //
 type UpdateCallback = (percent: number) => void;
 
@@ -49,6 +52,7 @@ export class SaveDataService {
     files.push(new File([configXml], 'config.xml', { type: 'text/plain' }));
 
     files.push(new File([summarySetting], 'summary.xml', { type: 'text/plain' }));
+    files.push(new File([this.createMediaManifestJson()], 'media-manifest.json', { type: 'application/json' }));
 //本家PR #92より
 //    files = files.concat(this.searchImageFiles(roomXml));
 //    files = files.concat(this.searchImageFiles(chatXml));
@@ -107,6 +111,23 @@ export class SaveDataService {
     let xmlDeclaration = '<?xml version="1.0" encoding="UTF-8"?>';
 //    return xmlDeclaration + '\n' + gameObject.toXml();
     return xmlDeclaration + '\n' + Beautify.xml(gameObject.toXml(), 2);
+  }
+
+  private createMediaManifestJson(): string {
+    const audios = AudioStorage.instance.getCatalog().map(audio => ({
+      kind: 'audio',
+      identifier: audio.identifier,
+      name: audio.name || audio.identifier,
+      state: audio.state
+    }));
+    const jukebox = ObjectStore.instance.get<Jukebox>('Jukebox');
+    const jukeboxSettings = jukebox ? {
+      audioFolderMap: jukebox.getAudioFolderMap(),
+      customFolderNames: jukebox.getCustomFolderNames(),
+      jukeboxLayers: jukebox.getJukeboxLayers(),
+      pinnedLibraryTrackIds: jukebox.getPinnedLibraryTrackIds()
+    } : null;
+    return JSON.stringify({ version: 2, audios, jukebox: jukeboxSettings }, null, 2);
   }
 
 //本家PR #92より

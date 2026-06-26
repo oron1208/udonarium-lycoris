@@ -3,6 +3,7 @@ import * as JSZip from 'jszip';
 
 import { EventSystem, Network } from '../system';
 import { XmlUtil } from '../system/util/xml-util';
+import { AudioFile } from './audio-file';
 import { AudioStorage } from './audio-storage';
 import { FileReaderUtil } from './file-reader-util';
 import { ImageStorage } from './image-storage';
@@ -10,6 +11,7 @@ import { MimeType } from './mime-type';
 
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { ReloadCheck } from '@udonarium/reload-check';
+import { Jukebox } from '@udonarium/Jukebox';
 
 type MetaData = { percent: number, currentFile: string };
 type UpdateCallback = (metadata: MetaData) => void;
@@ -92,6 +94,7 @@ export class FileArchiver {
     for (let file of loadFiles) {
       await this.handleImage(file);
       await this.handleAudio(file);
+      await this.handleMediaManifest(file);
       await this.handleText(file);
       await this.handleZip(file);
       EventSystem.trigger('FILE_LOADED', { file: file });
@@ -117,6 +120,52 @@ export class FileArchiver {
     }
     console.log(file.name + ' type:' + file.type);
     await AudioStorage.instance.addAsync(file);
+  }
+
+  private async handleMediaManifest(file: File): Promise<void> {
+    if (file.name !== 'media-manifest.json') return;
+    try {
+      const manifest = JSON.parse(await FileReaderUtil.readAsTextAsync(file));
+      const audios = Array.isArray(manifest && manifest.audios) ? manifest.audios : [];
+      for (const item of audios) {
+        const identifier = String(item && item.identifier || '');
+        if (!/^[a-f0-9]{64}$/i.test(identifier)) continue;
+        let audio = AudioStorage.instance.get(identifier);
+        if (audio === null) {
+          audio = AudioFile.createEmpty(identifier);
+          AudioStorage.instance.add(audio);
+        }
+        const name = String(item && item.name || '');
+        if (name && (!audio.name || audio.name === audio.identifier)) {
+          const context = audio.toContext();
+          context.name = name;
+          audio.apply(context);
+        }
+      }
+      if (audios.length > 0) AudioStorage.instance.synchronize();
+
+      const jukeboxSettings = manifest && manifest.jukebox;
+      if (jukeboxSettings && typeof jukeboxSettings === 'object') {
+        const jukebox = ObjectStore.instance.get<Jukebox>('Jukebox');
+        if (jukebox) {
+          if (jukeboxSettings.audioFolderMap && typeof jukeboxSettings.audioFolderMap === 'object') {
+            jukebox.setAudioFolderMap(jukeboxSettings.audioFolderMap);
+          }
+          if (Array.isArray(jukeboxSettings.customFolderNames)) {
+            jukebox.setCustomFolderNames(jukeboxSettings.customFolderNames.map(name => String(name)).filter(name => name.length > 0));
+          }
+          if (Array.isArray(jukeboxSettings.jukeboxLayers)) {
+            jukebox.setJukeboxLayers(jukeboxSettings.jukeboxLayers);
+          }
+          if (Array.isArray(jukeboxSettings.pinnedLibraryTrackIds)) {
+            jukebox.setPinnedLibraryTrackIds(jukeboxSettings.pinnedLibraryTrackIds.map(id => String(id)).filter(id => id.length > 0));
+          }
+          jukebox.update();
+        }
+      }
+    } catch (reason) {
+      console.warn('media-manifest.json load failed', reason);
+    }
   }
 
   private async handleText(file: File): Promise<void> {

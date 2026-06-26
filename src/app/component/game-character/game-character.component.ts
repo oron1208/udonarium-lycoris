@@ -33,6 +33,7 @@ import { ContextMenuAction, ContextMenuSeparator, ContextMenuService } from 'ser
 import { PanelOption, PanelService } from 'service/panel.service';
 import { InitiativeDiceRollerComponent } from 'component/initiative-dice-roller/initiative-dice-roller.component';
 import { BatchDiceRollerComponent } from 'component/batch-dice-roller/batch-dice-roller.component';
+import { BatchDamagePanelComponent } from 'component/batch-damage-panel/batch-damage-panel.component';
 import { PointerDeviceService } from 'service/pointer-device.service';
 import { GmModeService } from 'service/gm-mode.service';
 import { RemoteControllerComponent } from 'component/remote-controller/remote-controller.component';
@@ -81,6 +82,17 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
   get isCurrentCombatTurn(): boolean {
     return this.initiativeService.isCombatActive &&
       this.initiativeService.getCurrentTurnIdentifier() === this.gameCharacter.identifier;
+  }
+  get isTurnMarkerVisible(): boolean {
+    const tables = ObjectStore.instance.getObjects<GameTable>(GameTable);
+    const table = tables.find(t => t.combatActive) || tables.find(t => t.selected) || tables[0];
+    return table ? table.combatTurnMarkerVisible : true;
+  }
+  get turnMarker3dOffset(): number {
+    const base = this.gameCharacter.specifyKomaImageFlag
+      ? Number(this.gameCharacter.komaImageHeignt || this.size * this.gridSize)
+      : this.size * this.gridSize;
+    return Math.max(52, base + 24);
   }
   set isLock(isLock: boolean) { this.gameCharacter.isLock = isLock; }
 
@@ -160,8 +172,73 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
 
   private highlightTimer: NodeJS.Timer;
   private unhighlightTimer: NodeJS.Timer;
+  private animationTimer: NodeJS.Timer;
   private isDirectionMarkerRotating: boolean = false;
   private directionMarkerRotated: boolean = false;
+  private flatIconNaturalWidth: number = 0;
+  private flatIconNaturalHeight: number = 0;
+
+  get flatIconImageStyle(): { [key: string]: string } {
+    const mode = this.resolveFlatIconFitMode();
+    const zoom = this.normalizeFlatIconZoom(this.gameCharacter?.flatIconZoom);
+    const offsetX = this.normalizeFlatIconOffset(this.gameCharacter?.flatIconOffsetX);
+    const offsetY = this.normalizeFlatIconOffset(this.gameCharacter?.flatIconOffsetY);
+
+    const style: { [key: string]: string } = {
+      'object-fit': mode === 'contain' ? 'contain' : 'cover',
+      'object-position': `${offsetX}% ${offsetY}%`,
+      'transform': `scale(${zoom / 100})`,
+      'transform-origin': `${offsetX}% ${offsetY}%`
+    };
+
+    if ((this.gameCharacter?.flatIconFitMode || 'auto') === 'auto') {
+      if (mode === 'top') {
+        style['object-position'] = '50% 18%';
+        style['transform'] = `scale(${Math.min(zoom, 96) / 100})`;
+        style['transform-origin'] = '50% 18%';
+      } else if (mode === 'contain') {
+        style['object-position'] = '50% 50%';
+        style['transform'] = 'scale(1)';
+        style['transform-origin'] = '50% 50%';
+      }
+    }
+    return style;
+  }
+
+  onFlatIconImageLoad(event: Event) {
+    const img = event.target as HTMLImageElement;
+    if (!img) return;
+    this.flatIconNaturalWidth = img.naturalWidth || img.width || 0;
+    this.flatIconNaturalHeight = img.naturalHeight || img.height || 0;
+    this.changeDetector.markForCheck();
+  }
+
+  private resolveFlatIconFitMode(): 'center' | 'top' | 'contain' {
+    const mode = this.gameCharacter?.flatIconFitMode || 'auto';
+    if (mode === 'contain') return 'contain';
+    if (mode === 'top') return 'top';
+    if (mode === 'center') return 'center';
+
+    const w = this.flatIconNaturalWidth;
+    const h = this.flatIconNaturalHeight;
+    if (w > 0 && h > 0) {
+      if (h / w >= 1.25) return 'top';
+      if (w / h >= 1.45) return 'contain';
+    }
+    return 'center';
+  }
+
+  private normalizeFlatIconZoom(value: number): number {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return 100;
+    return Math.max(50, Math.min(180, num));
+  }
+
+  private normalizeFlatIconOffset(value: number): number {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return 50;
+    return Math.max(0, Math.min(100, num));
+  }
 
   get elevation(): number {
     return +((this.gameCharacter.posZ + (this.altitude * this.gridSize)) / this.gridSize).toFixed(1);
@@ -288,6 +365,12 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
       .on('COMBAT_STATE_CHANGED', event => {
         this.changeDetector.markForCheck();
       })
+      .on('CHARACTER_ANIMATION', event => {
+        if (!this.gameCharacter || this.gameCharacter.identifier !== event.data.characterIdentifier) return;
+        const anim = event.data.animation;
+        if (!anim) return;
+        this.playCharacterAnimation(anim);
+      })
 
       .on('HIGHTLIGHT_TABLETOP_OBJECT', event => {
         if (this.gameCharacter.identifier !== event.data.identifier) { return; }
@@ -324,6 +407,22 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
     this.rotableOption = {
       tabletopObject: this.gameCharacter
     };
+  }
+
+  private playCharacterAnimation(animation: string) {
+    if (!this.rootElementRef?.nativeElement) return;
+    const root = this.rootElementRef.nativeElement;
+    const contentEl = root.querySelector('.component-content') as HTMLElement;
+    if (!contentEl) return;
+    const className = `char-anim-${animation}`;
+    contentEl.classList.remove('char-anim-shake', 'char-anim-jump', 'char-anim-spin', 'char-anim-lunge', 'char-anim-flash');
+    void contentEl.offsetWidth; // reflow
+    contentEl.classList.add(className);
+    if (this.animationTimer) clearTimeout(this.animationTimer);
+    this.animationTimer = setTimeout(() => {
+      contentEl.classList.remove(className);
+      this.animationTimer = null;
+    }, 800);
   }
 
   ngAfterViewInit() {
@@ -537,6 +636,10 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
             { name: '📋 登録式でロール', action: () => this.rollInitiativeByFormula() },
             { name: '✏️ 手入力でロール...', action: () => this.openInitiativeDiceRoller([this.gameCharacter]) },
           ]
+        },
+        ContextMenuSeparator,
+        {
+          name: '⚔️ 一括判定ダメージ', action: () => this.openBatchDamagePanel()
         },
       ] : []),
     ], this.name);
@@ -860,6 +963,20 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
     const component = this.panelService.open<BatchDiceRollerComponent>(BatchDiceRollerComponent, option);
     if (component) {
       component.characters = characters;
+    }
+  }
+
+  private openBatchDamagePanel() {
+    const targeted = ObjectStore.instance.getObjects<GameCharacter>(GameCharacter)
+      .filter(c => c.targeted && c.location.name === this.gameCharacter.location.name);
+    if (targeted.length === 0) {
+      alert('ターゲット指定されたコマがいません。\nコマを右クリック → 対象指定 してください。');
+      return;
+    }
+    const option: PanelOption = { width: 480, height: 600, left: 200, top: 100, title: '⚔️ 一括判定ダメージ' };
+    const component = this.panelService.open<BatchDamagePanelComponent>(BatchDamagePanelComponent, option);
+    if (component) {
+      component.attacker = this.gameCharacter;
     }
   }
 

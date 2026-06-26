@@ -6,6 +6,9 @@
         <span class="round-icon">⚔️</span>
         <span class="round-num">R{{ currentRound }}</span>
       </div>
+      <button class="turn-marker-toggle" [class.active]="turnMarkerVisible" (click)="toggleTurnMarker()" title="手番マーカーON/OFF">
+        🏴
+      </button>
       <button class="collapse-btn" (click)="toggleCollapse()">
         <span *ngIf="!isCollapsed">▲</span>
         <span *ngIf="isCollapsed">▼</span>

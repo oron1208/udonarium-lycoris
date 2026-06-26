@@ -95,6 +95,21 @@ export class InitiativeTrackerComponent implements OnInit, OnDestroy {
     this.isCollapsed = !this.isCollapsed;
   }
 
+  get turnMarkerVisible(): boolean {
+    const tables = ObjectStore.instance.getObjects<GameTable>(GameTable);
+    const table = tables.find(t => t.combatActive) || tables.find(t => t.selected) || tables[0];
+    return table ? table.combatTurnMarkerVisible : false;
+  }
+
+  toggleTurnMarker() {
+    const tables = ObjectStore.instance.getObjects<GameTable>(GameTable);
+    const table = tables.find(t => t.combatActive) || tables.find(t => t.selected) || tables[0];
+    if (!table) return;
+    table.combatTurnMarkerVisible = !table.combatTurnMarkerVisible;
+    table.update();
+    EventSystem.trigger('COMBAT_STATE_CHANGED', {});
+  }
+
   getCharacterIcon(identifier: string): string {
     const char = ObjectStore.instance.get<GameCharacter>(identifier);
     return char?.imageFile?.url || '';

@@ -179,150 +179,117 @@
       </ng-container>
     </div>
   </ng-container>
-  <ng-container *ngIf="tabletopObject.aliasName === 'character'">
-    <div *ngIf="isAdvancedRoom" class="extra-setting advanced-piece-section" style="border:1px solid #777;margin:8px 0;padding:8px;">
-      <b>アドバンス設定</b>
-      <div style="margin-top:4px;">
-        <button type="button" (click)="toggleMyPiece()">{{isMyPiece ? '自分のコマから外す' : '自分のコマにする'}}</button>
-        <span style="font-size:12px;margin-left:8px;">自分のコマにすると、このコマの視界が自分の盤面に反映されます。</span>
-      </div>
-      <div style="margin-top:6px;">
-        <label>視覚を有効にする
-          <input type="checkbox" [(ngModel)]="tabletopObject.sightEnabled" name="sightEnabled">
-        </label>
-      </div>
-      <ng-container *ngIf="tabletopObject.sightEnabled">
-        <div>
-          視覚タイプ
-          <select [ngModel]="tabletopObject.sightMode" (ngModelChange)="setSightMode($event)" name="sightMode">
-            <option value="normal">通常視界</option>
-            <option value="darkvision">暗視</option>
-            <option value="superiorDarkvision">上級暗視</option>
-          </select>
-        </div>
-        <div>
-          視界半径（マス）
-          <input type="range" min="1" max="60" step="0.5" [(ngModel)]="tabletopObject.sightRadius" [disabled]="tabletopObject.sightUnlimited" style="width:10em;">
-          <input class="is-caret" [(ngModel)]="tabletopObject.sightRadius" type="number" min="1" max="60" step="0.5" [disabled]="tabletopObject.sightUnlimited" style="width:5em;color:#555;">
-          <label style="margin-left:8px;">無限
-            <input type="checkbox" [(ngModel)]="tabletopObject.sightUnlimited" name="sightUnlimited">
-          </label>
-        </div>
-        <div style="font-size:12px;line-height:1.5;">
-          通常視界は明るめ、暗視は薄く、上級暗視は広く強めに視界を開きます。壁指定は照明と同じ判定を使います。
-        </div>
-      </ng-container>
-    </div>
+ <ng-container *ngIf="tabletopObject.aliasName === 'character'">
     <select *ngIf="tabletopObject" (change)="setLocation($event.target.value)" [ngModel]="tabletopObject.location.name">
     <option value="table">テーブル</option>
     <option value="common">共有インベントリ</option>
     <option value="{{networkService.peerId}}">個人インベントリ</option>
     <option value="graveyard">墓地</option>
     </select>
-    <div class="extra-setting" style="display:table;">
-      <div class="extra-setting" style="width:50%;display:table-cell;">
-        <div >
-          テーブルインベントリ非表示
-          <input type="checkbox" value="hideInventory"  [(ngModel)]="tabletopObject.hideInventory" name="hideInventory" (click)="clickHide()">
+
+    <!-- タブバー -->
+    <div class="char-sheet-tabs">
+      <button class="char-sheet-tab" [class.active]="characterSheetTab === 'basic'" (click)="characterSheetTab = 'basic'">基本</button>
+      <button class="char-sheet-tab" [class.active]="characterSheetTab === 'display'" (click)="characterSheetTab = 'display'">表示</button>
+      <button class="char-sheet-tab" [class.active]="characterSheetTab === 'advanced'" (click)="characterSheetTab = 'advanced'" *ngIf="isAdvancedRoom">アドバンス</button>
+    </div>
+
+    <!-- ===== 表示タブ ===== -->
+    <div *ngIf="characterSheetTab === 'display'" class="char-sheet-tab-content">
+      <div class="extra-setting" style="display:table;width:100%;">
+        <div class="extra-setting" style="width:50%;display:table-cell;">
+          <div>テーブルインベントリ非表示 <input type="checkbox" [(ngModel)]="tabletopObject.hideInventory" name="hideInventory" (click)="clickHide()"></div>
+          <div>発言をしない <input type="checkbox" [(ngModel)]="tabletopObject.nonTalkFlag" name="nonTalkFlag" (click)="clickNoTalk()"></div>
+          <div>ポップアップ横幅
+            <input type="range" [style]="'font-size: 0.8em; min-width: 1em; width:' + (10) + 'em; --min: 0; --max: ' + 0 + '; --val:' + 10 +';' | safe: 'style'" min="270" max="1000" [(ngModel)]="tabletopObject.overViewWidth" />
+            <input class="is-caret" [(ngModel)]="tabletopObject.overViewWidth" type="number" style="width:12em;color:#555;" min="270" max="1000" name="popWidth" (change)="chkPopWidth($event.target.value)" />
+          </div>
+          <div>ポップアップ縦幅最大
+            <input type="range" [style]="'font-size: 0.8em; min-width: 1em; width:' + (10) + 'em; --min: 0; --max: ' + 0 + '; --val:' + 10 +';' | safe: 'style'" min="250" max="1000" [(ngModel)]="tabletopObject.overViewMaxHeight" />
+            <input class="is-caret" [(ngModel)]="tabletopObject.overViewMaxHeight" type="number" style="width:12em;color:#555;" min="250" max="1000" name="popHeight" (change)="chkPopMaxHeight($event.target.value)" />
+          </div>
         </div>
-        <div >
-          発言をしない
-          <input type="checkbox" value="hideInventory"  [(ngModel)]="tabletopObject.nonTalkFlag" name="nonTalkFlag" (click)="clickNoTalk()">
-        </div>
-        <div >
-          ポップアップ横幅
-            <input type="range" [style]="'font-size: 0.8em; min-width: 1em; width:' + (10) + 'em; --min: 0; --max: ' + 0 + '; --val:' + 10 +';' | safe: 'style'"
-            min="270" max="1000" [(ngModel)]="tabletopObject.overViewWidth" />
-            <input class="is-caret" [(ngModel)]="tabletopObject.overViewWidth" type="number" style="width:12em;"
-            min="270" max="1000" name="popWidth" (change)="chkPopWidth($event.target.value)"
-            style="color: #555;"/>
-        </div >
-        <div >
-          ポップアップ縦幅最大
-         <input type="range" [style]="'font-size: 0.8em; min-width: 1em; width:' + (10) + 'em; --min: 0; --max: ' + 0 + '; --val:' + 10 +';' | safe: 'style'"
-          min="250" max="1000" [(ngModel)]="tabletopObject.overViewMaxHeight" />
-          <input class="is-caret" [(ngModel)]="tabletopObject.overViewMaxHeight" type="number" style="width:12em;"
-          min="250" max="1000" name="popHeight" (change)="chkPopMaxHeight($event.target.value)"
-          style="color: #555;"/>
+        <div class="extra-setting" style="width:50%;display:table-cell;">
+          <div>コマ画像の高さを指定 <input type="checkbox" [(ngModel)]="tabletopObject.specifyKomaImageFlag" name="specifyKomaImageFlag" (click)="clickImageFlag()"></div>
+          <div>コマ画像の高さ
+            <input type="range" [style]="'font-size: 0.8em; min-width: 1em; width:' + (10) + 'em; --min: 0; --max: ' + 0 + '; --val:' + 1 +';' | safe: 'style'" min="50" max="750" [(ngModel)]="tabletopObject.komaImageHeignt" [disabled]="!tabletopObject.specifyKomaImageFlag" />
+            <input class="is-caret" [(ngModel)]="tabletopObject.komaImageHeignt" type="number" style="width:12em;color:#555;" min="50" max="750" name="komaHeight" (change)="chkKomaSize($event.target.value)" [disabled]="!tabletopObject.specifyKomaImageFlag" />
+          </div>
+          <div style="border-top:1px solid #888;margin-top:8px;padding-top:8px;">
+            平面コマ表示
+            <select [(ngModel)]="tabletopObject.flatIconFitMode" name="flatIconFitMode">
+              <option value="auto">自動</option><option value="center">中央クロップ</option><option value="top">上寄せクロップ</option><option value="contain">全体表示</option>
+            </select>
+            <div>ズーム <input type="range" min="50" max="180" [(ngModel)]="tabletopObject.flatIconZoom" /> <input class="is-caret" [(ngModel)]="tabletopObject.flatIconZoom" type="number" min="50" max="180" style="width:5em;color:#555;" />%</div>
+            <div>横位置 <input type="range" min="0" max="100" [(ngModel)]="tabletopObject.flatIconOffsetX" /> <input class="is-caret" [(ngModel)]="tabletopObject.flatIconOffsetX" type="number" min="0" max="100" style="width:5em;color:#555;" />%</div>
+            <div>縦位置 <input type="range" min="0" max="100" [(ngModel)]="tabletopObject.flatIconOffsetY" /> <input class="is-caret" [(ngModel)]="tabletopObject.flatIconOffsetY" type="number" min="0" max="100" style="width:5em;color:#555;" />%</div>
+            <div style="font-size:11px;color:#555;">自動: 縦長は上寄せ、横長は全体表示、通常は中央。</div>
+          </div>
         </div>
       </div>
-      <div class="extra-setting" style="width:50%;display:table-cell;">
-        コマ画像の高さを指定
-        <input type="checkbox" value="hideInventory"  [(ngModel)]="tabletopObject.specifyKomaImageFlag" name="specifyKomaImageFlag" (click)="clickImageFlag()">
-        <div >
-          コマ画像の高さ
-            <input type="range" [style]="'font-size: 0.8em; min-width: 1em; width:' + (10) + 'em; --min: 0; --max: ' + 0 + '; --val:' + 1 +';' | safe: 'style'"
-            min="50" max="750" [(ngModel)]="tabletopObject.komaImageHeignt" [disabled]="!tabletopObject.specifyKomaImageFlag" />
-            <input class="is-caret" [(ngModel)]="tabletopObject.komaImageHeignt" type="number" style="width:12em;"
-            min="50" max="750" name="popWidth" (change)="chkKomaSize($event.target.value)"
-            style="color: #555;" [disabled]="!tabletopObject.specifyKomaImageFlag"/>
-        </div >
-        
-      </div>
-      <div class="extra-setting light-source-section" style="border-top:1px solid #888;margin-top:8px;padding-top:8px;">
-        <b>光源設定</b>
-        <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
-          <label style="cursor:pointer;">
-            光源を有効にする
-            <input type="checkbox" [(ngModel)]="tabletopObject.lightSourceEnabled" name="lightSourceEnabled">
-          </label>
+    </div>
+
+    <!-- ===== アドバンスタブ ===== -->
+    <div *ngIf="characterSheetTab === 'advanced' && isAdvancedRoom" class="char-sheet-tab-content">
+      <div class="extra-setting" style="border:1px solid #777;padding:8px;margin-bottom:8px;">
+        <b>自動効果音・アニメーション</b>
+        <div style="font-size:12px;color:#666;margin-bottom:4px;">
+          チャット発言にトリガー文字列が含まれていると、音声とアニメーションが再生されます。<br>
+          予約語: [CRITICAL] [FUMBLE] [BUFF] [DICE]
         </div>
-        <ng-container *ngIf="tabletopObject.lightSourceEnabled">
-          <div>
-            光源タイプ
-            <select [(ngModel)]="tabletopObject.lightType" name="lightType">
-              <option value="torch">松明</option>
-              <option value="magic">魔法の光</option>
-              <option value="flashlight">懐中電灯</option>
-            </select>
-          </div>
-          <div>
-            照射形状
-            <select [(ngModel)]="tabletopObject.lightShape" name="lightShape">
-              <option value="circle">円（360度）</option>
-              <option value="cone">コーン</option>
-              <option value="laser">レーザー</option>
-            </select>
-          </div>
-          <div *ngIf="tabletopObject.lightShape === 'cone'">
-            コーン角度
-            <select [(ngModel)]="tabletopObject.lightConeAngle" name="lightConeAngle">
-              <option [ngValue]="60">狭い（60度）</option>
-              <option [ngValue]="90">広い（90度）</option>
-            </select>
-          </div>
-          <div>
-            照射半径（マス）
-            <input type="range" min="1" max="15" step="0.5" [(ngModel)]="tabletopObject.lightRadius" style="width:10em;">
-            <input class="is-caret" [(ngModel)]="tabletopObject.lightRadius" type="number" min="1" max="15" step="0.5" style="width:5em;color:#555;">
-          </div>
-          <div>
-            明るさ
-            <input type="range" min="0.1" max="1" step="0.05" [(ngModel)]="tabletopObject.lightIntensity" style="width:10em;">
-          </div>
-          <div>
-            光の色 <input type="color" [(ngModel)]="tabletopObject.lightColor" name="lightColor">
-          </div>
+        <div *ngFor="let trigger of getAutoSoundTriggers(); let i = index" style="display:flex;gap:4px;align-items:center;margin-bottom:3px;">
+          <input class="is-caret" style="width:8em;color:#444;" [(ngModel)]="trigger.keyword" (change)="commitAutoSoundTrigger(i)" placeholder="トリガー文字" />
+          <select style="width:9em;" [(ngModel)]="trigger.audioIdentifier" (change)="commitAutoSoundTrigger(i)">
+            <option value="">音なし</option>
+            <optgroup label="ジュークボックス">
+              <option *ngFor="let track of pinnedLibraryTracks" [value]="'server:' + track.id">{{track.name}}</option>
+            </optgroup>
+            <optgroup label="アップロード音声">
+              <option *ngFor="let audio of availableAudios" [value]="audio.identifier">{{audio.name || audio.identifier}}</option>
+            </optgroup>
+          </select>
+          <select style="width:7em;" [(ngModel)]="trigger.animation" (change)="commitAutoSoundTrigger(i)">
+            <option value="">アニメなし</option>
+            <option value="shake">揺れ</option>
+            <option value="jump">ジャンプ</option>
+            <option value="spin">回転</option>
+            <option value="lunge">突進</option>
+            <option value="flash">点滅</option>
+          </select>
+          <button type="button" style="font-size:0.8em;padding:2px 5px;" (click)="removeAutoSoundTrigger(i)">✕</button>
+        </div>
+        <button type="button" class="tab-setting small-font" style="font-size:0.8em;" (click)="addAutoSoundTrigger()">＋トリガー追加</button>
+      </div>
+      <div class="extra-setting" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
+        <button type="button" style="font-size:0.8em;" (click)="toggleMyPiece()">{{isMyPiece ? '自分のコマから外す' : '自分のコマにする'}}</button>
+        <label style="cursor:pointer;">視覚 <input type="checkbox" [(ngModel)]="tabletopObject.sightEnabled" name="sightEnabled"></label>
+        <ng-container *ngIf="tabletopObject.sightEnabled">
+          <select [ngModel]="tabletopObject.sightMode" (ngModelChange)="setSightMode($event)" name="sightMode" style="font-size:0.85em;">
+            <option value="normal">通常視界</option><option value="darkvision">暗視</option><option value="superiorDarkvision">上級暗視</option>
+          </select>
+          <input type="range" min="1" max="60" step="0.5" [(ngModel)]="tabletopObject.sightRadius" [disabled]="tabletopObject.sightUnlimited" style="width:7em;">
+          <label>無限 <input type="checkbox" [(ngModel)]="tabletopObject.sightUnlimited" name="sightUnlimited"></label>
         </ng-container>
-        <div style="border-top:1px solid #777;margin-top:8px;padding-top:8px;">
-          <b>上級暗闇設定</b>
-          <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
-            <label style="cursor:pointer;">
-              上級暗闇を発生させる
-              <input type="checkbox" [(ngModel)]="tabletopObject.superiorDarknessEnabled" name="superiorDarknessEnabled">
-            </label>
-          </div>
-          <ng-container *ngIf="tabletopObject.superiorDarknessEnabled">
-            <div>
-              暗闇半径（マス）
-              <input type="range" min="1" max="15" step="0.5" [(ngModel)]="tabletopObject.superiorDarknessRadius" style="width:10em;">
-              <input class="is-caret" [(ngModel)]="tabletopObject.superiorDarknessRadius" type="number" min="1" max="15" step="0.5" style="width:5em;color:#555;">
-            </div>
-            <div style="font-size:12px;line-height:1.5;">
-              通常視界と暗視を遮断します。上級暗視だけがこの暗闇を見通せます。
-            </div>
-          </ng-container>
-        </div>
+      </div>
+      <div class="extra-setting light-source-section" style="border-top:1px solid #888;padding-top:8px;">
+        <b>光源設定</b>
+        <div><label>光源を有効にする <input type="checkbox" [(ngModel)]="tabletopObject.lightSourceEnabled" name="lightSourceEnabled"></label></div>
+        <ng-container *ngIf="tabletopObject.lightSourceEnabled">
+          <div>光源タイプ <select [(ngModel)]="tabletopObject.lightType" name="lightType"><option value="torch">松明</option><option value="magic">魔法の光</option><option value="flashlight">懐中電灯</option></select></div>
+          <div>照射形状 <select [(ngModel)]="tabletopObject.lightShape" name="lightShape"><option value="circle">円（360度）</option><option value="cone">コーン</option><option value="laser">レーザー</option></select></div>
+          <div *ngIf="tabletopObject.lightShape === 'cone'">コーン角度 <select [(ngModel)]="tabletopObject.lightConeAngle" name="lightConeAngle"><option [ngValue]="60">狭い（60度）</option><option [ngValue]="90">広い（90度）</option></select></div>
+          <div>照射半径（マス）<input type="range" min="1" max="15" step="0.5" [(ngModel)]="tabletopObject.lightRadius" style="width:10em;"> <input class="is-caret" [(ngModel)]="tabletopObject.lightRadius" type="number" min="1" max="15" step="0.5" style="width:5em;color:#555;"></div>
+          <div>明るさ<input type="range" min="0.1" max="1" step="0.05" [(ngModel)]="tabletopObject.lightIntensity" style="width:10em;"></div>
+          <div>光の色 <input type="color" [(ngModel)]="tabletopObject.lightColor" name="lightColor"></div>
+        </ng-container>
+      </div>
+      <div style="border-top:1px solid #777;margin-top:8px;padding-top:8px;">
+        <b>上級暗闇設定</b>
+        <div><label>上級暗闇を発生させる <input type="checkbox" [(ngModel)]="tabletopObject.superiorDarknessEnabled" name="superiorDarknessEnabled"></label></div>
+        <ng-container *ngIf="tabletopObject.superiorDarknessEnabled">
+          <div>暗闇半径（マス）<input type="range" min="1" max="15" step="0.5" [(ngModel)]="tabletopObject.superiorDarknessRadius" style="width:10em;"> <input class="is-caret" [(ngModel)]="tabletopObject.superiorDarknessRadius" type="number" min="1" max="15" step="0.5" style="width:5em;color:#555;"></div>
+          <div style="font-size:12px;">通常視界と暗視を遮断します。上級暗視だけが見通せます。</div>
+        </ng-container>
       </div>
     </div>
   </ng-container>
@@ -427,7 +394,7 @@
   </ng-container>
 </div>
 
-  <div *ngIf="tabletopObject" class="flex-container">
+  <div *ngIf="tabletopObject && (!isCharacter || characterSheetTab === 'basic')" class="flex-container">
     <div *ngIf="0 < tabletopObject.imageFile?.url.length" class="box main-image-box">
       <img class="main-image" [src]="tabletopObject.imageFile.url | safe: 'resourceUrl'" [alt]="tabletopObject.imageFile.name"/>
     </div>

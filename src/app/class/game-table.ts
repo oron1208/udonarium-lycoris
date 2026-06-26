@@ -70,6 +70,7 @@ export class GameTable extends ObjectNode {
   @SyncVar() combatJoinSelectedCharacters: boolean = false; // 戦闘開始時、選択状態のキャラクターを参加対象にする
   @SyncVar() combatIncludeHiddenInventoryCharacters: boolean = true; // テーブルインベントリ非表示キャラクターも参加対象に含める
   @SyncVar() combatAutoBuffDecay: boolean = false; // ラウンド進行時にバフRを自動減少させる（アドバンスモード用）
+  @SyncVar() combatTurnMarkerVisible: boolean = true; // 手番マーカー（矢印）表示ON/OFF
 
   gridClipRect: {top: number, right: number, bottom: number, left: number} = null;
 

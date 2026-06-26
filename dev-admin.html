@@ -74,6 +74,8 @@
     code { background: #0e1118; border: 1px solid #30374a; border-radius: 4px; padding: 2px 4px; word-break: break-all; }
     .table-wrap { overflow-x: auto; }
     .pill { display: inline-block; padding: 2px 7px; border-radius: 999px; background: #263149; color: #cbd3e6; font-size: 12px; }
+    .thumb { max-width: 96px; max-height: 64px; border-radius: 4px; background: #0e1118; }
+    .small { font-size: 12px; padding: 5px 7px; margin: 2px 4px 2px 0; }
     .hidden { display: none; }
   </style>
 </head>
@@ -145,6 +147,42 @@
         <h2>接続一覧</h2>
         <div class="table-wrap"><table id="peersTable"></table></div>
       </div>
+
+      <div class="card" style="margin-top:16px;">
+        <div class="row">
+          <h2 style="margin:0;">保存メディア管理</h2>
+          <button class="secondary" id="mediaRefreshButton" style="flex:0 0 auto;">メディア更新</button>
+        </div>
+        <div class="row">
+          <div>
+            <label for="mediaKind">種類</label>
+            <select id="mediaKind">
+              <option value="all">すべて</option>
+              <option value="image">画像</option>
+              <option value="audio">音声</option>
+            </select>
+          </div>
+          <div>
+            <label for="mediaReferenced">参照状態</label>
+            <select id="mediaReferenced">
+              <option value="all">すべて</option>
+              <option value="yes">部屋から参照あり</option>
+              <option value="no">未参照</option>
+            </select>
+          </div>
+          <div>
+            <label for="mediaQuery">検索</label>
+            <input id="mediaQuery" placeholder="ファイル名 / hash / MIME">
+          </div>
+        </div>
+        <div class="status" id="mediaStatus">未取得</div>
+        <div class="table-wrap"><table id="mediaTable"></table></div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <h2>メディア操作ログ</h2>
+        <div class="table-wrap"><table id="mediaLogsTable"></table></div>
+      </div>
     </section>
   </main>
 
@@ -180,15 +218,28 @@ async function login() {
     setLoginStatus(`ログインOK / clientIp: ${data.clientIp || '-'} / 接続数: ${Array.isArray(data.peers) ? data.peers.length : data.peers}`, 'ok');
     showAdmin(true);
     renderStatus(data);
+    await refreshMedia();
   } catch (e) {
     showAdmin(false);
     setLoginStatus('ログイン失敗: ' + e.message, 'bad');
   }
 }
+function formatBytes(bytes) {
+  bytes = Number(bytes || 0);
+  if (bytes < 1024) return bytes + ' B';
+  const units = ['KB','MB','GB','TB'];
+  let value = bytes / 1024;
+  let unit = units.shift();
+  while (value >= 1024 && units.length) { value /= 1024; unit = units.shift(); }
+  return value.toFixed(value >= 10 ? 1 : 2) + ' ' + unit;
+}
+function formatDateMs(ms) { return ms ? new Date(ms).toLocaleString() : ''; }
 function renderStatus(data) {
   $('statusBox').innerHTML = `
     <span class="pill">rooms ${data.rooms ? data.rooms.length : 0}</span>
     <span class="pill">peers ${data.peers ? data.peers.length : 0}</span>
+    <span class="pill">media ${data.media ? data.media.count : '-'}</span>
+    <span class="pill">media size ${data.media ? formatBytes(data.media.bytes) : '-'}</span>
     <span class="pill">client ${escapeHtml(data.clientIp || '-')}</span>
   `;
   renderRooms(data.rooms || []);
@@ -227,6 +278,48 @@ function renderPeers(peers) {
           <button class="secondary" onclick="fillPeer('${escapeHtml(peer.peerId)}','${escapeHtml(peer.ip)}','${escapeHtml(peer.roomKey)}')">選択</button>
           <button class="danger" onclick="kick({peerId:'${escapeHtml(peer.peerId)}'})">キック</button>
         </td>
+      </tr>`).join('')}
+  `;
+}
+function renderMedia(media, total, totalBytes) {
+  $('mediaStatus').innerHTML = `
+    <span class="pill">表示 ${media.length} / ${total}</span>
+    <span class="pill">合計 ${formatBytes(totalBytes)}</span>
+  `;
+  $('mediaTable').innerHTML = `
+    <tr><th>preview</th><th>種類</th><th>名前/hash</th><th>サイズ</th><th>参照</th><th>更新</th><th>保存元</th><th>操作</th></tr>
+    ${media.map(item => {
+      const url = `/api/media/${encodeURIComponent(item.kind)}/${encodeURIComponent(item.hash)}`;
+      const preview = item.kind === 'image'
+        ? `<img class="thumb" src="${url}" loading="lazy">`
+        : `<audio controls preload="none" src="${url}" style="max-width:220px;"></audio>`;
+      const refs = (item.references || []).map(ref => `<div><code>${escapeHtml(ref.roomKey)}</code> peers:${escapeHtml(ref.activePeers)}</div>`).join('') || '<span class="muted">なし</span>';
+      return `<tr>
+        <td>${preview}</td>
+        <td>${escapeHtml(item.kind)}<br><span class="muted">${escapeHtml(item.type || '')}</span></td>
+        <td>${escapeHtml(item.name || '')}<br><code>${escapeHtml(item.hash)}</code></td>
+        <td>${formatBytes(item.size)}</td>
+        <td>${item.referenced ? '<span class="pill">参照あり</span>' : '<span class="pill">未参照</span>'}<br>${refs}</td>
+        <td>${escapeHtml(formatDateMs(item.mtimeMs))}</td>
+        <td><code>${escapeHtml(item.uploadedFrom || '')}</code></td>
+        <td>
+          <button class="small secondary" onclick="copyText(${jsString(item.hash)})">hashコピー</button>
+          <button class="small danger" onclick="deleteMedia(${jsString(item.kind)},${jsString(item.hash)},${jsString(item.name || '')})">削除</button>
+        </td>
+      </tr>`;
+    }).join('')}
+  `;
+}
+function renderMediaLogs(logs) {
+  $('mediaLogsTable').innerHTML = `
+    <tr><th>時刻</th><th>操作</th><th>種類</th><th>名前/hash</th><th>理由/IP</th></tr>
+    ${(logs || []).map(log => `
+      <tr>
+        <td>${escapeHtml(log.at || '')}</td>
+        <td>${escapeHtml(log.action || '')}</td>
+        <td>${escapeHtml(log.kind || '')}</td>
+        <td>${escapeHtml(log.name || '')}<br><code>${escapeHtml(log.hash || '')}</code></td>
+        <td>${escapeHtml(log.reason || log.ip || '')}<br>${log.bytes ? formatBytes(log.bytes) : ''}</td>
       </tr>`).join('')}
   `;
 }
@@ -269,9 +362,35 @@ async function refresh() {
   const data = await api('/api/dev/status');
   renderStatus(data);
 }
+async function refreshMedia() {
+  const params = new URLSearchParams({
+    kind: $('mediaKind').value,
+    referenced: $('mediaReferenced').value,
+    q: $('mediaQuery').value.trim(),
+    limit: '500',
+  });
+  const data = await api('/api/dev/media?' + params.toString());
+  renderMedia(data.media || [], data.total || 0, data.totalBytes || 0);
+  renderMediaLogs(data.logs || []);
+}
+window.copyText = async text => {
+  try { await navigator.clipboard.writeText(text); } catch (_) { prompt('コピーしてね', text); }
+};
+window.deleteMedia = async (kind, hash, name) => {
+  const reason = prompt(`メディアを削除します。\n${name || hash}\n理由を入力してください。`, '権利侵害のおそれ / 管理者削除');
+  if (reason == null) return;
+  if (!confirm(`本当に削除しますか？\n${kind} ${hash}`)) return;
+  await api('/api/dev/delete-media', {method:'POST', body: JSON.stringify({kind, hash, reason})});
+  await refreshMedia();
+  await refresh();
+};
 $('loginButton').onclick = login;
 $('forgetButton').onclick = () => { localStorage.removeItem('udonarium.devAdminToken'); $('token').value=''; showAdmin(false); setLoginStatus('保存トークンを削除しました', 'warn'); };
-$('refreshButton').onclick = refresh;
+$('refreshButton').onclick = async () => { await refresh(); await refreshMedia(); };
+$('mediaRefreshButton').onclick = refreshMedia;
+$('mediaKind').onchange = refreshMedia;
+$('mediaReferenced').onchange = refreshMedia;
+$('mediaQuery').onkeydown = event => { if (event.key === 'Enter') refreshMedia(); };
 $('announceButton').onclick = async () => {
   const text = $('announceText').value.trim();
   if (!text) return alert('表示文を入力してね');

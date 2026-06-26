@@ -12,6 +12,16 @@ export interface SortKeyEntry {
   order: SortOrder;
 }
 
+export interface InventorySortSetting {
+  enabled: boolean;
+  sortKeys: SortKeyEntry[];
+}
+
+export interface CustomInventoryDefinition {
+  id: string;
+  name: string;
+}
+
 function parseSortKeys(value: string): SortKeyEntry[] {
   if (!value || value.trim().length < 1) return [{ tag: 'HP', order: SortOrder.ASC }, { tag: 'name', order: SortOrder.ASC }];
   try {
@@ -23,6 +33,28 @@ function parseSortKeys(value: string): SortKeyEntry[] {
 
 function stringifySortKeys(keys: SortKeyEntry[]): string {
   return JSON.stringify(keys);
+}
+
+function parseInventorySortSettings(value: string): { [location: string]: InventorySortSetting } {
+  if (!value || value.trim().length < 1) return {};
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed && typeof parsed === 'object') return parsed;
+  } catch (e) { }
+  return {};
+}
+
+function parseCustomInventories(value: string): CustomInventoryDefinition[] {
+  if (!value || value.trim().length < 1) return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .filter(item => item && typeof item.id === 'string' && typeof item.name === 'string')
+        .map(item => ({ id: item.id, name: item.name }));
+    }
+  } catch (e) { }
+  return [];
 }
 
 @SyncObject('summary-setting')
@@ -45,6 +77,12 @@ export class DataSummarySetting extends GameObject implements InnerXml {
 
   // 新: N段ソートキー配列（JSON）
   @SyncVar() sortKeysJson: string = '';
+
+  // アドバンス: インベントリごとのソート設定（JSON）
+  @SyncVar() inventorySortSettingsJson: string = '';
+
+  // アドバンス: 追加インベントリ定義（JSON）
+  @SyncVar() customInventoriesJson: string = '';
 
   private _sortKeys: SortKeyEntry[] | null = null;
   get sortKeys(): SortKeyEntry[] {
@@ -73,6 +111,49 @@ export class DataSummarySetting extends GameObject implements InnerXml {
       this.sortTag2nd = keys[1].tag;
       this.sortOrder2nd = keys[1].order;
     }
+  }
+
+  private _inventorySortSettingsSource: string = null;
+  private _inventorySortSettings: { [location: string]: InventorySortSetting } = null;
+  get inventorySortSettings(): { [location: string]: InventorySortSetting } {
+    if (this._inventorySortSettings === null || this._inventorySortSettingsSource !== this.inventorySortSettingsJson) {
+      this._inventorySortSettingsSource = this.inventorySortSettingsJson;
+      this._inventorySortSettings = parseInventorySortSettings(this.inventorySortSettingsJson);
+    }
+    return this._inventorySortSettings;
+  }
+  set inventorySortSettings(settings: { [location: string]: InventorySortSetting }) {
+    this._inventorySortSettings = settings || {};
+    this._inventorySortSettingsSource = JSON.stringify(this._inventorySortSettings);
+    this.inventorySortSettingsJson = this._inventorySortSettingsSource;
+  }
+
+  getInventorySortSetting(location: string): InventorySortSetting {
+    const settings = this.inventorySortSettings;
+    if (!settings[location]) {
+      settings[location] = { enabled: true, sortKeys: this.sortKeys.map(key => ({ tag: key.tag, order: key.order })) };
+      this.inventorySortSettings = { ...settings };
+    }
+    return settings[location];
+  }
+
+  setInventorySortSetting(location: string, setting: InventorySortSetting) {
+    this.inventorySortSettings = { ...this.inventorySortSettings, [location]: setting };
+  }
+
+  private _customInventoriesSource: string = null;
+  private _customInventories: CustomInventoryDefinition[] = null;
+  get customInventories(): CustomInventoryDefinition[] {
+    if (this._customInventories === null || this._customInventoriesSource !== this.customInventoriesJson) {
+      this._customInventoriesSource = this.customInventoriesJson;
+      this._customInventories = parseCustomInventories(this.customInventoriesJson);
+    }
+    return this._customInventories;
+  }
+  set customInventories(inventories: CustomInventoryDefinition[]) {
+    this._customInventories = inventories || [];
+    this._customInventoriesSource = JSON.stringify(this._customInventories);
+    this.customInventoriesJson = this._customInventoriesSource;
   }
 
   @SyncVar() dataTag: string = 'HP MP SAN 敏捷度 精神力 情報';

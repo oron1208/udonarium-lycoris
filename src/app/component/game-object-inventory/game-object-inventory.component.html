@@ -27,6 +27,10 @@
 </ng-template>
 <ng-template #inventoryViewSetting>
   <ng-container *ngIf="isEdit">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:12px;">
+      <label style="cursor:pointer;"><input type="checkbox" [(ngModel)]="sortEnabled"> このインベントリでソートする</label>
+      <span style="color:#666;">({{getTabTitle(selectTab)}}専用)</span>
+    </div>
     <div *ngFor="let key of sortKeys; let i = index"
       draggable="true"
       (dragstart)="onSortKeyDragStart(i)"
@@ -34,24 +38,24 @@
       (dragleave)="onSortKeyDragLeave(i)"
       (drop)="onSortKeyDrop(i)"
       (dragend)="onSortKeyDragEnd()"
-      [style.opacity]="dragSortKeyIndex === i ? 0.5 : 1"
       [style.background]="dragOverIndex === i ? '#e3f2fd' : ''"
-      style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px; padding: 2px 4px; border-radius: 4px; cursor: grab;">
+      style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px; padding: 2px 4px; border-radius: 4px; cursor: grab;"
+      [style.opacity]="!sortEnabled ? 0.45 : (dragSortKeyIndex === i ? 0.5 : 1)">
       <span style="cursor: grab; font-size: 14px; color: #888;">⠿</span>
       <div style="font-size: 12px; min-width: 28px;">第{{i + 1}}</div>
-      <select style="flex: 1;" [(ngModel)]="sortKeys[i].tag" (ngModelChange)="updateSortKeyTag(i, $event)">
+      <select style="flex: 1;" [(ngModel)]="sortKeys[i].tag" (ngModelChange)="updateSortKeyTag(i, $event)" [disabled]="!sortEnabled">
         <option value="">（未設定）</option>
         <option *ngIf="key.tag && !availableTags.includes(key.tag)" [value]="key.tag">{{key.tag}}</option>
         <option *ngFor="let tag of availableTags" [value]="tag">{{tag}}</option>
       </select>
-      <select [(ngModel)]="sortKeys[i].order" (ngModelChange)="updateSortKeyOrder(i, $event)">
+      <select [(ngModel)]="sortKeys[i].order" (ngModelChange)="updateSortKeyOrder(i, $event)" [disabled]="!sortEnabled">
         <option value="ASC">昇順</option>
         <option value="DESC">降順</option>
       </select>
-      <button *ngIf="sortKeys.length > 1" style="font-size: 0.8em; padding: 2px 5px;" (click)="removeSortKey(i)">✕</button>
+      <button *ngIf="sortKeys.length > 1" style="font-size: 0.8em; padding: 2px 5px;" (click)="removeSortKey(i)" [disabled]="!sortEnabled">✕</button>
     </div>
     <div style="padding: 2px 0;">
-      <button class="tab-setting small-font" (click)="addSortKey()" style="font-size: 0.8em;">＋ソートキー追加</button>
+      <button class="tab-setting small-font" (click)="addSortKey()" style="font-size: 0.8em;" [disabled]="!sortEnabled">＋ソートキー追加</button>
     </div>
     <div style="font-size: 12px; padding-top: 4px;">表示項目</div>
     <input class="is-caret" style="width: 100%; box-sizing: border-box;" [(ngModel)]="dataTag" placeholder="スペース区切りでタグ名 スラッシュで改行 ex.「HP MP / メモ」" />
@@ -62,6 +66,8 @@
   <ng-container *ngIf="!isEdit">
     <table style="font-size: 0.8em;">
       <tr>
+        <th style="vertical-align:middle;">ソート:</th>
+        <td style="vertical-align:middle;">{{sortEnabled ? 'ON' : 'OFF'}}</td>
         <ng-container *ngFor="let key of sortKeys; let i = index; let last = last">
           <th style="vertical-align:middle;"> {{getSortKeyName(i)}}:</th>
           <td style="vertical-align:middle;">
@@ -89,6 +95,11 @@
   <ng-container *ngIf="!isMultiMove">
     <div>
       <button class="tab-setting small-font" (click)="toggleMultiMove()"><i class="material-icons small-font">settings</i>一括移動</button>
+      <ng-container *ngIf="isAdvancedRoom">
+        <input class="is-caret" style="font-size:0.8em;width:9em;margin-left:4px;" [(ngModel)]="newInventoryName" placeholder="追加インベントリ名" />
+        <button class="tab-setting small-font" (click)="addCustomInventory()">＋追加</button>
+        <button *ngIf="isCustomInventory(selectTab)" class="tab-setting small-font danger" (click)="removeCurrentCustomInventory()">この追加インベントリを削除</button>
+      </ng-container>
     </div>
   </ng-container>
 </ng-template>

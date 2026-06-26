@@ -12,7 +12,7 @@ import { TabletopObject } from '@udonarium/tabletop-object';
 import { ChatPaletteComponent } from 'component/chat-palette/chat-palette.component';
 import { GameCharacterSheetComponent } from 'component/game-character-sheet/game-character-sheet.component';
 import { ContextMenuAction, ContextMenuService, ContextMenuSeparator } from 'service/context-menu.service';
-import { GameObjectInventoryService } from 'service/game-object-inventory.service';
+import { GameObjectInventoryService, ObjectInventory } from 'service/game-object-inventory.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
 import { TabletopService } from 'service/tabletop.service';
@@ -35,6 +35,7 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
 
   isEdit: boolean = false;
   isMultiMove: boolean = false;
+  newInventoryName: string = '';
   disptimer = null;
 
   get sortTag(): string { return this.inventoryService.sortTag; }
@@ -55,8 +56,11 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
   get sortOrderName(): string { return this.sortOrder === SortOrder.ASC ? '昇順' : '降順'; }
   get sortOrderName2nd(): string { return this.sortOrder2nd === SortOrder.ASC ? '昇順' : '降順'; }
 
-  get sortKeys(): SortKeyEntry[] { return this.inventoryService.sortKeys; }
-  set sortKeys(keys: SortKeyEntry[]) { this.inventoryService.sortKeys = keys; }
+  get currentInventory(): ObjectInventory { return this.getInventory(this.selectTab); }
+  get sortEnabled(): boolean { return this.currentInventory.sortEnabled; }
+  set sortEnabled(enabled: boolean) { this.currentInventory.sortEnabled = enabled; this.currentInventory.refreshSort(); }
+  get sortKeys(): SortKeyEntry[] { return this.currentInventory.sortKeys; }
+  set sortKeys(keys: SortKeyEntry[]) { this.currentInventory.sortKeys = keys; this.currentInventory.refreshSort(); }
 
   getSortKeyName(index: number): string { return `第${index + 1}`; }
   getSortOrderName(order: SortOrder): string { return order === SortOrder.ASC ? '昇順' : '降順'; }
@@ -156,15 +160,17 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
         if (event.isSendFromSelf) this.changeDetector.markForCheck();
       })
       .on('UPDATE_INVENTORY', event => {
-        if (event.isSendFromSelf) this.changeDetector.markForCheck();
+        if (event.isSendFromSelf) {
+          this.updateInventoryTypes();
+          if (!this.inventoryTypes.includes(this.selectTab)) this.selectTab = 'common';
+          this.changeDetector.markForCheck();
+        }
       })
       .on('OPEN_NETWORK', event => {
-        this.inventoryTypes = ['table', 'common', Network.peerId, 'graveyard'];
-        if (!this.inventoryTypes.includes(this.selectTab)) {
-          this.selectTab = Network.peerId;
-        }
+        this.updateInventoryTypes();
+        if (!this.inventoryTypes.includes(this.selectTab)) this.selectTab = Network.peerId;
       });
-    this.inventoryTypes = ['table', 'common', Network.peerId, 'graveyard'];
+    this.updateInventoryTypes();
 
   }
 
@@ -190,8 +196,39 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
       case 'graveyard':
         return '墓場';
       default:
-        return '共有';
+        return this.inventoryService.customInventories.find(inventory => inventory.id === inventoryType)?.name || '共有';
     }
+  }
+
+  isCustomInventory(inventoryType: string): boolean {
+    return this.inventoryService.customInventories.some(inventory => inventory.id === inventoryType);
+  }
+
+  addCustomInventory() {
+    if (!this.isAdvancedRoom) return;
+    const created = this.inventoryService.addCustomInventory(this.newInventoryName);
+    if (!created) return;
+    this.newInventoryName = '';
+    this.updateInventoryTypes();
+    this.selectTab = created.id;
+    this.changeDetector.markForCheck();
+  }
+
+  removeCurrentCustomInventory() {
+    if (!this.isAdvancedRoom || !this.isCustomInventory(this.selectTab)) return;
+    const title = this.getTabTitle(this.selectTab);
+    const count = this.getGameObjects(this.selectTab).length;
+    if (!confirm(`${title}インベントリを削除しますか？\n中の${count}個のコマは共有インベントリへ移動します。`)) return;
+    this.inventoryService.removeCustomInventory(this.selectTab, 'common');
+    this.updateInventoryTypes();
+    this.selectTab = 'common';
+    this.changeDetector.markForCheck();
+  }
+
+  private updateInventoryTypes() {
+    const base = ['table', 'common', Network.peerId, 'graveyard'];
+    const custom = this.isAdvancedRoom ? this.inventoryService.customInventories.map(inventory => inventory.id) : [];
+    this.inventoryTypes = [...base.slice(0, 3), ...custom, 'graveyard'];
   }
 
   isSecretDetailsHidden(gameObject: GameObject): boolean {
@@ -227,16 +264,7 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
   }
 
   getInventory(inventoryType: string) {
-    switch (inventoryType) {
-      case 'table':
-        return this.inventoryService.tableInventory;
-      case Network.peerId:
-        return this.inventoryService.privateInventory;
-      case 'graveyard':
-        return this.inventoryService.graveyardInventory;
-      default:
-        return this.inventoryService.commonInventory;
-    }
+    return this.inventoryService.getInventoryByLocation(inventoryType);
   }
 
   getGameObjects(inventoryType: string): TabletopObject[] {
@@ -285,12 +313,7 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
       actions.push({ name: isHidden ? 'リモコンは秘匿中' : 'リモコンを表示', action: () => { if (!isHidden) this.showRemoteController(gameObject) } });
     }
     actions.push(ContextMenuSeparator);
-    let locations = [
-      { name: 'table', alias: 'テーブルに移動' },
-      { name: 'common', alias: '共有イベントリに移動' },
-      { name: Network.peerId, alias: '個人イベントリに移動' },
-      { name: 'graveyard', alias: '墓場に移動' }
-    ];
+    let locations = this.moveLocations();
     for (let location of locations) {
       if (gameObject.location.name === location.name) continue;
       actions.push({
@@ -368,12 +391,7 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
 
     let position = this.pointerDeviceService.pointers[0];
     let actions: ContextMenuAction[] = [];
-    let locations = [
-      { name: 'table', alias: 'テーブルに移動' },
-      { name: 'common', alias: '共有イベントリに移動' },
-      { name: Network.peerId, alias: '個人イベントリに移動' },
-      { name: 'graveyard', alias: '墓場に移動' }
-    ];
+    let locations = this.moveLocations();
     for (let location of locations) {
       if (this.selectTab === location.name) continue;
       actions.push({
@@ -420,6 +438,21 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
     for (const gameObject of inGraveyard) {
       this.deleteGameObject(gameObject);
     }
+  }
+
+  private moveLocations(): { name: string, alias: string }[] {
+    const locations = [
+      { name: 'table', alias: 'テーブルに移動' },
+      { name: 'common', alias: '共有イベントリに移動' },
+      { name: Network.peerId, alias: '個人イベントリに移動' }
+    ];
+    if (this.isAdvancedRoom) {
+      for (const inventory of this.inventoryService.customInventories) {
+        locations.push({ name: inventory.id, alias: `${inventory.name}インベントリに移動` });
+      }
+    }
+    locations.push({ name: 'graveyard', alias: '墓場に移動' });
+    return locations;
   }
 
   private cloneGameObject(gameObject: TabletopObject) {

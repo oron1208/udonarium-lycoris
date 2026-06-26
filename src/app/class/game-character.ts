@@ -33,6 +33,13 @@ export class GameCharacter extends TabletopObject {
   @SyncVar() specifyKomaImageFlag: boolean = false;
   @SyncVar() komaImageHeignt: number = 100;
 
+  // 平面/俯瞰アイコン表示調整
+  // auto: 画像比率で自動 / center: 中央クロップ / top: 上寄せクロップ / contain: 全体表示
+  @SyncVar() flatIconFitMode: string = 'auto';
+  @SyncVar() flatIconZoom: number = 100;
+  @SyncVar() flatIconOffsetX: number = 50;
+  @SyncVar() flatIconOffsetY: number = 50;
+
   @SyncVar() chatColorCode: string[]  = ["#000000","#FF0000","#0099FF"];
   @SyncVar() syncDummyCounter: number = 0;
   @SyncVar() statusMarkerIds: string = '[]';
@@ -58,6 +65,9 @@ export class GameCharacter extends TabletopObject {
 
   // 自動計算バフ（アドバンスモード用）
   @SyncVar() autoBuffsJson: string = '[]';
+
+  // 自動効果音・アニメーショントリガー（アドバンスモード用）
+  @SyncVar() autoSoundTriggersJson: string = '[]';
 
   _targeted: boolean = false;
   get targeted(): boolean {
@@ -942,6 +952,40 @@ export class GameCharacter extends TabletopObject {
 
   // ===== 自動計算バフ（アドバンスモード用） =====
 
+  // ===== 自動効果音・アニメーショントリガー（アドバンスモード用） =====
+
+  getAutoSoundTriggers(): AutoSoundTrigger[] {
+    try {
+      return JSON.parse(this.autoSoundTriggersJson || '[]');
+    } catch { return []; }
+  }
+
+  saveAutoSoundTriggers(triggers: AutoSoundTrigger[]) {
+    this.autoSoundTriggersJson = JSON.stringify(triggers || []);
+  }
+
+  addAutoSoundTrigger(trigger: AutoSoundTrigger) {
+    const triggers = this.getAutoSoundTriggers();
+    triggers.push(trigger);
+    this.saveAutoSoundTriggers(triggers);
+  }
+
+  removeAutoSoundTrigger(index: number) {
+    const triggers = this.getAutoSoundTriggers();
+    if (index < 0 || index >= triggers.length) return;
+    triggers.splice(index, 1);
+    this.saveAutoSoundTriggers(triggers);
+  }
+
+  updateAutoSoundTrigger(index: number, trigger: AutoSoundTrigger) {
+    const triggers = this.getAutoSoundTriggers();
+    if (index < 0 || index >= triggers.length) return;
+    triggers[index] = trigger;
+    this.saveAutoSoundTriggers(triggers);
+  }
+
+  // ===== 自動計算バフ（アドバンスモード用） =====
+
   getAutoBuffs(): AutoBuffEntry[] {
     try {
       return JSON.parse(this.autoBuffsJson || '[]');
@@ -1151,6 +1195,16 @@ export class GameCharacter extends TabletopObject {
     return { netDelta, isModified };
   }
 
+}
+
+/** 自動効果音・アニメーショントリガー */
+export type AutoSoundAnimationType = '' | 'shake' | 'jump' | 'spin' | 'lunge' | 'flash';
+
+export interface AutoSoundTrigger {
+  id: string;
+  keyword: string;          // トリガー文字列（チャット発言に含まれてたら発火）or 予約語 [CRITICAL] [FUMBLE] [BUFF]
+  audioIdentifier: string;  // 音声ファイル識別子（空なら音なし）
+  animation: AutoSoundAnimationType; // CSSアニメーション種別（空ならアニメなし）
 }
 
 /** 自動計算バフの操作タイプ */

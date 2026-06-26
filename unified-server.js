@@ -13,6 +13,7 @@ const PORT = Number(process.env.PORT || 12081);
 const WEB_ROOT = path.join(__dirname, 'dist', 'udonarium-lycoris');
 const DATA_ROOT = path.join(__dirname, 'data', 'rooms');
 const MEDIA_ROOT = path.join(__dirname, 'data', 'media');
+const MEDIA_AUDIT_LOG = path.join(__dirname, 'data', 'media-audit.log');
 const MAX_SIGNAL_BYTES = 1024 * 1024;
 const MAX_MEDIA_BYTES = Number(process.env.MAX_MEDIA_BYTES || 100 * 1024 * 1024);
 const HEARTBEAT_MS = 30000;
@@ -21,8 +22,9 @@ const SAVE_MAX_DEBOUNCE_MS = Number(process.env.ROOM_SAVE_MAX_DEBOUNCE_MS || 100
 const EMPTY_ROOM_LOBBY_MS = Number(process.env.EMPTY_ROOM_LOBBY_MS || 5 * 60 * 1000);
 const ROOM_GC_MS = Number(process.env.ROOM_GC_MS || 24 * 60 * 60 * 1000);
 const ROOM_GC_INTERVAL_MS = Number(process.env.ROOM_GC_INTERVAL_MS || 60 * 60 * 1000);
-const MEDIA_GC_MS = Number(process.env.MEDIA_GC_MS || ROOM_GC_MS);
+const MEDIA_GC_MS = Number(process.env.MEDIA_GC_MS || 90 * 24 * 60 * 60 * 1000);
 const MEDIA_GC_INTERVAL_MS = Number(process.env.MEDIA_GC_INTERVAL_MS || ROOM_GC_INTERVAL_MS);
+const MEDIA_MAX_TOTAL_BYTES = Number(process.env.MEDIA_MAX_TOTAL_BYTES || 20 * 1024 * 1024 * 1024);
 const MAX_ROOM_EVENTS = Number(process.env.MAX_ROOM_EVENTS || 5000);
 const EVENTS_SNAPSHOT_THRESHOLD = Number(process.env.EVENTS_SNAPSHOT_THRESHOLD || 200);
 const MIN_SNAPSHOT_SAVE_INTERVAL_MS = Number(process.env.MIN_SNAPSHOT_SAVE_INTERVAL_MS || 15000);
@@ -77,6 +79,7 @@ let stats = {
 };
 
 fs.mkdirSync(DATA_ROOT, { recursive: true });
+fs.mkdirSync(path.dirname(MEDIA_AUDIT_LOG), { recursive: true });
 fs.mkdirSync(path.join(MEDIA_ROOT, 'image'), { recursive: true });
 fs.mkdirSync(path.join(MEDIA_ROOT, 'audio'), { recursive: true });
 loadRoomStates();
@@ -277,11 +280,75 @@ function countSavedMedia() {
   return count;
 }
 
-function cleanupUnreferencedMedia() {
-  const referenced = collectReferencedMediaHashes();
-  const now = Date.now();
-  let deleted = 0;
+function safeReadMediaMeta(kind, hash) {
+  try {
+    const meta = JSON.parse(fs.readFileSync(mediaMetaPath(kind, hash), 'utf8'));
+    return meta && typeof meta === 'object' ? meta : {};
+  } catch (_) {
+    return {};
+  }
+}
 
+function appendMediaAudit(action, detail = {}) {
+  const entry = { at: new Date().toISOString(), action, ...detail };
+  try {
+    fs.appendFileSync(MEDIA_AUDIT_LOG, `${JSON.stringify(entry)}\n`);
+  } catch (error) {
+    console.warn('[media-audit] failed to write log', error.message);
+  }
+  return entry;
+}
+
+function collectMediaReferences() {
+  const references = new Map();
+  for (const room of roomStates.values()) {
+    if (!room || room.roomKey === 'lobby') continue;
+    const text = JSON.stringify({ snapshot: room.snapshot || null, events: room.events || [] });
+    const seenInRoom = new Set();
+    let match;
+    MEDIA_HASH_PATTERN.lastIndex = 0;
+    while ((match = MEDIA_HASH_PATTERN.exec(text))) seenInRoom.add(match[0].toLowerCase());
+    for (const hash of seenInRoom) {
+      if (!references.has(hash)) references.set(hash, []);
+      references.get(hash).push({
+        roomKey: room.roomKey,
+        seq: room.seq || 0,
+        snapshotSeq: room.snapshotSeq || 0,
+        updatedAt: room.updatedAt || null,
+        activePeers: activePeerCountInRoom(room.roomKey),
+      });
+    }
+  }
+  return references;
+}
+
+function readMediaAuditLogs(limit = 200, filter = {}) {
+  let text = '';
+  try {
+    text = fs.readFileSync(MEDIA_AUDIT_LOG, 'utf8');
+  } catch (error) {
+    if (error.code !== 'ENOENT') console.warn('[media-audit] failed to read log', error.message);
+    return [];
+  }
+  const kind = filter.kind || '';
+  const hash = filter.hash || '';
+  const max = Math.max(1, Math.min(Number(limit) || 200, 1000));
+  const lines = text.trim().split('\n').filter(Boolean).slice(-max * 4);
+  const logs = [];
+  for (const line of lines) {
+    try {
+      const item = JSON.parse(line);
+      if (kind && item.kind !== kind) continue;
+      if (hash && item.hash !== hash) continue;
+      logs.push(item);
+    } catch (_) { }
+  }
+  return logs.slice(-max).reverse();
+}
+
+function collectMediaEntries() {
+  const entries = [];
+  const references = collectMediaReferences();
   for (const kind of ['image', 'audio']) {
     const dir = path.join(MEDIA_ROOT, kind);
     let names = [];
@@ -294,31 +361,91 @@ function cleanupUnreferencedMedia() {
 
     for (const name of names) {
       if (!/^[a-f0-9]{64}$/i.test(name)) continue;
-      const hash = name.toLowerCase();
-      if (referenced.has(hash)) continue;
-
       const file = path.join(dir, name);
-      const metaFile = `${file}.json`;
-      let ageMs = 0;
       try {
         const stat = fs.statSync(file);
-        ageMs = now - stat.mtimeMs;
+        const hash = name.toLowerCase();
+        const meta = safeReadMediaMeta(kind, hash);
+        const refs = references.get(hash) || [];
+        entries.push({
+          kind,
+          hash,
+          file,
+          metaFile: `${file}.json`,
+          size: stat.size,
+          mtimeMs: stat.mtimeMs,
+          ctimeMs: stat.ctimeMs,
+          atimeMs: stat.atimeMs,
+          name: meta.name || hash,
+          type: meta.type || '',
+          bytes: Number(meta.bytes || stat.size),
+          updatedAt: meta.updatedAt || null,
+          createdAt: meta.createdAt || meta.updatedAt || null,
+          uploadedFrom: meta.uploadedFrom || '',
+          userAgent: meta.userAgent || '',
+          referenced: refs.length > 0,
+          references: refs,
+        });
       } catch (error) {
         if (error.code !== 'ENOENT') console.warn('[media-gc] failed to stat media', file, error.message);
-        continue;
-      }
-      if (ageMs <= MEDIA_GC_MS) continue;
-
-      try {
-        fs.unlinkSync(file);
-        fs.rmSync(metaFile, { force: true });
-        deleted++;
-        console.log(`[media-gc] deleted unreferenced ${kind} hash=${hash}`);
-      } catch (error) {
-        if (error.code !== 'ENOENT') console.warn('[media-gc] failed to delete media', file, error.message);
       }
     }
   }
+  return entries;
+}
+
+function deleteMediaEntry(entry, reason) {
+  try {
+    const meta = safeReadMediaMeta(entry.kind, entry.hash);
+    fs.unlinkSync(entry.file);
+    fs.rmSync(entry.metaFile, { force: true });
+    appendMediaAudit('delete', { kind: entry.kind, hash: entry.hash, reason, name: meta.name || entry.name || entry.hash, bytes: entry.size || meta.bytes || 0 });
+    console.log(`[media-gc] deleted ${reason} ${entry.kind} hash=${entry.hash}`);
+    return true;
+  } catch (error) {
+    if (error.code !== 'ENOENT') console.warn('[media-gc] failed to delete media', entry.file, error.message);
+    return false;
+  }
+}
+
+function cleanupMediaCapacity(entries, referenced) {
+  if (!Number.isFinite(MEDIA_MAX_TOTAL_BYTES) || MEDIA_MAX_TOTAL_BYTES <= 0) return 0;
+  let totalBytes = entries.reduce((sum, entry) => sum + entry.size, 0);
+  if (totalBytes <= MEDIA_MAX_TOTAL_BYTES) return 0;
+  let deleted = 0;
+  const oldestFirst = entries.slice().sort((a, b) => a.mtimeMs - b.mtimeMs);
+  const passes = [
+    { reason: 'capacity-unreferenced', allow: entry => !referenced.has(entry.hash) },
+    { reason: 'capacity-oldest', allow: () => true },
+  ];
+  for (const pass of passes) {
+    for (const entry of oldestFirst) {
+      if (totalBytes <= MEDIA_MAX_TOTAL_BYTES) return deleted;
+      if (!pass.allow(entry)) continue;
+      if (!fs.existsSync(entry.file)) continue;
+      if (deleteMediaEntry(entry, pass.reason)) {
+        totalBytes -= entry.size;
+        deleted++;
+      }
+    }
+  }
+  return deleted;
+}
+
+function cleanupUnreferencedMedia() {
+  const referenced = collectReferencedMediaHashes();
+  const now = Date.now();
+  let deleted = 0;
+
+  const entries = collectMediaEntries();
+  for (const entry of entries) {
+    if (referenced.has(entry.hash)) continue;
+    const ageMs = now - entry.mtimeMs;
+    if (ageMs <= MEDIA_GC_MS) continue;
+    if (deleteMediaEntry(entry, 'expired-unreferenced')) deleted++;
+  }
+
+  deleted += cleanupMediaCapacity(entries, referenced);
 
   if (deleted > 0) stats.deletedMedia += deleted;
   stats.savedMedia = countSavedMedia();
@@ -661,6 +788,13 @@ function handleMediaGet(req, res, kind, hash) {
     res.end('Not found');
     return;
   }
+  try {
+    const now = new Date();
+    fs.utimesSync(file, now, now);
+    if (fs.existsSync(metaFile)) fs.utimesSync(metaFile, now, now);
+  } catch (error) {
+    if (error.code !== 'ENOENT') console.warn('[media] failed to touch media', kind, hash, error.message);
+  }
   let meta = {};
   try { meta = JSON.parse(fs.readFileSync(metaFile, 'utf8')); } catch (_) { }
   const contentType = meta.type || (kind === 'image' ? 'image/*' : 'audio/*');
@@ -933,7 +1067,64 @@ async function handleDeveloperApi(req, res, requestPath) {
 
   try {
     if (req.method === 'GET' && requestPath === '/api/dev/status') {
-      sendJson(res, 200, { ok: true, enabled: true, clientIp: getClientIp(req), peers: getPeerDetails(), rooms: getRoomDetails() });
+      const mediaEntries = collectMediaEntries();
+      sendJson(res, 200, {
+        ok: true,
+        enabled: true,
+        clientIp: getClientIp(req),
+        peers: getPeerDetails(),
+        rooms: getRoomDetails(),
+        media: {
+          count: mediaEntries.length,
+          bytes: mediaEntries.reduce((sum, entry) => sum + entry.size, 0),
+          maxBytes: MEDIA_MAX_TOTAL_BYTES,
+          gcAfterMs: MEDIA_GC_MS,
+          deletedTotal: stats.deletedMedia,
+        },
+      });
+      return true;
+    }
+
+    if (req.method === 'GET' && requestPath === '/api/dev/media') {
+      const url = new URL(req.url, 'http://localhost');
+      const kind = String(url.searchParams.get('kind') || 'all');
+      const referenced = String(url.searchParams.get('referenced') || 'all');
+      const q = String(url.searchParams.get('q') || '').trim().toLowerCase();
+      const limit = Math.max(1, Math.min(Number(url.searchParams.get('limit') || 500), 2000));
+      let media = collectMediaEntries();
+      if (kind === 'image' || kind === 'audio') media = media.filter(entry => entry.kind === kind);
+      if (referenced === 'yes') media = media.filter(entry => entry.referenced);
+      if (referenced === 'no') media = media.filter(entry => !entry.referenced);
+      if (q) media = media.filter(entry => entry.hash.includes(q) || String(entry.name || '').toLowerCase().includes(q) || String(entry.type || '').toLowerCase().includes(q));
+      media.sort((a, b) => b.mtimeMs - a.mtimeMs);
+      const totalBytes = media.reduce((sum, entry) => sum + entry.size, 0);
+      sendJson(res, 200, { ok: true, media: media.slice(0, limit), total: media.length, totalBytes, logs: readMediaAuditLogs(80) });
+      return true;
+    }
+
+    if (req.method === 'GET' && requestPath === '/api/dev/media-logs') {
+      const url = new URL(req.url, 'http://localhost');
+      const limit = Math.max(1, Math.min(Number(url.searchParams.get('limit') || 200), 1000));
+      const kind = String(url.searchParams.get('kind') || '');
+      const hash = String(url.searchParams.get('hash') || '').toLowerCase();
+      sendJson(res, 200, { ok: true, logs: readMediaAuditLogs(limit, { kind, hash }) });
+      return true;
+    }
+
+    if (req.method === 'POST' && requestPath === '/api/dev/delete-media') {
+      const body = JSON.parse(await readRequestBody(req, 64 * 1024) || '{}');
+      const kind = String(body.kind || '');
+      const hash = String(body.hash || '').toLowerCase();
+      const reason = String(body.reason || 'admin-delete').slice(0, 256) || 'admin-delete';
+      if (!isValidMediaRequest(kind, hash)) return sendJson(res, 400, { ok: false, error: 'invalid-media' });
+      const file = mediaPath(kind, hash);
+      if (!fs.existsSync(file)) return sendJson(res, 404, { ok: false, error: 'media-not-found' });
+      const stat = fs.statSync(file);
+      const entry = { kind, hash, file, metaFile: mediaMetaPath(kind, hash), size: stat.size };
+      const deleted = deleteMediaEntry(entry, reason);
+      if (deleted) stats.deletedMedia++;
+      stats.savedMedia = countSavedMedia();
+      sendJson(res, 200, { ok: true, deleted, kind, hash, reason });
       return true;
     }
 
@@ -1151,6 +1342,9 @@ function handleMediaPut(req, res, kind, hash) {
   const finalFile = mediaPath(kind, hash);
   const metaFile = mediaMetaPath(kind, hash);
   if (fs.existsSync(finalFile)) {
+    const stat = fs.statSync(finalFile);
+    const meta = safeReadMediaMeta(kind, hash);
+    appendMediaAudit('dedupe', { kind, hash: hash.toLowerCase(), name: meta.name || hash, bytes: stat.size, ip: getClientIp(req) });
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache' });
     res.end(JSON.stringify({ ok: true, exists: true, hash }));
     req.resume();
@@ -1207,7 +1401,20 @@ function handleMediaPut(req, res, kind, hash) {
     fs.renameSync(tmp, finalFile);
     let name;
     try { name = decodeURIComponent(String(req.headers['x-file-name'] || hash)); } catch (e) { name = hash; }
-    fs.writeFileSync(metaFile, JSON.stringify({ hash, kind, type: contentType, name, bytes, updatedAt: new Date().toISOString() }));
+    const now = new Date().toISOString();
+    const meta = {
+      hash,
+      kind,
+      type: contentType,
+      name,
+      bytes,
+      createdAt: now,
+      updatedAt: now,
+      uploadedFrom: getClientIp(req),
+      userAgent: String(req.headers['user-agent'] || '').slice(0, 512),
+    };
+    fs.writeFileSync(metaFile, JSON.stringify(meta));
+    appendMediaAudit('save', { kind, hash: hash.toLowerCase(), name, bytes, type: contentType, ip: meta.uploadedFrom });
     console.log(`[media] save ${kind} hash=${hash} bytes=${bytes}`);
     res.writeHead(201, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache' });
     res.end(JSON.stringify({ ok: true, hash, bytes }));

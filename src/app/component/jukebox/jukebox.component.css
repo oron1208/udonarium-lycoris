@@ -2,6 +2,37 @@
   display: block;
 }
 
+.auto-sound-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  margin-top: 4px;
+  background: rgba(255, 224, 178, 0.85);
+  border: 1px solid #ff9800;
+  border-radius: 4px;
+}
+
+.auto-sound-badge {
+  font-size: 12px;
+  font-weight: bold;
+  color: #e65100;
+}
+
+.auto-sound-stop-btn {
+  font-size: 12px;
+  padding: 3px 10px;
+  background: #f44336;
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.auto-sound-stop-btn:hover {
+  background: #d32f2f;
+}
+
 .jukebox-section {
   margin-bottom: 4px;
 }

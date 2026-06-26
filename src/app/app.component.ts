@@ -28,6 +28,7 @@ import { Jukebox } from '@udonarium/Jukebox';
 import { AudioLibraryService } from 'service/audio-library.service';
 import { PeerCursor } from '@udonarium/peer-cursor';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
+import { AutoSoundService } from 'service/auto-sound.service';
 import { ReloadCheck } from '@udonarium/reload-check';
 import { TableSelecter } from '@udonarium/table-selecter';
 import { TextNote } from '@udonarium/text-note';
@@ -170,6 +171,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
     // AudioLibraryServiceをJukeboxに注入
     Jukebox.setAudioLibraryService(this.audioLibraryService);
+    (window as any).__audioLibraryService = this.audioLibraryService;
     // 初回フェッチ
     this.audioLibraryService.fetchTracks();
 
@@ -221,6 +223,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
     let soundEffect: SoundEffect = new SoundEffect('SoundEffect');
     soundEffect.initialize();
+    AutoSoundService.init();
 
     ChatTabList.instance.addChatTab('メインタブ', 'MainTab');
     ChatTabList.instance.addChatTab('サブタブ', 'SubTab');
@@ -386,6 +389,14 @@ export class AppComponent implements AfterViewInit, OnDestroy {
           Network.open();
         });
       })
+      .on('SERVER_MEDIA_MISSING', event => {
+        this.ngZone.run(() => {
+          const kind = event.data && event.data.kind === 'image' ? '画像' : '音声';
+          const identifier = event.data && event.data.identifier ? String(event.data.identifier).slice(0, 12) : '';
+          const sysTab = ChatTabList.instance ? ChatTabList.instance.systemMessageTab : null;
+          this.chatMessageService.sendSystemMessage(sysTab, `${kind}データはサーバーから削除されました。${identifier ? ` (${identifier}...)` : ''}`, '#b71c1c');
+        });
+      })
       .on('CONNECT_PEER', event => {
         if (event.isSendFromSelf) this.chatMessageService.calibrateTimeOffset();
         this.lazyNgZoneUpdate(event.isSendFromSelf);
@@ -401,9 +412,27 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     setTimeout(() => {
       this.panelService.open(PeerMenuComponent, { width: 500, height: 450, left: 100 });
       this.panelService.open(ChatWindowComponent, { width: 700, height: 400, left: 100, top: 450 });
+      this.showRightsNoticeOnStartup();
     }, 0);
     this.startDeveloperClientBridge();
     this.installMakoDebugDump();
+  }
+
+  private showRightsNoticeOnStartup() {
+    const text = [
+      '画像・音楽などの素材アップロードについて',
+      '',
+      'このツールでは、部屋内での表示/再生・参加者間の同期・再接続のため、画像・音楽などの素材が各参加者へ共有され、サーバーに保存される場合があります。',
+      '',
+      'アップロードや部屋データの読み込みで共有される素材は、自分で権利を持つ素材、または利用許諾・利用規約上アップロード/共有が許可された素材だけにしてください。',
+      '部屋に参加している人が意図せず素材共有に関わる場合があります。権利侵害のおそれがある素材は使用しないでください。',
+      '権利侵害のおそれがある素材は、管理者判断で削除される場合があります。',
+      '',
+      '音楽のダウンロード機能は提供していません。',
+      '',
+      '内容を確認したらOKを押して進んでください。'
+    ].join('\n');
+    this.modalService.open(TextViewComponent, { title: '素材アップロードに関する注意', text });
   }
 
   private installMakoDebugDump() {
