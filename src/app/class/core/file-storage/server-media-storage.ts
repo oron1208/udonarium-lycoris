@@ -36,14 +36,16 @@ export class ServerMediaStorage {
     if (this.uploading.has(key)) return;
     this.uploading.add(key);
     try {
-      const response = await fetch(`/api/media/${kind}/${encodeURIComponent(identifier)}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': blob.type || 'application/octet-stream',
-          'X-File-Name': encodeURIComponent(name || identifier),
-        },
-        body: blob,
-      });
+      const uploadUrl = `/api/media/${kind}/${encodeURIComponent(identifier)}`;
+      const uploadHeaders = {
+        'Content-Type': blob.type || 'application/octet-stream',
+        'X-File-Name': encodeURIComponent(name || identifier),
+      };
+      // Try PUT first, fall back to POST for servers that reject PUT (e.g. shared hosting)
+      let response = await fetch(uploadUrl, { method: 'PUT', headers: uploadHeaders, body: blob });
+      if (response.status === 405) {
+        response = await fetch(uploadUrl, { method: 'POST', headers: uploadHeaders, body: blob });
+      }
       if (!response.ok && response.status !== 409) console.warn(`media upload failed ${kind}:${identifier}`, response.status, await response.text().catch(() => ''));
     } catch (error) {
       console.warn(`media upload failed ${kind}:${identifier}`, error);
