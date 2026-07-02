@@ -104,12 +104,79 @@ export class FileArchiver {
   private async handleImage(file: File) {
     if (file.type.indexOf('image/') < 0) return;
     if (!this.reloadCheck.isLoadOk() ) return;
+    
+    let processedFile = file;
+    // 2MB超の場合は自動圧縮
     if (this.maxImageSize < file.size) {
-      console.warn(`File size limit exceeded. -> ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
-      return;
+      console.log(`Image compression: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB) → compressing...`);
+      const compressed = await this.compressImage(file);
+      if (compressed && compressed.size <= this.maxImageSize) {
+        console.log(`Image compressed: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressed.size / 1024 / 1024).toFixed(2)}MB)`);
+        processedFile = compressed;
+      } else if (compressed) {
+        // 圧縮しても2MB超の場合でも、元より小さければ許可
+        if (compressed.size < file.size) {
+          console.log(`Image compressed (still large): ${file.name} (${(compressed.size / 1024 / 1024).toFixed(2)}MB)`);
+          processedFile = compressed;
+        } else {
+          console.warn(`Image compression failed to reduce size: ${file.name}`);
+          return;
+        }
+      } else {
+        console.warn(`Image compression failed: ${file.name}`);
+        return;
+      }
     }
-    console.log(file.name + ' type:' + file.type);
-    await ImageStorage.instance.addAsync(file);
+    
+    console.log(processedFile.name + ' type:' + processedFile.type);
+    await ImageStorage.instance.addAsync(processedFile);
+  }
+
+  /**
+   * 画像を自動圧縮する（Canvas経由）
+   * - 最大幅1920px、最大高さ1920pxにリサイズ
+   * - JPEG/WebP → quality 0.85で再圧縮
+   * - PNG → PNGのまま（透過保持）
+   */
+  private async compressImage(file: File, maxDim = 1920, quality = 0.85): Promise<File | null> {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          // サイズオーバー時のみリサイズ
+          if (width > maxDim || height > maxDim) {
+            const ratio = Math.min(maxDim / width, maxDim / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // フォーマット選択
+          const isPng = file.type === 'image/png';
+          const mimeType = isPng ? 'image/png' : 'image/jpeg';
+          
+          canvas.toBlob((blob) => {
+            if (blob && blob.size < file.size) {
+              const compressed = new File([blob], file.name, { type: mimeType });
+              resolve(compressed);
+            } else {
+              // 圧縮結果が元より大きくなったらnull
+              resolve(null);
+            }
+          }, mimeType, isPng ? undefined : quality);
+        };
+        img.onerror = () => resolve(null);
+        img.src = e.target.result as string;
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
   }
 
   private async handleAudio(file: File) {

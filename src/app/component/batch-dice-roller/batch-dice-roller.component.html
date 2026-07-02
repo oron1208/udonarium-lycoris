@@ -35,6 +35,16 @@
     </div>
   </div>
 
+  <!-- オプション -->
+  <div class="bdr-options">
+    <label class="bdr-toggle" title="ダイス部分を1回だけ振り、全コマで同じ結果を使います。修正値は各コマごとに適用されます。">
+      <input type="checkbox" [(ngModel)]="singleDiceRoll">
+      <span>🎲 ダイス1回のみ</span>
+    </label>
+    <span class="bdr-toggle-note" *ngIf="singleDiceRoll">⚠️ 全コマ共通のダイス出目を使用・テーブル設定のダイスボットを優先</span>
+    <span class="bdr-toggle-note" style="color:#888">💡 :HP+5 等のリソース編集コマンドは各コマに個別適用</span>
+  </div>
+
   <!-- ロールボタン -->
   <button type="button" class="bdr-roll-btn" [disabled]="isRolling || !diceExpression.trim()"
     (click)="rollAll()">
@@ -43,6 +53,11 @@
 
   <!-- 結果表示 -->
   <div class="bdr-results" *ngIf="results.length > 0">
+    <!-- ダイス1回のみの結果サイマリー -->
+    <div class="bdr-dice-summary" *ngIf="diceSummary">
+      <span class="bdr-dice-summary-icon">🎲</span>
+      <span class="bdr-dice-summary-text">{{ diceSummary.detail }}</span>
+    </div>
     <div class="bdr-results-header">結果</div>
     <div class="bdr-result-row" *ngFor="let r of results; let i = index"
       [class.bdr-error]="r.error" [class.bdr-secret]="r.isGmOnly">

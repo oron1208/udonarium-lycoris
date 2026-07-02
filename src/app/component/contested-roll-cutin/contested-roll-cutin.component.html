@@ -1,0 +1,156 @@
+<div class="crc-overlay" *ngIf="active" [@cutinAnimation]>
+  <div class="crc-container">
+    <!-- 左側：攻撃側 -->
+    <div class="crc-side crc-attacker" *ngIf="attacker">
+      <div class="crc-character">
+        <img *ngIf="attacker.characterImage" [src]="attacker.characterImage" class="crc-char-img" [style.object-fit]="'cover'">
+        <div *ngIf="!attacker.characterImage" class="crc-char-placeholder">{{attacker.characterName.charAt(0)}}</div>
+        <span class="crc-char-name">{{attacker.characterName}}</span>
+      </div>
+      <div class="crc-roll-area">
+        <div class="crc-formula-row">
+          <div class="crc-formula-display">{{attacker.formula}}</div>
+          <button class="crc-palette-btn" *ngIf="!attacker.isRolled" (click)="togglePalettePicker('attacker')" title="チャットパレットから選択">📜</button>
+        </div>
+        <div class="crc-palette-dropdown" *ngIf="activePaletteTarget === 'attacker'">
+          <div *ngFor="let line of getPaletteLines(attacker.characterIdentifier)" 
+               (click)="selectFromPalette('attacker', line)" class="crc-palette-item">
+            {{line}}
+          </div>
+          <div class="crc-palette-empty" *ngIf="!getPaletteLines(attacker.characterIdentifier).length">パレットが空です</div>
+        </div>
+        <!-- ロール前：ボタン -->
+        <button class="crc-roll-btn-main" *ngIf="!attacker.isRolled && !attacker.isRolling && canRollAttacker" (click)="rollAttacker()">
+          🎲 ダイスロール
+        </button>
+        <div class="crc-waiting" *ngIf="!attacker.isRolled && !attacker.isRolling && !canRollAttacker">
+          他のプレイヤーのロールを待っています...
+        </div>
+        <div class="crc-rolling" *ngIf="attacker.isRolling">
+          <span class="crc-spinner">🎲</span> ロール中...
+        </div>
+        <!-- ダイス表示 -->
+        <div class="crc-dice-row" *ngIf="attacker.diceResults.length">
+          <div *ngFor="let d of attacker.diceResults; let i = index"
+               class="crc-dice crc-dice-{{d.shape}}"
+               [style.animation-delay]="(i * 0.1) + 's'">
+            <div class="crc-dice-body" [innerHTML]="getDiceSvgSafe(d.shape)"></div>
+            <div class="crc-dice-value">{{d.value}}</div>
+          </div>
+        </div>
+        <!-- ロール中 -->
+        <div class="crc-rolling" *ngIf="attacker.isRolling">
+          <span class="crc-spinner">🎲</span> ロール中...
+        </div>
+        <!-- 結果 -->
+        <div class="crc-result" *ngIf="attacker.isRolled">
+          <span class="crc-total" [class.crit]="attacker.isCritical" [class.fumb]="attacker.isFumble">
+            {{attacker.total ?? '???'}}
+          </span>
+          <span class="crc-tag critical" *ngIf="attacker.isCritical">クリティカル!</span>
+          <span class="crc-tag fumble" *ngIf="attacker.isFumble">ファンブル!</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 中央：VS＆結果 -->
+    <div class="crc-center">
+      <div class="crc-vs">VS</div>
+      <!-- ダメージ表示 -->
+      <div class="crc-damage-display" *ngIf="damageFormula && allResolved">
+        <div class="crc-dmg-label">ダメージ</div>
+        <div class="crc-formula-row">
+          <div class="crc-dmg-formula">{{damageFormula}}</div>
+          <button class="crc-palette-btn" *ngIf="damageTotal === null" (click)="togglePalettePicker('damage')" title="チャットパレットから選択">📜</button>
+        </div>
+        <div class="crc-palette-dropdown" *ngIf="activePaletteTarget === 'damage'">
+          <div *ngFor="let line of getPaletteLines(getDamagePaletteCharacterId())" 
+               (click)="selectFromPalette('damage', line)" class="crc-palette-item">
+            {{line}}
+          </div>
+          <div class="crc-palette-empty" *ngIf="!getPaletteLines(getDamagePaletteCharacterId()).length">パレットが空です</div>
+        </div>
+        <button class="crc-dmg-roll-btn" *ngIf="damageTotal === null" (click)="rollDamage()">🎲 ロール</button>
+        <div class="crc-dmg-total" *ngIf="damageTotal !== null">{{damageTotal}}</div>
+      </div>
+      <!-- 同値ルール -->
+      <div class="crc-tie-rule" *ngIf="!allResolved">
+        <label>同値時: </label>
+        <select [(ngModel)]="tieAdvantage">
+          <option value="attacker">攻撃側有利</option>
+          <option value="defender">受動側有利</option>
+        </select>
+      </div>
+      <!-- 適用ボタン -->
+      <button class="crc-apply-btn" *ngIf="allResolved" (click)="close()">判定確定 →</button>
+    </div>
+
+    <!-- 右側：受動側（複数縦並び） -->
+    <div class="crc-defenders">
+      <div *ngFor="let t of targets; let i = index"
+           class="crc-defender-row"
+           [class.crc-hit]="t.resolved && t.hit"
+           [class.crc-miss]="t.resolved && !t.hit">
+        <div class="crc-character crc-character-sm">
+          <img *ngIf="t.side.characterImage" [src]="t.side.characterImage" class="crc-char-img-sm">
+          <div *ngIf="!t.side.characterImage" class="crc-char-placeholder-sm">{{t.side.characterName.charAt(0)}}</div>
+          <span class="crc-char-name-sm">{{t.side.characterName}}</span>
+        </div>
+        <div class="crc-roll-area crc-roll-area-sm">
+          <!-- 受動式（編集可） -->
+          <div class="crc-formula-row" *ngIf="!t.side.isRolled">
+            <input [(ngModel)]="t.side.formula"
+                   class="crc-formula-input"
+                   placeholder="1d20+{回避}">
+            <button class="crc-palette-btn crc-palette-btn-sm" (click)="togglePalettePicker('defender:' + t.side.characterIdentifier)" title="チャットパレットから選択">📜</button>
+          </div>
+          <div class="crc-palette-dropdown" *ngIf="activePaletteTarget === 'defender:' + t.side.characterIdentifier">
+            <div *ngFor="let line of getPaletteLines(t.side.characterIdentifier)" 
+                 (click)="selectFromPalette('defender:' + t.side.characterIdentifier, line)" class="crc-palette-item">
+              {{line}}
+            </div>
+            <div class="crc-palette-empty" *ngIf="!getPaletteLines(t.side.characterIdentifier).length">パレットが空です</div>
+          </div>
+          <div class="crc-formula-display" *ngIf="t.side.isRolled">{{t.side.formula}}</div>
+          <!-- ダイス -->
+          <div class="crc-dice-row crc-dice-row-sm" *ngIf="t.side.diceResults.length">
+            <div *ngFor="let d of t.side.diceResults; let j = index"
+                 class="crc-dice crc-dice-sm crc-dice-{{d.shape}}"
+                 [style.animation-delay]="(j * 0.1) + 's'">
+              <div class="crc-dice-body" [innerHTML]="getDiceSvgSafe(d.shape)"></div>
+              <div class="crc-dice-value crc-dice-value-sm">{{d.value}}</div>
+            </div>
+          </div>
+          <!-- ロール中 -->
+          <div class="crc-rolling" *ngIf="t.side.isRolling">
+            <span class="crc-spinner">🎲</span>
+          </div>
+          <!-- ロール前：ボタン -->
+          <button class="crc-roll-btn" *ngIf="!t.side.isRolled && !t.side.isRolling && canRollTarget(t.side.characterIdentifier)" (click)="rollTarget(t)">
+            🎲 ダイスロール
+          </button>
+          <div class="crc-waiting-sm" *ngIf="!t.side.isRolled && !t.side.isRolling && !canRollTarget(t.side.characterIdentifier)">
+            待機中...
+          </div>
+          <!-- 結果 -->
+          <div class="crc-result crc-result-sm" *ngIf="t.side.isRolled">
+            <span class="crc-total crc-total-sm" [class.crit]="t.side.isCritical" [class.fumb]="t.side.isFumble">
+              {{t.side.total ?? '???'}}
+            </span>
+          </div>
+          <!-- 命中/回避 -->
+          <div class="crc-verdict" *ngIf="t.resolved">
+            <span *ngIf="t.hit" class="crc-verdict-hit">✅ 命中</span>
+            <span *ngIf="!t.hit" class="crc-verdict-miss">❌ 回避</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 全員一括ロール -->
+      <button class="crc-roll-all-btn" *ngIf="hasUnrolledTargets"
+              (click)="rollAllTargets()">
+        🎲 全員一括ロール
+      </button>
+    </div>
+  </div>
+</div>

@@ -16,17 +16,32 @@
     <div class="bp-form-row">
       <label>命中式</label>
       <input [(ngModel)]="hitFormula" placeholder="1d20+5" class="bp-input">
+      <button class="bp-palette-btn" (click)="togglePalettePicker('hit')" title="チャットパレットから選択">📜</button>
+    </div>
+    <div class="bp-palette-dropdown" *ngIf="activePaletteTarget === 'hit'">
+      <div *ngFor="let line of getPaletteLines()" (click)="selectFromPalette('hit', line)" class="bp-palette-item">{{line}}</div>
+      <div class="bp-palette-empty" *ngIf="!getPaletteLines().length">パレットが空です</div>
     </div>
     <div class="bp-form-row">
       <label>ダメージ式</label>
       <input [(ngModel)]="damageFormula" placeholder="2d6+10" class="bp-input">
+      <button class="bp-palette-btn" (click)="togglePalettePicker('damage')" title="チャットパレットから選択">📜</button>
+    </div>
+    <div class="bp-palette-dropdown" *ngIf="activePaletteTarget === 'damage'">
+      <div *ngFor="let line of getPaletteLines()" (click)="selectFromPalette('damage', line)" class="bp-palette-item">{{line}}</div>
+      <div class="bp-palette-empty" *ngIf="!getPaletteLines().length">パレットが空です</div>
     </div>
     <div class="bp-form-row bp-multi">
-      <div class="bp-field-select">
+      <div class="bp-field-select" *ngIf="!useContestedCutin">
         <label>比較</label>
         <select [(ngModel)]="defenseField" (ngModelChange)="recalcDefenseValues()" class="bp-input-sm">
           <option *ngFor="let f of availableFieldOptions" [value]="f">{{f}}</option>
         </select>
+      </div>
+      <div class="bp-field-select" *ngIf="useContestedCutin">
+        <label>受動式</label>
+        <input [(ngModel)]="defenseFormula" placeholder="1d20+{回避}" class="bp-input-sm">
+        <button class="bp-palette-btn bp-palette-btn-sm" (click)="togglePalettePicker('defense')" title="チャットパレットから選択">📜</button>
       </div>
       <div class="bp-field-select">
         <label>防護</label>
@@ -49,6 +64,16 @@
           <option [ngValue]="100">100%</option>
           <option [ngValue]="50">50%</option>
           <option [ngValue]="25">25%</option>
+        </select>
+      </div>
+      <div class="bp-contested-toggle">
+        <label title="対象がダイスロールで抵抗する模式">
+          <input type="checkbox" [(ngModel)]="useContestedCutin">
+          <span>⚔️対抗ロール</span>
+        </label>
+        <select *ngIf="useContestedCutin" [(ngModel)]="tieAdvantage" class="bp-select-sm">
+          <option value="attacker">同値:攻撃有利</option>
+          <option value="defender">同値:受動有利</option>
         </select>
       </div>
     </div>

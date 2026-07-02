@@ -84,6 +84,7 @@ import { VnStageComponent } from 'component/vn-stage/vn-stage.component';
 import { LightingLayerComponent } from 'component/lighting-layer/lighting-layer.component';
 import { LightingPanelComponent } from 'component/lighting-panel/lighting-panel.component';
 import { DiceCutinComponent } from 'component/dice-cutin/dice-cutin.component';
+import { ContestedRollCutinComponent } from 'component/contested-roll-cutin/contested-roll-cutin.component';
 import { OptionsPanelComponent } from 'component/options-panel/options-panel.component';
 import { InitiativeTrackerComponent } from 'component/initiative-tracker/initiative-tracker.component';
 import { InitiativePanelComponent } from 'component/initiative-panel/initiative-panel.component';
@@ -165,6 +166,7 @@ import { AppComponent } from './app.component';
     LightingLayerComponent,
     LightingPanelComponent,
     DiceCutinComponent,
+    ContestedRollCutinComponent,
     OptionsPanelComponent,
     InitiativeTrackerComponent,
     InitiativePanelComponent,

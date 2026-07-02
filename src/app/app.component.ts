@@ -390,12 +390,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         });
       })
       .on('SERVER_MEDIA_MISSING', event => {
-        this.ngZone.run(() => {
-          const kind = event.data && event.data.kind === 'image' ? '画像' : '音声';
-          const identifier = event.data && event.data.identifier ? String(event.data.identifier).slice(0, 12) : '';
-          const sysTab = ChatTabList.instance ? ChatTabList.instance.systemMessageTab : null;
-          this.chatMessageService.sendSystemMessage(sysTab, `${kind}データはサーバーから削除されました。${identifier ? ` (${identifier}...)` : ''}`, '#b71c1c');
-        });
+        // システムメッセージを抑制（ログのみ）
+        const kind = event.data && event.data.kind === 'image' ? '画像' : '音声';
+        const identifier = event.data && event.data.identifier ? String(event.data.identifier).slice(0, 12) : '';
+        console.debug(`[SERVER_MEDIA_MISSING] ${kind}データが見つかりません${identifier ? ` (${identifier}...)` : ''}`);
       })
       .on('CONNECT_PEER', event => {
         if (event.isSendFromSelf) this.chatMessageService.calibrateTimeOffset();
@@ -420,19 +418,13 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
   private showRightsNoticeOnStartup() {
     const text = [
-      '画像・音楽などの素材アップロードについて',
+      '法令または公序良俗に違反する行為を禁止しています。',
+      '詳しくは利用規約をご一読ください。',
+      'https://udonarium-lycoris.ddns.net/docs/terms.html',
       '',
-      'このツールでは、部屋内での表示/再生・参加者間の同期・再接続のため、画像・音楽などの素材が各参加者へ共有され、サーバーに保存される場合があります。',
-      '',
-      'アップロードや部屋データの読み込みで共有される素材は、自分で権利を持つ素材、または利用許諾・利用規約上アップロード/共有が許可された素材だけにしてください。',
-      '部屋に参加している人が意図せず素材共有に関わる場合があります。権利侵害のおそれがある素材は使用しないでください。',
-      '権利侵害のおそれがある素材は、管理者判断で削除される場合があります。',
-      '',
-      '音楽のダウンロード機能は提供していません。',
-      '',
-      '内容を確認したらOKを押して進んでください。'
+      'ご了承いただけたらOKを押してください。'
     ].join('\n');
-    this.modalService.open(TextViewComponent, { title: '素材アップロードに関する注意', text });
+    this.modalService.open(TextViewComponent, { title: '利用規約について', text });
   }
 
   private installMakoDebugDump() {

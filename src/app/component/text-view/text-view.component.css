@@ -11,6 +11,11 @@
   word-break: break-word;
 }
 
+.text a {
+  color: #5dade2;
+  word-break: break-all;
+}
+
 .actions {
   margin-top: 12px;
   text-align: right;

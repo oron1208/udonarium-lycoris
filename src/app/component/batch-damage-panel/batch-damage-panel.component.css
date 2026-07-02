@@ -180,3 +180,88 @@
   cursor: pointer;
 }
 .bp-apply-all-btn:hover { background: linear-gradient(180deg, #3498db, #2980b9); }
+
+.bp-contested-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.bp-contested-toggle label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.bp-contested-toggle input[type="checkbox"] {
+  margin: 0;
+}
+
+/* ===== チャットパレットピッカー ===== */
+
+.bp-palette-btn {
+  background: rgba(100, 140, 255, 0.15);
+  border: 1px solid rgba(100, 140, 255, 0.35);
+  color: rgba(200, 220, 255, 0.95);
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 6px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.bp-palette-btn:hover {
+  background: rgba(100, 140, 255, 0.3);
+  border-color: rgba(100, 140, 255, 0.6);
+}
+
+.bp-palette-btn-sm {
+  font-size: 11px;
+  padding: 2px 4px;
+}
+
+.bp-palette-dropdown {
+  position: relative;
+  background: #111;
+  border: 1px solid rgba(100, 140, 255, 0.4);
+  border-radius: 4px;
+  padding: 4px;
+  max-height: 180px;
+  overflow-y: auto;
+  min-width: 160px;
+  max-width: 100%;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  z-index: 10;
+  margin-bottom: 6px;
+}
+
+.bp-palette-item {
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: monospace;
+  color: rgba(200, 220, 255, 0.9);
+  border-radius: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.1s;
+}
+
+.bp-palette-item:hover {
+  background: rgba(100, 140, 255, 0.25);
+  color: #fff;
+}
+
+.bp-palette-empty {
+  padding: 8px;
+  font-size: 11px;
+  color: rgba(180, 180, 200, 0.5);
+  text-align: center;
+  font-style: italic;
+}

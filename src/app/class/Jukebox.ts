@@ -259,7 +259,10 @@ export class Jukebox extends GameObject {
 
   private _updateBgmPlayback() {
     const combatReady = !!this._combatBgmIdentifier;
-    const tableReady = this._tableWantsPlay && !!this.activeTableIdentifier;
+    // テーブル音源が実際に存在するか確認
+    const tableObj = this.activeTableIdentifier ? ObjectStore.instance.get<GameTable>(this.activeTableIdentifier) : null;
+    const tableLayers = tableObj ? Jukebox.getTableAudioLayers(tableObj).filter(l => l.enabled && l.audioIdentifier) : [];
+    const tableReady = this._tableWantsPlay && tableLayers.length > 0;
     const jukeboxReady = this._jukeboxLayerOverrideActive || (this.isPlaying && !!this.audioIdentifier);
 
     let desired: 'combat' | 'table' | 'jukebox' | null = null;
@@ -532,7 +535,21 @@ export class Jukebox extends GameObject {
       // 同期された状態から内部フラグを復元
       this._combatBgmIdentifier = this.combatBgmIdentifierSync;
       if (this.activeBgmSource === 'table' && this.activeTableIdentifier) {
-        this._tableWantsPlay = true;
+        // テーブル音源が実際に存在するか確認
+        const table = ObjectStore.instance.get<GameTable>(this.activeTableIdentifier);
+        const tableLayers = table ? Jukebox.getTableAudioLayers(table).filter(l => l.enabled && l.audioIdentifier) : [];
+        if (tableLayers.length > 0) {
+          this._tableWantsPlay = true;
+        } else {
+          // テーブル音源がない場合はtable優先を適用せず、jukeboxを維持
+          console.log('Sync: table BGM has no valid layers, ignoring table override');
+          // activeBgmSourceを元に戻さず、内部だけでtable優先を無視
+          this._tableWantsPlay = false;
+        }
+      } else if (this.activeBgmSource === '') {
+        // 再生停止の同期
+        this._tableWantsPlay = false;
+        this._combatBgmIdentifier = '';
       }
       this._updateBgmPlayback();
       return;

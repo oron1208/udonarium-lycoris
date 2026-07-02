@@ -222,6 +222,36 @@
     </div>
     <div class="timeline">
       <div class="timeline-item fade-up">
+        <div class="timeline-badge">v1.53</div>
+        <div class="timeline-content">
+          <div class="timeline-date">2026-07-03</div>
+          <h3>BGM再生バグ修正・一括判定式対応強化・チャットパレット連携</h3>
+          <ul>
+            <li><b>BGMが鳴らない不具合を修正</b> — 保存部屋読み込み時にテーブルBGM設定が空でも優先度システムが作動し、ジュークボックスBGMが上書きされて無音になる問題を解消。テーブル音源レイヤーが実際に存在しない場合は優先度判定から除外するよう修正</li>
+            <li><b>一括判定ダメージパネルの式評価を強化</b> — 固定値（<code>15</code>）、計算記法（<code>c(8+{Artificer})</code>）、独自ダイスボットコマンド（<code>AR{敏セーヴ}&gt;=0</code>）、単純数式（<code>8+5</code>）に対応。BCDice → 固定値 → 数式 → 数値抽出の順でフォールバック評価</li>
+            <li><b>チャットパレット参照の入れ子対応</b> — <code>{Artificer}</code>の値が<code>({知力}+{習熟})</code>になっているような多段参照を最大32回ループで解決するよう修正</li>
+            <li><b>対抗ロールカットインにチャットパレットピッカーを追加</b> — 攻撃側・受動側・ダメージ式の横に📜ボタンを配置し、キャラのチャットパレットから式を選択可能に</li>
+            <li><b>一括判定ダメージパネルにチャットパレットピッカーを追加</b> — 命中式・ダメージ式・受動式の横に📜ボタンを配置</li>
+            <li><b>対抗ロールカットインのキャラ画像表示を修正</b> — blob URLがAngularのサニタイザで<code>unsafe:</code>扱いされて表示されない問題を修正</li>
+            <li><b>不要なシステムメッセージを抑制</b> — 「画像データはサーバーから削除されました」のシステムメッセージをコンソールログのみに変更</li>
+            <li><b>画像の自動圧縮</b> — ドラッグ＆ドロップで画像をアップロードする際、2MBを超える画像を自動的に圧縮（最大1920px、JPEGはquality 0.85、PNGは透過保持）するように変更。大きい画像でも弾かれずにアップロード可能に</li>
+          </ul>
+        </div>
+      </div>
+      <div class="timeline-item fade-up">
+        <div class="timeline-badge">v1.52</div>
+        <div class="timeline-content">
+          <div class="timeline-date">2026-06-28</div>
+          <h3>一括判定ダメージパネル・自動効果音同期修正</h3>
+          <ul>
+            <li><b>一括判定ダメージパネル</b> — ターゲット指定した複数コマに対し、命中判定〜ダメージ計算〜HP適用までを一括実行するパネルを追加。対抗ロールカットインとの連携にも対応</li>
+            <li><b>自動効果音の同期修正</b> — コマ配置・移動時の自動効果音が全プレイヤーで正しく同期されない問題を修正</li>
+            <li><b>アニメーション調整</b> — ダイスカットイン等のアニメーションタイミングを微調整</li>
+            <li><b>ジュークボックスZIP保存拡張</b> — 部屋データ保存時にジュークボックス設定も保存されるよう改善</li>
+          </ul>
+        </div>
+      </div>
+      <div class="timeline-item fade-up">
         <div class="timeline-badge">v1.50</div>
         <div class="timeline-content">
           <div class="timeline-date">2026-06-25</div>
