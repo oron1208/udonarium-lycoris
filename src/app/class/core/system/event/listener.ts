@@ -5,10 +5,10 @@ import { Subject } from './subject';
 export class Listener implements Observer {
   private _subject: Subject;
   private _key: any;
-  private _eventName: string;
+  private _eventName!: string;
   private _priority: number = 0;
-  private _callback: Callback<any>;
-  private _isOnlyOnce: boolean;
+  private _callback!: Callback<any>;
+  private _isOnlyOnce!: boolean;
   private _isRegistered: boolean = false;
 
   get subject() { return this._subject; }

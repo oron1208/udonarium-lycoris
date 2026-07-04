@@ -4,6 +4,7 @@ import { ObjectNode } from './core/synchronize-object/object-node';
 import { StringUtil } from './core/system/util/string-util';
 import { DataElement } from './data-element';
 import { GameCharacter } from './game-character';
+import { Logger } from './core/system/util/logger';
 
 export interface PaletteLine {
   palette: string;
@@ -144,7 +145,7 @@ export class ChatPalette extends ObjectNode {
     if( text.match(/\s[tTｔＴ][&＆]([^&＆]+)/g) ){
       istarget = true;
     }
-    console.log('複数対象用コマンド：'+istarget);
+    Logger.debug('複数対象用コマンド：'+istarget);
     return istarget;
   }
 
@@ -221,7 +222,7 @@ export class ChatPalette extends ObjectNode {
       evaluate = line.palette;
     }
 
-    console.log(evaluate);
+    Logger.debug(evaluate);
     let limit = 128;
     let loop = 0;
     let isContinue = true;

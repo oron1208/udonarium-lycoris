@@ -8,6 +8,7 @@ import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { EventSystem } from '@udonarium/core/system';
 import { Network } from '@udonarium/core/system/network/network';
 import { PeerContext } from '@udonarium/core/system/network/peer-context';
+import { Logger } from '../../class/core/system/util/logger';
 
 type DiceShape = 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'd20' | 'd100';
 
@@ -319,7 +320,7 @@ export class ContestedRollCutinComponent implements OnInit, OnDestroy {
         }
       }
     } catch (e) {
-      console.debug('[ContestedRoll] BCDice fallback:', e);
+      Logger.debug('[ContestedRoll] BCDice fallback:', e);
     }
 
     // 4. コマンド部分を抽出（最初の空白より前）
@@ -371,7 +372,7 @@ export class ContestedRollCutinComponent implements OnInit, OnDestroy {
         isFumble: r.isFumble,
       });
     } catch (e) {
-      console.error('rollAttacker error', e);
+      Logger.error('rollAttacker error', e);
       this.attacker.isRolling = false;
     }
   }
@@ -398,7 +399,7 @@ export class ContestedRollCutinComponent implements OnInit, OnDestroy {
         isFumble: r.isFumble,
       });
     } catch (e) {
-      console.error('rollTarget error', e);
+      Logger.error('rollTarget error', e);
       target.side.isRolling = false;
     }
   }
@@ -429,7 +430,7 @@ export class ContestedRollCutinComponent implements OnInit, OnDestroy {
         total: r.total,
       });
     } catch (e) {
-      console.error('rollDamage error', e);
+      Logger.error('rollDamage error', e);
     }
   }
 

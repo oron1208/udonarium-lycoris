@@ -3,6 +3,7 @@ import { GameObject, ObjectContext } from './core/synchronize-object/game-object
 import { ObjectStore } from './core/synchronize-object/object-store';
 import { EventSystem } from './core/system';
 import { GameTable } from './game-table';
+import { Logger } from './core/system/util/logger';
 
 @SyncObject('TableSelecter')
 export class TableSelecter extends GameObject {
@@ -25,7 +26,7 @@ export class TableSelecter extends GameObject {
     super.onStoreAdded();
     EventSystem.register(this)
       .on('SELECT_GAME_TABLE', event => {
-        console.log('SELECT_GAME_TABLE ' + this.identifier);
+        Logger.debug('SELECT_GAME_TABLE ' + this.identifier);
 
         if (this.viewTable) this.viewTable.selected = false;
         this.viewTableIdentifier = event.data.identifier;

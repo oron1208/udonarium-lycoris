@@ -7,6 +7,7 @@ import { PeerSessionGrade } from './peer-session-state';
 import { SkyWayDataConnection } from './skyway-data-connection';
 import { WebRtcSignalingDataConnection } from './webrtc-signaling-data-connection';
 import { CandidateType } from './webrtc-stats';
+import { Logger } from '../util/logger';
 
 interface DataContainer {
   data: Uint8Array;
@@ -369,7 +370,7 @@ export class WebSocketSignalingConnection implements Connection {
     this.relayingPeerIds.set(conn.remoteId, diff.diff1);
     container.peers = container.peers.concat(diff.diff1);
     for (let peerId of diff.diff2) {
-      if (!this.maybeUnavailablePeerIds.has(peerId) && this.connect(peerId)) console.log('auto connect to unknown Peer <' + peerId + '>');
+      if (!this.maybeUnavailablePeerIds.has(peerId) && this.connect(peerId)) Logger.debug('auto connect to unknown Peer <' + peerId + '>');
     }
   }
 

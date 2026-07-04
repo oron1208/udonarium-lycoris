@@ -38,19 +38,19 @@ export interface ChatMessageContext {
 
 @SyncObject('chat')
 export class ChatMessage extends ObjectNode implements ChatMessageContext {
-  @SyncVar() originFrom: string;
-  @SyncVar() from: string;
-  @SyncVar() to: string;
-  @SyncVar() name: string;
-  @SyncVar() tag: string;
-  @SyncVar() dicebot: string;
-  @SyncVar() imageIdentifier: string;
-  @SyncVar() imagePos: number;
-  @SyncVar() messColor: string;
-  @SyncVar() sendFrom: string;
+  @SyncVar() originFrom!: string;
+  @SyncVar() from!: string;
+  @SyncVar() to!: string;
+  @SyncVar() name!: string;
+  @SyncVar() tag!: string;
+  @SyncVar() dicebot!: string;
+  @SyncVar() imageIdentifier!: string;
+  @SyncVar() imagePos!: number;
+  @SyncVar() messColor!: string;
+  @SyncVar() sendFrom!: string;
   @SyncVar() fixd: boolean = false;
 
-  targetInfo: ChatMessageTargetContext[];
+  targetInfo!: ChatMessageTargetContext[];
 
   get tabIdentifier(): string { return this.parent.identifier; }
   get text(): string { return <string>this.value }
@@ -61,7 +61,7 @@ export class ChatMessage extends ObjectNode implements ChatMessageContext {
     let num = timestamp ? +timestamp : 0;
     return Number.isNaN(num) ? 1 : num;
   }
-  private _to: string;
+  private _to!: string;
   private _sendTo: string[] = [];
   get sendTo(): string[] {
     if (this._to !== this.to) {
@@ -70,7 +70,7 @@ export class ChatMessage extends ObjectNode implements ChatMessageContext {
     }
     return this._sendTo;
   }
-  private _tag: string;
+  private _tag!: string;
   private _tags: string[] = [];
   get tags(): string[] {
     if (this._tag !== this.tag) {

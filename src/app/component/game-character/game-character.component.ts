@@ -1,4 +1,5 @@
 import { animate, keyframes, style, transition, trigger } from '@angular/animations';
+import { Logger } from '../../class/core/system/util/logger';
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
@@ -76,7 +77,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
   @Input() isSimpleView: boolean = false;
   @Input() isFlatMode: boolean = false;
   @Input() isRangeSelected: boolean = false;
-  @ViewChild('root') rootElementRef: ElementRef<HTMLElement>;
+  @ViewChild('root') rootElementRef!: ElementRef<HTMLElement>;
 
   get isLock(): boolean { return this.gameCharacter.isLock; }
   get isCurrentCombatTurn(): boolean {
@@ -170,9 +171,9 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
 
   rotableOption: RotableOption = {};
 
-  private highlightTimer: NodeJS.Timer;
-  private unhighlightTimer: NodeJS.Timer;
-  private animationTimer: NodeJS.Timer;
+  private highlightTimer!: NodeJS.Timer;
+  private unhighlightTimer!: NodeJS.Timer;
+  private animationTimer!: NodeJS.Timer;
   private isDirectionMarkerRotating: boolean = false;
   private directionMarkerRotated: boolean = false;
   private flatIconNaturalWidth: number = 0;
@@ -376,7 +377,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
         if (this.gameCharacter.identifier !== event.data.identifier) { return; }
         if (this.gameCharacter.location.name != "table") { return; }
 
-        console.log(`recv focus event to ${this.gameCharacter.name}`);
+        Logger.debug(`recv focus event to ${this.gameCharacter.name}`);
         // アニメーション開始のタイマーが既にあってアニメーション開始前（ごくわずかな間）ならば何もしない
         if (this.highlightTimer != null) { return; }
 
@@ -440,7 +441,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
 
   @HostListener('dragstart', ['$event'])
   onDragstart(e: any) {
-    console.log('Dragstart Cancel !!!!');
+    Logger.debug('Dragstart Cancel !!!!');
     e.stopPropagation();
     e.preventDefault();
   }
@@ -454,7 +455,6 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
       EventSystem.trigger('DRAG_LOCKED_OBJECT', {});
     }
   }
-
 
   @HostListener('contextmenu', ['$event'])
   onContextMenu(e: Event) {
@@ -561,7 +561,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
 /*
       {
         name: '削除', action: () => {
-          console.log("円柱_削除実行_キャラコマ");
+          Logger.debug("円柱_削除実行_キャラコマ");
           this.gameCharacter.setLocation('graveyard');
           this.deleteGameObject(this.gameCharacter);
           ObjectStore.instance.clearDeleteHistory();
@@ -1209,7 +1209,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
     try {
       localStorage.setItem(GameCharacterComponent.SIMPLE_VIEW_FULL_STORAGE_KEY, JSON.stringify(Array.from(GameCharacterComponent.simpleViewFullIdentifiers)));
     } catch (e) {
-      console.warn('simple view full identifiers save failed', e);
+      Logger.warn('simple view full identifiers save failed', e);
     }
   }
 
@@ -1235,16 +1235,16 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
     let key_meta = (key_event.metaKey);
     //キーに対応した処理
     
-    if (key_shift) console.log("shiftキー");
-    if (key_ctrl) console.log("ctrlキー");
+    if (key_shift) Logger.debug("shiftキー");
+    if (key_ctrl) Logger.debug("ctrlキー");
     if (key_alt) {
-      console.log("altキー");
+      Logger.debug("altキー");
       this.gameCharacter.targeted = this.gameCharacter.targeted ? false : true;
     }
-    if (key_meta) console.log("metaキー");
+    if (key_meta) Logger.debug("metaキー");
 
     if (key_shift && key_alt) {
-      console.log("shift+ALTキー");
+      Logger.debug("shift+ALTキー");
       let objects = ObjectStore.instance.getObjects(GameCharacter);
       for (let object of objects) {
         object.targeted = false;
@@ -1291,7 +1291,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
   }
 
   private foldingBuffFlag(flag: boolean){
-    console.log('private foldingBuffFlag');
+    Logger.debug('private foldingBuffFlag');
     this.foldingBuff = flag;
   }
 

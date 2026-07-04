@@ -1,4 +1,5 @@
 import { AfterViewInit, Component, OnDestroy, OnInit, ViewContainerRef } from '@angular/core';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
@@ -39,7 +40,7 @@ export class GameCharacterGeneratorComponent implements OnInit, OnDestroy, After
     Promise.resolve().then(() => this.panelService.title = 'キャラクタージェネレーター');
     EventSystem.register(this)
       .on('SELECT_FILE', event => {
-        console.log('SELECT_FILE GameCharacterGeneratorComponent ' + event.data.fileIdentifier);
+        Logger.debug('SELECT_FILE GameCharacterGeneratorComponent ' + event.data.fileIdentifier);
 
         let fileIdentifier: string = event.data.fileIdentifier;
 

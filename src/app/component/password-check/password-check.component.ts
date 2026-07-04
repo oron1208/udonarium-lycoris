@@ -12,7 +12,7 @@ import { PanelService } from 'service/panel.service';
   styleUrls: ['./password-check.component.css']
 })
 export class PasswordCheckComponent implements OnInit, AfterViewInit, OnDestroy {
-  @ViewChild('passwordInput', { static: true }) passwordInputElementRef: ElementRef<HTMLInputElement>;
+  @ViewChild('passwordInput', { static: true }) passwordInputElementRef!: ElementRef<HTMLInputElement>;
 
   password: string = '';
   help: string = '';

@@ -12,6 +12,7 @@ import { PeerCursor } from '@udonarium/peer-cursor';
 import { TextViewComponent } from 'component/text-view/text-view.component';
 import { BatchService } from 'service/batch.service';
 import { ChatColorSettingComponent } from 'component/chat-color-setting/chat-color-setting.component';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { ChatMessageService } from 'service/chat-message.service';
 import { PanelOption, PanelService } from 'service/panel.service';
@@ -26,7 +27,7 @@ import { Config } from '@udonarium/config';
   styleUrls: ['./chat-input.component.css']
 })
 export class ChatInputComponent implements OnInit, OnDestroy {
-  @ViewChild('textArea', { static: true }) textAreaElementRef: ElementRef;
+  @ViewChild('textArea', { static: true }) textAreaElementRef!: ElementRef;
 
   @Input() onlyCharacters: boolean = false;
   @Input() chatTabidentifier: string = '';
@@ -396,7 +397,7 @@ export class ChatInputComponent implements OnInit, OnDestroy {
     if (event && event.keyCode !== 13) return;
 
     if( this.autoCompleteIndex >= 0){
-      console.log("オートコンプリート処理実行 INDEX:" + this.autoCompleteIndex);
+      Logger.debug("オートコンプリート処理実行 INDEX:" + this.autoCompleteIndex);
       this.autoCompleteDo.emit( this.autoCompleteIndex );
       return;
     }
@@ -442,9 +443,9 @@ export class ChatInputComponent implements OnInit, OnDestroy {
   }
 
   loadDiceBot(gameType: string) {
-    console.log('onChangeGameType ready');
+    Logger.debug('onChangeGameType ready');
     DiceBot.getHelpMessage(gameType).then(help => {
-      console.log('onChangeGameType done\n' + help);
+      Logger.debug('onChangeGameType done\n' + help);
     });
   }
 

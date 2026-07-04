@@ -2,6 +2,7 @@ import { EventSystem } from '../system';
 import { ResettableTimeout } from '../system/util/resettable-timeout';
 import { AudioFile, AudioFileContext, AudioState } from './audio-file';
 import { ServerMediaStorage } from './server-media-storage';
+import { Logger } from '../system/util/logger';
 
 export type CatalogItem = { readonly identifier: string, readonly state: number, readonly name?: string };
 
@@ -12,7 +13,7 @@ export class AudioStorage {
     return AudioStorage._instance;
   }
 
-  private lazyTimer: ResettableTimeout;
+  private lazyTimer!: ResettableTimeout;
   private hash: { [identifier: string]: AudioFile } = {};
 
   get audios(): AudioFile[] {
@@ -24,7 +25,7 @@ export class AudioStorage {
   }
 
   private constructor() {
-    console.log('AudioStorage ready...');
+    Logger.debug('AudioStorage ready...');
   }
 
   private destroy() {
@@ -68,7 +69,7 @@ export class AudioStorage {
       return stored;
     }
     this.hash[audio.identifier] = audio;
-    console.log('add Audio: ' + audio.identifier);
+    Logger.debug('add Audio: ' + audio.identifier);
     return audio;
   }
 
@@ -105,7 +106,7 @@ export class AudioStorage {
     if (/^[a-f0-9]{64}$/i.test(identifier || '')) {
       audio = AudioFile.createEmpty(identifier);
       this.hash[identifier] = audio;
-      ServerMediaStorage.fetchAudio(identifier).then(fetched => {
+      ServerMediaStorage.fetchAudioOrNull(identifier).then(fetched => {
         if (fetched) this.add(fetched);
       });
       return audio;

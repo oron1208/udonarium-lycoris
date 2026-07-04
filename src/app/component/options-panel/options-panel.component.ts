@@ -226,6 +226,14 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
     EventSystem.call('MACRO_HOTBAR_VISIBILITY_CHANGED', { visible: true });
   }
 
+  clearHotbarSlots() {
+    if (!confirm('ホットバーの全スロットをクリアしますか？')) return;
+    try {
+      localStorage.setItem('udonarium.macroHotbar.v1', JSON.stringify({ version: 2, pageCount: 5, slotCount: 12, slots: Array.from({ length: 60 }, () => ({ label: '', text: '', iconIdentifier: '' })) }));
+    } catch (_) { }
+    EventSystem.trigger('MACRO_HOTBAR_CLEAR_ALL', {});
+  }
+
   resetVnUi() {
     try {
       localStorage.removeItem('udonarium.vnPanel.pos.v1');

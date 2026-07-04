@@ -4,6 +4,7 @@ import { defineSyncObject as SyncObject, defineSyncVariable as SyncVar } from '.
 import { GameObject, ObjectContext } from './game-object';
 import { InnerXml, ObjectSerializer, XmlAttributes } from './object-serializer';
 import { ObjectStore } from './object-store';
+import { Logger } from '../system/util/logger';
 
 @SyncObject('node')
 export class ObjectNode extends GameObject implements XmlAttributes, InnerXml {
@@ -186,7 +187,7 @@ export class ObjectNode extends GameObject implements XmlAttributes, InnerXml {
     let parent = child.parent;
     while (parent) {
       if (parent === child) {
-        console.error('あ やっべ、循環参照', child);
+        Logger.error('あ やっべ、循環参照', child);
         return false;
       }
       if (parent === this) return true;

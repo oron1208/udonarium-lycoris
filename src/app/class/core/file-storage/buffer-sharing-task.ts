@@ -2,6 +2,7 @@ import { EventSystem } from '../system';
 import { MessagePack } from '../system/util/message-pack';
 import { ResettableTimeout } from '../system/util/resettable-timeout';
 import { clearZeroTimeout, setZeroTimeout } from '../system/util/zero-timeout';
+import { Logger } from '../system/util/logger';
 
 interface ChankData {
   index: number;
@@ -14,11 +15,11 @@ export class BufferSharingTask<T> {
   readonly sendTo: string;
 
   private data: T;
-  private uint8Array: Uint8Array;
+  private uint8Array!: Uint8Array;
   private chanks: Uint8Array[] = [];
   private chankSize: number = 32 * 1024;
   private chankReceiveCount: number = 0;
-  private sendChankTimer: number;
+  private sendChankTimer!: number;
 
   private sentChankIndex = 0;
   private bufferingChankRange: number = 4;
@@ -27,13 +28,13 @@ export class BufferSharingTask<T> {
   private startTime = 0;
   private isCanceled = false;
 
-  private onstart: () => void;
-  onprogress: (task: BufferSharingTask<T>, loded: number, total: number) => void;
-  onfinish: (task: BufferSharingTask<T>, data: T) => void;
-  ontimeout: (task: BufferSharingTask<T>) => void;
-  oncancel: (task: BufferSharingTask<T>) => void;
+  private onstart!: () => void;
+  onprogress!: (task: BufferSharingTask<T>, loded: number, total: number) => void;
+  onfinish!: (task: BufferSharingTask<T>, data: T) => void;
+  ontimeout!: (task: BufferSharingTask<T>) => void;
+  oncancel!: (task: BufferSharingTask<T>) => void;
 
-  private timeoutTimer: ResettableTimeout;
+  private timeoutTimer!: ResettableTimeout;
 
   private constructor(identifier: string, sendTo?: string, data?: T) {
     this.identifier = identifier;
@@ -55,7 +56,7 @@ export class BufferSharingTask<T> {
 
   start(data?: T) {
     if (!this.onstart) {
-      console.warn('再起動する仕様など無い。');
+      Logger.warn('再起動する仕様など無い。');
       return;
     }
     this.data = data;
@@ -110,7 +111,7 @@ export class BufferSharingTask<T> {
     let total = Math.ceil(this.uint8Array.byteLength / this.chankSize);
     this.chanks = new Array(total);
 
-    console.log('チャンク分割 ' + this.identifier, this.chanks.length);
+    Logger.debug('チャンク分割 ' + this.identifier, this.chanks.length);
 
     EventSystem.register(this)
       .on<number>('FILE_MORE_CHANK_' + this.identifier, event => {
@@ -123,11 +124,11 @@ export class BufferSharingTask<T> {
       })
       .on('DISCONNECT_PEER', event => {
         if (event.data.peerId !== this.sendTo) return;
-        console.warn('送信キャンセル（Peer切断）', this, event.data.peerId);
+        Logger.warn('送信キャンセル（Peer切断）', this, event.data.peerId);
         this._cancel();
       })
       .on('CANCEL_TASK_' + this.identifier, event => {
-        console.warn('送信キャンセル', this, event.sendFrom);
+        Logger.warn('送信キャンセル', this, event.sendFrom);
         this._cancel();
       });
     this.sentChankIndex = this.completedChankIndex = 0;
@@ -142,7 +143,7 @@ export class BufferSharingTask<T> {
     this.sentChankIndex = index;
     this.sendChankTimer = null;
     if (this.chanks.length <= index + 1) {
-      console.log('バッファ送信完了', this.identifier);
+      Logger.debug('バッファ送信完了', this.identifier);
       this.outputTransferRate(this.uint8Array.byteLength);
       setZeroTimeout(() => this.finish());
     } else if (this.completedChankIndex + this.bufferingChankRange <= index) {
@@ -161,7 +162,7 @@ export class BufferSharingTask<T> {
         if (this.chanks.length < 1) this.chanks = new Array(event.data.length);
 
         if (this.chanks[event.data.index] != null) {
-          console.log(`already received. [${event.data.index}] <${this.identifier}>`);
+          Logger.debug(`already received. [${event.data.index}] <${this.identifier}>`);
           return;
         }
         this.chankReceiveCount++;
@@ -176,17 +177,17 @@ export class BufferSharingTask<T> {
       })
       .on('DISCONNECT_PEER', event => {
         if (event.data.peerId !== this.sendTo) return;
-        console.warn('受信キャンセル（Peer切断）', this, event.data.peerId);
+        Logger.warn('受信キャンセル（Peer切断）', this, event.data.peerId);
         this._cancel();
       })
       .on('CANCEL_TASK_' + this.identifier, event => {
-        console.warn('受信キャンセル', this, event.sendFrom);
+        Logger.warn('受信キャンセル', this, event.sendFrom);
         this._cancel();
       });
   }
 
   private finishReceive() {
-    console.log('バッファ受信完了', this.identifier);
+    Logger.debug('バッファ受信完了', this.identifier);
 
     let sumLength = 0;
     for (let chank of this.chanks) { sumLength += chank.byteLength; }
@@ -212,6 +213,6 @@ export class BufferSharingTask<T> {
   private outputTransferRate(byteLength: number) {
     let time = performance.now() - this.startTime;
     let rate = (byteLength / 1024 / 1024) / (time / 1000);
-    console.log(`${(byteLength / 1024).toFixed(2)}KB ${(time / 1000).toFixed(2)}秒 転送速度: ${rate.toFixed(2)}MB/s`);
+    Logger.debug(`${(byteLength / 1024).toFixed(2)}KB ${(time / 1000).toFixed(2)}秒 転送速度: ${rate.toFixed(2)}MB/s`);
   }
 }

@@ -26,9 +26,9 @@ export class FileSelecterComponent implements OnInit, OnDestroy, AfterViewInit {
 //本家PR #92より
   searchWord: string = '';
 
-  private _searchWord: string;
+  private _searchWord!: string;
   
-  private _searchWords: string[];
+  private _searchWords!: string[];
   get searchWords(): string[] {
     if (this._searchWord !== this.searchWord) {
       this._searchWord = this.searchWord;

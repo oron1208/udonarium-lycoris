@@ -8,6 +8,7 @@ import { PointerCoordinate, PointerDeviceService } from 'service/pointer-device.
 import { TabletopUndoService } from 'service/tabletop-undo.service';
 import { TabletopSelectionService } from 'service/tabletop-selection.service';
 import { TabletopService } from 'service/tabletop.service';
+import { Logger } from '../class/core/system/util/logger';
 
 import { InputHandler } from './input-handler';
 
@@ -32,7 +33,7 @@ interface GroupMoveTarget {
 export class MovableDirective implements AfterViewInit, OnDestroy {
   private static layerHash: { [layerName: string]: MovableDirective[] } = {};
 
-  private tabletopObject: TabletopObject;
+  private tabletopObject!: TabletopObject;
   private layerName: string = '';
   private colideLayers: string[] = [];
   private transformCssOffset: string = '';
@@ -89,7 +90,7 @@ export class MovableDirective implements AfterViewInit, OnDestroy {
   private pointerOffset2d: PointerCoordinate = { x: 0, y: 0, z: 0 };
   private pointerStart3d: PointerCoordinate = { x: 0, y: 0, z: 0 };
 
-  private targetStartRect: DOMRect;
+  private targetStartRect!: DOMRect;
   private groupMoveTargets: GroupMoveTarget[] = [];
   private isGroupMove: boolean = false;
 
@@ -507,7 +508,7 @@ export class MovableDirective implements AfterViewInit, OnDestroy {
 //    let css = 'translate3d(' + this.posX + 'px,' + this.posY + 'px,' + this.posZ + 'px) ' + ' translate3d(0px,0px,1px) translate3d(0px,0px,1px)  translate3d(0px,0px,1px) translate3d(0px,0px,1px) translate3d(0px,0px,1px)';
 
 //    let css = 'translate3d(' + this.posX + 'px,' + this.posY + 'px,' + (this.posZ +100 )+ 'px) ';
-//    console.log(css);
+//    Logger.debug(css);
     this.nativeElement.style.transform = css;
   }
 

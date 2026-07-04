@@ -7,6 +7,7 @@ import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { EventSystem } from './core/system';
 import { Config } from '@udonarium/config';
 import { GameTable } from './game-table';
+import { Logger } from './core/system/util/logger';
 
 // 型ガード: 統合音源ID
 function isServerAudio(id: string): boolean { return id && id.startsWith('server:'); }
@@ -209,7 +210,7 @@ export class Jukebox extends GameObject {
     const shouldPlay = layers.length > 0;
 
     if (shouldPlay !== this._tableWantsPlay) {
-      console.log('Table audio config updated, re-evaluating BGM');
+      Logger.debug('Table audio config updated, re-evaluating BGM');
       this._tableWantsPlay = shouldPlay;
       this._updateBgmPlayback();
     }
@@ -295,7 +296,7 @@ export class Jukebox extends GameObject {
       this.activeBgmSource = newActiveSource;
     }
 
-    console.log(`BGM priority: ${this._currentBgmSource} → ${desired}`);
+    Logger.debug(`BGM priority: ${this._currentBgmSource} → ${desired}`);
 
     this._stopAllBgmAudio();
 
@@ -336,7 +337,7 @@ export class Jukebox extends GameObject {
     const resolved = resolveAudioSource(this._combatBgmIdentifier);
     const url = Jukebox._resolveAudioUrl(resolved);
     if (!url) {
-      console.warn('[BGM] audio source not found:', resolved);
+      Logger.warn('[BGM] audio source not found:', resolved);
       this.playAfterFileUpdate();
       return false;
     }
@@ -355,7 +356,7 @@ export class Jukebox extends GameObject {
     }
     const layers = Jukebox.getTableAudioLayers(table).filter(layer => layer.enabled && layer.audioIdentifier);
     if (layers.length === 0) {
-      console.log('Table audio layers not yet available, waiting for sync...');
+      Logger.debug('Table audio layers not yet available, waiting for sync...');
       this.playAfterFileUpdate();
       return false;
     }
@@ -474,7 +475,7 @@ export class Jukebox extends GameObject {
       const layers = JSON.parse(raw);
       return Array.isArray(layers) ? layers.map(layer => Jukebox.normalizeTableAudioLayer(layer)) : [];
     } catch (error) {
-      console.warn('テーブルBGM設定の読み込みに失敗しました', error);
+      Logger.warn('テーブルBGM設定の読み込みに失敗しました', error);
       return [];
     }
   }
@@ -531,7 +532,7 @@ export class Jukebox extends GameObject {
 
     // activeBgmSourceの変化を検知（新規ログイン・他ピアの操作）
     if (prevActiveBgm !== this.activeBgmSource) {
-      console.log(`Sync: activeBgmSource changed ${prevActiveBgm} → ${this.activeBgmSource}`);
+      Logger.debug(`Sync: activeBgmSource changed ${prevActiveBgm} → ${this.activeBgmSource}`);
       // 同期された状態から内部フラグを復元
       this._combatBgmIdentifier = this.combatBgmIdentifierSync;
       if (this.activeBgmSource === 'table' && this.activeTableIdentifier) {
@@ -542,7 +543,7 @@ export class Jukebox extends GameObject {
           this._tableWantsPlay = true;
         } else {
           // テーブル音源がない場合はtable優先を適用せず、jukeboxを維持
-          console.log('Sync: table BGM has no valid layers, ignoring table override');
+          Logger.debug('Sync: table BGM has no valid layers, ignoring table override');
           // activeBgmSourceを元に戻さず、内部だけでtable優先を無視
           this._tableWantsPlay = false;
         }

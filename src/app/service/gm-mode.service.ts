@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { EventSystem } from '@udonarium/core/system';
 import { PeerCursor } from '@udonarium/peer-cursor';
+import { Logger } from '../class/core/system/util/logger';
 
 const STORAGE_KEY = 'udonarium-lycoris.gm-mode';
 
@@ -24,7 +25,7 @@ export class GmModeService {
     try {
       localStorage.setItem(STORAGE_KEY, isGm ? '1' : '0');
     } catch (e) {
-      console.warn('GM mode localStorage save failed', e);
+      Logger.warn('GM mode localStorage save failed', e);
     }
     // Notify all components (including OnPush) that GM mode changed
     EventSystem.trigger('GM_MODE_CHANGED', { isGm });

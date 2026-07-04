@@ -29,6 +29,9 @@ import { FileStorageComponent } from 'component/file-storage/file-storage.compon
 import { GameCharacterGeneratorComponent } from 'component/game-character-generator/game-character-generator.component';
 import { GameCharacterSheetComponent } from 'component/game-character-sheet/game-character-sheet.component';
 import { GameCharacterComponent } from 'component/game-character/game-character.component';
+import { CharacterGroupComponent } from 'component/character-group/character-group.component';
+import { CharacterGroupPartsPanelComponent } from 'component/character-group-parts/character-group-parts.component';
+import { GameCharacterGroup } from '@udonarium/game-character-group';
 import { GameDataElementComponent } from 'component/game-data-element/game-data-element.component';
 
 import { GameDataElementBuffComponent } from 'component/game-data-element-buff/game-data-element-buff.component';
@@ -143,6 +146,8 @@ import { AppComponent } from './app.component';
     GameCharacterGeneratorComponent,
     GameCharacterSheetComponent,
     GameCharacterComponent,
+    CharacterGroupComponent,
+    CharacterGroupPartsPanelComponent,
     GameDataElementComponent,
 
     GameDataElementBuffComponent,

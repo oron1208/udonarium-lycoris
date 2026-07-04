@@ -1,12 +1,12 @@
 import { IPeerContext } from './peer-context';
 
 export class ConnectionCallback {
-  onOpen: (peerId: string) => void;
-  onClose: (peerId: string) => void;
-  onConnect: (peerId: string) => void;
-  onDisconnect: (peerId: string) => void;
-  onData: (peerId: string, data: any) => void;
-  onError: (peerId: string, errorType: string, errorMessage: string, errorObject: any) => void;
+  onOpen!: (peerId: string) => void;
+  onClose!: (peerId: string) => void;
+  onConnect!: (peerId: string) => void;
+  onDisconnect!: (peerId: string) => void;
+  onData!: (peerId: string, data: any) => void;
+  onError!: (peerId: string, errorType: string, errorMessage: string, errorObject: any) => void;
 }
 
 export interface Connection {

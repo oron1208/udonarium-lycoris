@@ -1,4 +1,5 @@
 import { Component, ElementRef, HostBinding, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { ChatMessage, ChatMessageTargetContext } from '@udonarium/chat-message';
 import { ChatTab } from '@udonarium/chat-tab';
@@ -60,8 +61,8 @@ interface VnActor {
 })
 export class VnStageComponent implements OnInit, OnDestroy {
   @HostBinding('class.vn-has-front-pinned') get hasFrontPinnedSubPanel(): boolean { return this.paletteFrontPinned || this.logFrontPinned; }
-  @ViewChild('logScroll', { static: false }) logScrollEl: ElementRef;
-  @ViewChild('paletteScroll', { static: false }) paletteScrollEl: ElementRef;
+  @ViewChild('logScroll', { static: false }) logScrollEl!: ElementRef;
+  @ViewChild('paletteScroll', { static: false }) paletteScrollEl!: ElementRef;
 
   actors: VnActor[] = [];
   selectedCharacterId: string = '';
@@ -370,7 +371,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
         if (actor.text === obj.text && Date.now() - actor.lastSpokeAt < 3000) return;
         this.ngZone.run(() => this.applyChatMessage(obj));
       });
-    console.log('[VN] Event handlers registered after sync grace period');
+    Logger.debug('[VN] Event handlers registered after sync grace period');
 
     // Request VN_STAGE_FULL from all existing peers (handles late VN activation)
     const peers = Network.peerContexts.filter(p => p.peerId !== Network.peerContext?.peerId);
@@ -1760,7 +1761,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
         if (children[idx.line]) {
           (children[idx.line] as HTMLElement).scrollIntoView({ block: 'center' });
         }
-      } catch (e) { console.warn('jumpToIndex error', e); }
+      } catch (e) { Logger.warn('jumpToIndex error', e); }
     }, 200);
   }
 
@@ -2059,14 +2060,14 @@ export class VnStageComponent implements OnInit, OnDestroy {
     const cached = ImageStorage.instance.get(identifier);
     if (cached && cached.url) return;
     this.loadingImages.add(identifier);
-    ServerMediaStorage.fetchImage(identifier)
+    ServerMediaStorage.fetchImageOrNull(identifier)
       .then(image => {
         if (image) {
           ImageStorage.instance.add(image);
           this.ngZone.run(() => { this.now = Date.now(); });
         }
       })
-      .catch(err => console.warn('VN image fetch fail', identifier, err))
+      .catch(err => Logger.warn('VN image fetch fail', identifier, err))
       .finally(() => this.loadingImages.delete(identifier));
   }
 

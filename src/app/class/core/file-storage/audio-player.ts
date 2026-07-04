@@ -1,5 +1,6 @@
 import { AudioFile, AudioState } from './audio-file';
 import { FileReaderUtil } from './file-reader-util';
+import { Logger } from '../system/util/logger';
 
 export enum VolumeType {
   MASTER,
@@ -61,7 +62,7 @@ export class AudioPlayer {
   static get rootNode(): AudioNode { return AudioPlayer.masterGainNode; }
   static get auditionNode(): AudioNode { return AudioPlayer.auditionGainNode; }
 
-  private _audioElm: HTMLAudioElement;
+  private _audioElm!: HTMLAudioElement;
   private get audioElm(): HTMLAudioElement {
     if (!this._audioElm) {
       this._audioElm = new Audio();
@@ -72,7 +73,7 @@ export class AudioPlayer {
     return this._audioElm;
   }
 
-  private _mediaElementSource: MediaElementAudioSourceNode;
+  private _mediaElementSource!: MediaElementAudioSourceNode;
   private get mediaElementSource(): MediaElementAudioSourceNode {
     if (!this._mediaElementSource) this._mediaElementSource = AudioPlayer.audioContext.createMediaElementSource(this.audioElm);
     return this._mediaElementSource;
@@ -115,7 +116,7 @@ export class AudioPlayer {
     this.mediaElementSource.connect(this.getConnectingAudioNode());
     this.audioElm.src = url;
     this.audioElm.load();
-    this.audioElm.play().catch(reason => { console.warn(reason); });
+    this.audioElm.play().catch(reason => { Logger.warn(reason); });
   }
 
   pause() {
@@ -178,7 +179,7 @@ export class AudioPlayer {
       source.buffer = decodedData;
       return source;
     } catch (reason) {
-      console.warn(reason);
+      Logger.warn(reason);
       return null;
     }
   }
@@ -202,7 +203,7 @@ export class AudioPlayer {
       let blob = await response.blob();
       return blob;
     } catch (error) {
-      console.warn('There has been a problem with your fetch operation: ', error.message);
+      Logger.warn('There has been a problem with your fetch operation: ', error.message);
       throw error;
     }
   }
@@ -212,7 +213,7 @@ export class AudioPlayer {
     try {
       cache.blob = await AudioPlayer.getBlobAsync(audio);
     } catch (e) {
-      console.error(e);
+      Logger.error(e);
       return cache;
     }
 
@@ -231,7 +232,7 @@ export class AudioPlayer {
       AudioPlayer.audioContext.resume();
       document.removeEventListener('touchstart', callback, true);
       document.removeEventListener('mousedown', callback, true);
-      console.log('resumeAudioContext');
+      Logger.debug('resumeAudioContext');
     }
     document.addEventListener('touchstart', callback, true);
     document.addEventListener('mousedown', callback, true);
@@ -273,7 +274,7 @@ export class HttpAudioPlayer {
     this.mediaElementSource.connect(AudioPlayer.rootNode);
     this.audioElm.src = url;
     this.audioElm.load();
-    this.audioElm.play().catch(reason => { console.warn('HttpAudioPlayer play error:', reason); });
+    this.audioElm.play().catch(reason => { Logger.warn('HttpAudioPlayer play error:', reason); });
   }
 
   stop() {

@@ -1,4 +1,5 @@
 import { Component, NgZone, OnDestroy, OnInit } from '@angular/core';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { AudioFile } from '@udonarium/core/file-storage/audio-file';
 import { AudioPlayer, VolumeType } from '@udonarium/core/file-storage/audio-player';
@@ -57,10 +58,10 @@ export class CutInBgmComponent implements OnInit, OnDestroy {
   
   selectBgm(file: AudioFile) {
     if( !file )return; 
-    console.log('onSelectedFile', file);
+    Logger.debug('onSelectedFile', file);
     
-    console.log('file.identifier' + file.identifier);
-    console.log('file.name' + file.name);
+    Logger.debug('file.identifier' + file.identifier);
+    Logger.debug('file.name' + file.name);
     
     this.modalService.resolve(file.identifier);
   }

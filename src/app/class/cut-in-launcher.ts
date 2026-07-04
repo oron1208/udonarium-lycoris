@@ -1,4 +1,5 @@
 import { Component, NgZone, OnDestroy, OnInit } from '@angular/core';
+import { Logger } from './core/system/util/logger';
 
 import { AudioFile } from './core/file-storage/audio-file';
 import { AudioPlayer } from './core/file-storage/audio-player';
@@ -37,7 +38,7 @@ export class CutInLauncher extends GameObject {
   private _diceCutInWindowOpen = false;
 
   notifyDiceCutInClosed() {
-    console.log('DiceCutIn: window closed, resetting flag');
+    Logger.debug('DiceCutIn: window closed, resetting flag');
     this._diceCutInWindowOpen = false;
   }
 
@@ -52,7 +53,7 @@ export class CutInLauncher extends GameObject {
     const allCutIn = this.getCutIns();
     for (const cutIn_ of allCutIn) {
       if (cutIn_.diceActivate) {
-        console.log('DiceCutIn: diceActivate found, windowOpen=' + this._diceCutInWindowOpen);
+        Logger.debug('DiceCutIn: diceActivate found, windowOpen=' + this._diceCutInWindowOpen);
         cutIn_.diceResultText = contextText || resultText;
         cutIn_.diceRollTimestamp = Date.now();
 
@@ -69,7 +70,7 @@ export class CutInLauncher extends GameObject {
           }
         } else {
           // 2回目以降: 既存ウィンドウを更新
-          console.log('DiceCutIn: updating existing window');
+          Logger.debug('DiceCutIn: updating existing window');
           EventSystem.trigger('DICE_CUT_IN_UPDATE', { cutIn: cutIn_ });
           if (rollResult) {
             EventSystem.trigger('DICE_CUT_IN_STRUCTURED', { rollResult });
@@ -78,7 +79,7 @@ export class CutInLauncher extends GameObject {
         return;
       }
     }
-    console.log('DiceCutIn: no diceActivate cutin found');
+    Logger.debug('DiceCutIn: no diceActivate cutin found');
   }
 
   chatActivateCutIn( text: string , sendTo: string){
@@ -192,7 +193,7 @@ export class CutInLauncher extends GameObject {
 
   // override
   apply(context: ObjectContext) {
-    console.log('CutInLauncher apply() CALL');
+    Logger.debug('CutInLauncher apply() CALL');
 
     const launchCutInIdentifier = this.launchCutInIdentifier;
     const launchIsStart = this.launchIsStart;
@@ -205,10 +206,10 @@ export class CutInLauncher extends GameObject {
 
     if ( this.launchMySelf ) { return; } // ソロ再生用の場合他の人は発火しない
 
-    console.log('this.sendTo :' + this.sendTo);
+    Logger.debug('this.sendTo :' + this.sendTo);
 
     if ( stopBlankTagCutInTimeStamp !== this.stopBlankTagCutInTimeStamp ){
-      console.log('データ伝搬で検知 無タグカットイン停止のトリガー');
+      Logger.debug('データ伝搬で検知 無タグカットイン停止のトリガー');
       EventSystem.trigger('STOP_CUT_IN_BY_BGM', {  });
     }
 

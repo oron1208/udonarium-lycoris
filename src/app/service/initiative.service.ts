@@ -2,6 +2,7 @@ import { Injectable, NgZone } from '@angular/core';
 import { EventSystem } from '@udonarium/core/system';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { GameCharacter } from '@udonarium/game-character';
+import { GameCharacterGroup } from '@udonarium/game-character-group';
 import { GameTable } from '@udonarium/game-table';
 import { DataElement } from '@udonarium/data-element';
 import { ChatMessageService } from './chat-message.service';
@@ -9,6 +10,7 @@ import { ChatTabList } from '@udonarium/chat-tab-list';
 import { DiceBot } from '@udonarium/dice-bot';
 import { TabletopSelectionService } from 'service/tabletop-selection.service';
 import { TabletopService } from 'service/tabletop.service';
+import { Logger } from '../class/core/system/util/logger';
 
 export interface CombatEntry {
   identifier: string;
@@ -143,8 +145,15 @@ export class InitiativeService {
     if (!table) return;
 
     // 戦闘開始設定に従って参加対象を集める
-    const allTableChars = ObjectStore.instance.getObjects<GameCharacter>(GameCharacter)
-      .filter(c => c.location.name === 'table');
+    // 通常キャラクター + キャラクターグループ(部位管理)。
+    // グループは1枠として扱い、格納された部位は location.name='parts' で除外済み。
+    const allTableChars: GameCharacter[] = [];
+    for (const c of ObjectStore.instance.getObjects<GameCharacter>(GameCharacter)) {
+      if (c.location.name === 'table') allTableChars.push(c);
+    }
+    for (const g of ObjectStore.instance.getObjects<GameCharacterGroup>(GameCharacterGroup)) {
+      if (g.location.name === 'table') allTableChars.push(g);
+    }
     const charMap: { [identifier: string]: GameCharacter } = {};
 
     if (table.combatJoinAllTableCharacters) {
@@ -248,15 +257,9 @@ export class InitiativeService {
 
     if (!found) {
       // 全員行動済みなら次ラウンドへ
-      // ただし最後のキャラの turn_end バフを先に処理する
+      // ただし最後のキャラの turn_end バフを先に処理する(部位含む)
       if (table.roomMode === 'advanced' && table.combatAutoBuffDecay && currentId) {
-        for (const id of order) {
-          const char = ObjectStore.instance.get<GameCharacter>(id);
-          if (!char) continue;
-          char.decreaseAutoBuffRoundsByTrigger(currentId, 'turn_end');
-          char.decreaseBuffRound('turn_end', currentId);
-          char.deleteZeroRoundBuff();
-        }
+        this.decayBuffsForOrder(order, 'turn_end', currentId);
       }
       // 範囲バフの turn_end 処理（最後のキャラをトリガーとする）
       if (table.roomMode === 'advanced' && currentId) {
@@ -365,15 +368,9 @@ export class InitiativeService {
     table.update();
     EventSystem.trigger('COMBAT_ROUND_END', { round: oldRound });
 
-    // バフR自動減少（アドバンスモード用）— round_end タイミングのみ
+    // バフR自動減少（アドバンスモード用）— round_end タイミングのみ(部位含む)
     if (table.roomMode === 'advanced' && table.combatAutoBuffDecay) {
-      for (const id of order) {
-        const char = ObjectStore.instance.get<GameCharacter>(id);
-        if (!char) continue;
-        char.decreaseBuffRound('round_end');
-        char.deleteZeroRoundBuff();
-        char.decreaseAutoBuffRounds();
-      }
+      this.decayBuffsForOrder(order, 'round_end');
     }
 
     // 範囲バフのラウンド管理（アドバンスモード用）— round_end タイミングのみ
@@ -583,7 +580,7 @@ export class InitiativeService {
    */
   async rollInitiativeFormulaAsync(char: GameCharacter): Promise<{ value: number; detail: string } | null> {
     const formula = char.initiativeFormula;
-    console.log('[InitiativeRoll] start', char.name, 'formula:', formula, 'dicebot:', char.chatPalette?.dicebot);
+    Logger.debug('[InitiativeRoll] start', char.name, 'formula:', formula, 'dicebot:', char.chatPalette?.dicebot);
     if (!formula || !formula.trim()) return null;
 
     // {パラメータ名} を解決（チャパレのevaluateを使用）
@@ -599,13 +596,13 @@ export class InitiativeService {
     try {
       const gameSystem = await DiceBot.loadGameSystemAsync(gameType);
       const rollResult = await DiceBot.diceRollAsync(resolved, gameSystem);
-      console.log('[InitiativeRoll]', char.name, 'gameType:', gameType, 'resolved:', resolved, 'result:', rollResult?.result);
+      Logger.debug('[InitiativeRoll]', char.name, 'gameType:', gameType, 'resolved:', resolved, 'result:', rollResult?.result);
       if (rollResult && rollResult.result) {
         const value = this.extractNumber(rollResult.result);
         return { value, detail: `${formula} → ${rollResult.result}` };
       }
     } catch (e) {
-      console.warn('rollInitiativeFormulaAsync error', e);
+      Logger.warn('rollInitiativeFormulaAsync error', e);
     }
 
     // フォールバック: 簡易評価
@@ -714,5 +711,33 @@ export class InitiativeService {
   extractNumber(detail: string): number {
     const m = /=?\s*(-?\d+)\s*$/.exec(detail);
     return m ? parseInt(m[1]) : 0;
+  }
+
+  /**
+   * バフ自動減少処理。combatOrder のキャラ + グループ内の部位も対象にする。
+   * 部位は location.name='parts' で combatOrder に入らないため、
+   * グループのターン/ラウンド経過で部位のバフも減らす。
+   */
+  private decayBuffsForOrder(
+    order: string[],
+    mode: 'turn_end' | 'round_end',
+    triggerId?: string,
+  ) {
+    for (const id of order) {
+      const char = ObjectStore.instance.get<GameCharacter>(id);
+      if (!char) continue;
+      // グループなら部位も処理
+      const targets: GameCharacter[] = (char instanceof GameCharacterGroup) ? char.parts : [char];
+      for (const target of targets) {
+        if (mode === 'turn_end' && triggerId) {
+          target.decreaseAutoBuffRoundsByTrigger(triggerId, 'turn_end');
+          target.decreaseBuffRound('turn_end', triggerId);
+        } else {
+          target.decreaseBuffRound('round_end');
+          target.decreaseAutoBuffRounds();
+        }
+        target.deleteZeroRoundBuff();
+      }
+    }
   }
 }

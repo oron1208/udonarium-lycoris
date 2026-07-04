@@ -6,6 +6,7 @@ import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 import { EventSystem } from '@udonarium/core/system';
 import { DiceSymbol, DiceType } from '@udonarium/dice-symbol';
 import { GameCharacter } from '@udonarium/game-character';
+import { GameCharacterGroup } from '@udonarium/game-character-group';
 import { GameTable } from '@udonarium/game-table';
 import { GameTableMask } from '@udonarium/game-table-mask';
 import { GameTableScratchMask } from '@udonarium/game-table-scratch-mask';
@@ -14,6 +15,7 @@ import { TableSelecter } from '@udonarium/table-selecter';
 import { RangeArea } from '@udonarium/range';
 import { Terrain } from '@udonarium/terrain';
 import { TextNote } from '@udonarium/text-note';
+import { Logger } from '../class/core/system/util/logger';
 
 import { ImageTag } from '@udonarium/image-tag'; 
 import { DataElement } from '@udonarium/data-element';
@@ -35,6 +37,19 @@ export class TabletopActionService {
     character.location.y = position.y - 25;
     character.posZ = position.z;
     return character;
+  }
+
+  /**
+   * キャラクターグループ(部位管理)を作成。アドバンスモード限定。
+   */
+  createCharacterGroup(position: PointerCoordinate): GameCharacterGroup {
+    let group = GameCharacterGroup.create('新しいグループ', 1, '');
+    // location は @SyncVar で新しいオブジェクトをセットしないと同期されない
+    // (location.x の直接変更は setter をトリガーしない)。
+    group.location = { name: 'table', x: position.x - 25, y: position.y - 25 };
+    group.posZ = position.z;
+    group.update();
+    return group;
   }
 
   createGameTableMask(position: PointerCoordinate): GameTableMask {
@@ -161,7 +176,7 @@ export class TabletopActionService {
     range.posZ = position.z;
     range.type = typeName;
     let data = range.commonDataElement.getFirstElementByName('opacity');
-    console.log( '射程範囲TEST' + data);
+    Logger.debug( '射程範囲TEST' + data);
     data.currentValue = 60;
     return range;
   }
@@ -243,7 +258,7 @@ export class TabletopActionService {
       localStorage.removeItem('udonarium.pendingRoomMode.v1');
       if (mode === 'advanced') return 'advanced';
     } catch (e) {
-      console.warn('room mode localStorage read failed', e);
+      Logger.warn('room mode localStorage read failed', e);
     }
     return 'standard';
   }
@@ -529,7 +544,7 @@ export class TabletopActionService {
   }
 
   makeDefaultContextMenuActions(position: PointerCoordinate): ContextMenuAction[] {
-    return [
+    let actions: ContextMenuAction[] = [
       this.getCreateCharacterMenu(position),
       this.getCreateTableMaskMenu(position),
       this.getCreateLightMaskMenu(position),
@@ -539,6 +554,11 @@ export class TabletopActionService {
       this.getCreateDiceSymbolMenu(position),
       this.getCreateRangeMenu(position),
     ];
+    // アドバンスモード限定: キャラクターグループ(部位管理)作成を追加
+    if (TableSelecter.instance.viewTable?.roomMode === 'advanced') {
+      actions.push(this.getCreateCharacterGroupMenu(position));
+    }
+    return actions;
   }
 
   private getCreateCharacterMenu(position: PointerCoordinate): ContextMenuAction {
@@ -546,6 +566,19 @@ export class TabletopActionService {
       name: 'キャラクターを作成', action: () => {
         let character = this.createGameCharacter(position);
         EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: character.identifier, className: character.aliasName });
+        SoundEffect.play(PresetSound.piecePut);
+      }
+    }
+  }
+
+  /**
+   * キャラクターグループ(部位管理)作成メニュー。アドバンスモード限定で表示。
+   */
+  getCreateCharacterGroupMenu(position: PointerCoordinate): ContextMenuAction {
+    return {
+      name: 'キャラクターグループを作成（開発途中）', action: () => {
+        let group = this.createCharacterGroup(position);
+        EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: group.identifier, className: group.aliasName });
         SoundEffect.play(PresetSound.piecePut);
       }
     }

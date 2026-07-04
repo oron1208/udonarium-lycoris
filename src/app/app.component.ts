@@ -1,6 +1,7 @@
 import { AfterViewInit, Component, NgZone, OnDestroy, ViewChild, ViewContainerRef } from '@angular/core';
 import { NgSelectConfig } from '@ng-select/ng-select';
 import * as lzbase62 from 'lzbase62';
+import { Logger } from './class/core/system/util/logger';
 
 import { ChatTabList } from '@udonarium/chat-tab-list';
 import { Config } from '@udonarium/config';
@@ -78,7 +79,7 @@ import { ChatMessageFixComponent } from 'component/chat-message-fix/chat-message
 })
 export class AppComponent implements AfterViewInit, OnDestroy {
 
-  @ViewChild('modalLayer', { read: ViewContainerRef, static: true }) modalLayerViewContainerRef: ViewContainerRef;
+  @ViewChild('modalLayer', { read: ViewContainerRef, static: true }) modalLayerViewContainerRef!: ViewContainerRef;
 
   get reloadCheck(): ReloadCheck { return ObjectStore.instance.get<ReloadCheck>('ReloadCheck'); }
   networkService = Network;
@@ -109,7 +110,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     try {
       localStorage.setItem('udonarium.macroHotbar.visible.v1', this.isMacroHotbarVisible ? '1' : '0');
     } catch (e) {
-      console.warn('macro hotbar visibility localStorage save failed', e);
+      Logger.warn('macro hotbar visibility localStorage save failed', e);
     }
     EventSystem.trigger('MACRO_HOTBAR_VISIBILITY_CHANGED', { visible: this.isMacroHotbarVisible });
   }
@@ -128,7 +129,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     try {
       localStorage.setItem('udonarium.vnStage.visible.v1', this.isVnStageVisible ? '1' : '0');
     } catch (e) {
-      console.warn('VN stage visibility localStorage save failed', e);
+      Logger.warn('VN stage visibility localStorage save failed', e);
     }
   }
 
@@ -290,7 +291,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       })
       .on('STOP_CUT_IN', event => {
         if ( ! event.data.cutIn ) return;
-        console.log('カットインイベント_ストップ'  + event.data.cutIn.name );
+        Logger.debug('カットインイベント_ストップ'  + event.data.cutIn.name );
 
       })
       .on('DEVELOPER_ANNOUNCEMENT', event => {
@@ -346,7 +347,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       })
       .on('SYNCHRONIZE_FILE_LIST', event => { if (event.isSendFromSelf) this.lazyNgZoneUpdate(false); })
       .on<AppConfig>('LOAD_CONFIG', event => {
-        console.log('LOAD_CONFIG !!!');
+        Logger.debug('LOAD_CONFIG !!!');
         Network.configure(event.data);
         Network.setApiKey(event.data.webrtc.key);
         Network.setSignalingUrl(event.data.webrtc.signalingUrl || '');
@@ -359,7 +360,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         this.lazyNgZoneUpdate(false);
       })
       .on('OPEN_NETWORK', event => {
-        console.log('OPEN_NETWORK', event.data.peerId);
+        Logger.debug('OPEN_NETWORK', event.data.peerId);
         // Force VN stage off during sync to prevent freeze
         this.vnStageReady = false;
         if (this.vnStageReadyTimer) clearTimeout(this.vnStageReadyTimer);
@@ -372,7 +373,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         // 初期オブジェクトの自動配置は廃止（ヘルプ→サンプルキャラから手動配置）
       })
       .on('NETWORK_ERROR', event => {
-        console.log('NETWORK_ERROR', event.data.peerId);
+        Logger.debug('NETWORK_ERROR', event.data.peerId);
         let errorType: string = event.data.errorType;
         let errorMessage: string = event.data.errorMessage;
 
@@ -393,7 +394,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         // システムメッセージを抑制（ログのみ）
         const kind = event.data && event.data.kind === 'image' ? '画像' : '音声';
         const identifier = event.data && event.data.identifier ? String(event.data.identifier).slice(0, 12) : '';
-        console.debug(`[SERVER_MEDIA_MISSING] ${kind}データが見つかりません${identifier ? ` (${identifier}...)` : ''}`);
+        Logger.debug(`[SERVER_MEDIA_MISSING] ${kind}データが見つかりません${identifier ? ` (${identifier}...)` : ''}`);
       })
       .on('CONNECT_PEER', event => {
         if (event.isSendFromSelf) this.chatMessageService.calibrateTimeOffset();
@@ -625,7 +626,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       Network.open(userId, entry.roomId, entry.roomName, password);
       return true;
     } catch (e) {
-      console.warn('developer join failed', e);
+      Logger.warn('developer join failed', e);
       return false;
     }
   }
@@ -651,7 +652,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   }
 
   startVote(){
-    console.log( '点呼/投票イベント_スタート' );
+    Logger.debug( '点呼/投票イベント_スタート' );
     let vote = ObjectStore.instance.get<Vote>('Vote');
     if (!vote.chkToMe() )return;
 
@@ -668,19 +669,19 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   }
 
   finishVote(text: string){
-    console.log( '投票集計完了' );
+    Logger.debug( '投票集計完了' );
     this.chatMessageService.sendSystemMessageLastSendCharactor(text);
   }
 
   alarmPop(title: string, time: string){
-    console.log( 'ポップアップ_スタート' + title );
+    Logger.debug( 'ポップアップ_スタート' + title );
     let winH = 100;
     let winW = 200;
     let option: PanelOption = { width: winW, height: winH, left: 300 , top: 100};
     option.title = 'アラーム ' + title;
 
-    console.log( 'POP画面領域 w:' + window.innerWidth + ' h:' + window.innerHeight );
-    console.log( 'POPサイズ w:' + winW + ' h:' + winH );
+    Logger.debug( 'POP画面領域 w:' + window.innerWidth + ' h:' + window.innerHeight );
+    Logger.debug( 'POPサイズ w:' + winW + ' h:' + winH );
 
     let margin_w = window.innerWidth - winW ;
     let margin_h = window.innerHeight - winH - 25 ;
@@ -704,16 +705,16 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
   startCutIn( cutIn: CutIn ){
     if ( ! cutIn ) return;
-    console.log( 'カットインイベント_スタート' + cutIn.name );
+    Logger.debug( 'カットインイベント_スタート' + cutIn.name );
     let option: PanelOption = { width: 200, height: 100, left: 300 , top: 100};
     option.title = 'カットイン : ' + cutIn.name ;
 
-    console.log( '画面領域 w:' + window.innerWidth + ' h:' + window.innerHeight );
+    Logger.debug( '画面領域 w:' + window.innerWidth + ' h:' + window.innerHeight );
 
     let cutin_w = cutIn.width;
     let cutin_h = cutIn.height;
 
-    console.log( '画像サイズ w:' + cutin_w + ' h:' + cutin_h );
+    Logger.debug( '画像サイズ w:' + cutin_w + ' h:' + cutin_h );
 
     let margin_w = window.innerWidth - cutin_w ;
     let margin_h = window.innerHeight - cutin_h - 25 ;
@@ -911,7 +912,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
           identifiers.push(path);
         }
       } catch (e) {
-        console.warn('asset image fetch failed:', path, e);
+        Logger.warn('asset image fetch failed:', path, e);
         identifiers.push(path);
       }
     }

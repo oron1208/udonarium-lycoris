@@ -1,4 +1,5 @@
 import { AfterViewInit, Component, Input, OnDestroy, OnInit, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { EventSystem, Network } from '@udonarium/core/system';
 import { DataElement } from '@udonarium/data-element';
@@ -384,7 +385,7 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
     component.tabletopObject = <GameCharacter>this.tabletopObject;
   }
 
-  @ViewChild('bulkFileInput') bulkFileInput: ElementRef<HTMLInputElement>;
+  @ViewChild('bulkFileInput') bulkFileInput!: ElementRef<HTMLInputElement>;
 
   async onBulkFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
@@ -409,7 +410,7 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
         try {
           processFile = await this.compressImage(file);
         } catch (e) {
-          console.error('compress failed', e);
+          Logger.error('compress failed', e);
           alert(`${baseName} の圧縮に失敗しました。スキップします。`);
           continue;
         }
@@ -424,7 +425,7 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
           character.imageDataElement.appendChild(child);
         }
       } catch (e) {
-        console.error('add failed', e);
+        Logger.error('add failed', e);
         alert(`${baseName} の登録に失敗しました。`);
       }
     }

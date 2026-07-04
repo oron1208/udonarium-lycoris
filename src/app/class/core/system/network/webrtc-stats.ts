@@ -1,3 +1,4 @@
+import { Logger } from '../util/logger';
 export enum CandidateType {
   UNKNOWN = 'unknown',
   RELAY = 'relay',
@@ -16,7 +17,7 @@ export class WebRTCStats {
     try {
       stats = await this.peerConnection.getStats();
     } catch (error) {
-      console.warn(error);
+      Logger.warn(error);
     }
 
     if (stats == null) {

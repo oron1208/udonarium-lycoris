@@ -1,4 +1,5 @@
 import { animate, keyframes, state, style, transition, trigger } from '@angular/animations';
+import { Logger } from '../../class/core/system/util/logger';
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
@@ -205,7 +206,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
     this.stopDoubleClickTimer();
     let distance = (this.doubleClickPoint.x - this.input.pointer.x) ** 2 + (this.doubleClickPoint.y - this.input.pointer.y) ** 2;
     if (distance < 10 ** 2) {
-      console.log('onDoubleClick !!!!');
+      Logger.debug('onDoubleClick !!!!');
       if (this.drawCard() != null) {
         SoundEffect.play(PresetSound.cardDraw);
       }

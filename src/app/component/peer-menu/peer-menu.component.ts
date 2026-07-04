@@ -1,4 +1,5 @@
 import { AfterViewInit, ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit } from '@angular/core';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { ChatTabList } from '@udonarium/chat-tab-list';
@@ -136,7 +137,7 @@ export class PeerMenuComponent implements OnInit, OnDestroy, AfterViewInit {
     try {
       localStorage.setItem(GM_CURSOR_SHARE_DISABLED_KEY, this.isGmCursorShareDisabled ? '1' : '0');
     } catch (e) {
-      console.warn('GM cursor sharing localStorage save failed', e);
+      Logger.warn('GM cursor sharing localStorage save failed', e);
     }
     if (this.myPeer) {
       this.myPeer.isCursorShareDisabled = this.isGmCursorShareDisabled;
@@ -225,9 +226,9 @@ export class PeerMenuComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   checkConnect(){
-    console.log("自身のUserid:" + this.networkService.peerContext.userId );
+    Logger.debug("自身のUserid:" + this.networkService.peerContext.userId );
     for (let context of this.networkService.peerContexts){
-      console.log("接続対象ID:" + context.peerId );
+      Logger.debug("接続対象ID:" + context.peerId );
     }
   }
 

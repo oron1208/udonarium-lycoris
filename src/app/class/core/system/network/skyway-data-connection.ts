@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import { Logger } from '../util/logger';
 
 import { MessagePack } from '../util/message-pack';
 import { UUID } from '../util/uuid';
@@ -41,7 +42,7 @@ export class SkyWayDataConnection extends EventEmitter {
   get metadata(): any { return this.conn.metadata; }
   get bufferedAmount(): number { return this.conn._dc?.bufferedAmount ?? 0; }
 
-  private stats: WebRTCStats;
+  private stats!: WebRTCStats;
 
   private _timestamp: number = performance.now();
   get timestamp(): number { return this._timestamp; }
@@ -185,7 +186,7 @@ export class SkyWayDataConnection extends EventEmitter {
   private setTimeoutTimer() {
     this.clearTimeoutTimer();
     this.timeoutTimer = setTimeout(() => {
-      console.warn(`timeout ${this.conn.remoteId}`);
+      Logger.warn(`timeout ${this.conn.remoteId}`);
       this.timeoutTimer = null;
       this.emit('close');
     }, 15000);

@@ -4,6 +4,7 @@ import { AudioStorage, CatalogItem } from './audio-storage';
 import { BufferSharingTask } from './buffer-sharing-task';
 import { FileReaderUtil } from './file-reader-util';
 import { ServerMediaStorage } from './server-media-storage';
+import { Logger } from '../system/util/logger';
 
 export class AudioSharingSystem {
   private static _instance: AudioSharingSystem
@@ -21,22 +22,22 @@ export class AudioSharingSystem {
   private constructor() { }
 
   initialize() {
-    console.log('AudioSharingSystem ready...');
+    Logger.debug('AudioSharingSystem ready...');
     this.destroy();
     EventSystem.register(this)
       .on('CONNECT_PEER', -1, event => {
         if (!event.isSendFromSelf) return;
-        console.log('CONNECT_PEER AudioStorageService !!!', event.data.peerId);
+        Logger.debug('CONNECT_PEER AudioStorageService !!!', event.data.peerId);
         AudioStorage.instance.synchronize();
       })
       .on('SYNCHRONIZE_AUDIO_LIST', async event => {
         if (event.isSendFromSelf) return;
-        console.log('SYNCHRONIZE_AUDIO_LIST ' + event.sendFrom);
+        Logger.debug('SYNCHRONIZE_AUDIO_LIST ' + event.sendFrom);
 
         let otherCatalog: CatalogItem[] = event.data;
         let request: CatalogItem[] = [];
 
-        console.log('SYNCHRONIZE_AUDIO_LIST active tasks ', this.sendTaskMap.size + this.receiveTaskMap.size);
+        Logger.debug('SYNCHRONIZE_AUDIO_LIST active tasks ', this.sendTaskMap.size + this.receiveTaskMap.size);
         for (let item of otherCatalog) {
           let audio: AudioFile = AudioStorage.instance.get(item.identifier);
           if (audio === null) {
@@ -50,10 +51,11 @@ export class AudioSharingSystem {
             audio.apply(ctx);
           }
           if (audio.state < AudioState.COMPLETE && !this.receiveTaskMap.has(item.identifier)) {
-            let fetched = await ServerMediaStorage.fetchAudio(item.identifier);
-            if (fetched) {
-              AudioStorage.instance.add(fetched);
+            let result = await ServerMediaStorage.fetchAudio(item.identifier);
+            if (result.status === 'ok') {
+              AudioStorage.instance.add(result.file);
             } else {
+              // missing(本当に無い) / unreachable(サーバー障害) のどちらも P2P フォールバックで救済する。
               request.push({ identifier: item.identifier, state: audio.state });
             }
           }
@@ -83,7 +85,7 @@ export class AudioSharingSystem {
 
         if (this.isLimitSendTask() === false && 0 < randomRequest.length && !this.existsSendTask(event.data.receiver)) {
           // 送信
-          console.log('REQUEST_AUDIO_RESOURE Send!!! ' + event.data.receiver + ' -> ' + randomRequest);
+          Logger.debug('REQUEST_AUDIO_RESOURE Send!!! ' + event.data.receiver + ' -> ' + randomRequest);
           let index = Math.floor(Math.random() * randomRequest.length);
           let item: { identifier: string, state: number } = randomRequest[index];
           let audio: AudioFile = AudioStorage.instance.get(item.identifier);
@@ -95,27 +97,27 @@ export class AudioSharingSystem {
           if (-1 < index) candidatePeers.splice(index, 1);
 
           for (let peerId of candidatePeers) {
-            console.log('REQUEST_AUDIO_RESOURE AudioStorageService Relay!!! ' + peerId + ' -> ' + event.data.identifiers);
+            Logger.debug('REQUEST_AUDIO_RESOURE AudioStorageService Relay!!! ' + peerId + ' -> ' + event.data.identifiers);
             EventSystem.call(event, peerId);
             return;
           }
-          console.log('REQUEST_FILE_RESOURE AudioStorageService あぶれた...' + event.data.receiver, randomRequest.length);
+          Logger.debug('REQUEST_FILE_RESOURE AudioStorageService あぶれた...' + event.data.receiver, randomRequest.length);
         }
       })
       .on('UPDATE_AUDIO_RESOURE', 1000, event => {
         let updateAudios: AudioFileContext[] = event.data;
-        console.log('UPDATE_AUDIO_RESOURE AudioStorageService ' + event.sendFrom + ' -> ', updateAudios);
+        Logger.debug('UPDATE_AUDIO_RESOURE AudioStorageService ' + event.sendFrom + ' -> ', updateAudios);
         for (let context of updateAudios) {
           if (context.blob) context.blob = new Blob([context.blob], { type: context.type });
           AudioStorage.instance.add(context);
         }
       })
       .on('START_AUDIO_TRANSMISSION', event => {
-        console.log('START_AUDIO_TRANSMISSION ' + event.data.fileIdentifier);
+        Logger.debug('START_AUDIO_TRANSMISSION ' + event.data.fileIdentifier);
         let identifier: string = event.data.fileIdentifier;
         let audio: AudioFile = AudioStorage.instance.get(identifier);
         if (this.receiveTaskMap.has(identifier) || (audio && AudioState.COMPLETE <= audio.state)) {
-          console.warn('CANCEL_TASK_ ' + identifier);
+          Logger.warn('CANCEL_TASK_ ' + identifier);
           EventSystem.call('CANCEL_TASK_' + identifier, null, event.sendFrom);
         } else {
           this.startReceiveTask(identifier);
@@ -181,7 +183,7 @@ export class AudioSharingSystem {
     }
 
     task.start();
-    console.log('startReceiveTask => ', this.receiveTaskMap.size);
+    Logger.debug('startReceiveTask => ', this.receiveTaskMap.size);
   }
 
   private stopSendTask(identifier: string) {
@@ -189,7 +191,7 @@ export class AudioSharingSystem {
     if (task) { task.cancel(); }
     this.sendTaskMap.delete(identifier);
 
-    console.log('stopSendTask => ', this.sendTaskMap.size);
+    Logger.debug('stopSendTask => ', this.sendTaskMap.size);
   }
 
   private stopReceiveTask(identifier: string) {
@@ -197,11 +199,11 @@ export class AudioSharingSystem {
     if (task) { task.cancel(); }
     this.receiveTaskMap.delete(identifier);
 
-    console.log('stopReceiveTask => ', this.receiveTaskMap.size);
+    Logger.debug('stopReceiveTask => ', this.receiveTaskMap.size);
   }
 
   private request(request: CatalogItem[], peerId: string) {
-    console.log('requestFile() ' + peerId);
+    Logger.debug('requestFile() ' + peerId);
     let peerIds = Network.peerIds;
     peerIds.splice(peerIds.indexOf(Network.peerId), 1);
     EventSystem.call('REQUEST_AUDIO_RESOURE', { identifiers: request, receiver: Network.peerId, candidatePeers: peerIds }, peerId);

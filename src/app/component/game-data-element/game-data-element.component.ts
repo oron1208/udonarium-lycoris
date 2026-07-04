@@ -14,6 +14,7 @@ import {
 import { EventSystem } from '@udonarium/core/system';
 import { DataElement } from '@udonarium/data-element';
 import { MarkDown } from '@udonarium/mark-down';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
@@ -42,7 +43,7 @@ export class GameDataElementComponent implements OnInit, OnDestroy, AfterViewIni
   @Input() isImage: boolean = false;
   @Input() indexNum: number = 0;
 
-  @ViewChild('bulkFileInput') bulkFileInput: ElementRef<HTMLInputElement>;
+  @ViewChild('bulkFileInput') bulkFileInput!: ElementRef<HTMLInputElement>;
 
   @HostBinding('class.auto-buff-row-up') get isAutoBuffRowUp(): boolean { return this.autoBuffClass === 'auto-buffed-up'; }
   @HostBinding('class.auto-buff-row-down') get isAutoBuffRowDown(): boolean { return this.autoBuffClass === 'auto-buffed-down'; }
@@ -163,7 +164,7 @@ export class GameDataElementComponent implements OnInit, OnDestroy, AfterViewIni
         try {
           processFile = await this.compressImage(file);
         } catch (e) {
-          console.error('compress failed', e);
+          Logger.error('compress failed', e);
           alert(`${baseName} の圧縮に失敗しました。スキップします。`);
           continue;
         }
@@ -178,7 +179,7 @@ export class GameDataElementComponent implements OnInit, OnDestroy, AfterViewIni
           this.gameDataElement.appendChild(child);
         }
       } catch (e) {
-        console.error('add failed', e);
+        Logger.error('add failed', e);
         alert(`${baseName} の登録に失敗しました。`);
       }
     }
@@ -279,7 +280,7 @@ export class GameDataElementComponent implements OnInit, OnDestroy, AfterViewIni
   }
 
   clickMarkDownBox(id: string) {
-    console.log("マークダウンクリック:" + id);
+    Logger.debug("マークダウンクリック:" + id);
   }
 
   get markdown(): MarkDown { return ObjectStore.instance.get<MarkDown>('markdwon'); }
@@ -295,7 +296,7 @@ export class GameDataElementComponent implements OnInit, OnDestroy, AfterViewIni
   @HostListener('click', ['$event'])
   click(event){
     if (this.markdown){
-      console.log("event.timeStamp:" + event.timeStamp);
+      Logger.debug("event.timeStamp:" + event.timeStamp);
       this.markdown.changeMarkDownCheckBox(event.target.id, event.timeStamp);
     }
   }

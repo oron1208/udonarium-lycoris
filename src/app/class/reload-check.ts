@@ -1,6 +1,7 @@
 import { SyncObject, SyncVar } from './core/synchronize-object/decorator';
 import { GameCharacter } from '@udonarium/game-character';
 import { TabletopObject } from './tabletop-object';
+import { Logger } from './core/system/util/logger';
 
 @SyncObject('reload-check')
 export class ReloadCheck extends TabletopObject {
@@ -27,7 +28,7 @@ export class ReloadCheck extends TabletopObject {
   }
 
   isLoadOk(): boolean{
-    console.log('isLoadOk :' + this.reloadOK);
+    Logger.debug('isLoadOk :' + this.reloadOK);
     return this.reloadOK;
   }
 

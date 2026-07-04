@@ -25,7 +25,7 @@ import { ChatTachieImageComponent } from 'component/chat-tachie-img/chat-tachie-
 export class ChatTachieComponent implements OnInit, OnDestroy, AfterViewInit, AfterViewChecked {
 
   @Input() chatTabidentifier: string = '';
-  @ViewChild('tachieArea', { read: ElementRef }) private tachieArea: ElementRef;  
+  @ViewChild('tachieArea', { read: ElementRef }) private tachieArea!: ElementRef;
   private _tachieAreaWidth = 0;
   
 

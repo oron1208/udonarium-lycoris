@@ -1,4 +1,5 @@
 import { Component, ElementRef, Input, OnInit, ViewChild } from '@angular/core';
+import { Logger } from '../../class/core/system/util/logger';
 
 export interface DictionaryCategory {
   id: string;
@@ -48,7 +49,7 @@ export class ItemDictionaryComponent implements OnInit {
           this.dictionaries.push(dict);
         }
       } catch (e) {
-        console.warn('Failed to load dictionary:', f.name, e);
+        Logger.warn('Failed to load dictionary:', f.name, e);
       }
     }
     if (this.dictionaries.length > 0) {

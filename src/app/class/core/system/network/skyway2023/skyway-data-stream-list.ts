@@ -1,5 +1,6 @@
 import { PeerContext } from '../peer-context';
 import { SkyWayDataStream } from './skyway-data-stream';
+import { Logger } from '../../util/logger';
 
 export class SkyWayDataStreamList implements Iterable<SkyWayDataStream> {
   private streams: SkyWayDataStream[] = [];
@@ -54,12 +55,12 @@ export class SkyWayDataStreamList implements Iterable<SkyWayDataStream> {
     if (existStream) {
       if (existStream !== stream) {
         if (existStream.sortKey < stream.sortKey) {
-          console.log('add() is Fail. ' + stream.peer.peerId + ' is already connecting.', stream, existStream);
+          Logger.debug('add() is Fail. ' + stream.peer.peerId + ' is already connecting.', stream, existStream);
           stream.removeAllListeners();
           stream.disconnect();
           this.remove(stream);
         } else {
-          console.log('add() is Fail. ' + stream.peer.peerId + ' is already connecting. exchange.', stream, existStream);
+          Logger.debug('add() is Fail. ' + stream.peer.peerId + ' is already connecting. exchange.', stream, existStream);
           existStream.removeAllListeners();
           existStream.disconnect();
           this.remove(existStream);
@@ -70,17 +71,17 @@ export class SkyWayDataStreamList implements Iterable<SkyWayDataStream> {
     }
     this.streams.push(stream);
     this.refresh();
-    console.log('<add()> Peer:' + stream.peer.peerId + ' length:' + this.streams.length);
+    Logger.debug('<add()> Peer:' + stream.peer.peerId + ' length:' + this.streams.length);
     return stream;
   }
 
   remove(stream: SkyWayDataStream): SkyWayDataStream {
     let index = this.streams.indexOf(stream);
     if (0 <= index) {
-      console.log(stream.peer.peerId + ' is えんいー' + 'index:' + index + ' length:' + this.streams.length);
+      Logger.debug(stream.peer.peerId + ' is えんいー' + 'index:' + index + ' length:' + this.streams.length);
       this.streams.splice(index, 1);
       this.refresh();
-      console.log('<close()> Peer:' + stream.peer.peerId + ' length:' + this.streams.length);
+      Logger.debug('<close()> Peer:' + stream.peer.peerId + ' length:' + this.streams.length);
     }
     return 0 <= index ? stream : null;
   }

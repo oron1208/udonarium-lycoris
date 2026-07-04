@@ -24,6 +24,9 @@ import { ImageTagList } from '@udonarium/image-tag-list';
 import { Jukebox } from '@udonarium/Jukebox';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 //
+import { ModalService } from './modal.service';
+import { TextViewComponent } from '../component/text-view/text-view.component';
+
 type UpdateCallback = (percent: number) => void;
 
 @Injectable({
@@ -33,7 +36,8 @@ export class SaveDataService {
   private static queue: PromiseQueue = new PromiseQueue('SaveDataServiceQueue');
 
   constructor(
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    private modalService: ModalService
   ) { }
 
   saveRoomAsync(fileName: string = 'ルームデータ', updateCallback?: UpdateCallback): Promise<void> {
@@ -60,11 +64,15 @@ export class SaveDataService {
     let images: ImageFile[] = [];
     images = images.concat(this.searchImageFiles(roomXml));
     images = images.concat(this.searchImageFiles(chatXml));
+    let incompleteCount = 0;
     for (const image of images) {
       if (image.state === ImageState.COMPLETE) {
         files.push(new File([image.blob], image.identifier + '.' + MimeType.extension(image.blob.type), { type: image.blob.type }));
+      } else {
+        incompleteCount++;
       }
     }
+    this.warnIncompleteImages(incompleteCount);
 
     let imageTagXml = this.convertToXml(ImageTagList.create(images));
     files.push(new File([imageTagXml], 'imagetag.xml', { type: 'text/plain' }));
@@ -85,11 +93,15 @@ export class SaveDataService {
 //    files = files.concat(this.searchImageFiles(xml));
     let images: ImageFile[] = [];
     images = images.concat(this.searchImageFiles(xml));
+    let incompleteCount = 0;
     for (const image of images) {
       if (image.state === ImageState.COMPLETE) {
         files.push(new File([image.blob], image.identifier + '.' + MimeType.extension(image.blob.type), { type: image.blob.type }));
+      } else {
+        incompleteCount++;
       }
     }
+    this.warnIncompleteImages(incompleteCount);
 
     let imageTagXml = this.convertToXml(ImageTagList.create(images));
     files.push(new File([imageTagXml], 'imagetag.xml', { type: 'text/plain' }));
@@ -105,6 +117,16 @@ export class SaveDataService {
       progresPercent = percent;
       this.ngZone.run(() => updateCallback(progresPercent));
     });
+  }
+
+  /**
+   * サーバー/ローカルキャッシュに無く、取得できなかった画像がZIP保存で漏れた場合に警告表示。
+   * P2P救済が間に合わなかった画像は保存データに含まれない。
+   */
+  private warnIncompleteImages(incompleteCount: number): void {
+    if (incompleteCount < 1) return;
+    const message = `${incompleteCount}枚の画像が取得できず、保存データに含まれませんでした。\nサーバーまたは他の参加者から取得できる場合がありますが、このままでは保存データから復元できません。`;
+    this.modalService.open(TextViewComponent, { title: '画像の保存漏れ', text: message });
   }
 
   private convertToXml(gameObject: GameObject): string {

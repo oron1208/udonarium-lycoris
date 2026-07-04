@@ -11,6 +11,7 @@ import {
   OnInit,
   ViewChild
 } from '@angular/core';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ObjectNode } from '@udonarium/core/synchronize-object/object-node';
@@ -47,7 +48,7 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit{
   
   @Input() terrain: Terrain = null;
   @Input() is3D: boolean = false;
-  @ViewChild('gridCanvas', { static: true }) gridCanvas: ElementRef<HTMLCanvasElement>;
+  @ViewChild('gridCanvas', { static: true }) gridCanvas!: ElementRef<HTMLCanvasElement>;
 
   get tableSelecter(): TableSelecter { return this.tabletopService.tableSelecter; }
   get currentTable(): GameTable { return this.tabletopService.currentTable; }
@@ -482,7 +483,7 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit{
       }
       if (videoId) return `https://www.youtube.com/embed/${encodeURIComponent(videoId)}`;
     } catch (e) {
-      console.warn(e);
+      Logger.warn(e);
     }
     return url;
   }

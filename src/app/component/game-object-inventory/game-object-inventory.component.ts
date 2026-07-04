@@ -1,4 +1,5 @@
 import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { GameObject } from '@udonarium/core/synchronize-object/game-object';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
@@ -375,7 +376,7 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
     } else {
       this.multiMoveTargets.delete(gameObject.identifier);
     }
-    console.log(`multimove selected ${[...this.multiMoveTargets]}`);
+    Logger.debug(`multimove selected ${[...this.multiMoveTargets]}`);
   }
 
   allTabBoxCheck() {
@@ -499,7 +500,7 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
       } else {
         this.multiMoveTargets.add(gameObject.identifier);
       }
-      console.log(`multimove selected ${[...this.multiMoveTargets]}`);
+      Logger.debug(`multimove selected ${[...this.multiMoveTargets]}`);
     }
     let aliasName: string = gameObject.aliasName;
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });

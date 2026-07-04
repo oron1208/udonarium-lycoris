@@ -1,3 +1,4 @@
+import { Logger } from '../system/util/logger';
 export namespace Base64 {
   export function toBlob(base64: string): Blob {
     let tmp = base64.split(',');
@@ -5,7 +6,7 @@ export namespace Base64 {
     try {
       data = atob(tmp[1]);
     } catch (error) {
-      console.warn(error);
+      Logger.warn(error);
       return null;
     }
     let mime = tmp[0].split(':')[1].split(';')[0];

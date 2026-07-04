@@ -1,4 +1,5 @@
 import { Component, ChangeDetectorRef, OnDestroy, OnInit } from '@angular/core';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { PeerContext } from '@udonarium/core/system/network/peer-context';
@@ -10,6 +11,7 @@ import { CardStack } from '@udonarium/card-stack';
 import { GameObject } from '@udonarium/core/synchronize-object/game-object';
 import { DiceSymbol } from '@udonarium/dice-symbol';
 import { GameCharacter } from '@udonarium/game-character';
+import { GameCharacterGroup } from '@udonarium/game-character-group';
 import { GameTableMask } from '@udonarium/game-table-mask';
 import { RangeArea } from '@udonarium/range';
 import { Terrain } from '@udonarium/terrain';
@@ -82,15 +84,15 @@ export class ReConnectComponent implements OnInit, OnDestroy {
     for ( let room of this.rooms){
       if (room.alias == ( this.roomId + this.roomName) ){
         this.connect(room.peerContexts);
-        console.log("再接続成功");
+        Logger.debug("再接続成功");
         return;
       }
     }
-    console.log("再接続失敗");
+    Logger.debug("再接続失敗");
   }
 
   async reload() {
-      console.log( "async reload()");
+      Logger.debug( "async reload()");
 
     this.isReloading = true;
     this.rooms = [];
@@ -135,7 +137,7 @@ export class ReConnectComponent implements OnInit, OnDestroy {
     let triedPeer: string[] = [];
     EventSystem.register(triedPeer)
       .on('OPEN_NETWORK', event => {
-        console.log('LobbyComponent OPEN_PEER', event.data.peerId);
+        Logger.debug('LobbyComponent OPEN_PEER', event.data.peerId);
         EventSystem.unregister(triedPeer);
         ObjectStore.instance.clearDeleteHistory();
         for (let context of peerContexts) {
@@ -143,9 +145,9 @@ export class ReConnectComponent implements OnInit, OnDestroy {
         }
         EventSystem.register(triedPeer)
           .on('CONNECT_PEER', event => {
-            console.log('接続成功！', event.data.peerId);
+            Logger.debug('接続成功！', event.data.peerId);
             triedPeer.push(event.data.peerId);
-            console.log('接続成功 ' + triedPeer.length + '/' + peerContexts.length);
+            Logger.debug('接続成功 ' + triedPeer.length + '/' + peerContexts.length);
             if (peerContexts.length <= triedPeer.length) {
               this.resetNetwork();
               EventSystem.unregister(triedPeer);
@@ -153,9 +155,9 @@ export class ReConnectComponent implements OnInit, OnDestroy {
             }
           })
           .on('DISCONNECT_PEER', event => {
-            console.warn('接続失敗', event.data.peerId);
+            Logger.warn('接続失敗', event.data.peerId);
             triedPeer.push(event.data.peerId);
-            console.warn('接続失敗 ' + triedPeer.length + '/' + peerContexts.length);
+            Logger.warn('接続失敗 ' + triedPeer.length + '/' + peerContexts.length);
             if (peerContexts.length <= triedPeer.length) {
               this.resetNetwork();
               EventSystem.unregister(triedPeer);
@@ -182,22 +184,28 @@ export class ReConnectComponent implements OnInit, OnDestroy {
 
   disConnect(){
 
-    console.log("切断");
-    console.log("接続数 A:" + this.networkService.peerIds.length);
+    Logger.debug("切断");
+    Logger.debug("接続数 A:" + this.networkService.peerIds.length);
     this.networkService.connectionClose();
-    console.log("接続数 B:" + this.networkService.peerIds.length);
-    console.log("ネットワーク状態:" + this.networkService.isOpen);
-    console.log("再接続挑戦:" + this.networkService.open());
-    console.log("ネットワーク状態:" + this.networkService.isOpen);
+    Logger.debug("接続数 B:" + this.networkService.peerIds.length);
+    Logger.debug("ネットワーク状態:" + this.networkService.isOpen);
+    Logger.debug("再接続挑戦:" + this.networkService.open());
+    Logger.debug("ネットワーク状態:" + this.networkService.isOpen);
 
   }
 
   deleteObject(){
-    console.log("切断元と不一致になっている可能性のあるオブジェクト削除");
+    Logger.debug("切断元と不一致になっている可能性のあるオブジェクト削除");
 
     //要素変更後updateをかけ、clearDeleteHistoryでログを飛ばせば再接続先の後方を取得、表示される
     let gameCharacters = ObjectStore.instance.getObjects<GameCharacter>(GameCharacter);
     for(let obj of gameCharacters){
+      obj.setLocation('graveyard'); 
+      this.deleteGameObject(obj);
+    }
+
+    let characterGroups = ObjectStore.instance.getObjects<GameCharacterGroup>(GameCharacterGroup);
+    for(let obj of characterGroups){
       obj.setLocation('graveyard'); 
       this.deleteGameObject(obj);
     }
@@ -253,12 +261,12 @@ export class ReConnectComponent implements OnInit, OnDestroy {
   }
 
   logCrear(){
-    console.log("削除した記録を消去");
+    Logger.debug("削除した記録を消去");
     ObjectStore.instance.clearDeleteHistory();
   }
 
   deleteList(){
-    console.log("削除した記録を表示");
+    Logger.debug("削除した記録を表示");
     ObjectStore.instance.dispGarbageMap();
   }
 

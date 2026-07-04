@@ -1,3 +1,4 @@
+import { Logger } from './logger';
 export class PromiseQueue {
   private queue: Promise<any> = Promise.resolve();
 
@@ -11,7 +12,7 @@ export class PromiseQueue {
   add<T>(executor: (resolve: (value?: T | PromiseLike<T>) => void, reject: (reason?: any) => void) => void): Promise<T>
   add<T>(arg: any): Promise<T> {
     this._length++
-    console.log(`${this.name} add: ${this._length}`);
+    Logger.debug(`${this.name} add: ${this._length}`);
     if (typeof arg.then == 'function') {
       this.queue = this.queue.then(() => arg); // promise
     } else if (0 < arg.length) {
@@ -22,11 +23,11 @@ export class PromiseQueue {
 
     let ret = this.queue;
     this.queue = this.queue.catch((reason) => {
-      console.error(reason);
+      Logger.error(reason);
     });
     this.queue = this.queue.then(() => {
       this._length--;
-      console.log(`${this.name} done: ${this._length}`);
+      Logger.debug(`${this.name} done: ${this._length}`);
     });
     return ret;
   }

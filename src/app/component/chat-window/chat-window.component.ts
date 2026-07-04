@@ -11,6 +11,7 @@ import { ChatTabSettingComponent } from 'component/chat-tab-setting/chat-tab-set
 import { ChatMessageService } from 'service/chat-message.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { DiceTableSettingComponent } from 'component/dice-table-setting/dice-table-setting.component';
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
@@ -188,7 +189,8 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private targeted(gameCharacter: GameCharacter): boolean {
-    if (gameCharacter.location.name != 'table') return false;
+    // 卓上のコマ または キャラクターグループ内の部位(location.name='parts')を対象に含める。
+    if (gameCharacter.location.name != 'table' && gameCharacter.location.name != 'parts') return false;
     return gameCharacter.targeted;
   }
 
@@ -206,7 +208,7 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
       let objects: GameCharacter[] = [];
       let messageTargetContext: ChatMessageTargetContext[] = [];
 
-      console.log(value.text + ':'+ this.checkTargetCharactor(value.text));
+      Logger.debug(value.text + ':'+ this.checkTargetCharactor(value.text));
 
       if ( this.checkTargetCharactor(value.text)) {
         objects = this.targetedGameCharacterList();

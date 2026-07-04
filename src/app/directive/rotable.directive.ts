@@ -22,7 +22,7 @@ export interface RotableOption {
   selector: '[appRotable]'
 })
 export class RotableDirective implements AfterViewInit, OnDestroy {
-  protected tabletopObject: RotableTabletopObject;
+  protected tabletopObject!: RotableTabletopObject;
 
   private transformCssOffset: string = '';
   private grabbingSelecter: string = '.rotate-grab';

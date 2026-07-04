@@ -1,5 +1,6 @@
 import { Component, ElementRef, ChangeDetectorRef, EventEmitter, Input, NgZone,
          OnDestroy, OnInit, AfterViewInit, AfterViewChecked, Output, ViewChild } from '@angular/core';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { ChatMessage } from '@udonarium/chat-message';
 import { ChatTab } from '@udonarium/chat-tab';
@@ -27,7 +28,7 @@ export class ChatTachieImageComponent implements OnInit, OnDestroy, AfterViewIni
   @Input() isTilteTop = false;
   @Input() dispByMouse = false;
 
-  @ViewChild('tachieArea', { read: ElementRef }) private tachieArea: ElementRef;  
+  @ViewChild('tachieArea', { read: ElementRef }) private tachieArea!: ElementRef;
   private _tachieAreaWidth = 0;
   
   
@@ -218,7 +219,7 @@ export class ChatTachieImageComponent implements OnInit, OnDestroy, AfterViewIni
   }
 
   tachieClick( pos : number ){
-    console.log("tachieClick" + pos);
+    Logger.debug("tachieClick" + pos);
     this.chatTab.tachiePosHide(pos);
   }
 

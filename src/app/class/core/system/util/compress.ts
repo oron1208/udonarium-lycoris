@@ -1,4 +1,5 @@
 import * as Pako from 'pako';
+import { Logger } from './logger';
 
 import { setZeroTimeout } from './zero-timeout';
 
@@ -9,7 +10,7 @@ export async function compressAsync(data: Uint8Array, chunkSize?: number): Promi
     await processAsync(deflate, data, chunkSize);
     return deflate.result as Uint8Array;
   } catch (e) {
-    console.error(e);
+    Logger.error(e);
   }
   return null;
 }
@@ -21,7 +22,7 @@ export async function decompressAsync(data: Uint8Array, chunkSize?: number): Pro
     await processAsync(inflate, data, chunkSize);
     return inflate.result as Uint8Array;
   } catch (e) {
-    console.error(e);
+    Logger.error(e);
   }
   return null;
 }

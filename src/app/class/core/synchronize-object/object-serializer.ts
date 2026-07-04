@@ -2,6 +2,7 @@ import { XmlUtil } from '../system/util/xml-util';
 import { Attributes } from './attributes';
 import { GameObject, ObjectContext } from './game-object';
 import { ObjectFactory } from './object-factory';
+import { Logger } from '../system/util/logger';
 
 export interface XmlAttributes extends GameObject {
   toAttributes(): Attributes;
@@ -24,7 +25,7 @@ export class ObjectSerializer {
   }
 
   private constructor() {
-    console.log('ObjectSerializer ready...');
+    Logger.debug('ObjectSerializer ready...');
   };
 
   toXml(gameObject: GameObject): string {
@@ -110,7 +111,7 @@ export class ObjectSerializer {
       xmlElement = xml;
     }
     if (!xmlElement) {
-      console.error('xmlElementが空です');
+      Logger.error('xmlElementが空です');
       return null;
     }
 
@@ -144,7 +145,7 @@ export class ObjectSerializer {
 
       let pollutionKey = split.find(splitKey => objectPropertyKeys.includes(splitKey));
       if (pollutionKey != null) {
-        console.log(`skip invalid key (${pollutionKey})`);
+        Logger.debug(`skip invalid key (${pollutionKey})`);
         continue;
       }
 
@@ -176,7 +177,7 @@ export class ObjectSerializer {
       key = Number.isNaN(index) ? split[i] : index;
 
       if (Array.isArray(obj) && typeof key !== 'number') {
-        console.warn('Arrayにはindexの挿入しか許可しない');
+        Logger.warn('Arrayにはindexの挿入しか許可しない');
         return { obj, key: null };
       }
       if (i + 1 < length) {

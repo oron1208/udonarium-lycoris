@@ -2,42 +2,43 @@ import {
   Channel,
   LocalDataStream,
   LocalPerson,
-  Logger,
   Publication,
   SkyWayChannel,
   SkyWayContext,
   SkyWayError,
   SkyWayStreamFactory,
-  Subscription
+  Subscription,
+  Logger as SkyWayLogger
 } from '@skyway-sdk/core';
 import { CryptoUtil } from '../../util/crypto-util';
 import { IPeerContext, PeerContext } from '../peer-context';
 import { SkyWayBackend } from './skyway-backend';
+import { Logger } from '../../util/logger';
 
 export class SkyWayFacade {
   url = '';
-  context: SkyWayContext;
-  private lobby: Channel;
-  private lobbyPerson: LocalPerson;
-  room: Channel;
-  roomPerson: LocalPerson;
+  context!: SkyWayContext;
+  private lobby!: Channel;
+  private lobbyPerson!: LocalPerson;
+  room!: Channel;
+  roomPerson!: LocalPerson;
 
-  publication: Publication<LocalDataStream>;
+  publication!: Publication<LocalDataStream>;
 
   peer: PeerContext = PeerContext.parse('???');
   get isOpen(): boolean { return this.peer.isOpen };
   private isDestroyed = false;
 
-  onOpen: (peer: IPeerContext) => void;
-  onClose: (peer: IPeerContext) => void;
-  onFatalError: (peer: IPeerContext, errorType: string, errorMessage: string, errorObject: any) => void;
-  onSubscribed: (peer: IPeerContext, subscription: Subscription) => void;
-  onRoomRestore: (peer: IPeerContext) => void;
+  onOpen!: (peer: IPeerContext) => void;
+  onClose!: (peer: IPeerContext) => void;
+  onFatalError!: (peer: IPeerContext, errorType: string, errorMessage: string, errorObject: any) => void;
+  onSubscribed!: (peer: IPeerContext, subscription: Subscription) => void;
+  onRoomRestore!: (peer: IPeerContext) => void;
 
   async open(peer: IPeerContext) {
     if (this.isOpen) await this.close();
     try {
-      console.log('SkyWayFacade open...');
+      Logger.debug('SkyWayFacade open...');
       this.peer = PeerContext.parse(peer.peerId);
       this.peer.userId = peer.userId;
       this.peer.password = peer.password;
@@ -50,27 +51,27 @@ export class SkyWayFacade {
       await this.joinLobby();
 
       this.peer.isOpen = true;
-      console.log('SkyWayFacade open ok');
+      Logger.debug('SkyWayFacade open ok');
 
       if (this.onOpen) this.onOpen(this.peer);
     } catch (err) {
-      console.error(err);
+      Logger.error(err);
       if (this.onFatalError) this.onFatalError(this.peer, err.name, err.message, err);
     }
   }
 
   async close() {
     try {
-      console.log('SkyWayFacade close...');
+      Logger.debug('SkyWayFacade close...');
       this.peer = PeerContext.parse('???');
       this.isDestroyed = true;
 
       await this.leaveLobby();
       await this.leaveRoom();
       await this.disposeContext();
-      console.log('SkyWayFacade close ok');
+      Logger.debug('SkyWayFacade close ok');
     } catch (err) {
-      console.error(err);
+      Logger.error(err);
     }
   }
 
@@ -92,7 +93,7 @@ export class SkyWayFacade {
 
     let context = await SkyWayContext.Create(authToken);
     context.onTokenUpdateReminder.add(async () => {
-      console.log(`skyWay onTokenUpdateReminder ${new Date().toISOString()}`);
+      Logger.debug(`skyWay onTokenUpdateReminder ${new Date().toISOString()}`);
       let authToken = await backend.createSkyWayAuthToken(channelName, this.peer.peerId);
       if (authToken.length < 1) {
         let message = `APIバックエンド< ${backend.url} >にアクセスできませんでした。`
@@ -103,7 +104,7 @@ export class SkyWayFacade {
     });
 
     context.onTokenExpired.add(() => {
-      console.error('skyWay onTokenExpired');
+      Logger.error('skyWay onTokenExpired');
       if (this.isOpen) {
         this.close();
         if (this.onClose) this.onClose(this.peer);
@@ -113,7 +114,7 @@ export class SkyWayFacade {
     });
 
     context.onFatalError.add(err => {
-      console.error('skyWay onFatalError', err);
+      Logger.error('skyWay onFatalError', err);
       if (this.isOpen) {
         this.close();
         if (this.onClose) this.onClose(this.peer);
@@ -138,7 +139,7 @@ export class SkyWayFacade {
       let lobby = await SkyWayChannel.FindOrCreate(this.context, {
         name: lobbyName,
       });
-      console.log(`FindOrCreate<${lobbyName}>`);
+      Logger.debug(`FindOrCreate<${lobbyName}>`);
       lobbys.push(lobby);
       if (lobby.members.length < 300) break;
     }
@@ -156,7 +157,7 @@ export class SkyWayFacade {
     });
 
     joinLobby.onClosed.add(() => {
-      console.log(`lobby<${joinLobby.name}> onClosed`);
+      Logger.debug(`lobby<${joinLobby.name}> onClosed`);
       this.joinLobby();
     });
 
@@ -171,13 +172,13 @@ export class SkyWayFacade {
       name: this.peer.peerId,
     });
 
-    console.log(`lobbyPerson join <${this.lobby.name}>`);
+    Logger.debug(`lobbyPerson join <${this.lobby.name}>`);
     lobbyPerson.onLeft.add(() => {
-      console.log(`lobbyPerson onClosed`);
+      Logger.debug(`lobbyPerson onClosed`);
     });
 
     lobbyPerson.onFatalError.add(err => {
-      console.error('lobbyPerson onFatalError', err);
+      Logger.error('lobbyPerson onFatalError', err);
     });
 
     this.lobbyPerson = lobbyPerson;
@@ -194,17 +195,17 @@ export class SkyWayFacade {
     if (this.isDestroyed || !this.peer.isRoom || !this.context || this.context?.disposed) return;
 
     let roomName = this.peer.roomChannelName || CryptoUtil.sha256Base64Url(this.peer.roomId + this.peer.roomName + this.peer.password);
-    console.log(`roomName: ${roomName}`);
+    Logger.debug(`roomName: ${roomName}`);
 
     let room = await SkyWayChannel.FindOrCreate(this.context, {
       name: roomName,
     });
-    console.log(`FindOrCreate<${roomName}>`);
+    Logger.debug(`FindOrCreate<${roomName}>`);
 
     room.onClosed.add(async () => {
-      console.log(`room<${room.name}> onClosed`);
+      Logger.debug(`room<${room.name}> onClosed`);
       await this.joinRoom();
-      console.log(`room<${room.name}> onRoomRestore`);
+      Logger.debug(`room<${room.name}> onRoomRestore`);
       if (this.onRoomRestore) this.onRoomRestore(this.peer);
     });
 
@@ -219,10 +220,10 @@ export class SkyWayFacade {
       name: this.peer.peerId
     });
 
-    console.log(`roomPerson join <${this.room.name}>`);
+    Logger.debug(`roomPerson join <${this.room.name}>`);
 
     roomPerson.onFatalError.add(err => {
-      console.error('roomPerson onFatalError', err);
+      Logger.error('roomPerson onFatalError', err);
       if (this.isOpen) {
         this.close();
         if (this.onClose) this.onClose(this.peer);
@@ -239,7 +240,7 @@ export class SkyWayFacade {
     let publication = await this.roomPerson.publish(dataStream, { metadata: 'udonarium-data-stream' });
 
     publication.onSubscribed.add(event => {
-      console.log(`publication onSubscribed ${event.subscription.subscriber.name}`);
+      Logger.debug(`publication onSubscribed ${event.subscription.subscriber.name}`);
       let peerId = event.subscription.subscriber.name;
       if (peerId == null) {
         event.subscription.cancel();
@@ -257,7 +258,7 @@ export class SkyWayFacade {
     let context = this.context;
     this.context = null;
     if (!context) return;
-    console.log('disposeContext');
+    Logger.debug('disposeContext');
     context.dispose();
   }
 
@@ -271,7 +272,7 @@ export class SkyWayFacade {
     this.lobby = null;
 
     if (!lobby) return;
-    console.log('leaveLobbyChannel');
+    Logger.debug('leaveLobbyChannel');
     lobby.dispose();
   }
 
@@ -280,7 +281,7 @@ export class SkyWayFacade {
     this.lobbyPerson = null;
 
     if (!lobbyPerson || lobbyPerson.state === 'left') return;
-    console.log('leaveLobbyPerson');
+    Logger.debug('leaveLobbyPerson');
     lobbyPerson.onLeft.removeAllListeners();
     lobbyPerson.onFatalError.removeAllListeners();
     await lobbyPerson.leave();
@@ -297,7 +298,7 @@ export class SkyWayFacade {
     this.room = null;
 
     if (!room) return;
-    console.log('leaveRoomChannel');
+    Logger.debug('leaveRoomChannel');
     room.onMemberJoined.removeAllListeners();
     room.onMemberLeft.removeAllListeners();
     room.onMemberListChanged.removeAllListeners();
@@ -311,7 +312,7 @@ export class SkyWayFacade {
     this.roomPerson = null;
 
     if (!roomPerson || roomPerson.state === 'left') return;
-    console.log('leaveRoomPerson');
+    Logger.debug('leaveRoomPerson');
     roomPerson.onLeft.removeAllListeners();
     roomPerson.onFatalError.removeAllListeners();
     await roomPerson.leave();
@@ -330,19 +331,19 @@ export class SkyWayFacade {
 
     let lobbys: Channel[] = [];
     for (let lobbyName of this.getLobbyNames()) {
-      let level = Logger.level;
-      Logger.level = 'disable';
+      let level = SkyWayLogger.level;
+      SkyWayLogger.level = 'disable';
       try {
         let lobby = this.lobby?.name === lobbyName ? this.lobby : await SkyWayChannel.Find(this.context, { name: lobbyName });
         lobbys.push(lobby);
       } catch (error) {
         if (error instanceof SkyWayError) {
-          if (error.name != 'channelNotFound') console.error(`${error.name} ${error.message}`);
+          if (error.name != 'channelNotFound') Logger.error(`${error.name} ${error.message}`);
         } else {
-          console.error(error);
+          Logger.error(error);
         }
       }
-      Logger.level = level;
+      SkyWayLogger.level = level;
     }
 
     let allPeerIds = lobbys.flatMap(lobby => lobby.members.map(member => member.name ?? '???'));
@@ -372,12 +373,12 @@ export class SkyWayFacade {
         }
         try {
           let regArray = /-(\d+)$/.exec(name);
-          console.log(regArray);
+          Logger.debug(regArray);
           let lobbySize = regArray && 1 < regArray.length ? Number(regArray[1]) : 0;
           if (isNaN(lobbySize)) lobbySize = 0;
           if (maxLobbySize < lobbySize) maxLobbySize = lobbySize;
         } catch (e) {
-          console.warn(e);
+          Logger.warn(e);
         }
       }
     }

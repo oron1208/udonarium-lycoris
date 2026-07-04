@@ -1,4 +1,5 @@
 import { animate, keyframes, style, transition, trigger } from '@angular/animations';
+import { Logger } from '../../class/core/system/util/logger';
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
@@ -57,7 +58,7 @@ import { SafeHtml, DomSanitizer } from '@angular/platform-browser';
   ]
 })
 export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
-  @ViewChild('draggablePanel', { static: true }) draggablePanel: ElementRef<HTMLElement>;
+  @ViewChild('draggablePanel', { static: true }) draggablePanel!: ElementRef<HTMLElement>;
   @Input() tabletopObject: TabletopObject = null;
 
   @Input() left: number = 0;
@@ -340,14 +341,14 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
     let cardStack = <CardStack>this.tabletopObject;
     let object = null;
 
-      console.log('overViewCardWidth');
+      Logger.debug('overViewCardWidth');
 
     if( ! card && ! cardStack ) return 250;
     if( card ){
       object = card;
-      console.log('card');
+      Logger.debug('card');
     }else if( cardStack ){
-      console.log('cardStack');
+      Logger.debug('cardStack');
       object = cardStack;
     }
 
@@ -388,7 +389,7 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
   }
 
   clickMarkDownBox(id: string) {
-    console.log("マークダウンクリック:" + id);
+    Logger.debug("マークダウンクリック:" + id);
   }
 
   get markdown(): MarkDown { return ObjectStore.instance.get<MarkDown>('markdwon'); }
@@ -404,7 +405,7 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
   @HostListener('click', ['$event'])
   click(event){
     if (this.markdown){
-      console.log("event.timeStamp:" + event.timeStamp);
+      Logger.debug("event.timeStamp:" + event.timeStamp);
       this.markdown.changeMarkDownCheckBox(event.target.id, event.timeStamp);
     }
   }
@@ -413,7 +414,7 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
   isEditUrl( dataElmIdentifier) {
     let box = <HTMLInputElement>document.getElementById(dataElmIdentifier);
     if( !box )return false;
-//   console.log( "Edit:" + dataElmIdentifier  + ":" + box.checked   );
+//   Logger.debug( "Edit:" + dataElmIdentifier  + ":" + box.checked   );
     return box.checked;
   }
   
@@ -428,7 +429,7 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
   }
 
   textFocus( dataElmIdentifier ){
-    //console.log( "text forcus:" + dataElmIdentifier );
+    //Logger.debug( "text forcus:" + dataElmIdentifier );
     let box = <HTMLInputElement>document.getElementById(dataElmIdentifier);
     box.checked = true;
   }

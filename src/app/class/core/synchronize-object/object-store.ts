@@ -2,6 +2,7 @@ import { EventSystem } from '../system';
 import { setZeroTimeout } from '../system/util/zero-timeout';
 import { GameObject, ObjectContext } from './game-object';
 import { Type } from './object-factory';
+import { Logger } from '../system/util/logger';
 
 type ObjectAliasName = string;
 type ObjectIdentifier = string;
@@ -25,7 +26,7 @@ export class ObjectStore {
   private garbageCollectionInterval: NodeJS.Timer = null;
   private updateCallback = () => { this.updateQueue(); }
 
-  private constructor() { console.log('ObjectStore ready...'); };
+  private constructor() { Logger.debug('ObjectStore ready...'); };
 
   add(object: GameObject, shouldBroadcast: boolean = true): GameObject {
     if (this.get(object.identifier) != null || this.isDeleted(object.identifier)) return null;
@@ -64,7 +65,7 @@ export class ObjectStore {
   }
 
   private _delete(object: GameObject, shouldBroadcast: boolean): GameObject {
-    console.log("円柱　_delete:" + object.aliasName); 
+    Logger.debug("円柱　_delete:" + object.aliasName); 
     if (this.remove(object) === null) return null;
     if (shouldBroadcast) EventSystem.call('DELETE_GAME_OBJECT', { aliasName: object.aliasName, identifier: object.identifier });
 
@@ -72,7 +73,7 @@ export class ObjectStore {
   }
 
   private markForDelete(identifier: string) {
-    console.log("円柱　markForDelete" + identifier); 
+    Logger.debug("円柱　markForDelete" + identifier); 
     this.garbageMap.set(identifier, performance.now());
     this.garbageCollection(10 * 60 * 1000);
   }
@@ -148,7 +149,7 @@ export class ObjectStore {
 
   dispGarbageMap(){
     for(let map of this.garbageMap){
-      console.log("garbageMap 履歴:" + map); 
+      Logger.debug("garbageMap 履歴:" + map); 
     }
   }
 

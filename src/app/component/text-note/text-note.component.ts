@@ -12,6 +12,7 @@ import { RotableOption } from 'directive/rotable.directive';
 import { ContextMenuSeparator, ContextMenuService } from 'service/context-menu.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
+import { Logger } from '../../class/core/system/util/logger';
 
 @Component({
   selector: 'text-note',
@@ -20,7 +21,7 @@ import { PointerDeviceService } from 'service/pointer-device.service';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
-  @ViewChild('textArea', { static: true }) textAreaElementRef: ElementRef;
+  @ViewChild('textArea', { static: true }) textAreaElementRef!: ElementRef;
 
   @Input() textNote: TextNote = null;
   @Input() isFlatMode: boolean = false;
@@ -33,7 +34,7 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
   oldText : string = '';
   oldFontSize : number = 9;
   get text(): string { 
-    console.log('get text');  
+    Logger.debug('get text');  
     
     if( this.oldText != this.textNote.text){
       this.calcFitHeightIfNeeded(); 
@@ -42,13 +43,13 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
     return this.textNote.text;  
     }
   set text(text: string) { 
-    console.log('set text'); 
+    Logger.debug('set text'); 
     this.calcFitHeightIfNeeded(); 
     this.textNote.text = text;
     this.oldText = text;
     }
   get fontSize(): number { 
-    console.log('get fontSize');
+    Logger.debug('get fontSize');
     
     if( this.oldFontSize != this.textNote.fontSize ){
       this.calcFitHeightIfNeeded(); 
@@ -137,7 +138,7 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
   ngOnInit() {
     EventSystem.register(this)
       .on('RESIZE_NOTE_OBJECT', -1000, event => {
-        console.log('resize');
+        Logger.debug('resize');
         let object = ObjectStore.instance.get(event.data.identifier);
         if (!this.textNote || !object) return;
         if (this.textNote === object ) {
@@ -195,7 +196,7 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
 
   @HostListener('mousedown', ['$event'])
   onMouseDown(e: any) {
-    console.log('e.id onMouseDown:' + e.target.id );
+    Logger.debug('e.id onMouseDown:' + e.target.id );
     if (this.isSelected) return;
     e.preventDefault();
     this.textNote.toTopmost();
@@ -209,10 +210,10 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onMouseUp(e: any) {
-    console.log('e.id onMouseUp:' + e.target.id );
+    Logger.debug('e.id onMouseUp:' + e.target.id );
 
       if (this.pointerDeviceService.isAllowedToOpenContextMenu) {
-        console.log('TEST');
+        Logger.debug('TEST');
         let selection = window.getSelection();
         if (!selection.isCollapsed) selection.removeAllRanges();
 
@@ -225,7 +226,7 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onRotateMouseDown(e: any) {
-    console.log('e.id onRotateMouseDown:' + e.target.id );
+    Logger.debug('e.id onRotateMouseDown:' + e.target.id );
     e.stopPropagation();
     e.preventDefault();
   }
@@ -309,7 +310,7 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
       {
         name: 'コピーを作る', action: () => {
           let cloneObject = this.textNote.clone();
-          console.log('コピー', cloneObject);
+          Logger.debug('コピー', cloneObject);
           cloneObject.location.x += this.gridSize;
           cloneObject.location.y += this.gridSize;
           cloneObject.toTopmost();
@@ -347,7 +348,7 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
   oldOffsetHeight = 0;
   
   calcFitHeight() {
-    console.log('calcFitHeight');
+    Logger.debug('calcFitHeight');
     let textArea: HTMLTextAreaElement = this.textAreaElementRef.nativeElement;
     
 //    if( ( this.oldScrollHeight == 0 ) && ( this.oldOffsetHeight == 0)){
@@ -355,10 +356,10 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
 //    }
     textArea.style.height = '0';
     if( ! this.textNote.limitHeight ){
-      console.log('textArea.scrollHeight' + textArea.scrollHeight);
-      console.log('textArea.offsetHeight' + textArea.offsetHeight);
+      Logger.debug('textArea.scrollHeight' + textArea.scrollHeight);
+      Logger.debug('textArea.offsetHeight' + textArea.offsetHeight);
       if (textArea.scrollHeight > textArea.offsetHeight) {
-        console.log('更新');
+        Logger.debug('更新');
         
         textArea.style.height = textArea.scrollHeight + 'px';
         this.oldScrollHeight = textArea.scrollHeight;

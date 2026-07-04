@@ -7,6 +7,7 @@ import { ObjectStore } from '../../synchronize-object/object-store';
 import { Connection, ConnectionCallback } from './connection';
 import { PeerContext } from './peer-context';
 import { PeerSessionGrade } from './peer-session-state';
+import { Logger } from '../util/logger';
 
 interface RelayDataContainer {
   data: Uint8Array;
@@ -207,13 +208,13 @@ export class WebSocketRelayConnection implements Connection {
         this.lastSeq = Math.max(this.lastSeq, message.snapshotSeq || message.seq || 0);
         break;
       case 'snapshot-rejected':
-        console.warn(`snapshot rejected: ${message.reason || 'unknown'} objects=${message.objects || 0} previous=${message.previousObjects || 0}`);
+        Logger.warn(`snapshot rejected: ${message.reason || 'unknown'} objects=${message.objects || 0} previous=${message.previousObjects || 0}`);
         this.lastSeq = Math.min(this.lastSeq, message.snapshotSeq || message.seq || this.lastSeq);
         this.forceSnapshotApply = true;
         this.sendSignal({ type: 'sync-request', sinceSeq: 0 });
         break;
       case 'snapshot-save-request':
-        console.log(`server requested snapshot save, seq=${message.seq}`);
+        Logger.debug(`server requested snapshot save, seq=${message.seq}`);
         this.scheduleSnapshotSave(1000);
         break;
       case 'peers':
@@ -313,7 +314,7 @@ export class WebSocketRelayConnection implements Connection {
     this.snapshotSaveDueAt = 0;
     this.snapshotDirtyAt = 0;
     let snapshot = this.createObjectSnapshot();
-    console.log(`save snapshot request objects=${snapshot.objects.length}`);
+    Logger.debug(`save snapshot request objects=${snapshot.objects.length}`);
     this.sendSignal({ type: 'snapshot-save', snapshot });
   }
 

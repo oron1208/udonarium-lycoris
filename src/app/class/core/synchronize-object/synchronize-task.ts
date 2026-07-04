@@ -15,12 +15,12 @@ export class SynchronizeTask {
   private static key: any = {};
   private static tasksMap: Map<ObjectIdentifier, SynchronizeTask[]> = new Map();
 
-  onsynchronize: (task: SynchronizeTask, identifier: string) => void;
-  onfinish: (task: SynchronizeTask) => void;
-  ontimeout: (task: SynchronizeTask, remainedRequests: SynchronizeRequest[]) => void;
+  onsynchronize!: (task: SynchronizeTask, identifier: string) => void;
+  onfinish!: (task: SynchronizeTask) => void;
+  ontimeout!: (task: SynchronizeTask, remainedRequests: SynchronizeRequest[]) => void;
 
   private requestMap: Map<ObjectIdentifier, SynchronizeRequest> = new Map();
-  private timeoutTimer: ResettableTimeout;
+  private timeoutTimer!: ResettableTimeout;
 
   private constructor(readonly peerId: PeerId) { }
 

@@ -39,6 +39,10 @@
           <div class="dummy"></div>
           <game-character class="is-3d will-change-transform" *ngFor="let character of visibleCharacters; trackBy: trackByGameObject" [gameCharacter]="character" [isSimpleView]="isCharacterSimpleMode" [isFlatMode]="isFlatMode" [isRangeSelected]="isCharacterRangeSelected(character)" [appTooltip]="isCharacterSimpleMode ? null : character"></game-character>
         </div>
+        <div *ngIf="characterGroups.length > 0 && layerVisibility.character" class="layer">
+          <div class="dummy"></div>
+          <character-group class="is-3d will-change-transform" *ngFor="let group of characterGroups; trackBy: trackByGameObject" [characterGroup]="group"></character-group>
+        </div>
         <div *ngIf="layerVisibility.cursor" class="layer cursor-layer">
           <div class="dummy"></div>
           <peer-cursor class="is-3d will-change-transform" *ngFor="let cursor of peerCursors; trackBy: trackByGameObject" [cursor]="cursor"></peer-cursor>

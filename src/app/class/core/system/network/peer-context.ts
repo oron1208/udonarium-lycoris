@@ -1,5 +1,6 @@
 import * as lzbase62 from 'lzbase62';
 import * as SHA256 from 'crypto-js/sha256';
+import { Logger } from '../util/logger';
 
 import { base } from '../util/base-x';
 import { MutablePeerSessionState, PeerSessionGrade, PeerSessionState } from './peer-session-state';
@@ -56,7 +57,7 @@ export class PeerContext implements IPeerContext {
         return;
       }
     } catch (e) {
-      console.warn(e);
+      Logger.warn(e);
     }
     this.digestUserId = peerId;
     return;
@@ -74,7 +75,7 @@ export class PeerContext implements IPeerContext {
     if (!this.hasPassword) return true;
     if (this.isDeveloperJoin && this.digestPassword === peer.digestPassword) return true;
     if (this.password.length < 1) {
-      console.error('do not know password.');
+      Logger.error('do not know password.');
       return false;
     }
     return peer.verifyPassword(this.password);
@@ -141,7 +142,7 @@ function parseDeveloperJoinPassword(password: string): { digestPassword: string,
     if (!data || !data.digestPassword || !data.roomChannelName) return null;
     return { digestPassword: String(data.digestPassword), roomChannelName: String(data.roomChannelName) };
   } catch (e) {
-    console.warn('developer join password parse failed', e);
+    Logger.warn('developer join password parse failed', e);
     return null;
   }
 }

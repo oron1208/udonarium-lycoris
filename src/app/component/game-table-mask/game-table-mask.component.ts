@@ -13,6 +13,7 @@ import {
   ViewChild,
   
 } from '@angular/core';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ObjectNode } from '@udonarium/core/synchronize-object/object-node';
@@ -77,7 +78,7 @@ type ResizeCorner = 'nw' | 'ne' | 'sw' | 'se';
 
 export class GameTableMaskComponent implements OnChanges, OnDestroy, AfterViewInit {
 //  @ViewChild('elementToDetach') elementToDetach: ElementRef;
-  @ViewChild('maskCanvas') maskCanvas: ElementRef<HTMLCanvasElement>;
+  @ViewChild('maskCanvas') maskCanvas!: ElementRef<HTMLCanvasElement>;
 
   @Input() gameTableMask: GameTableMask = null;
   @Input() is3D: boolean = false;
@@ -592,7 +593,7 @@ export class GameTableMaskComponent implements OnChanges, OnDestroy, AfterViewIn
     } else if (!window.PointerEvent && e.button < 2 && e.buttons < 2) {
       this.scratching(true);
     }
-    //console.log(e)
+    //Logger.debug(e)
     // TODO:もっと良い方法考える
     if ((this.isLock && !this.isScratching) || (this.isScratching && !this.gameTableMask.isMine)) {
       EventSystem.trigger('DRAG_LOCKED_OBJECT', { srcEvent: e });
@@ -723,7 +724,7 @@ export class GameTableMaskComponent implements OnChanges, OnDestroy, AfterViewIn
     e.preventDefault();
   }
 
-  private _currentScratchingSet: Set<string>;
+  private _currentScratchingSet!: Set<string>;
   private _scratchingTimerId;
   scratching(isStart: boolean, position: {offsetX: number, offsetY: number} = null) {
     if (!this.gameTableMask.isMine) return;
@@ -1076,7 +1077,7 @@ export class GameTableMaskComponent implements OnChanges, OnDestroy, AfterViewIn
       menuArray.push( 
         {name: 'コピーを作る', action: () => {
           let cloneObject = this.gameTableMask.clone();
-          console.log('コピー', cloneObject);
+          Logger.debug('コピー', cloneObject);
           cloneObject.location.x += this.gridSize;
           cloneObject.location.y += this.gridSize;
           cloneObject.isLock = false;

@@ -1,4 +1,5 @@
 import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { FileArchiver } from '@udonarium/core/file-storage/file-archiver';
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
@@ -21,8 +22,8 @@ export class FileStorageComponent implements OnInit, OnDestroy, AfterViewInit {
 
 //本家PR #92より
   searchWord: string = '';
-  private _searchWord: string;
-  private _searchWords: string[];
+  private _searchWord!: string;
+  private _searchWords!: string[];
   get searchWords(): string[] {
     if (this._searchWord !== this.searchWord) {
       this._searchWord = this.searchWord;
@@ -105,10 +106,10 @@ export class FileStorageComponent implements OnInit, OnDestroy, AfterViewInit {
     if( this.newTagName == 'システム予約' )return; //システム予約名称
     
     let changeableImages = this.images; 
-    console.log("this.newTagName" + this.newTagName );
+    Logger.debug("this.newTagName" + this.newTagName );
     
     for (let img of changeableImages) {
-//    console.log("img.context.identifier:"+img.context.identifier);
+//    Logger.debug("img.context.identifier:"+img.context.identifier);
       let box = <HTMLInputElement>document.getElementById(img.context.identifier+'_'+ this.initTimestamp);
       if( box ){
         if( box.checked ){
@@ -164,14 +165,14 @@ export class FileStorageComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onSelectedFile(file: ImageFile) {
-    console.log('onSelectedFile', file);
+    Logger.debug('onSelectedFile', file);
     EventSystem.call('SELECT_FILE', { fileIdentifier: file.identifier }, Network.peerId);
 
     this.selectedFile = file;//本家PR #92より
   }
   
   imgBlockClick(identifier){
-    console.log( "identifier:"+identifier);
+    Logger.debug( "identifier:"+identifier);
     let box = <HTMLInputElement>document.getElementById(identifier+'_'+ this.initTimestamp);
     box.checked = !box.checked;
   }

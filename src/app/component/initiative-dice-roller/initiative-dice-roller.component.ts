@@ -9,6 +9,7 @@ import { ChatTabList } from '@udonarium/chat-tab-list';
 import { DiceBot } from '@udonarium/dice-bot';
 import { Config } from '@udonarium/config';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
+import { Logger } from '../../class/core/system/util/logger';
 
 @Component({
   selector: 'initiative-dice-roller',
@@ -114,7 +115,7 @@ export class InitiativeDiceRollerComponent implements OnInit, OnDestroy {
 
         await new Promise(r => setTimeout(r, 200));
       } catch (e) {
-        console.warn('Initiative dice roll error', char.name, e);
+        Logger.warn('Initiative dice roll error', char.name, e);
       }
     }
 

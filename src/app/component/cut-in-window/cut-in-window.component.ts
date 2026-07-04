@@ -4,6 +4,7 @@ import { YouTubePlayer } from '@angular/youtube-player';
 import { AudioPlayer, VolumeType } from '@udonarium/core/file-storage/audio-player';
 import { AudioStorage } from '@udonarium/core/file-storage/audio-storage';
 import { FileArchiver } from '@udonarium/core/file-storage/file-archiver';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { ModalService } from 'service/modal.service';
 import { PanelOption, PanelService } from 'service/panel.service';
@@ -31,8 +32,8 @@ import { PeerMenuComponent } from 'component/peer-menu/peer-menu.component';
 })
 export class CutInWindowComponent implements AfterViewInit, OnInit, OnDestroy {
 
-// @ViewChild('cutInImageElement', { static: false }) cutInImageElement: ElementRef;
-  @ViewChild('videoPlayerComponent', { static: false }) videoPlayer: YouTubePlayer;
+// @ViewChild('cutInImageElement', { static: false }) cutInImageElement!: ElementRef;
+  @ViewChild('videoPlayerComponent', { static: false }) videoPlayer!: YouTubePlayer;
 
   left = 0;
   top = 0;
@@ -68,7 +69,7 @@ export class CutInWindowComponent implements AfterViewInit, OnInit, OnDestroy {
 
   startCutIn(){
     if ( !this.cutIn )return;
-    console.log('CutInWin ' + this.cutIn.name );
+    Logger.debug('CutInWin ' + this.cutIn.name );
 
     let audio = this.cutIn.audio ;
     if ( audio ){
@@ -79,7 +80,7 @@ export class CutInWindowComponent implements AfterViewInit, OnInit, OnDestroy {
     }
 
     if ( this.cutIn.outTime > 0){
-      console.log('outTime ' + this.cutIn.outTime );
+      Logger.debug('outTime ' + this.cutIn.outTime );
 
       this.cutInTimeOut = setTimeout(() => {
         this.cutInTimeOut = null;
@@ -103,7 +104,7 @@ export class CutInWindowComponent implements AfterViewInit, OnInit, OnDestroy {
   ngOnInit(){
     EventSystem.register(this)
       .on('START_CUT_IN', event => {
-        console.log('カットインウィンドウ>Event:START_CUT_IN ' + this.cutIn.name );
+        Logger.debug('カットインウィンドウ>Event:START_CUT_IN ' + this.cutIn.name );
         if ( this.cutIn ){
           if ( this.cutIn.identifier == event.data.cutIn.identifier || this.cutIn.tagName == event.data.cutIn.tagName){
             this.panelService.close();
@@ -112,7 +113,7 @@ export class CutInWindowComponent implements AfterViewInit, OnInit, OnDestroy {
       })
       .on('DICE_CUT_IN_UPDATE', event => {
         if (this.cutIn && this.cutIn.diceActivate && event.data.cutIn) {
-          console.log('DiceCutIn: window received update');
+          Logger.debug('DiceCutIn: window received update');
           this.cutIn.diceResultText = event.data.cutIn.diceResultText;
           this.cutIn.diceRollTimestamp = event.data.cutIn.diceRollTimestamp;
           // outTime タイマーをリセット
@@ -131,7 +132,7 @@ export class CutInWindowComponent implements AfterViewInit, OnInit, OnDestroy {
       })
       .on('STOP_CUT_IN_BY_BGM', event => {
         if ( this.cutIn ){
-          console.log( ' \'STOP_CUT_IN_BY_BGM :' + this.cutIn);
+          Logger.debug( ' \'STOP_CUT_IN_BY_BGM :' + this.cutIn);
           let audio = AudioStorage.instance.get( this.cutIn.audioIdentifier );
           if ( this.cutIn.tagName == '' && audio ){
             this.panelService.close();
@@ -139,7 +140,7 @@ export class CutInWindowComponent implements AfterViewInit, OnInit, OnDestroy {
         }
       })
       .on('STOP_CUT_IN', event => {
-        console.log('カットインウィンドウ>Event: ' + this.cutIn.name );
+        Logger.debug('カットインウィンドウ>Event: ' + this.cutIn.name );
         if ( this.cutIn ){
           if ( this.cutIn.identifier == event.data.cutIn.identifier ){
             this.panelService.close();
@@ -173,7 +174,7 @@ export class CutInWindowComponent implements AfterViewInit, OnInit, OnDestroy {
       this.left = margin_x ;
       this.top = margin_y;
     }else{
-      console.log('カットインが未定義で再生された');
+      Logger.debug('カットインが未定義で再生された');
     }
     this.panelService.width = this.width ;
     this.panelService.height = this.height ;
@@ -183,14 +184,14 @@ export class CutInWindowComponent implements AfterViewInit, OnInit, OnDestroy {
 
   chkeWindowMinSize(){
     if (this.videoId ){
-       console.log('chkeWindowMinSize 1:' + this.panelService.width);
+       Logger.debug('chkeWindowMinSize 1:' + this.panelService.width);
        if (this.panelService.width < this.cutIn.minSizeWidth(true)){
         this.panelService.width = this.cutIn.minSizeWidth(true);
       }
        if (this.panelService.height < this.cutIn.minSizeHeight(true)){
         this.panelService.height = this.cutIn.minSizeHeight(true);
       }
-       console.log('chkeWindowMinSize 2:' + this.panelService.width);
+       Logger.debug('chkeWindowMinSize 2:' + this.panelService.width);
     }
   }
 
@@ -223,13 +224,13 @@ export class CutInWindowComponent implements AfterViewInit, OnInit, OnDestroy {
 
   onPlayerReady($event) {
     $event.target.setVolume(this.videoVolume);
-    console.log('ready');
+    Logger.debug('ready');
     $event.target.playVideo();
   }
 
   onPlayerStateChange($event) {
     const state = $event.data;
-    console.log($event.data);
+    Logger.debug($event.data);
     if (state == 1) {
       this.videoStateTransition = true;
       this._timeoutIdVideo = setTimeout(() => {
@@ -264,7 +265,7 @@ export class CutInWindowComponent implements AfterViewInit, OnInit, OnDestroy {
   }
 
   onErrorFallback() {
-    console.log('fallback');
+    Logger.debug('fallback');
     if (!this.videoId) return;
 // 後で修正
 // this.cutInImageElement.nativeElement.src = 'https://img.youtube.com/vi/' + this.videoId + '/default.jpg'

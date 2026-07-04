@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import { Logger } from '../util/logger';
 
 export class WebRtcSignalingDataConnection extends EventEmitter {
   private isOpen = false;
@@ -26,8 +27,8 @@ export class WebRtcSignalingDataConnection extends EventEmitter {
   close() {
     if (!this.isOpen && this.dataChannel.readyState === 'closed') return;
     this.isOpen = false;
-    try { this.dataChannel.close(); } catch (e) { console.warn(e); }
-    try { this.peerConnection.close(); } catch (e) { console.warn(e); }
+    try { this.dataChannel.close(); } catch (e) { Logger.warn(e); }
+    try { this.peerConnection.close(); } catch (e) { Logger.warn(e); }
     this.emit('close');
   }
 

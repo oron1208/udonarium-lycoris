@@ -2,6 +2,7 @@ import { animate, keyframes, style, transition, trigger } from '@angular/animati
 import { Component, ElementRef, Input, OnInit, ViewChild, ViewContainerRef } from '@angular/core';
 import { PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { EventSystem, Network } from '@udonarium/core/system';
 import { ChatTachieImageComponent } from 'component/chat-tachie-img/chat-tachie-img.component';
@@ -32,10 +33,10 @@ import { CutIn } from '@udonarium/cut-in';
   ]
 })
 export class UIPanelComponent implements OnInit {
-  @ViewChild('draggablePanel', { static: true }) draggablePanel: ElementRef<HTMLElement>;
-  @ViewChild('scrollablePanel', { static: true }) scrollablePanel: ElementRef<HTMLDivElement>;
-  @ViewChild('titleBar', { static: true }) titleBar: ElementRef<HTMLDivElement>;
-  @ViewChild('content', { read: ViewContainerRef, static: true }) content: ViewContainerRef;
+  @ViewChild('draggablePanel', { static: true }) draggablePanel!: ElementRef<HTMLElement>;
+  @ViewChild('scrollablePanel', { static: true }) scrollablePanel!: ElementRef<HTMLDivElement>;
+  @ViewChild('titleBar', { static: true }) titleBar!: ElementRef<HTMLDivElement>;
+  @ViewChild('content', { read: ViewContainerRef, static: true }) content!: ViewContainerRef;
 
   @Input() set title(title: string) { this.panelService.title = title; }
   @Input() set left(left: number) { this.panelService.left = left; }
@@ -90,17 +91,17 @@ export class UIPanelComponent implements OnInit {
     if(!cutIn.videoId)return;
 
     let panel = this.draggablePanel.nativeElement
-    console.log('chkeWindowMinSize:' + panel.style.width + ' H:' + panel.style.height);
+    Logger.debug('chkeWindowMinSize:' + panel.style.width + ' H:' + panel.style.height);
     
     const nowW = parseInt(panel.style.width);
     const nowH = parseInt(panel.style.height);
     if (nowW < cutIn.minSizeWidth(true)){
       panel.style.width = cutIn.minSizeWidth(true) + 'px';
-      console.log('サイズ補正W');
+      Logger.debug('サイズ補正W');
     }
     if (nowH < cutIn.minSizeHeight(true)){
       panel.style.height = cutIn.minSizeHeight(true) + 'px';
-      console.log('サイズ補正H');
+      Logger.debug('サイズ補正H');
     }
     // はみ出し防止処理
     const winW = window.innerWidth;
@@ -113,14 +114,14 @@ export class UIPanelComponent implements OnInit {
     if( overR >= 0){
       const newOffL = offsetL - overR <= 0 ? 0 : offsetL - overR;
       panel.style.left = newOffL + 'px';
-      console.log('はみ出し防止処理横');
+      Logger.debug('はみ出し防止処理横');
     }
 
     const overB = offsetT + cutIn.minSizeHeight(true) - winH;
     if( overB >= 0){
       const newOffT = offsetT - overB <= 0 ? 0 : offsetT - overB;
       panel.style.top = newOffT + 'px';
-      console.log('はみ出し防止処理縦');
+      Logger.debug('はみ出し防止処理縦');
     }
   }
 

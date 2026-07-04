@@ -5,6 +5,7 @@ import { GameObject, ObjectContext } from './core/synchronize-object/game-object
 import { ObjectStore } from './core/synchronize-object/object-store';
 import { EventSystem, Network } from './core/system';
 import { Vote, VoteContext } from '@udonarium/vote';
+import { Logger } from './core/system/util/logger';
 
 type UserId = string;
 type PeerId = string;
@@ -163,7 +164,7 @@ export class PeerCursor extends GameObject {
 
   static createMyCursor(): PeerCursor {
     if (PeerCursor.myCursor) {
-      console.warn('It is already created.');
+      Logger.warn('It is already created.');
       return PeerCursor.myCursor;
     }
     PeerCursor.myCursor = new PeerCursor();

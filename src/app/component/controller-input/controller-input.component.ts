@@ -5,6 +5,7 @@ import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { EventSystem, Network } from '@udonarium/core/system';
 import { PeerContext } from '@udonarium/core/system/network/peer-context';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { ResettableTimeout } from '@udonarium/core/system/util/resettable-timeout';
 
@@ -101,7 +102,7 @@ export class ControllerInputComponent implements OnInit, OnDestroy {
   }
 
   get selectChatColor(): string{
-    console.log( 'selectChatColor :' + this.charactorChatColor(this.colorSelectNo) );
+    Logger.debug( 'selectChatColor :' + this.charactorChatColor(this.colorSelectNo) );
     return this.charactorChatColor(this.colorSelectNo);
   }
 
@@ -172,7 +173,7 @@ export class ControllerInputComponent implements OnInit, OnDestroy {
     private panelService: PanelService,
     private pointerDeviceService: PointerDeviceService
   ) { }
-  @ViewChild('textArea', { static: true }) textAreaElementRef: ElementRef;
+  @ViewChild('textArea', { static: true }) textAreaElementRef!: ElementRef;
 
   @Input() onlyCharacters = false;
   @Input() chatTabidentifier = '';
@@ -389,14 +390,14 @@ export class ControllerInputComponent implements OnInit, OnDestroy {
   }
 
   loadDiceBot(gameType: string) {
-    console.log('onChangeGameType ready');
+    Logger.debug('onChangeGameType ready');
     DiceBot.getHelpMessage(gameType).then(help => {
-      console.log('onChangeGameType done\n' + help);
+      Logger.debug('onChangeGameType done\n' + help);
     });
   }
   // 親コンポーネントにもCHKBOX情報を渡す、作りが悪いがチャット入力部流用のためひとまずこのまま
   buffHideChkChange( chk ){
-    console.log('buffHideChkChange:' + chk );
+    Logger.debug('buffHideChkChange:' + chk );
     this.hideChkEvent.emit(chk);
     this.buffHideIsChk = chk;
   }

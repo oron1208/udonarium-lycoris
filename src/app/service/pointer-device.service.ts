@@ -24,7 +24,7 @@ export class PointerDeviceService {
   private _isAllowedToOpenContextMenu: boolean = false;
   get isAllowedToOpenContextMenu(): boolean { return this._isAllowedToOpenContextMenu; }
 
-  targetElement: HTMLElement;
+  targetElement!: HTMLElement;
 
   pointers: PointerData[] = [{ x: 0, y: 0, z: 0, identifier: -1 }];
   private startPostion: PointerData = this.pointers[0];

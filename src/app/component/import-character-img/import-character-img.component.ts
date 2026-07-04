@@ -13,6 +13,7 @@ import { PanelService } from 'service/panel.service';
 import { TabletopObject } from '@udonarium/tabletop-object';
 import { GameCharacter } from '@udonarium/game-character';
 import { DataElement } from '@udonarium/data-element';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 
@@ -29,7 +30,7 @@ export class ImportCharacterImgComponent implements OnInit, OnDestroy, AfterView
 
   @Input() tabletopObject: GameCharacter = null;
 
-  private _sendFrom: string;
+  private _sendFrom!: string;
   get sendFrom(): string { return this._sendFrom };
   set sendFrom(sendFrom: string) { this._sendFrom = sendFrom; }
 
@@ -78,18 +79,18 @@ export class ImportCharacterImgComponent implements OnInit, OnDestroy, AfterView
     let object = ObjectStore.instance.get(this._sendFrom);
     if (object instanceof GameCharacter) {
       if(GameCharacter){
-        console.log( this.tabletopObject.name + 'インポート実行');
-        console.log( object.name + 'インポート実行');
+        Logger.debug( this.tabletopObject.name + 'インポート実行');
+        Logger.debug( object.name + 'インポート実行');
         let distImageDataElement = this.tabletopObject.imageDataElement;
         let srcImageDataElement = object.imageDataElement;
 
         while( distImageDataElement.children.length < srcImageDataElement.children.length){
-          console.log('イメージ追加');
+          Logger.debug('イメージ追加');
           distImageDataElement.appendChild(DataElement.create('imageIdentifier', '', { type: 'image' }, ''));
         }
 
         while( distImageDataElement.children.length > srcImageDataElement.children.length && distImageDataElement.children.length >= 2){
-          console.log('イメージ削除');
+          Logger.debug('イメージ削除');
           distImageDataElement.children[distImageDataElement.children.length-1].destroy();
         }
 

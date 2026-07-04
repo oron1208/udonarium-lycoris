@@ -1,4 +1,5 @@
 import { ChatPalette,BuffPalette } from './chat-palette';
+import { Logger } from './core/system/util/logger';
 
 import { ImageFile } from './core/file-storage/image-file';
 import { ImageStorage } from './core/file-storage/image-storage';
@@ -90,7 +91,7 @@ export class GameCharacter extends TabletopObject {
   }
 
   set selectedTachieNum(num : number){
-    console.log("set selectedTachieNum NUM=" + num +" len" + this.imageDataElement.children.length);
+    Logger.debug("set selectedTachieNum NUM=" + num +" len" + this.imageDataElement.children.length);
 
     if( num > ( this.imageDataElement.children.length - 1 ) ){
       num = this.imageDataElement.children.length - 1;
@@ -99,7 +100,7 @@ export class GameCharacter extends TabletopObject {
       num = 0;
     }
     this._selectedTachieNum = num
-    console.log("set selectedTachieNum" + this._selectedTachieNum);
+    Logger.debug("set selectedTachieNum" + this._selectedTachieNum);
 
   }
 
@@ -143,7 +144,7 @@ export class GameCharacter extends TabletopObject {
   set initiativeFormula(value: string) { this.setCommonValue('initiativeFormula', value); }
 
   TestExec() {
-    console.log('TestExec');
+    Logger.debug('TestExec');
 
   }
   get remoteController(): BuffPalette {
@@ -406,10 +407,10 @@ export class GameCharacter extends TabletopObject {
       if( tachies.length != 0 ){
         let parentElement = tachies[0].parent;
         let index: number = parentElement.children.indexOf(tachies[0]);
-        console.log("立ち絵の次に差し込み INdex" + index);
+        Logger.debug("立ち絵の次に差し込み INdex" + index);
         if (index < parentElement.children.length - 1) {
           let nextElement = parentElement.children[index + 1];
-          console.log("立ち絵の次に差し込み nextElement" + nextElement);
+          Logger.debug("立ち絵の次に差し込み nextElement" + nextElement);
           
           parentElement.insertBefore(elementKoma, nextElement);
         }
@@ -875,7 +876,7 @@ export class GameCharacter extends TabletopObject {
     let oldNumS = '';
     let newNum: number;
     let sum: number;
-    console.log('getStatusValue type' + type);
+    Logger.debug('getStatusValue type' + type);
 
     if ( type == 'value') {
       oldNumS = (data.value as string);

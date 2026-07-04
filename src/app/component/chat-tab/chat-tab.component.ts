@@ -14,6 +14,7 @@ import {
   Output,
   ViewChild,
 } from '@angular/core';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { ChatMessage, ChatMessageContext } from '@udonarium/chat-message';
 import { ChatTab } from '@udonarium/chat-tab';
@@ -53,8 +54,8 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
 
   private needUpdate = true;
 
-  @ViewChild('logContainer', { static: true }) logContainerRef: ElementRef<HTMLDivElement>;
-  @ViewChild('messageContainer', { static: true }) messageContainerRef: ElementRef<HTMLDivElement>;
+  @ViewChild('logContainer', { static: true }) logContainerRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('messageContainer', { static: true }) messageContainerRef!: ElementRef<HTMLDivElement>;
 
   private topElm: HTMLElement = null;
   private bottomElm: HTMLElement = null;
@@ -108,7 +109,7 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
   get minScrollHeight(): number {
 //    let length = this.chatTab ? this.chatTab.chatMessages.length : this.sampleMessages.length;
     let length = this.chatTab ? this.chatTab.displayableMessagesLength() : this.sampleMessages.length;
-    console.log('minScrollHeight' + length);
+    Logger.debug('minScrollHeight' + length);
     return (length < 10000 ? length : 10000) * this.minMessageHeight;
   }
 
@@ -126,7 +127,7 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
   private callbackOnScroll: any = () => this.onScroll();
   private callbackOnScrollToBottom: any = () => this.resetMessages();
 
-  @Input() chatTab: ChatTab;
+  @Input() chatTab!: ChatTab;
   get chatTabList(): ChatTabList { return ObjectStore.instance.get<ChatTabList>('ChatTabList'); }
 
   @Output() addMessage: EventEmitter<null> = new EventEmitter();
@@ -175,7 +176,7 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
         }
       })
       .on('RE_DRAW_CHAT', event => {
-        console.log('チャット再描画');
+        Logger.debug('チャット再描画');
         setTimeout(() => this.redraw() , 0);
         // フラグの更新前にイベントが走るためタイマーを使う。ひとまずやむなし
       });
@@ -232,7 +233,7 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
     this.scrollSpeed = 0;
     this.topElm = this.bottomElm = null;
     this.adjustIndex();
-    console.log('resetMessages top:' + this.topIndex + ' bottom:' + this.bottomIndex );
+    Logger.debug('resetMessages top:' + this.topIndex + ' bottom:' + this.bottomIndex );
     this.changeDetector.markForCheck();
   }
 

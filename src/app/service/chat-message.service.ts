@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import GameSystemClass from 'bcdice/lib/game_system';
+import { Logger } from '../class/core/system/util/logger';
 
 import { ChatMessage, ChatMessageContext, ChatMessageTargetContext } from '@udonarium/chat-message';
 import { ChatTab } from '@udonarium/chat-tab';
@@ -38,7 +39,7 @@ export class ChatMessageService {
 
   calibrateTimeOffset() {
     if (this.intervalTimer != null) {
-      console.log('calibrateTimeOffset was canceled.');
+      Logger.debug('calibrateTimeOffset was canceled.');
       return;
     }
     let index = Math.floor(Math.random() * this.ntpApiUrls.length);
@@ -57,14 +58,14 @@ export class ChatMessageService {
         let fixedTime = st + latency;
         this.timeOffset = fixedTime;
         this.performanceOffset = endTime;
-        console.log('latency: ' + latency + 'ms');
-        console.log('st: ' + st + '');
-        console.log('timeOffset: ' + this.timeOffset);
-        console.log('performanceOffset: ' + this.performanceOffset);
+        Logger.debug('latency: ' + latency + 'ms');
+        Logger.debug('st: ' + st + '');
+        Logger.debug('timeOffset: ' + this.timeOffset);
+        Logger.debug('performanceOffset: ' + this.performanceOffset);
         this.setIntervalTimer();
       })
       .catch(error => {
-        console.warn('There has been a problem with your fetch operation: ', error.message);
+        Logger.warn('There has been a problem with your fetch operation: ', error.message);
         this.setIntervalTimer();
       });
     this.setIntervalTimer();
@@ -179,7 +180,7 @@ export class ChatMessageService {
       sendFrom: sendFrom,  // Lycoris
     };
 
-    console.log(text + ' ' + sendFrom + ' ' + sendTo + ' ' + tachieNum);
+    Logger.debug(text + ' ' + sendFrom + ' ' + sendTo + ' ' + tachieNum);
     this.setLastControlInfoToPeer(sendFrom, this.findImageIdentifier(sendFrom, imgIndex), tachieNum, sendTo);
 
     // 立ち絵置き換え
@@ -187,7 +188,7 @@ export class ChatMessageService {
 
     let matchesArray = chkMessage.match(/\s[@＠](\S+)\s*$/i);
     if ( matchesArray ){
-      console.log( matchesArray );
+      Logger.debug( matchesArray );
       const matchHide = matchesArray[1].match(/^[hHｈＨ][iIｉＩ][dDｄＤ][eEｅＥ]$/);
       const matchNum = matchesArray[1].match(/(\d+)$/);
 
@@ -255,7 +256,7 @@ export class ChatMessageService {
     if (!peerCursor ) {
       return;
     }
-    console.log('peerCursor:' + peerCursor);
+    Logger.debug('peerCursor:' + peerCursor);
     if (sendTo == null || sendTo.length < 1) {
       if (peerCursor.lastControlImageIdentifier != imageIdentifier){
         peerCursor.lastControlImageIdentifier = imageIdentifier;
@@ -280,7 +281,7 @@ export class ChatMessageService {
       for (let child of data.children) {
         if (child instanceof DataElement) {
           if (child.getAttribute('currentValue') == name){
-            console.log( 'HIT!!' + child.getAttribute('currentValue') + '=' + name);
+            Logger.debug( 'HIT!!' + child.getAttribute('currentValue') + '=' + name);
             const img = ImageStorage.instance.get(<string> child.value);
             if ( img ){
               return  img.identifier;
@@ -293,9 +294,9 @@ export class ChatMessageService {
       this._ImageIndex = 0;
       for (let child of data.children) {
         if (child instanceof DataElement) {
-          console.log( 'child' + child.getAttribute('currentValue') );
+          Logger.debug( 'child' + child.getAttribute('currentValue') );
           if ( child.getAttribute('currentValue').indexOf( name ) == 0 ){
-            console.log( 'HIT!!' + child.getAttribute('currentValue') + '=' + name);
+            Logger.debug( 'HIT!!' + child.getAttribute('currentValue') + '=' + name);
             const img = ImageStorage.instance.get(<string> child.value);
             if ( img ){
               return  img.identifier;

@@ -1,5 +1,6 @@
 import { animate, keyframes, style, transition, trigger } from '@angular/animations';
 import { AfterViewInit, ChangeDetectionStrategy, Component, Input, OnInit } from '@angular/core';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { ChatMessage } from '@udonarium/chat-message';
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
@@ -36,7 +37,7 @@ import { ChatMessageFixComponent } from 'component/chat-message-fix/chat-message
 })
 
 export class ChatMessageComponent implements OnInit, AfterViewInit {
-  @Input() chatMessage: ChatMessage;
+  @Input() chatMessage!: ChatMessage;
 
   @Input() simpleDispFlagTime: boolean = false;
   @Input() simpleDispFlagUserId: boolean = false;
@@ -68,7 +69,7 @@ export class ChatMessageComponent implements OnInit, AfterViewInit {
   }
 
   clickFix(){
-    console.log('clickFix');
+    Logger.debug('clickFix');
     let coordinate = this.pointerDeviceService.pointers[0];
     let option: PanelOption = { width: 700, height: 120, left: coordinate.x , top: coordinate.y};
     option.title = 'チャット編集';

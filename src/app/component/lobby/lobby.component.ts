@@ -1,9 +1,18 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { PeerContext } from '@udonarium/core/system/network/peer-context';
 import { EventSystem, Network } from '@udonarium/core/system';
 import { PeerCursor } from '@udonarium/peer-cursor';
+import { GameCharacter } from '@udonarium/game-character';
+import { GameCharacterGroup } from '@udonarium/game-character-group';
+import { RangeArea } from '@udonarium/range';
+import { TextNote } from '@udonarium/text-note';
+import { DiceSymbol } from '@udonarium/dice-symbol';
+import { GameTableMask } from '@udonarium/game-table-mask';
+import { Terrain } from '@udonarium/terrain';
+import { TabletopObject } from '@udonarium/tabletop-object';
 
 import { PasswordCheckComponent } from 'component/password-check/password-check.component';
 import { RoomSettingComponent } from 'component/room-setting/room-setting.component';
@@ -98,6 +107,10 @@ export class LobbyComponent implements OnInit, OnDestroy {
 
     if (!context.verifyPassword(password)) return;
 
+    // 部屋に入る前に、ロビー状態で作成されたコマ等をクリーンアップする
+    // （ユドナリウム公式の「部屋未作成時にコマを作ると別の部屋に引き継がれる」現象の修正）
+    this.cleanupTabletopObjectsBeforeJoin();
+
     let userId = Network.peerContext ? Network.peerContext.userId : PeerContext.generateId();
     Network.open(userId, context.roomId, context.roomName, password);
     PeerCursor.myCursor.peerId = Network.peerId;
@@ -105,7 +118,7 @@ export class LobbyComponent implements OnInit, OnDestroy {
     let triedPeer: string[] = [];
     EventSystem.register(triedPeer)
       .on('OPEN_NETWORK', event => {
-        console.log('LobbyComponent OPEN_PEER', event.data.peerId);
+        Logger.debug('LobbyComponent OPEN_PEER', event.data.peerId);
         EventSystem.unregister(triedPeer);
         ObjectStore.instance.clearDeleteHistory();
         if (peerContexts.every(context => this.isSavedEmptyRoomContext(context))) {
@@ -117,9 +130,9 @@ export class LobbyComponent implements OnInit, OnDestroy {
         }
         EventSystem.register(triedPeer)
           .on('CONNECT_PEER', event => {
-            console.log('接続成功！', event.data.peerId);
+            Logger.debug('接続成功！', event.data.peerId);
             triedPeer.push(event.data.peerId);
-            console.log('接続成功 ' + triedPeer.length + '/' + peerContexts.length);
+            Logger.debug('接続成功 ' + triedPeer.length + '/' + peerContexts.length);
             if (peerContexts.length <= triedPeer.length) {
               this.resetNetwork();
               EventSystem.unregister(triedPeer);
@@ -127,9 +140,9 @@ export class LobbyComponent implements OnInit, OnDestroy {
             }
           })
           .on('DISCONNECT_PEER', event => {
-            console.warn('接続失敗', event.data.peerId);
+            Logger.warn('接続失敗', event.data.peerId);
             triedPeer.push(event.data.peerId);
-            console.warn('接続失敗 ' + triedPeer.length + '/' + peerContexts.length);
+            Logger.warn('接続失敗 ' + triedPeer.length + '/' + peerContexts.length);
             if (peerContexts.length <= triedPeer.length) {
               this.resetNetwork();
               EventSystem.unregister(triedPeer);
@@ -158,5 +171,30 @@ export class LobbyComponent implements OnInit, OnDestroy {
     await this.modalService.open(RoomSettingComponent, { width: 700, height: 400, left: 0, top: 400 });
     this.reload();
     this.help = '「一覧を更新」ボタンを押すと接続可能なルーム一覧を表示します。';
+  }
+
+  /**
+   * 部屋入室前に、ロビー状態で作成されたコマ等を破棄する。
+   * ユドナリウム公式の「部屋未作成時にコマを作ると別の部屋に引き継がれる」現象の対策。
+   * re-connect.component.ts の deleteObject() と同等の処理。
+   */
+  private cleanupTabletopObjectsBeforeJoin() {
+    const cleanupTargets = [
+      GameCharacter,
+      GameCharacterGroup,
+      RangeArea,
+      TextNote,
+      DiceSymbol,
+      GameTableMask,
+      Terrain,
+    ];
+    for (const cls of cleanupTargets) {
+      const objects = ObjectStore.instance.getObjects<TabletopObject>(cls as any);
+      for (const obj of objects) {
+        obj.setLocation('graveyard');
+        obj.destroy();
+      }
+    }
+    ObjectStore.instance.clearDeleteHistory();
   }
 }

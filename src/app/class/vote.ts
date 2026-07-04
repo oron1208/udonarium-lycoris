@@ -1,4 +1,5 @@
 import { Component, NgZone, OnDestroy, OnInit } from '@angular/core';
+import { Logger } from './core/system/util/logger';
 
 import { SyncObject, SyncVar } from './core/synchronize-object/decorator';
 import { GameObject, ObjectContext } from './core/synchronize-object/game-object';
@@ -166,7 +167,7 @@ export class Vote extends GameObject {
   // override
   apply(context: ObjectContext) {
 
-    console.log('Vote apply() CALL');
+    Logger.debug('Vote apply() CALL');
 
     const initTimeStamp = this.initTimeStamp;
     super.apply(context);

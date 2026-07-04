@@ -31,7 +31,7 @@ export class RangeDockingCharacterComponent implements OnInit, OnDestroy, AfterV
 
   @Input() tabletopObject: RangeArea = null;
 
-  private _sendFrom: string;
+  private _sendFrom!: string;
   get sendFrom(): string { return this._sendFrom };
   set sendFrom(sendFrom: string) { this._sendFrom = sendFrom; }
 

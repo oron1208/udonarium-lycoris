@@ -2,6 +2,7 @@ import { ChatTab } from './chat-tab';
 import { SyncObject, SyncVar } from './core/synchronize-object/decorator';
 import { ObjectNode } from './core/synchronize-object/object-node';
 import { InnerXml } from './core/synchronize-object/object-serializer';
+import { Logger } from './core/system/util/logger';
 
 import { PeerCursor } from '@udonarium/peer-cursor';
 import { Network } from '@udonarium/core/system';
@@ -132,7 +133,7 @@ export class ChatTabList extends ObjectNode implements InnerXml {
     if( this.chatTabs ){
       let tabNum = this.chatTabs.length;
       let indexList : number[] = [] ;
-      console.log( 'tabNum :' + tabNum );
+      Logger.debug( 'tabNum :' + tabNum );
       for( let i = 0 ; i < tabNum ;i++){
         indexList.push(0);
       }
@@ -163,7 +164,7 @@ export class ChatTabList extends ObjectNode implements InnerXml {
         let myId = Network.peerContext.userId; //1.13.xとのmargeで修正
         if( to ){
           if( ( to != myId) && ( from != myId) ){
-            console.log( " SKIP " + from + " > " + to + " : " + this.chatTabs[ fastTabIndex ].chatMessages[ indexList[fastTabIndex] ].text );
+            Logger.debug( " SKIP " + from + " > " + to + " : " + this.chatTabs[ fastTabIndex ].chatMessages[ indexList[fastTabIndex] ].text );
             indexList[ fastTabIndex ] ++;
             continue;
           }
@@ -203,7 +204,7 @@ export class ChatTabList extends ObjectNode implements InnerXml {
     if( this.chatTabs ){
       let tabNum = this.chatTabs.length;
       let indexList : number[] = [] ;
-      console.log( 'tabNum :' + tabNum );
+      Logger.debug( 'tabNum :' + tabNum );
       for( let i = 0 ; i < tabNum ;i++){
         indexList.push(0);
       }
@@ -234,7 +235,7 @@ export class ChatTabList extends ObjectNode implements InnerXml {
         let myId = Network.peerContext.userId; //1.13.xとのmargeで修正
         if( to ){
           if( ( to != myId) && ( from != myId) ){
-            console.log( " SKIP " + from + " > " + to + " : " + this.chatTabs[ fastTabIndex ].chatMessages[ indexList[fastTabIndex] ].text );
+            Logger.debug( " SKIP " + from + " > " + to + " : " + this.chatTabs[ fastTabIndex ].chatMessages[ indexList[fastTabIndex] ].text );
             indexList[ fastTabIndex ] ++;
             continue;
           }

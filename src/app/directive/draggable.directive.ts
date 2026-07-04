@@ -1,6 +1,7 @@
 import { AfterViewInit, Directive, ElementRef, EventEmitter, Input, NgZone, OnDestroy, Output } from '@angular/core';
 import { CSSNumber } from '@udonarium/transform/css-number';
 import { PointerCoordinate } from 'service/pointer-device.service';
+import { Logger } from '../class/core/system/util/logger';
 
 import { InputHandler } from './input-handler';
 
@@ -149,8 +150,8 @@ export class DraggableDirective implements AfterViewInit, OnDestroy {
   private adjustPosition() {
     let current = this.calcElementPosition(this.elementRef.nativeElement);
     let correction = this.calcCorrectionPosition();
-    console.log("current x " + current.x+ "  y" + current.y);
-    console.log("correction x " + correction.x+ "  y" + correction.y);
+    Logger.debug("current x " + current.x+ "  y" + current.y);
+    Logger.debug("correction x " + correction.x+ "  y" + correction.y);
     this.elementRef.nativeElement.style.left = correction.x + current.x + 'px';
     this.elementRef.nativeElement.style.top = correction.y + current.y + 'px';
   }

@@ -14,6 +14,7 @@ import { ModalService } from 'service/modal.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
 import { TabletopService } from 'service/tabletop.service';
 import { Config } from '@udonarium/config';
+import { Logger } from '../../class/core/system/util/logger';
 
 interface MacroHotbarSlot {
   label: string;
@@ -41,7 +42,7 @@ const TOTAL_SLOT_COUNT = SLOT_COUNT * PAGE_COUNT;
   styleUrls: ['./macro-hotbar.component.css']
 })
 export class MacroHotbarComponent {
-  @ViewChild('importFileInput') importFileInput: ElementRef<HTMLInputElement>;
+  @ViewChild('importFileInput') importFileInput!: ElementRef<HTMLInputElement>;
 
   // ── Floating panel state ──
   panelX: number = -1; // -1 = default centered
@@ -100,6 +101,11 @@ export class MacroHotbarComponent {
         this.isVisible = true;
         this.isPinned = false;
         try { localStorage.removeItem('udonarium.macroHotbar.pos.v1'); localStorage.removeItem('udonarium.macroHotbar.pinned.v1'); } catch (_) { }
+      })
+      .on('MACRO_HOTBAR_CLEAR_ALL', event => {
+        this.slots = this.emptySlots();
+        this.saveSlots();
+        this.helpText = 'ホットバーを全てクリアしました';
       })
       .on('MACRO_HOTBAR_SCALE_CHANGED', event => {
         this._hotbarScale = Number(event.data?.scale || 100);
@@ -216,14 +222,14 @@ export class MacroHotbarComponent {
   }
 
   getSlotTooltip(slot: MacroHotbarSlot): string {
-    if (!slot.text.trim().length) return '空スロット: クリックで編集 / Ctrl+クリックで編集';
+    if (!slot.text.trim().length) return '空スロット: クリックで編集';
     const label = (slot.label || '').trim() || '名称なし';
     return `${label}\n${slot.text}`;
   }
 
   showSlotPopover(slot: MacroHotbarSlot) {
     this.hoverSlotLabel = (slot.label || '').trim() || (slot.text.trim().length ? '名称なし' : '空スロット');
-    this.hoverSlotText = slot.text.trim().length ? slot.text : 'クリックで編集 / Ctrl+クリックで編集';
+    this.hoverSlotText = slot.text.trim().length ? slot.text : 'クリックで編集 / 右クリックでも編集';
   }
 
   hideSlotPopover() {
@@ -239,7 +245,7 @@ export class MacroHotbarComponent {
         activePage: this.activePage
       }));
     } catch (e) {
-      console.warn('macro hotbar settings save failed', e);
+      Logger.warn('macro hotbar settings save failed', e);
     }
   }
 
@@ -277,11 +283,6 @@ export class MacroHotbarComponent {
     event.stopPropagation();
     const index = this.toSlotIndex(visibleIndex);
 
-    if (event.ctrlKey || event.metaKey) {
-      this.startEdit(index);
-      return;
-    }
-
     const slot = this.slots[index];
     if (!slot.text.trim().length) {
       this.startEdit(index);
@@ -295,14 +296,7 @@ export class MacroHotbarComponent {
     event.preventDefault();
     event.stopPropagation();
     const index = this.toSlotIndex(visibleIndex);
-
-    const slot = this.slots[index];
-    if (!slot.text.trim().length) {
-      this.startEdit(index);
-      return;
-    }
-
-    this.copyText(slot.text);
+    this.startEdit(index);
   }
 
   startEdit(index: number) {
@@ -329,6 +323,17 @@ export class MacroHotbarComponent {
     this.saveSlots();
     this.helpText = `スロット${this.editingIndex + 1}を空にしました`;
     this.cancelEdit();
+  }
+
+  copyEditMacro() {
+    if (this.editingIndex < 0) return;
+    this.copyText(this.editSlot.text || '');
+  }
+
+  clearAllSlots() {
+    this.slots = this.emptySlots();
+    this.saveSlots();
+    this.helpText = 'ホットバーを全てクリアしました';
   }
 
   cancelEdit() {
@@ -380,7 +385,7 @@ export class MacroHotbarComponent {
         this.saveSlots();
         this.helpText = 'ホットバー設定を読み込みました';
       } catch (e) {
-        console.warn('macro hotbar import failed', e);
+        Logger.warn('macro hotbar import failed', e);
         this.helpText = '読み込みに失敗しました';
       }
     };
@@ -439,7 +444,8 @@ export class MacroHotbarComponent {
   }
 
   private targeted(gameCharacter: GameCharacter): boolean {
-    if (gameCharacter.location.name != 'table') return false;
+    // 卓上のコマ または キャラクターグループ内の部位(location.name='parts')を対象に含める。
+    if (gameCharacter.location.name != 'table' && gameCharacter.location.name != 'parts') return false;
     return gameCharacter.targeted;
   }
 
@@ -479,7 +485,7 @@ export class MacroHotbarComponent {
       const slots = Array.isArray(data) ? data : data.slots;
       return this.normalizeSlots(slots);
     } catch (e) {
-      console.warn('macro hotbar load failed', e);
+      Logger.warn('macro hotbar load failed', e);
       return this.emptySlots();
     }
   }
@@ -539,7 +545,7 @@ export class MacroHotbarComponent {
         activePage: Math.max(0, Math.min(PAGE_COUNT - 1, Number(data.activePage || 0)))
       };
     } catch (e) {
-      console.warn('macro hotbar settings load failed', e);
+      Logger.warn('macro hotbar settings load failed', e);
       return { selectedCharacterIdentifier: '', targetMode: false, activePage: 0 };
     }
   }
@@ -548,7 +554,7 @@ export class MacroHotbarComponent {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, pageCount: PAGE_COUNT, slotCount: SLOT_COUNT, slots: this.slots }));
     } catch (e) {
-      console.warn('macro hotbar save failed', e);
+      Logger.warn('macro hotbar save failed', e);
       this.helpText = '保存に失敗しました';
     }
   }

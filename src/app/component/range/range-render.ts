@@ -1,4 +1,5 @@
 import { GridType } from '@udonarium/game-table';
+import { Logger } from '../../class/core/system/util/logger';
 
 type StrokeGridFunc = (w: number, h: number, gridSize: number) => GridPosition;
 type GridPosition = { gx: number, gy: number };
@@ -104,8 +105,8 @@ export class RangeRender {
     let bx = pchkx - p1x;
     let by = pchky - p1y;
     let calc = ax * by - ay * bx;
-    // console.log('p1:' + p1x + ',' + p1y +' p2:' + p2x + ',' + p2y + ' pchk:' + pchkx + ',' + pchky);
-    // console.log('a:' + ax + ',' + ay +' b:' + bx + ',' + by + ' calc:' + calc);
+    // Logger.debug('p1:' + p1x + ',' + p1y +' p2:' + p2x + ',' + p2y + ' pchk:' + pchkx + ',' + pchky);
+    // Logger.debug('a:' + ax + ',' + ay +' b:' + bx + ',' + by + ' calc:' + calc);
     
     return calc >= -0.01 ? true : false; // 丸め誤差対策で少し許容範囲を広くする
   }
@@ -166,7 +167,7 @@ export class RangeRender {
 
           gcx = gx + gridOffX + (gridSize / 2) - offSetX_px;
           gcy = gy + gridOffY + (gridSize / 2) - offSetY_px;
-          // console.log('hw' + h + ',' + w);
+          // Logger.debug('hw' + h + ',' + w);
 
           // trueで内側にある
           if(this.chkInCircle(setting.range * gridSize, gcx, gcy)){
@@ -295,7 +296,7 @@ export class RangeRender {
 
           gcx = gx + gridOffX + (gridSize / 2) - offSetX_px;
           gcy = gy + gridOffY + (gridSize / 2) - offSetY_px;
-          // console.log('hw' + h + ',' + w);
+          // Logger.debug('hw' + h + ',' + w);
 
           // 全部trueで内側にある
           if(  this.chkOuterProduct(p1x, p1y, p2x, p2y, gcx, gcy)
@@ -420,7 +421,7 @@ export class RangeRender {
 
           gcx = gx + gridOffX + (gridSize / 2) - offSetX_px;
           gcy = gy + gridOffY + (gridSize / 2) - offSetY_px;
-          // console.log('hw' + h + ',' + w);
+          // Logger.debug('hw' + h + ',' + w);
 
           // 全部trueで内側にある
           if(  this.chkOuterProduct(p1x, p1y, p2x, p2y, gcx, gcy)
@@ -550,7 +551,7 @@ export class RangeRender {
 
           gcx = gx + gridOffX + (gridSize / 2) - offSetX_px;
           gcy = gy + gridOffY + (gridSize / 2) - offSetY_px;
-          // console.log('hw' + h + ',' + w);
+          // Logger.debug('hw' + h + ',' + w);
 
           // 全部trueで内側にある
           if(  this.chkOuterProduct(p1x, p1y, p2x, p2y, gcx, gcy)
@@ -706,7 +707,7 @@ export class RangeRender {
 
           gcx = gx + gridOffX + (gridSize / 2) - offSetX_px;
           gcy = gy + gridOffY + (gridSize / 2) - offSetY_px;
-          // console.log('hw' + h + ',' + w);
+          // Logger.debug('hw' + h + ',' + w);
 
           // 全部trueで内側にある
           if(  this.chkOuterProduct(cx, cy, p1x, p1y, gcx, gcy)
@@ -744,7 +745,7 @@ export class RangeRender {
   }
 
   private generateCalcGridPositionFunc(gridType: GridType,centerX: number,centerY: number,areaWidth: number,areaHeight: number): StrokeGridFunc {
-//  console.log('areaWidth:'+areaWidth + ' areaHeight:'+areaHeight);
+//  Logger.debug('areaWidth:'+areaWidth + ' areaHeight:'+areaHeight);
     switch (gridType) {
       case GridType.HEX_VERTICAL: // ヘクス縦揃え
         return (w, h, gridSize) => {

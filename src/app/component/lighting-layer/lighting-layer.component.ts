@@ -21,7 +21,7 @@ interface LightSource {
   styleUrls: ['./lighting-layer.component.css']
 })
 export class LightingLayerComponent implements OnInit, OnDestroy {
-  @ViewChild('lightCanvas', { static: true }) canvasRef: ElementRef<HTMLCanvasElement>;
+  @ViewChild('lightCanvas', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
 
   state: LightingEffectState = {
     enabled: false, nightMode: true, intensity: 0.55, tint: '#00030c',

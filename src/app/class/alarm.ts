@@ -1,4 +1,5 @@
 import { Component, NgZone, OnDestroy, OnInit } from '@angular/core';
+import { Logger } from './core/system/util/logger';
 
 import { SyncObject, SyncVar } from './core/synchronize-object/decorator';
 import { GameObject, ObjectContext } from './core/synchronize-object/game-object';
@@ -67,10 +68,10 @@ export class Alarm extends GameObject {
           let text_ = 'アラーム(' + this.alarmTime + '秒)経過' + this.targetText + this.alarmTitle;
           EventSystem.trigger('ALARM_TIMEUP_ORIGIN', { text : text_ });
           AudioPlayer.play(AudioStorage.instance.get(PresetSound.alarm), 0.5);
-          console.log('アラーム音再生');
+          Logger.debug('アラーム音再生');
         }
         if(this.isPopUp ){
-          console.log('アラーム ポップアップ再生');
+          Logger.debug('アラーム ポップアップ再生');
           EventSystem.trigger('ALARM_POP', { title : this.alarmTitle , time : this.alarmTime });
         }
       }, this.alarmTime * 1000);
@@ -90,7 +91,7 @@ export class Alarm extends GameObject {
   // override
   apply(context: ObjectContext) {
 
-    console.log('Alarm timer apply() CALL');
+    Logger.debug('Alarm timer apply() CALL');
     const initTimeStamp = this.initTimeStamp;
     super.apply(context);
 

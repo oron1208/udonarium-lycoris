@@ -9,10 +9,10 @@ interface InputHandlerOption {
 }
 
 export class InputHandler {
-  onStart: (ev: MouseEvent | TouchEvent) => void;
-  onMove: (ev: MouseEvent | TouchEvent) => void;
-  onEnd: (ev: MouseEvent | TouchEvent) => void;
-  onContextMenu: (ev: MouseEvent | TouchEvent) => void;
+  onStart!: (ev: MouseEvent | TouchEvent) => void;
+  onMove!: (ev: MouseEvent | TouchEvent) => void;
+  onEnd!: (ev: MouseEvent | TouchEvent) => void;
+  onContextMenu!: (ev: MouseEvent | TouchEvent) => void;
 
   private callbackOnMouse = this.onMouse.bind(this);
   private callbackOnTouch = this.onTouch.bind(this);

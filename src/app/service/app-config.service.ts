@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { Logger } from '../class/core/system/util/logger';
 
 import { EventSystem } from '@udonarium/core/system';
 
@@ -54,12 +55,12 @@ export class AppConfigService {
 
   private async initAppConfig() {
     try {
-      console.log('YAML読み込み...');
+      Logger.debug('YAML読み込み...');
       let config = await this.loadYaml();
       let obj = yaml.load(config);
       AppConfigService.applyConfig(obj);
     } catch (e) {
-      console.warn(e);
+      Logger.warn(e);
     }
     EventSystem.trigger('LOAD_CONFIG', AppConfigService.appConfig);
   }
@@ -67,14 +68,14 @@ export class AppConfigService {
   private async loadYaml(): Promise<string> {
     let config = document.querySelector('script[type$="yaml"]');
     if (!config) {
-      console.warn('loadYaml element not found.');
+      Logger.warn('loadYaml element not found.');
       return '';
     }
 
     let url = config.getAttribute('src');
 
     if (url == null) {
-      console.warn('loadYaml url undefined.');
+      Logger.warn('loadYaml url undefined.');
       return config.textContent;
     }
 
@@ -88,7 +89,7 @@ export class AppConfigService {
     for (let key of keys) {
       let invalidPropertyKeys = Array.isArray(config) || Array.isArray(root) ? objectPropertyKeys.concat(arrayPropertyKeys) : objectPropertyKeys;
       if (invalidPropertyKeys.includes(key)) {
-        console.log(`skip invalid key (${key})`);
+        Logger.debug(`skip invalid key (${key})`);
         continue;
       } else if (config[key] != null && typeof config[key] === 'object') {
         if (root[key] == null) root[key] = Array.isArray(config[key]) ? [] : {};

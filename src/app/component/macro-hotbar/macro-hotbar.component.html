@@ -84,6 +84,9 @@
     <button type="button" (click)="openImportDialog()" title="ホットバー設定JSONを読み込み">
       <i class="material-icons">file_upload</i><span>読込</span>
     </button>
+    <button type="button" (click)="clearAllSlots()" title="ホットバーを全てクリア" class="clear-all-button">
+      <i class="material-icons">delete_sweep</i><span>全削除</span>
+    </button>
     <input #importFileInput type="file" accept="application/json,.json" style="display:none" (change)="importSlots($event)" />
   </div>
 
@@ -105,6 +108,7 @@
     <label>マクロ<textarea class="is-caret" [(ngModel)]="editSlot.text" placeholder="例: 2d6+3 回避"></textarea></label>
     <div class="editor-buttons">
       <button type="button" (click)="saveEdit()">保存</button>
+      <button type="button" (click)="copyEditMacro()" title="マクロテキストをクリップボードにコピー">コピー</button>
       <button type="button" (click)="clearEdit()">空にする</button>
       <button type="button" (click)="cancelEdit()">キャンセル</button>
     </div>

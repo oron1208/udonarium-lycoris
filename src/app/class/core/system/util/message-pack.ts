@@ -1,11 +1,12 @@
 import * as msgpacklite from 'msgpack-lite';
+import { Logger } from './logger';
 
 export namespace MessagePack {
   export function encode(object: unknown): Uint8Array {
     try {
       return msgpacklite.encode(object);
     } catch (error) {
-      console.error(error, object);
+      Logger.error(error, object);
     }
     return null;
   }
@@ -14,7 +15,7 @@ export namespace MessagePack {
     try {
       return msgpacklite.decode(buffer);
     } catch (error) {
-      console.error(error, buffer);
+      Logger.error(error, buffer);
     }
     return null;
   }

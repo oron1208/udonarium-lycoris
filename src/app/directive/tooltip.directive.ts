@@ -21,16 +21,16 @@ import { PointerDeviceService } from 'service/pointer-device.service';
 export class TooltipDirective implements OnInit, AfterViewInit, OnDestroy {
   private static activeTooltips: ComponentRef<OverviewPanelComponent>[] = [];
 
-  @Input('appTooltip') tabletopObject: TabletopObject;
+  @Input('appTooltip') tabletopObject!: TabletopObject;
 
   private callbackOnMouseEnter = (e) => this.onMouseEnter(e);
   private callbackOnMouseLeave = (e) => this.onMouseLeave(e);
   private callbackOnMouseDown = (e) => this.onMouseDown(e);
 
-  private openTooltipTimer: NodeJS.Timer;
-  private closeTooltipTimer: NodeJS.Timer;
+  private openTooltipTimer!: NodeJS.Timer;
+  private closeTooltipTimer!: NodeJS.Timer;
 
-  private tooltipComponentRef: ComponentRef<OverviewPanelComponent>
+  private tooltipComponentRef!: ComponentRef<OverviewPanelComponent>
 
   constructor(
     private ngZone: NgZone,

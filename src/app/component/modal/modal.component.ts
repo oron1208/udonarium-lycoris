@@ -30,7 +30,7 @@ import { ModalService } from 'service/modal.service';
   ]
 })
 export class ModalComponent {
-  @ViewChild('content', { read: ViewContainerRef, static: true }) content: ViewContainerRef;
+  @ViewChild('content', { read: ViewContainerRef, static: true }) content!: ViewContainerRef;
 
   constructor(
     public modalService: ModalService) { }

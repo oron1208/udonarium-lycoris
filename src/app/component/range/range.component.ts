@@ -19,6 +19,7 @@ import { RangeArea } from '@udonarium/range';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
 import { GameCharacterSheetComponent } from 'component/game-character-sheet/game-character-sheet.component';
 import { RangeDockingCharacterComponent } from 'component/range-docking-character/range-docking-character.component';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { InputHandler } from 'directive/input-handler';
 import { MovableOption } from 'directive/movable.directive';
@@ -45,9 +46,9 @@ export class RangeComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() is3D: boolean = false;
 //  @Input() rotateDeg : string = ''
 
-  @ViewChild('gridCanvas', { static: true }) gridCanvas: ElementRef<HTMLCanvasElement>;
-  @ViewChild('rangeCanvas', { static: true }) rangeCanvas: ElementRef<HTMLCanvasElement>;
-  @ViewChild('rotate') rotate: ElementRef<HTMLElement>;
+  @ViewChild('gridCanvas', { static: true }) gridCanvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('rangeCanvas', { static: true }) rangeCanvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('rotate') rotate!: ElementRef<HTMLElement>;
   
   public get clipPathText() {
     let text = '';
@@ -89,7 +90,7 @@ export class RangeComponent implements OnInit, OnDestroy, AfterViewInit {
     clipCorn += this.clipAreaCorn.clip08x + 'px ' + this.clipAreaCorn.clip08y + 'px, ';
     clipCorn += this.clipAreaCorn.clip09x + 'px ' + this.clipAreaCorn.clip09y + 'px)';
     // return this.sanitizer.bypassSecurityTrustStyle(this._polygon);
-    // console.log( 'clipCorn:' + clipCorn);
+    // Logger.debug( 'clipCorn:' + clipCorn);
     return clipCorn;
   }
 
@@ -244,7 +245,7 @@ export class RangeComponent implements OnInit, OnDestroy, AfterViewInit {
           this.changeDetector.markForCheck();
         }
         if( object.identifier == this.range.followingCharctorIdentifier){
-          console.log('追従動作');
+          Logger.debug('追従動作');
           this.range.following();
           this.setRange();
         }
@@ -380,7 +381,7 @@ export class RangeComponent implements OnInit, OnDestroy, AfterViewInit {
       {
         name: 'コピーを作る', action: () => {
           let cloneObject = this.range.clone();
-          console.log('コピー', cloneObject);
+          Logger.debug('コピー', cloneObject);
           cloneObject.location.x += this.gridSize;
           cloneObject.location.y += this.gridSize;
           cloneObject.isLock = false;

@@ -1,10 +1,11 @@
+import { Logger } from '../core/system/util/logger';
 // 試験実装中
 export class Database<T> {
   readonly version: number = 1;
   readonly databaseName: string;
   readonly storeName: string;
 
-  private openDBPromise: Promise<IDBDatabase>;
+  private openDBPromise!: Promise<IDBDatabase>;
 
   constructor(name: string) {
     this.databaseName = `Udonarium-IDB-${name}`;
@@ -18,13 +19,13 @@ export class Database<T> {
     let openFunc = async () => {
       let request = indexedDB.open(this.databaseName, this.version);
       request.onblocked = event => {
-        console.warn('request.onblocked');
+        Logger.warn('request.onblocked');
         // 他のタブがデータベースを読み込んでいる場合は、処理を進める前に
         // それらを閉じなければなりません。
         //alert('このサイトを開いている他のタブをすべて閉じてください!');
       };
       request.onupgradeneeded = event => {
-        console.log('request.onupgradeneeded');
+        Logger.debug('request.onupgradeneeded');
         this.createObjectStore(request.result);
       };
 
@@ -32,13 +33,13 @@ export class Database<T> {
         let database = await this.waitFor(request);
         return this.initializeDB(database);
       } catch (e) {
-        console.error(e);
+        Logger.error(e);
         if (request.error.name === 'VersionError') {
-          console.log(`recreate <${this.databaseName}>`);
+          Logger.debug(`recreate <${this.databaseName}>`);
           try {
             await this.waitFor(indexedDB.deleteDatabase(this.databaseName));
           } catch (e) {
-            console.warn(e);
+            Logger.warn(e);
           }
           return await openFunc();
         }
@@ -56,7 +57,7 @@ export class Database<T> {
       database.close();
       this.openDBPromise = null;
     } catch (e) {
-      console.error(e);
+      Logger.error(e);
     }
   }
 
@@ -72,12 +73,12 @@ export class Database<T> {
     // データベースを閉じなければなりません。データベースを閉じると、別のページがデータベースをアップグレードできます。
     // これを行わなければ、ユーザがタブを閉じるまでデータベースはアップグレードされません。
     database.onversionchange = event => {
-      console.warn('database.onversionchange.');
+      Logger.warn('database.onversionchange.');
       database.close();
       this.openDBPromise = null;
       //alert('新しいバージョンのページが使用可能になりました。再読み込みしてください!');
     };
-    database.onabort = database.onerror = event => console.error(event);
+    database.onabort = database.onerror = event => Logger.error(event);
     return database;
   }
 
@@ -93,7 +94,7 @@ export class Database<T> {
       let request = store.get(key);
       return await this.waitFor<T>(request);
     } catch (e) {
-      console.error(e);
+      Logger.error(e);
       return null;
     }
   }
@@ -104,7 +105,7 @@ export class Database<T> {
       let request = store.put(value, key);
       return await this.waitFor(request);
     } catch (e) {
-      console.error(e);
+      Logger.error(e);
       return null;
     }
   }
@@ -115,7 +116,7 @@ export class Database<T> {
       let request = store.delete(key);
       return await this.waitFor(request);
     } catch (e) {
-      console.error(e);
+      Logger.error(e);
       return null;
     }
   }
@@ -126,7 +127,7 @@ export class Database<T> {
       let request = store.getAll();
       return await this.waitFor<T[]>(request);
     } catch (e) {
-      console.error(e);
+      Logger.error(e);
       return null;
     }
   }
@@ -137,7 +138,7 @@ export class Database<T> {
       let request = store.getAllKeys();
       return await this.waitFor(request);
     } catch (e) {
-      console.error(e);
+      Logger.error(e);
       return null;
     }
   }

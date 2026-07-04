@@ -4,6 +4,7 @@ import { GameCharacter } from '@udonarium/game-character';
 import { DataElement } from './data-element';
 import { TabletopObject } from './tabletop-object';
 import { UUID } from './core/system/util/uuid';
+import { Logger } from './core/system/util/logger';
 
 @SyncObject('range')
 export class RangeArea extends TabletopObject {
@@ -60,17 +61,17 @@ export class RangeArea extends TabletopObject {
   followingCounterDummyCount(){
     this.followingCounterDummy ++;
     if(this.followingCounterDummy >= 50) this.followingCounterDummy = 0;
-    console.log(this.followingCounterDummy);
+    Logger.debug(this.followingCounterDummy);
   }
 
   following(){
     let object = <GameCharacter>ObjectStore.instance.get(this.followingCharctorIdentifier);
     if(!object ){
-      console.log('追従対象見失い');
+      Logger.debug('追従対象見失い');
       this.followingCharctorIdentifier = null;
       return ;
     }
-    console.log('following x:'+ object.location.x + ' y:' + object.location.y);
+    Logger.debug('following x:'+ object.location.x + ' y:' + object.location.y);
 
     this.location.x = object.location.x + (this.gridSize * object.size) / 2;
     this.location.y = object.location.y + (this.gridSize * object.size) / 2;

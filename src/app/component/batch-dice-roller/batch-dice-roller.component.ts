@@ -11,6 +11,7 @@ import { ChatMessageService } from 'service/chat-message.service';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
 import GameSystemClass from 'bcdice/lib/game_system';
 import Base from 'bcdice/lib/base';
+import { Logger } from '../../class/core/system/util/logger';
 
 interface RollResult {
   name: string;
@@ -302,7 +303,7 @@ export class BatchDiceRollerComponent implements OnInit, OnDestroy {
         return { result: resultText, isSecret: evalResult.secret };
       }
     } catch (e) {
-      console.error('rollWithFixedDice error', e);
+      Logger.error('rollWithFixedDice error', e);
     }
     return null;
   }

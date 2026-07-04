@@ -1,4 +1,5 @@
 import { AfterViewInit, Component, OnDestroy, OnInit , Input , Output , EventEmitter } from '@angular/core';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { ObjectSerializer } from '@udonarium/core/synchronize-object/object-serializer';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
@@ -32,9 +33,9 @@ export class DiceTableSettingComponent implements OnInit, OnDestroy, AfterViewIn
   }
 
   loadDiceBot(gameType: string) {
-    console.log('onChangeGameType ready');
+    Logger.debug('onChangeGameType ready');
     DiceBot.getHelpMessage(gameType).then(help => {
-      console.log('onChangeGameType done\n' + help);
+      Logger.debug('onChangeGameType done\n' + help);
     });
   }
 
@@ -53,7 +54,7 @@ export class DiceTableSettingComponent implements OnInit, OnDestroy, AfterViewIn
     return this.isEditable ? this.selectedTable.text : '' ; 
     }
   set tableText(tableText: string) { 
-    if(this.isEditable)console.log(tableText); 
+    if(this.isEditable)Logger.debug(tableText); 
     if (this.isEditable) this.selectedTable.text = tableText+''; 
   }
 

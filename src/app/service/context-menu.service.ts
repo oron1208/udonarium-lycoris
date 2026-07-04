@@ -1,5 +1,6 @@
 import { ComponentFactoryResolver, ComponentRef, Injectable, ViewContainerRef } from '@angular/core';
 import { TabletopObject } from '@udonarium/tabletop-object';
+import { Logger } from '../class/core/system/util/logger';
 
 interface ContextMenuPoint {
   x: number,
@@ -33,7 +34,7 @@ export class ContextMenuService {
   static defaultParentViewContainerRef: ViewContainerRef;
   static ContextMenuComponentClass: { new(...args: any[]): any } = null;
 
-  private panelComponentRef: ComponentRef<any>
+  private panelComponentRef!: ComponentRef<any>
 
   title: string = '';
   actions: ContextMenuAction[] = [];
@@ -51,7 +52,7 @@ export class ContextMenuService {
     this.close();
     if (!parentViewContainerRef) {
       parentViewContainerRef = ContextMenuService.defaultParentViewContainerRef;
-      console.log('Context Open');
+      Logger.debug('Context Open');
     }
     let panelComponentRef: ComponentRef<any>;
 

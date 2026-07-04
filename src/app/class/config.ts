@@ -5,6 +5,7 @@ import { GameObject, ObjectContext } from './core/synchronize-object/game-object
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { AudioPlayer } from './core/file-storage/audio-player';
 import { Jukebox } from '@udonarium/Jukebox';
+import { Logger } from './core/system/util/logger';
 
 
 @SyncObject('config')
@@ -61,12 +62,12 @@ export class Config extends ObjectNode implements InnerXml {
     let _defaultDiceBot = this._defaultDiceBot;
     super.apply(context);
     if (_defaultDiceBot !== this._defaultDiceBot) {
-      console.log("this._defaultDiceBot変更");
+      Logger.debug("this._defaultDiceBot変更");
     }
 
     if (_roomVolume !==  this._roomVolume) {
       this.jukebox.setNewVolume();
-      console.log("全体ボリューム変更");
+      Logger.debug("全体ボリューム変更");
     }
 
   }

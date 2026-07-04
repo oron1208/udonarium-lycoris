@@ -1,4 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { PeerContext } from '@udonarium/core/system/network/peer-context';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
@@ -66,7 +67,7 @@ export class RoomSettingComponent implements OnInit, OnDestroy {
     try {
       localStorage.setItem('udonarium.pendingRoomMode.v1', this.roomMode);
     } catch (e) {
-      console.warn('room mode localStorage save failed', e);
+      Logger.warn('room mode localStorage save failed', e);
     }
   }
 

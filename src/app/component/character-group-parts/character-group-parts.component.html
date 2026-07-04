@@ -1,0 +1,63 @@
+<div *ngIf="characterGroup" class="parts-panel">
+  <div class="parts-toolbar">
+    <button class="toolbar-button" (click)="openBackgroundImageModal()" title="背景画像を設定・変更">
+      <i class="material-icons">image</i>
+      <span>背景画像</span>
+    </button>
+    <div class="add-character-box">
+      <select [(ngModel)]="selectedCharacterId" class="character-select" title="追加するコマを選択">
+        <option value="">コマを選択...</option>
+        <option *ngFor="let c of availableCharacters" [value]="c.identifier">{{ c.name || '(無名)' }}</option>
+      </select>
+      <button class="toolbar-button add-button" (click)="addSelectedCharacter()" [disabled]="!selectedCharacterId" title="選択したコマを部位として追加">
+        <i class="material-icons">add</i>
+        <span>追加</span>
+      </button>
+    </div>
+  </div>
+  <div class="parts-area-wrap">
+    <div class="parts-area" #partsArea
+         [style.width.px]="areaWidthPx"
+         [style.height.px]="areaHeightPx"
+         [style.background-image]="backgroundImage && backgroundImage.url ? ('url(' + backgroundImage.url + ')') : 'none'">
+
+      <!-- 背景画像が無い時の案内 -->
+      <div *ngIf="!backgroundImage || !backgroundImage.url" class="no-bg-hint">
+        背景画像未設定
+      </div>
+
+      <!-- 部位一覧: エリア内相対座標で配置。ドラッグ移動・右クリック・Alt+クリック個別ターゲット・バフ表示・tooltip付き。 -->
+      <div *ngFor="let part of parts; trackBy: trackByIdentifier"
+           class="part-token"
+           [class.is-targeted]="part.targeted"
+           [appTooltip]="part"
+           [style.left.px]="part.location.x"
+           [style.top.px]="part.location.y"
+           (mousedown)="onPartMouseDown($event, part)"
+           (mousedown)="onPartDragStart($event, part)"
+           (touchstart)="onPartDragStart($event, part)"
+           (contextmenu)="onPartContextMenu($event, part)">
+        <img *ngIf="part.imageFile && part.imageFile.url"
+             [src]="part.imageFile.url" class="part-icon" alt=""
+             draggable="false" />
+        <div *ngIf="!part.imageFile || !part.imageFile.url" class="part-placeholder">
+          <i class="material-icons">person</i>
+        </div>
+        <div class="part-name">{{ part.name }}</div>
+        <!-- バフ表示(テキストバフ + 自動バフ) -->
+        <div class="part-buffs" *ngIf="getPartBuffs(part).length > 0">
+          <span class="part-buff-tag" *ngFor="let buff of getPartBuffs(part)">{{ buff }}</span>
+        </div>
+        <button class="part-remove" (click)="removePart(part); $event.stopPropagation()" title="グループから外す">
+          <i class="material-icons">close</i>
+        </button>
+      </div>
+
+      <!-- 部位が無い時の案内 -->
+      <div *ngIf="parts.length === 0" class="no-parts-hint">
+        部位がありません
+      </div>
+    </div>
+  </div>
+</div>
+

@@ -1,5 +1,6 @@
 import { Component, ElementRef, ChangeDetectorRef, EventEmitter, Input, NgZone,
          OnDestroy, OnInit, AfterViewInit, AfterViewChecked, Output, ViewChild } from '@angular/core';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { ChatMessage } from '@udonarium/chat-message';
 import { ChatTab } from '@udonarium/chat-tab';
@@ -26,7 +27,7 @@ export class CardStackListImageComponent implements OnInit, OnDestroy, AfterView
   @Input() isTilteTop = true;
   @Input() dispByMouse = false;
 
-  @ViewChild('cardArea', { read: ElementRef }) private cardArea: ElementRef;  
+  @ViewChild('cardArea', { read: ElementRef }) private cardArea!: ElementRef;
   private _cardAreaWidth = 0;
 //  get chatTab(): ChatTab { return ObjectStore.instance.get<ChatTab>(this.chatTabidentifier); }
 
@@ -211,7 +212,7 @@ export class CardStackListImageComponent implements OnInit, OnDestroy, AfterView
 */
 /*
   tachieClick( pos : number ){
-    console.log("tachieClick" + pos);
+    Logger.debug("tachieClick" + pos);
     this.chatTab.tachiePosHide(pos);
   }
 */

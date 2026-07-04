@@ -8,6 +8,7 @@ import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { EventSystem, Network } from '@udonarium/core/system';
 import { DiceSymbol } from '@udonarium/dice-symbol';
 import { AutoBuffOperation, GameCharacter } from '@udonarium/game-character';
+import { GameCharacterGroup } from '@udonarium/game-character-group';
 import { GameTable } from '@udonarium/game-table';
 import { GameTableMask } from '@udonarium/game-table-mask';
 import { GameTableScratchMask } from '@udonarium/game-table-scratch-mask';
@@ -18,6 +19,7 @@ import { TabletopObject } from '@udonarium/tabletop-object';
 import { RangeArea } from '@udonarium/range';
 import { Terrain } from '@udonarium/terrain';
 import { TextNote } from '@udonarium/text-note';
+import { Logger } from '../class/core/system/util/logger';
 
 import { CoordinateService } from './coordinate.service';
 //本家PR #92より
@@ -41,6 +43,8 @@ export class TabletopService {
   private locationMap: Map<ObjectIdentifier, LocationName> = new Map();
   private parentMap: Map<ObjectIdentifier, ObjectIdentifier> = new Map();
   private characterCache = new TabletopCache<GameCharacter>(() => ObjectStore.instance.getObjects(GameCharacter).filter(obj => obj.isVisibleOnTable));
+  // GameCharacterGroup は aliasName='character-group' で別バケットのため個別キャッシュ
+  private characterGroupCache = new TabletopCache<GameCharacterGroup>(() => ObjectStore.instance.getObjects(GameCharacterGroup).filter(obj => obj.isVisibleOnTable));
   private cardCache = new TabletopCache<Card>(() => ObjectStore.instance.getObjects(Card).filter(obj => obj.isVisibleOnTable));
   private cardStackCache = new TabletopCache<CardStack>(() => ObjectStore.instance.getObjects(CardStack).filter(obj => obj.isVisibleOnTable));
   private tableMaskCache = new TabletopCache<GameTableMask>(() => {
@@ -60,6 +64,7 @@ export class TabletopService {
   private diceSymbolCache = new TabletopCache<DiceSymbol>(() => ObjectStore.instance.getObjects(DiceSymbol));
 
   get characters(): GameCharacter[] { return this.characterCache.objects; }
+  get characterGroups(): GameCharacterGroup[] { return this.characterGroupCache.objects; }
   get cards(): Card[] { return this.cardCache.objects; }
   get cardStacks(): CardStack[] { return this.cardStackCache.objects; }
   get tableMasks(): GameTableMask[] { return this.tableMaskCache.objects; }
@@ -108,12 +113,12 @@ export class TabletopService {
       .on('XML_LOADED', event => {
         let xmlElement: Element = event.data.xmlElement;
         // todo:立体地形の上にドロップした時の挙動
-        console.log('parseXml todo:立体地形の上にドロップした時の挙動');
+        Logger.debug('parseXml todo:立体地形の上にドロップした時の挙動');
 
         let gameObject = ObjectSerializer.instance.parseXml(xmlElement);
         
         if (gameObject instanceof TabletopObject) {
-          console.log('TabletopObject 追加');
+          Logger.debug('TabletopObject 追加');
           let pointer = this.coordinateService.calcTabletopLocalCoordinate();
           gameObject.location.x = pointer.x - 25;
           gameObject.location.y = pointer.y - 25;
@@ -131,7 +136,7 @@ export class TabletopService {
         let objects: TabletopObject[] = ObjectStore.instance.getObjects(GameCharacter);
         for (let gameObject of objects) {
           if (gameObject instanceof GameCharacter) {
-            console.log('GameCharacter Load 追加データ確認');
+            Logger.debug('GameCharacter Load 追加データ確認');
             let gameCharacter:GameCharacter =  gameObject;
             gameCharacter.addExtendData();
           }
@@ -282,6 +287,8 @@ export class TabletopService {
     switch (aliasName) {
       case GameCharacter.aliasName:
         return this.characterCache;
+      case GameCharacterGroup.aliasName:
+        return this.characterGroupCache;
       case Card.aliasName:
         return this.cardCache;
       case CardStack.aliasName:
@@ -310,6 +317,7 @@ export class TabletopService {
 
   private refreshCacheAll() {
     this.characterCache.refresh();
+    this.characterGroupCache.refresh();
     this.cardCache.refresh();
     this.cardStackCache.refresh();
     this.tableMaskCache.refresh();

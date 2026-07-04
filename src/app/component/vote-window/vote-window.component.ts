@@ -1,4 +1,5 @@
 import { AfterViewInit, ChangeDetectorRef, Component, Input, NgZone, OnDestroy, OnInit } from '@angular/core';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { ChatTab } from '@udonarium/chat-tab';
@@ -59,7 +60,7 @@ export class VoteWindowComponent implements AfterViewInit, OnInit, OnDestroy {
   ngOnInit() {
     EventSystem.register(this)
       .on('END_OLD_VOTE', event => {
-        console.log('古い投票を終了');
+        Logger.debug('古い投票を終了');
         if ( this.timestamp != this.vote.initTimeStamp ){
           this.panelService.close();
         }

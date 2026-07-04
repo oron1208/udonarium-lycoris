@@ -5,6 +5,7 @@ import { GameCharacter } from '@udonarium/game-character';
 import { DiceBot } from '@udonarium/dice-bot';
 import { ChatMessageService } from 'service/chat-message.service';
 import { PanelService } from 'service/panel.service';
+import { Logger } from '../../class/core/system/util/logger';
 
 interface TargetResult {
   character: GameCharacter;
@@ -194,7 +195,7 @@ export class BatchDamagePanelComponent implements OnInit, OnDestroy {
         if (total !== null) return { total, resultText: result.result };
       }
     } catch (e) {
-      console.debug('[BatchDamage] BCDice fallback:', e);
+      Logger.debug('[BatchDamage] BCDice fallback:', e);
     }
 
     // コマンド部分を抽出
@@ -333,7 +334,7 @@ export class BatchDamagePanelComponent implements OnInit, OnDestroy {
       this.hasRolled = true;
       this.sendResultToChat();
     } catch (e) {
-      console.error('[BatchDamage] roll error', e);
+      Logger.error('[BatchDamage] roll error', e);
       alert('ダイスロールでエラーが発生しました: ' + (e?.message || e));
     } finally {
       this.isRolling = false;

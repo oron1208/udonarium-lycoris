@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { FileArchiver } from '@udonarium/core/file-storage/file-archiver';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
@@ -50,7 +51,7 @@ export class DataImportMenuComponent {
     try {
       clipboardText = await navigator.clipboard.readText();
     } catch (error) {
-      console.warn('Clipboard read failed', error);
+      Logger.warn('Clipboard read failed', error);
       await this.openMessage('いあきゃらコマ読込', 'クリップボードを読めませんでした。ブラウザの許可設定を確認してください。');
       return;
     }
@@ -96,7 +97,7 @@ export class DataImportMenuComponent {
     try {
       parsed = JSON.parse(text);
     } catch (error) {
-      console.warn('Iachara JSON parse failed', error);
+      Logger.warn('Iachara JSON parse failed', error);
       return null;
     }
 

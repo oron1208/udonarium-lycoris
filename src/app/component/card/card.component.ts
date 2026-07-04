@@ -27,6 +27,7 @@ import { ImageService } from 'service/image.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
 import { TabletopService } from 'service/tabletop.service';
+import { Logger } from '../../class/core/system/util/logger';
 
 @Component({
   selector: 'card',
@@ -177,7 +178,7 @@ export class CardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.stopDoubleClickTimer();
     let distance = (this.doubleClickPoint.x - this.input.pointer.x) ** 2 + (this.doubleClickPoint.y - this.input.pointer.y) ** 2;
     if (distance < 10 ** 2) {
-      console.log('onDoubleClick !!!!');
+      Logger.debug('onDoubleClick !!!!');
       if (this.ownerIsOnline && !this.isHand) return;
       this.state = this.isVisible && !this.isHand ? CardState.BACK : CardState.FRONT;
       this.owner = '';
@@ -344,7 +345,7 @@ export class CardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private dispatchCardDropEvent() {
-    console.log('dispatchCardDropEvent');
+    Logger.debug('dispatchCardDropEvent');
     let element: HTMLElement = this.elementRef.nativeElement;
     let parent = element.parentElement;
     let children = parent.children;

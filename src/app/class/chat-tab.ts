@@ -3,6 +3,7 @@ import { SyncObject, SyncVar } from './core/synchronize-object/decorator';
 import { ObjectNode } from './core/synchronize-object/object-node';
 import { InnerXml, ObjectSerializer } from './core/synchronize-object/object-serializer';
 import { EventSystem } from './core/system';
+import { Logger } from './core/system/util/logger';
 
 import { ImageFile } from './core/file-storage/image-file';
 import { ImageStorage } from './core/file-storage/image-storage';
@@ -62,7 +63,7 @@ export class ChatTab extends ObjectNode implements InnerXml {
 
   tachiePosHide( pos: number ){
     this.imageDispFlag[pos] = false;
-    console.log( this.imageDispFlag );
+    Logger.debug( this.imageDispFlag );
   }
 
   tachiePosIsDisp( pos: number ): boolean{
@@ -126,7 +127,7 @@ export class ChatTab extends ObjectNode implements InnerXml {
 
     let chat = new ChatMessage();
     for (let key in message) {
-//      console.log('addMessage:' + key);
+//      Logger.debug('addMessage:' + key);
       if (key === 'identifier') continue;
       if (key === 'tabIdentifier') continue;
 
@@ -317,7 +318,7 @@ export class ChatTab extends ObjectNode implements InnerXml {
       let to = mess.to;
       let from = mess.from;
       let myId = Network.peerContext.userId; // 1.13.xとのmargeで修正
-      console.log( 'from:' + mess.from
+      Logger.debug( 'from:' + mess.from
                   + ' To:' + mess.to + 'myId:' + myId);
       if ( to ){
         if ( ( to != myId) && ( from != myId) ){
@@ -356,7 +357,7 @@ export class ChatTab extends ObjectNode implements InnerXml {
       let to = mess.to;
       let from = mess.from;
       let myId = Network.peerContext.userId; // 1.13.xとのmargeで修正
-      console.log( 'from:' + mess.from
+      Logger.debug( 'from:' + mess.from
                   + ' To:' + mess.to + 'myId:' + myId);
       if ( to ){
         if ( ( to != myId) && ( from != myId) ){

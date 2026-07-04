@@ -34,8 +34,8 @@ export class AlarmWindowComponent implements AfterViewInit, OnInit, OnDestroy {
     this.timestamp = this.alarm.initTimeStamp;
   }
 
-  time : string;
-  title : string;
+  time!: string;
+  title!: string;
 
   ngOnInit() {
   }

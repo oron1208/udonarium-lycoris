@@ -5,9 +5,9 @@ import { GameObject, ObjectContext } from './core/synchronize-object/game-object
 
 @SyncObject('data')
 export class DataElement extends ObjectNode {
-  @SyncVar() name: string;
-  @SyncVar() type: string;
-  @SyncVar() currentValue: number | string;
+  @SyncVar() name!: string;
+  @SyncVar() type!: string;
+  @SyncVar() currentValue!: number | string;
 
   get isNumberResource(): boolean { return this.type != null && this.type === 'numberResource'; }
   get isNote(): boolean { return this.type != null && this.type === 'note'; }

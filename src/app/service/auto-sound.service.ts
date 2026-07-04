@@ -4,6 +4,7 @@ import { GameCharacter, AutoSoundTrigger } from '@udonarium/game-character';
 import { ChatMessage } from '@udonarium/chat-message';
 import { AudioStorage } from '@udonarium/core/file-storage/audio-storage';
 import { AudioPlayer } from '@udonarium/core/file-storage/audio-player';
+import { Logger } from '../class/core/system/util/logger';
 
 interface ActiveAutoSound {
   htmlAudio: HTMLAudioElement | null;  // server音の場合
@@ -29,7 +30,7 @@ export class AutoSoundService {
   static init() {
     if (AutoSoundService._initialized) return;
     AutoSoundService._initialized = true;
-    console.log('[AutoSound] initializing AutoSoundService');
+    Logger.debug('[AutoSound] initializing AutoSoundService');
 
     const instance = new AutoSoundService();
     EventSystem.register(instance)
@@ -68,7 +69,7 @@ export class AutoSoundService {
       .on('AUTO_SOUND_STOP_ALL', event => {
         AutoSoundService.stopLocalAll();
         EventSystem.trigger('AUTO_SOUND_STOPPED', {});
-        console.log('[AutoSound] received STOP_ALL');
+        Logger.debug('[AutoSound] received STOP_ALL');
       });
   }
 
@@ -152,7 +153,7 @@ export class AutoSoundService {
       if (!url) return;
       const htmlAudio = new Audio(url);
       htmlAudio.volume = 0.5;
-      htmlAudio.play().catch(e => console.warn('[AutoSound] play failed', e));
+      htmlAudio.play().catch(e => Logger.warn('[AutoSound] play failed', e));
       const cleanupTimer = setTimeout(() => {
         AutoSoundService.removeEntry(entry);
         EventSystem.trigger('AUTO_SOUND_ENDED', { keyword });
@@ -164,7 +165,7 @@ export class AutoSoundService {
       });
       AutoSoundService.activeSounds.push(entry);
       EventSystem.trigger('AUTO_SOUND_STARTED', { source: 'server', keyword });
-    } catch (e) { console.warn('[AutoSound] server audio error', e); }
+    } catch (e) { Logger.warn('[AutoSound] server audio error', e); }
   }
 
   private static removeEntry(entry: ActiveAutoSound) {
@@ -186,7 +187,7 @@ export class AutoSoundService {
     EventSystem.call('AUTO_SOUND_STOP_ALL', {});
     AutoSoundService.stopLocalAll();
     EventSystem.trigger('AUTO_SOUND_STOPPED', {});
-    console.log('[AutoSound] stopped all');
+    Logger.debug('[AutoSound] stopped all');
   }
 
   static getActiveSoundsCount(): number {

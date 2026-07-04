@@ -1,5 +1,6 @@
 import { CSSNumber } from './css-number';
 import { IPoint2D, IPoint3D } from './transform';
+import { Logger } from '../core/system/util/logger';
 
 export interface IMatrix3D {
   m11: number;
@@ -286,7 +287,7 @@ export class Matrix3D {
 
     let det = n11 * data[0] + n21 * data[1] + n31 * data[2] + n41 * data[3];
     if (det == 0) {
-      console.warn('Can not invert matrix, determinant is 0');
+      Logger.warn('Can not invert matrix, determinant is 0');
       return this;
     }
 

@@ -2,6 +2,7 @@ import { AfterViewInit, Component, ElementRef, HostListener, Input, OnDestroy, O
 import { ContextMenuAction, ContextMenuService } from 'service/context-menu.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
 import { TabletopObject } from '@udonarium/tabletop-object';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { EventSystem } from '@udonarium/core/system';
 
@@ -11,18 +12,18 @@ import { EventSystem } from '@udonarium/core/system';
   styleUrls: ['./context-menu.component.css']
 })
 export class ContextMenuComponent implements OnInit, OnDestroy, AfterViewInit {
-  @ViewChild('root', { static: true }) rootElementRef: ElementRef<HTMLElement>;
+  @ViewChild('root', { static: true }) rootElementRef!: ElementRef<HTMLElement>;
 
   @Input() title: string = '';
   @Input() actions: ContextMenuAction[] = [];
 
   @Input() isSubmenu: boolean = false;
 
-  parentMenu: ContextMenuAction;
-  subMenu: ContextMenuAction[];
+  parentMenu!: ContextMenuAction;
+  subMenu!: ContextMenuAction[];
 
-  showSubMenuTimer: NodeJS.Timer;
-  hideSubMenuTimer: NodeJS.Timer;
+  showSubMenuTimer!: NodeJS.Timer;
+  hideSubMenuTimer!: NodeJS.Timer;
 
   private callbackOnOutsideClick = (e) => this.onOutsideClick(e);
 
@@ -90,7 +91,7 @@ export class ContextMenuComponent implements OnInit, OnDestroy, AfterViewInit {
     let panel: HTMLElement = this.rootElementRef.nativeElement;
     let panelBox = panel.getBoundingClientRect();
 
-    console.log("位置修正 lr:" + panelBox.left +" "+ panelBox.right );
+    Logger.debug("位置修正 lr:" + panelBox.left +" "+ panelBox.right );
     const w = panelBox.right - panelBox.left;
     const newLeft = panelBox.left - w;
     

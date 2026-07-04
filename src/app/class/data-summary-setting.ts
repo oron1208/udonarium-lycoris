@@ -158,8 +158,8 @@ export class DataSummarySetting extends GameObject implements InnerXml {
 
   @SyncVar() dataTag: string = 'HP MP SAN 敏捷度 精神力 情報';
 
-  private _dataTag: string;
-  private _dataTags: string[];
+  private _dataTag!: string;
+  private _dataTags!: string[];
   get dataTags(): string[] {
     if (this._dataTag !== this.dataTag) {
       this._dataTag = this.dataTag;

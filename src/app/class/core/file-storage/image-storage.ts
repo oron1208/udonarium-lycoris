@@ -2,6 +2,7 @@ import { EventSystem } from '../system';
 import { ResettableTimeout } from '../system/util/resettable-timeout';
 import { ImageContext, ImageFile, ImageState } from './image-file';
 import { ServerMediaStorage } from './server-media-storage';
+import { Logger } from '../system/util/logger';
 
 export type CatalogItem = { readonly identifier: string, readonly state: number };
 
@@ -22,10 +23,10 @@ export class ImageStorage {
     return images;
   }
 
-  private lazyTimer: ResettableTimeout;
+  private lazyTimer!: ResettableTimeout;
 
   private constructor() {
-    console.log('ImageStorage ready...');
+    Logger.debug('ImageStorage ready...');
   }
 
   private destroy() {
@@ -69,7 +70,7 @@ export class ImageStorage {
       return stored;
     }
     this.imageHash[image.identifier] = image;
-    console.log('add Image: ' + image.identifier);
+    Logger.debug('add Image: ' + image.identifier);
     return image;
   }
 
@@ -106,7 +107,7 @@ export class ImageStorage {
     if (/^[a-f0-9]{64}$/i.test(identifier || '')) {
       image = ImageFile.createEmpty(identifier);
       this.imageHash[identifier] = image;
-      ServerMediaStorage.fetchImage(identifier).then(fetched => {
+      ServerMediaStorage.fetchImageOrNull(identifier).then(fetched => {
         if (fetched) this.add(fetched);
       });
       return image;

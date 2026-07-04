@@ -6,6 +6,7 @@ import { ImageContext, ImageFile, ImageState } from './image-file';
 import { CatalogItem, ImageStorage } from './image-storage';
 import { MimeType } from './mime-type';
 import { ServerMediaStorage } from './server-media-storage';
+import { Logger } from '../system/util/logger';
 
 export class ImageSharingSystem {
   private static _instance: ImageSharingSystem
@@ -20,14 +21,14 @@ export class ImageSharingSystem {
   private maxReceiveTask: number = 4;
 
   private constructor() {
-    console.log('FileSharingSystem ready...');
+    Logger.debug('FileSharingSystem ready...');
   }
 
   initialize() {
     EventSystem.register(this)
       .on('CONNECT_PEER', 1, event => {
         if (!event.isSendFromSelf) return;
-        console.log('CONNECT_PEER ImageStorageService !!!', event.data.peerId);
+        Logger.debug('CONNECT_PEER ImageStorageService !!!', event.data.peerId);
         ImageStorage.instance.synchronize();
       })
       .on('XML_LOADED', event => {
@@ -35,7 +36,7 @@ export class ImageSharingSystem {
       })
       .on('SYNCHRONIZE_FILE_LIST', async event => {
         if (event.isSendFromSelf) return;
-        console.log('SYNCHRONIZE_FILE_LIST ImageStorageService ' + event.sendFrom);
+        Logger.debug('SYNCHRONIZE_FILE_LIST ImageStorageService ' + event.sendFrom);
 
         let otherCatalog: CatalogItem[] = event.data;
         let request: CatalogItem[] = [];
@@ -47,10 +48,12 @@ export class ImageSharingSystem {
             ImageStorage.instance.add(image);
           }
           if (image.state < ImageState.COMPLETE && !this.receiveTaskMap.has(item.identifier)) {
-            let fetched = await ServerMediaStorage.fetchImage(item.identifier);
-            if (fetched) {
-              ImageStorage.instance.add(fetched);
+            let result = await ServerMediaStorage.fetchImage(item.identifier);
+            if (result.status === 'ok') {
+              ImageStorage.instance.add(result.file);
             } else {
+              // missing(本当に無い) / unreachable(サーバー障害) のどちらも P2P フォールバックで救済する。
+              // in-flight の場合は Promise 共有で待機済みなので、ここに到達するのは確定失敗のみ。
               request.push({ identifier: item.identifier, state: image.state });
             }
           }
@@ -81,7 +84,7 @@ export class ImageSharingSystem {
         if (this.isLimitSendTask() === false && 0 < randomRequest.length && !this.existsSendTask(event.data.receiver)) {
           // 送信
           let updateImages: ImageContext[] = this.makeSendUpdateImages(randomRequest);
-          console.log('REQUEST_FILE_RESOURE ImageStorageService Send!!! ' + event.data.receiver + ' -> ' + updateImages.length);
+          Logger.debug('REQUEST_FILE_RESOURE ImageStorageService Send!!! ' + event.data.receiver + ' -> ' + updateImages.length);
           this.startSendTask(updateImages, event.data.receiver);
         } else {
           // 中継
@@ -90,16 +93,16 @@ export class ImageSharingSystem {
           if (-1 < index) candidatePeers.splice(index, 1);
 
           for (let peerId of candidatePeers) {
-            console.log('REQUEST_FILE_RESOURE ImageStorageService Relay!!! ' + peerId + ' -> ' + event.data.identifiers);
+            Logger.debug('REQUEST_FILE_RESOURE ImageStorageService Relay!!! ' + peerId + ' -> ' + event.data.identifiers);
             EventSystem.call(event, peerId);
             return;
           }
-          console.log('REQUEST_FILE_RESOURE ImageStorageService あぶれた...' + event.data.receiver, randomRequest.length);
+          Logger.debug('REQUEST_FILE_RESOURE ImageStorageService あぶれた...' + event.data.receiver, randomRequest.length);
         }
       })
       .on('UPDATE_FILE_RESOURE', 1000, event => {
         let updateImages: ImageContext[] = event.data.updateImages;
-        console.log('UPDATE_FILE_RESOURE ImageStorageService ' + event.sendFrom + ' -> ', updateImages);
+        Logger.debug('UPDATE_FILE_RESOURE ImageStorageService ' + event.sendFrom + ' -> ', updateImages);
         for (let context of updateImages) {
           if (context.blob) context.blob = new Blob([context.blob], { type: context.type });
           if (context.thumbnail.blob) context.thumbnail.blob = new Blob([context.thumbnail.blob], { type: context.thumbnail.type });
@@ -107,11 +110,11 @@ export class ImageSharingSystem {
         }
       })
       .on('START_FILE_TRANSMISSION', event => {
-        console.log('START_FILE_TRANSMISSION ' + event.data.taskIdentifier);
+        Logger.debug('START_FILE_TRANSMISSION ' + event.data.taskIdentifier);
         let identifier = event.data.taskIdentifier;
         let image: ImageFile = ImageStorage.instance.get(identifier);
         if (this.receiveTaskMap.has(identifier) || (image && ImageState.COMPLETE <= image.state)) {
-          console.warn('CANCEL_TASK_ ' + identifier);
+          Logger.warn('CANCEL_TASK_ ' + identifier);
           EventSystem.call('CANCEL_TASK_' + identifier, null, event.sendFrom);
         } else {
           this.startReceiveTask(identifier);
@@ -157,7 +160,7 @@ export class ImageSharingSystem {
     }
 
     task.start();
-    console.log('startReceiveTask => ', this.receiveTaskMap.size);
+    Logger.debug('startReceiveTask => ', this.receiveTaskMap.size);
   }
 
   private stopSendTask(identifier: string) {
@@ -165,7 +168,7 @@ export class ImageSharingSystem {
     if (task) { task.cancel(); }
     this.sendTaskMap.delete(identifier);
 
-    console.log('stopSendTask => ', this.sendTaskMap.size);
+    Logger.debug('stopSendTask => ', this.sendTaskMap.size);
   }
 
   private stopReceiveTask(identifier: string) {
@@ -173,11 +176,11 @@ export class ImageSharingSystem {
     if (task) { task.cancel(); }
     this.receiveTaskMap.delete(identifier);
 
-    console.log('stopReceiveTask => ', this.receiveTaskMap.size);
+    Logger.debug('stopReceiveTask => ', this.receiveTaskMap.size);
   }
 
   private request(request: CatalogItem[], peerId: string) {
-    console.log('requestFile() ' + peerId);
+    Logger.debug('requestFile() ' + peerId);
     let peerIds = Network.peerIds;
     peerIds.splice(peerIds.indexOf(Network.peerId), 1);
     EventSystem.call('REQUEST_FILE_RESOURE', { identifiers: request, receiver: Network.peerId, candidatePeers: peerIds }, peerId);

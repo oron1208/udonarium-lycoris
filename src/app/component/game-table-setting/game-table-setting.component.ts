@@ -1,5 +1,6 @@
 import { AfterViewInit, Component, EventEmitter, Input, Output, OnDestroy, OnInit } from '@angular/core';
 import GameSystemClass from 'bcdice/lib/game_system';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { AudioFile } from '@udonarium/core/file-storage/audio-file';
@@ -35,9 +36,9 @@ export class GameTableSettingComponent implements OnInit, OnDestroy, AfterViewIn
   get gameType(): string { return this.config.defaultDiceBot };
   set gameType(gameType: string) { this.config.defaultDiceBot = gameType; }
   loadDiceBot(gameType: string) {
-    console.log('changeDiceBot ready');
+    Logger.debug('changeDiceBot ready');
     DiceBot.getHelpMessage(gameType).then(help => {
-     console.log('onChangeGameType done\n' + help);
+     Logger.debug('onChangeGameType done\n' + help);
     });
   }
 

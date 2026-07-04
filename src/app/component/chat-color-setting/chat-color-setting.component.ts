@@ -13,6 +13,7 @@ import { PanelService } from 'service/panel.service';
 import { TabletopObject } from '@udonarium/tabletop-object';
 import { GameCharacter } from '@udonarium/game-character';
 import { PeerCursor } from '@udonarium/peer-cursor';
+import { Logger } from '../../class/core/system/util/logger';
 
 @Component({
   selector: 'chat-color-setting',
@@ -37,7 +38,7 @@ export class ChatColorSettingComponent implements OnInit, OnDestroy, AfterViewIn
       }else{
         this.tabletopObject.syncDummyCounter = 0;
       }
-      console.log('changeColor:count:'+this.tabletopObject.syncDummyCounter);
+      Logger.debug('changeColor:count:'+this.tabletopObject.syncDummyCounter);
     }else{
       this.myPeer.chatColorCode[num] = event;
     }

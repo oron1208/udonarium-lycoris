@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Config } from '@udonarium/config';
+import { Logger } from '../class/core/system/util/logger';
 
 export interface ServerAudioTrack {
   id: string;
@@ -84,7 +85,7 @@ export class AudioLibraryService {
       const url = this._baseUrl + '/api/audio-library';
       const response = await fetch(url);
       if (!response.ok) {
-        console.warn('[AudioLibrary] fetch failed:', response.status);
+        Logger.warn('[AudioLibrary] fetch failed:', response.status);
         return this.cache.tracks;
       }
       const data = await response.json();
@@ -92,10 +93,10 @@ export class AudioLibraryService {
         tracks: Array.isArray(data.tracks) ? data.tracks : [],
         fetchedAt: Date.now()
       };
-      console.log(`[AudioLibrary] fetched ${this.cache.tracks.length} tracks`);
+      Logger.debug(`[AudioLibrary] fetched ${this.cache.tracks.length} tracks`);
       return this.cache.tracks;
     } catch (error) {
-      console.warn('[AudioLibrary] fetch error:', error);
+      Logger.warn('[AudioLibrary] fetch error:', error);
       return this.cache.tracks;
     }
   }

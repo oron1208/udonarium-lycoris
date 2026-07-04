@@ -12,6 +12,7 @@ import { PeerCursor } from '@udonarium/peer-cursor';
 import { TextViewComponent } from 'component/text-view/text-view.component';
 import { BatchService } from 'service/batch.service';
 import { ChatColorSettingComponent } from 'component/chat-color-setting/chat-color-setting.component';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { ChatMessageService } from 'service/chat-message.service';
 import { PanelOption, PanelService } from 'service/panel.service';
@@ -26,7 +27,7 @@ import { Config } from '@udonarium/config';
   styleUrls: ['./chat-message-fix.component.css']
 })
 export class ChatMessageFixComponent implements OnInit, OnDestroy {
-  @ViewChild('textArea', { static: true }) textAreaElementRef: ElementRef;
+  @ViewChild('textArea', { static: true }) textAreaElementRef!: ElementRef;
 
   @Input('autoCompleteListLen') _autoCompleteListLen: number = -1;
 
@@ -36,7 +37,7 @@ export class ChatMessageFixComponent implements OnInit, OnDestroy {
 
   @Output() chat = new EventEmitter<{ text: string, gameSystem: GameSystemClass, sendFrom: string, sendTo: string ,tachieNum: number ,messColor: string}>();
 
-  chatMessage: ChatMessage;
+  chatMessage!: ChatMessage;
   initTimestamp = 0;
 
   private previousWritingLength: number = 0;
@@ -87,7 +88,7 @@ export class ChatMessageFixComponent implements OnInit, OnDestroy {
 
   calcFitHeight() {
     let textArea: HTMLTextAreaElement = this.textAreaElementRef.nativeElement;
-    console.log('calcFitHeight');
+    Logger.debug('calcFitHeight');
     textArea.style.height = '';
     if (textArea.scrollHeight >= textArea.offsetHeight) {
       textArea.style.height = textArea.scrollHeight + 'px';

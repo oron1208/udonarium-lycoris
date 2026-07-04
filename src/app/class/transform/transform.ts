@@ -1,5 +1,6 @@
 import { CSSNumber } from './css-number';
 import { Matrix3D } from './matrix-3d';
+import { Logger } from '../core/system/util/logger';
 
 export interface IPoint2D {
   x: number;
@@ -10,17 +11,17 @@ export interface IPoint3D extends IPoint2D {
   w: number;
 }
 export class Transform {
-  private element: HTMLElement;
+  private element!: HTMLElement;
   private matrix: Matrix3D = new Matrix3D();
   private sceneTransform: Matrix3D = new Matrix3D();
   private inverseSceneTransform: Matrix3D = new Matrix3D();
 
-  private paddingLeft: number;
-  private paddingTop: number;
-  private marginLeft: number;
-  private marginTop: number;
-  private borderLeft: number;
-  private borderTop: number;
+  private paddingLeft!: number;
+  private paddingTop!: number;
+  private marginLeft!: number;
+  private marginTop!: number;
+  private borderLeft!: number;
+  private borderTop!: number;
 
   constructor(element: HTMLElement) {
     this.initialize(element);
@@ -101,7 +102,7 @@ export class Transform {
     while (node) {
       this.extractMatrix(node, matrix);
       if (node && node.style.position === 'fixed') {
-        console.warn('fixed領域は計算が不正確');
+        Logger.warn('fixed領域は計算が不正確');
         matrix.appendPosition(window.pageXOffset, window.pageYOffset, 0);
       }
       node = node.parentElement;

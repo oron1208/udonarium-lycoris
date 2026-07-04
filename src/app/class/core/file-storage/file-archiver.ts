@@ -1,5 +1,6 @@
 import { saveAs } from 'file-saver';
 import * as JSZip from 'jszip';
+import { Logger } from '../system/util/logger';
 
 import { EventSystem, Network } from '../system';
 import { XmlUtil } from '../system/util/xml-util';
@@ -36,7 +37,7 @@ export class FileArchiver {
   private callbackOnDrop;
 
   private constructor() {
-    console.log('FileArchiver ready...');
+    Logger.debug('FileArchiver ready...');
   }
 
   initialize() {
@@ -80,7 +81,7 @@ export class FileArchiver {
 
     this.reloadCheck.reloadCheckStart(this.networkService.peerContext.roomName != '');
 
-    console.log('onDrop', event.dataTransfer);
+    Logger.debug('onDrop', event.dataTransfer);
     let files = event.dataTransfer.files
     this.load(files);
   };
@@ -108,27 +109,27 @@ export class FileArchiver {
     let processedFile = file;
     // 2MB超の場合は自動圧縮
     if (this.maxImageSize < file.size) {
-      console.log(`Image compression: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB) → compressing...`);
+      Logger.debug(`Image compression: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB) → compressing...`);
       const compressed = await this.compressImage(file);
       if (compressed && compressed.size <= this.maxImageSize) {
-        console.log(`Image compressed: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressed.size / 1024 / 1024).toFixed(2)}MB)`);
+        Logger.debug(`Image compressed: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressed.size / 1024 / 1024).toFixed(2)}MB)`);
         processedFile = compressed;
       } else if (compressed) {
         // 圧縮しても2MB超の場合でも、元より小さければ許可
         if (compressed.size < file.size) {
-          console.log(`Image compressed (still large): ${file.name} (${(compressed.size / 1024 / 1024).toFixed(2)}MB)`);
+          Logger.debug(`Image compressed (still large): ${file.name} (${(compressed.size / 1024 / 1024).toFixed(2)}MB)`);
           processedFile = compressed;
         } else {
-          console.warn(`Image compression failed to reduce size: ${file.name}`);
+          Logger.warn(`Image compression failed to reduce size: ${file.name}`);
           return;
         }
       } else {
-        console.warn(`Image compression failed: ${file.name}`);
+        Logger.warn(`Image compression failed: ${file.name}`);
         return;
       }
     }
     
-    console.log(processedFile.name + ' type:' + processedFile.type);
+    Logger.debug(processedFile.name + ' type:' + processedFile.type);
     await ImageStorage.instance.addAsync(processedFile);
   }
 
@@ -182,10 +183,10 @@ export class FileArchiver {
   private async handleAudio(file: File) {
     if (file.type.indexOf('audio/') < 0) return;
     if (this.maxAudioeSize < file.size) {
-      console.warn(`File size limit exceeded. -> ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+      Logger.warn(`File size limit exceeded. -> ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
       return;
     }
-    console.log(file.name + ' type:' + file.type);
+    Logger.debug(file.name + ' type:' + file.type);
     await AudioStorage.instance.addAsync(file);
   }
 
@@ -231,7 +232,7 @@ export class FileArchiver {
         }
       }
     } catch (reason) {
-      console.warn('media-manifest.json load failed', reason);
+      Logger.warn('media-manifest.json load failed', reason);
     }
   }
 
@@ -245,12 +246,12 @@ export class FileArchiver {
     }
 
     if(isLoadOk){
-      console.log(file.name + ' type:' + file.type);
+      Logger.debug(file.name + ' type:' + file.type);
       try {
         let xmlElement: Element = XmlUtil.xml2element(await FileReaderUtil.readAsTextAsync(file));
         if (xmlElement) EventSystem.trigger('XML_LOADED', { xmlElement: xmlElement });
       } catch (reason) {
-        console.warn(reason);
+        Logger.warn(reason);
       }
     }
   }
@@ -261,7 +262,7 @@ export class FileArchiver {
     try {
       zip = await zip.loadAsync(file);
     } catch (reason) {
-      console.warn(reason);
+      Logger.warn(reason);
       return;
     }
     let zipEntries: JSZip.JSZipObject[] = [];
@@ -269,10 +270,10 @@ export class FileArchiver {
     for (let zipEntry of zipEntries) {
       try {
         let arraybuffer = await zipEntry.async('arraybuffer');
-        console.log(zipEntry.name + ' 解凍...');
+        Logger.debug(zipEntry.name + ' 解凍...');
         await this.load([new File([arraybuffer], zipEntry.name, { type: MimeType.type(zipEntry.name) })]);
       } catch (reason) {
-        console.warn(reason);
+        Logger.warn(reason);
       }
     }
   }

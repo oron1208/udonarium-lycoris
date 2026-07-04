@@ -1,4 +1,5 @@
 import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, HostListener, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { Card } from '@udonarium/card';
 import { CardStack } from '@udonarium/card-stack';
@@ -7,6 +8,7 @@ import { GameObject } from '@udonarium/core/synchronize-object/game-object';
 import { EventSystem, Network } from '@udonarium/core/system';
 import { DiceSymbol } from '@udonarium/dice-symbol';
 import { GameCharacter } from '@udonarium/game-character';
+import { GameCharacterGroup } from '@udonarium/game-character-group';
 import { FilterType, GameTable, GridType } from '@udonarium/game-table';
 import { GameTableMask } from '@udonarium/game-table-mask';
 import { GameTableScratchMask } from '@udonarium/game-table-scratch-mask';
@@ -103,12 +105,12 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   };
   private static readonly LAYER_VISIBILITY_KEY = 'udonarium.advanced.layerVisibility.v1';
 
-  @ViewChild('root', { static: true }) rootElementRef: ElementRef<HTMLElement>;
-  @ViewChild('gameTable', { static: true }) gameTable: ElementRef<HTMLElement>;
-  @ViewChild('gameObjects', { static: true }) gameObjects: ElementRef<HTMLElement>;
-  @ViewChild('gridCanvas', { static: true }) gridCanvas: ElementRef<HTMLCanvasElement>;
-  @ViewChild('drawingCanvas', { static: true }) drawingCanvas: ElementRef<HTMLCanvasElement>;
-  @ViewChild('lightingCanvas', { static: true }) lightingCanvas: ElementRef<HTMLCanvasElement>;
+  @ViewChild('root', { static: true }) rootElementRef!: ElementRef<HTMLElement>;
+  @ViewChild('gameTable', { static: true }) gameTable!: ElementRef<HTMLElement>;
+  @ViewChild('gameObjects', { static: true }) gameObjects!: ElementRef<HTMLElement>;
+  @ViewChild('gridCanvas', { static: true }) gridCanvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('drawingCanvas', { static: true }) drawingCanvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('lightingCanvas', { static: true }) lightingCanvas!: ElementRef<HTMLCanvasElement>;
 
   get tableSelecter(): TableSelecter { return this.tabletopService.tableSelecter; }
   get currentTable(): GameTable { return this.tabletopService.currentTable; }
@@ -192,6 +194,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
 
   get characters(): GameCharacter[] { return this.tabletopService.characters; }
   get visibleCharacters(): GameCharacter[] { return this.characters.filter(character => this.canSeeCharacterInAdvancedMode(character)); }
+  get characterGroups(): GameCharacterGroup[] { return this.tabletopService.characterGroups; }
   // 注意: 名前ラベルは game-character.component と game-table.component (side-name-label) の2箇所で描画されている。
   // gmOnlyコマのフィルタリングは両方で行うこと。片方だけ直してもラベルが残るバグが発生する。
   // game-character.component側は canDisplayByRole で制御。game-table側はこの getter で制御。
@@ -241,13 +244,13 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     EventSystem.register(this)
       .on('UPDATE_GAME_OBJECT', event => {
         if (event.data.identifier !== this.currentTable.identifier && event.data.identifier !== this.tableSelecter.identifier) return;
-        console.log('UPDATE_GAME_OBJECT GameTableComponent ' + this.currentTable.identifier);
+        Logger.debug('UPDATE_GAME_OBJECT GameTableComponent ' + this.currentTable.identifier);
         this.setGameTableGrid(this.currentTable.width, this.currentTable.height, this.currentTable.gridSize, this.currentTable.gridType, this.currentTable.gridColor);
         this.redrawDrawingCanvas();
         this.invalidateWallGrid();
       })
       .on('RE_DRAW_TABLE', event => {
-        console.log("テーブル再描画");
+        Logger.debug("テーブル再描画");
         this.changeDetector.detectChanges();
         this.changeDetector.markForCheck();
       })
@@ -280,7 +283,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
       })
       .on('FOCUS_TO_TABLETOP_COORDINATE', event => {
         setTimeout(() => {
-          console.log(`move table to focus (${event.data.x}, ${event.data.y})`);
+          Logger.debug(`move table to focus (${event.data.x}, ${event.data.y})`);
           this.gameTable.nativeElement.style.transition = '0.2s ease-out';
           setTimeout(() => {
             this.gameTable.nativeElement.style.transition = null;
@@ -543,7 +546,6 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   @HostListener('wheel', ['$event'])
   onWheel(event: WheelEvent) {
     if (!this.isFlatMode || this.isDrawingMode) return;
-    if (!event.ctrlKey && !event.metaKey) return;
     event.preventDefault();
     this.zoomFlatMode(event.deltaY < 0 ? 0.1 : -0.1);
   }
@@ -641,7 +643,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
         opacity = 1.0;
       }
       this.gridCanvas.nativeElement.style.opacity = opacity + '';
-      console.log('グリッド描画');
+      Logger.debug('グリッド描画');
     },0);
   }
 

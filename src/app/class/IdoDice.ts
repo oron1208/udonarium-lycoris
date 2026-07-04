@@ -6,6 +6,7 @@
 
 import Base from 'bcdice/lib/base';
 import Result from 'bcdice/lib/result';
+import { Logger } from './core/system/util/logger';
 
 import { BaseInstance } from 'bcdice/lib/internal/types/base';
 
@@ -71,18 +72,18 @@ export default class IdoDice extends Base {
 
   private commandWithoutRepeat: string;
 
-  private dispCommandId: string;
-  private dispCommandRes: string;
-  private dispCommandCbr: string;
+  private dispCommandId!: string;
+  private dispCommandRes!: string;
+  private dispCommandCbr!: string;
 
   private repeat: number;
-  private option: string;
-  private target: number;
+  private option!: string;
+  private target!: number;
 
-  private critical: number;
-  private famble: number;
-  private special: number;
-  private dicenum: number;
+  private critical!: number;
+  private famble!: number;
+  private special!: number;
+  private dicenum!: number;
 
   static eval(command: string): Result | null {
     return new IdoDice(command).eval();
@@ -118,7 +119,7 @@ export default class IdoDice extends Base {
         super(changeText, internal);
       }
 
-      console.log('matchResult' + matchResult);
+      Logger.debug('matchResult' + matchResult);
       this.commandWithoutRepeat = commandWithoutRepeat;
       this.repeat = repeat;
       this.dicenum = parseInt(dicenum, 10);
@@ -133,7 +134,7 @@ export default class IdoDice extends Base {
     matchResult = commandWithoutRepeat.match(regExpD100);
     if ( matchResult ){
       if ( matchResult[3].split(/\s/)[0] == '' ){// マッチ部分以降が空であるかスペース区切りのコメントかチェック
-        console.log('matchResult' + matchResult);
+        Logger.debug('matchResult' + matchResult);
 
         const dicenum = '1';
         changeText = matchResult[1] + '1d100<=' + matchResult[2];
@@ -143,7 +144,7 @@ export default class IdoDice extends Base {
           super(changeText, internal);
         }
 
-        console.log('matchResult' + matchResult);
+        Logger.debug('matchResult' + matchResult);
         this.commandWithoutRepeat = matchResult[1] + '1d100<=' + matchResult[2];
         this.repeat = repeat;
         this.dicenum = 1;
@@ -164,7 +165,7 @@ export default class IdoDice extends Base {
         } else {
           super(changeText, internal);
         }
-        console.log('matchResult' + matchResult);
+        Logger.debug('matchResult' + matchResult);
         this.commandWithoutRepeat = commandWithoutRepeat;
         this.repeat = repeat;
         return;
@@ -180,13 +181,13 @@ export default class IdoDice extends Base {
         const val2 = parseInt(matchResult[3], 10);
         const val = val1 < val2 ? val1 : val2;
         changeText = matchResult[1] + '1d100<=' + val;
-        console.log('val1:' + val1 + ' val2:' + val2 + ' text:' + changeText);
+        Logger.debug('val1:' + val1 + ' val2:' + val2 + ' text:' + changeText);
         if (repeat > 1) {
           super(`x${repeat} ${changeText}`, internal);
         } else {
           super(changeText, internal);
         }
-        console.log('matchResult' + matchResult);
+        Logger.debug('matchResult' + matchResult);
         this.commandWithoutRepeat = commandWithoutRepeat;
         this.repeat = repeat;
         this.dispCommandCbr = '1d100<=' + matchResult[2] + ',' + matchResult[3];
@@ -261,7 +262,7 @@ export default class IdoDice extends Base {
       this.special = 4;
       this.critical = 10;
     }
-    console.log( 'C:' + this.critical + ' F:' + this.famble + ' S:' + this.special);
+    Logger.debug( 'C:' + this.critical + ' F:' + this.famble + ' S:' + this.special);
     return;
   }
 
@@ -333,7 +334,7 @@ export default class IdoDice extends Base {
     if (result == null) {
       return null;
     }
-    console.log( 'result:' + result.text);
+    Logger.debug( 'result:' + result.text);
 
     // BCDice結果から演算済みの目標値を取り出す
     const target = result.text.match(/b100<=(\d+)/i);
@@ -398,13 +399,13 @@ export default class IdoDice extends Base {
     if (result == null) {
       return null;
     }
-    console.log( 'result:' + result.text);
+    Logger.debug( 'result:' + result.text);
 
     // BCDice結果から演算済みの目標値を取り出す
     const target = result.text.match(/1d100<=(\d+)/i);
     if ( !target ){ return null; }
     this.target = parseInt( target[1], 10);
-    console.log( 'target:' + target);
+    Logger.debug( 'target:' + target);
 
     // 自力書き出し
     let newResultText = '';
@@ -452,7 +453,7 @@ export default class IdoDice extends Base {
     if (result == null) {
       return null;
     }
-    console.log( 'result:' + result.text);
+    Logger.debug( 'result:' + result.text);
 
     // BCDice結果から演算済みの目標値を取り出す
     const target = result.text.match(/1d100<=(\d+)/i);
@@ -462,7 +463,7 @@ export default class IdoDice extends Base {
     let newResultText = '';
     for (let i = 0; i < this.repeat; i++) {
       const value = result.detailedRands[i].value;
-      console.log( 'dice value:' + value);
+      Logger.debug( 'dice value:' + value);
 
       if ( this.repeat > 1){
         if ( i > 0 ){
@@ -513,7 +514,7 @@ export default class IdoDice extends Base {
     if (result == null) {
       return null;
     }
-    console.log( 'result:' + result.text);
+    Logger.debug( 'result:' + result.text);
 
     // BCDice結果から演算済みの目標値を取り出す
     const target = result.text.match(/1d100<=(\d+)/i);
@@ -523,7 +524,7 @@ export default class IdoDice extends Base {
     let newResultText = '';
     for (let i = 0; i < this.repeat; i++) {
       const value = result.detailedRands[i].value;
-      console.log( 'dice value:' + value);
+      Logger.debug( 'dice value:' + value);
 
       if ( this.repeat > 1){
         if ( i > 0 ){

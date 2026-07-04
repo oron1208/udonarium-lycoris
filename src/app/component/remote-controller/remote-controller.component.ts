@@ -1,6 +1,7 @@
 import { ElementRef, Input, ViewChild } from '@angular/core';
 import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import GameSystemClass from 'bcdice/lib/game_system';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { ChatPalette } from '@udonarium/chat-palette';
 import { ChatTab } from '@udonarium/chat-tab';
@@ -28,9 +29,9 @@ import { GameDataElementBuffComponent } from 'component/game-data-element-buff/g
 import { GameCharacterBuffViewComponent } from 'component/game-character-buff-view/game-character-buff-view.component';
 
 class RemoteControllerSelect {
-    name: string;
-    nowOrMax: string;
-    dispName: string;
+    name!: string;
+    nowOrMax!: string;
+    dispName!: string;
 }
 
 @Component({
@@ -43,7 +44,7 @@ export class RemoteControllerComponent implements OnInit, OnDestroy, AfterViewIn
 
   get palette(): ChatPalette { return this.character.remoteController; }
 
-  private _gameSystem: GameSystemClass;
+  private _gameSystem!: GameSystemClass;
 
   get gameType(): string { return this._gameSystem == null ? '' : this._gameSystem.ID; }
   set gameType(gameType: string) {
@@ -75,7 +76,7 @@ export class RemoteControllerComponent implements OnInit, OnDestroy, AfterViewIn
 
   ) {
     this.initTimestamp = Date.now();
-    console.log('this.initTimestamp ' + this.initTimestamp);
+    Logger.debug('this.initTimestamp ' + this.initTimestamp);
   }
 
   get sortTag(): string { return this.inventoryService.sortTag; }
@@ -89,8 +90,8 @@ export class RemoteControllerComponent implements OnInit, OnDestroy, AfterViewIn
   get sortOrderName(): string { return this.sortOrder === SortOrder.ASC ? '昇順' : '降順'; }
 
   get newLineString(): string { return this.inventoryService.newLineString; }
-  @ViewChild('controllerInput', { static: true }) controllerInputComponent: ControllerInputComponent;
-  @ViewChild('chatPalette') chatPaletteElementRef: ElementRef<HTMLSelectElement>;
+  @ViewChild('controllerInput', { static: true }) controllerInputComponent!: ControllerInputComponent;
+  @ViewChild('chatPalette') chatPaletteElementRef!: ElementRef<HTMLSelectElement>;
   @Input() character: GameCharacter = null;
   errorMessageBuff = '';
   errorMessageController = '';
@@ -189,7 +190,7 @@ export class RemoteControllerComponent implements OnInit, OnDestroy, AfterViewIn
       .on('CHK_TARGET_CHANGE', -1000, event => {
         if (ObjectStore.instance.get(event.data.identifier) instanceof GameCharacter) {
           this.targetSetChkBox(ObjectStore.instance.get(event.data.identifier));
-          console.log('REC CHK_TARGET_CHANGE');
+          Logger.debug('REC CHK_TARGET_CHANGE');
         }
       })
       .on('SYNCHRONIZE_FILE_LIST', event => {
@@ -501,14 +502,14 @@ export class RemoteControllerComponent implements OnInit, OnDestroy, AfterViewIn
   }
 
   targetBlockClick(object){
-    console.log('targetBlockClick');
+    Logger.debug('targetBlockClick');
     object.targeted = object.targeted ? false : true;
     this.targetSetChkBox(object);
     EventSystem.trigger('CHK_TARGET_CHANGE', { identifier: object.identifier, className: object.aliasName });
   }
 
   onChange(object) {
-    console.log('onChange');
+    Logger.debug('onChange');
     this.targetBlockClick(object);
   }
 

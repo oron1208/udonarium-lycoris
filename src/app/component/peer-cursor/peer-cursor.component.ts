@@ -1,4 +1,5 @@
 import { AfterViewInit, Component, ElementRef, Input, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Logger } from '../../class/core/system/util/logger';
 
 import { EventSystem, Network } from '@udonarium/core/system';
 import { ResettableTimeout } from '@udonarium/core/system/util/resettable-timeout';
@@ -22,8 +23,8 @@ const GM_CURSOR_SHARE_DISABLED_KEY = 'udonarium.gm.cursorShareDisabled';
   styleUrls: ['./peer-cursor.component.css']
 })
 export class PeerCursorComponent implements OnInit, AfterViewInit, OnDestroy {
-  @ViewChild('cursor') cursorElementRef: ElementRef;
-  @ViewChild('opacity') opacityElementRef: ElementRef;
+  @ViewChild('cursor') cursorElementRef!: ElementRef;
+  @ViewChild('opacity') opacityElementRef!: ElementRef;
   @Input() cursor: PeerCursor = PeerCursor.myCursor;
 
   get iconUrl(): string { return this.cursor.image.url; }
@@ -46,7 +47,7 @@ export class PeerCursorComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private _x = 0;
   private _y = 0;
-  private _target: HTMLElement;
+  private _target!: HTMLElement;
 
   networkService = Network;
 
@@ -79,7 +80,7 @@ export class PeerCursorComponent implements OnInit, AfterViewInit, OnDestroy {
         .on('CURSOR_MOVE', event => {
           if (event.sendFrom !== this.cursor.peerId) return;
           this.batchService.add(() => {
-//            console.log( '★★CURSOR_MOVE★★ ' + event.sendFrom + ' > ' + this.cursor.peerId );
+//            Logger.debug( '★★CURSOR_MOVE★★ ' + event.sendFrom + ' > ' + this.cursor.peerId );
             this.stopTransition();
             this.setAnimatedTransition();
             this.setPosition(event.data[0], event.data[1], event.data[2]);
@@ -90,7 +91,7 @@ export class PeerCursorComponent implements OnInit, AfterViewInit, OnDestroy {
           if (event.sendFrom !== this.cursor.peerId) return;
 
           this.batchService.add(() => {
-//            console.log( '★★HEART_BEAT★★ ' + event.sendFrom + ' > ' + this.cursor.peerId );
+//            Logger.debug( '★★HEART_BEAT★★ ' + event.sendFrom + ' > ' + this.cursor.peerId );
             this.cursor.timestampSend = event.data[0];
             this.cursor.timestampReceive = Date.now();
             this.cursor.timeDiffDown = this.cursor.timestampReceive - this.cursor.timestampSend + PeerCursor.myCursor.debugReceiveDelay;
@@ -197,7 +198,7 @@ export class PeerCursorComponent implements OnInit, AfterViewInit, OnDestroy {
             const diffDown = peerCursor ? peerCursor.timeDiffDown : null ;
 
             EventSystem.call('HEART_BEAT', [ timestanmp , id , diffDown , this.secdCounter]);
-//            console.log( 'peerlength:' + peerlength + 'this.indexCounter' + this.indexCounter + ' id:' + id);
+//            Logger.debug( 'peerlength:' + peerlength + 'this.indexCounter' + this.indexCounter + ' id:' + id);
             this.indexCounter ++;
             this.secdCounter ++;
           }
