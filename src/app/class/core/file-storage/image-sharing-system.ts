@@ -17,8 +17,8 @@ export class ImageSharingSystem {
 
   private sendTaskMap: Map<string, BufferSharingTask<ImageContext[]>> = new Map();
   private receiveTaskMap: Map<string, BufferSharingTask<ImageContext[]>> = new Map();
-  private maxSendTask: number = 2;
-  private maxReceiveTask: number = 4;
+  private maxSendTask: number = 4;
+  private maxReceiveTask: number = 8;
 
   private constructor() {
     Logger.debug('FileSharingSystem ready...');
@@ -41,6 +41,10 @@ export class ImageSharingSystem {
         let otherCatalog: CatalogItem[] = event.data;
         let request: CatalogItem[] = [];
 
+        // サーバーfetchを並列バッチで実行（同時8枚まで）
+        const BATCH_SIZE = 8;
+        const needFetch: CatalogItem[] = [];
+
         for (let item of otherCatalog) {
           let image: ImageFile = ImageStorage.instance.get(item.identifier);
           if (image === null) {
@@ -48,13 +52,28 @@ export class ImageSharingSystem {
             ImageStorage.instance.add(image);
           }
           if (image.state < ImageState.COMPLETE && !this.receiveTaskMap.has(item.identifier)) {
-            let result = await ServerMediaStorage.fetchImage(item.identifier);
+            needFetch.push(item);
+          }
+        }
+
+        // バッチ並列fetch
+        for (let i = 0; i < needFetch.length; i += BATCH_SIZE) {
+          const batch = needFetch.slice(i, i + BATCH_SIZE);
+          const results = await Promise.all(
+            batch.map(async item => {
+              try {
+                const result = await ServerMediaStorage.fetchImage(item.identifier);
+                return { item, result };
+              } catch (e) {
+                return { item, result: { status: 'unreachable' as const } };
+              }
+            })
+          );
+          for (const { item, result } of results) {
             if (result.status === 'ok') {
               ImageStorage.instance.add(result.file);
             } else {
-              // missing(本当に無い) / unreachable(サーバー障害) のどちらも P2P フォールバックで救済する。
-              // in-flight の場合は Promise 共有で待機済みなので、ここに到達するのは確定失敗のみ。
-              request.push({ identifier: item.identifier, state: image.state });
+              request.push(item);
             }
           }
         }

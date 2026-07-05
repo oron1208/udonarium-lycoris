@@ -15,8 +15,8 @@ export class AudioSharingSystem {
 
   private sendTaskMap: Map<string, BufferSharingTask<AudioFileContext>> = new Map();
   private receiveTaskMap: Map<string, BufferSharingTask<AudioFileContext>> = new Map();
-  private maxSendTask: number = 2;
-  private maxReceiveTask: number = 4;
+  private maxSendTask: number = 4;
+  private maxReceiveTask: number = 8;
 
 
   private constructor() { }
@@ -38,6 +38,9 @@ export class AudioSharingSystem {
         let request: CatalogItem[] = [];
 
         Logger.debug('SYNCHRONIZE_AUDIO_LIST active tasks ', this.sendTaskMap.size + this.receiveTaskMap.size);
+
+        // name復元＋フィルタを先に処理
+        const needFetch: CatalogItem[] = [];
         for (let item of otherCatalog) {
           let audio: AudioFile = AudioStorage.instance.get(item.identifier);
           if (audio === null) {
@@ -51,12 +54,29 @@ export class AudioSharingSystem {
             audio.apply(ctx);
           }
           if (audio.state < AudioState.COMPLETE && !this.receiveTaskMap.has(item.identifier)) {
-            let result = await ServerMediaStorage.fetchAudio(item.identifier);
+            needFetch.push(item);
+          }
+        }
+
+        // バッチ並列fetch（同時8本まで）
+        const BATCH_SIZE = 8;
+        for (let i = 0; i < needFetch.length; i += BATCH_SIZE) {
+          const batch = needFetch.slice(i, i + BATCH_SIZE);
+          const results = await Promise.all(
+            batch.map(async item => {
+              try {
+                const result = await ServerMediaStorage.fetchAudio(item.identifier);
+                return { item, result };
+              } catch (e) {
+                return { item, result: { status: 'unreachable' as const } };
+              }
+            })
+          );
+          for (const { item, result } of results) {
             if (result.status === 'ok') {
               AudioStorage.instance.add(result.file);
             } else {
-              // missing(本当に無い) / unreachable(サーバー障害) のどちらも P2P フォールバックで救済する。
-              request.push({ identifier: item.identifier, state: audio.state });
+              request.push(item);
             }
           }
         }
