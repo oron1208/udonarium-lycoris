@@ -335,17 +335,38 @@ export class Jukebox extends GameObject {
   private _startCombatPlayback(): boolean {
     if (!this._combatBgmIdentifier) return false;
     const resolved = resolveAudioSource(this._combatBgmIdentifier);
-    const url = Jukebox._resolveAudioUrl(resolved);
-    if (!url) {
-      Logger.warn('[BGM] audio source not found:', resolved);
-      this.playAfterFileUpdate();
-      return false;
+    const loop = true;
+    const vol = 0.6;
+
+    // server: プレフィックス（ライブラリ曲）は HttpAudioPlayer
+    if (isServerAudio(resolved)) {
+      const url = Jukebox._resolveAudioUrl(resolved);
+      if (!url) {
+        Logger.warn('[BGM] server audio source not found:', resolved);
+        this.playAfterFileUpdate();
+        return false;
+      }
+      this.combatHttpPlayer = new HttpAudioPlayer();
+      this.combatHttpPlayer.loop = loop;
+      this.combatHttpPlayer.volume = vol;
+      this.combatHttpPlayer.play(url);
+      return true;
     }
-    this.combatHttpPlayer = new HttpAudioPlayer();
-    this.combatHttpPlayer.loop = true;
-    this.combatHttpPlayer.volume = 0.6;
-    this.combatHttpPlayer.play(url);
-    return true;
+
+    // upload: 音声は P2P (AudioStorage) で再生
+    const strippedId = stripPrefix(resolved);
+    const audio = AudioStorage.instance.get(strippedId);
+    if (audio && audio.isReady) {
+      this.combatAudioPlayer = new AudioPlayer();
+      this.combatAudioPlayer.loop = loop;
+      this.combatAudioPlayer.volume = vol;
+      this.combatAudioPlayer.play(audio);
+      return true;
+    }
+    // ファイル未同期 → 後で再試行
+    Logger.debug('[BGM] combat audio not yet synced, waiting:', strippedId);
+    this.playAfterFileUpdate();
+    return false;
   }
 
   private _startTablePlayback(): boolean {
@@ -361,20 +382,40 @@ export class Jukebox extends GameObject {
       return false;
     }
     let started = false;
+    let needRetry = false;
     for (const layer of layers) {
       const resolved = resolveAudioSource(layer.audioIdentifier);
       const loop = layer.mode === 'loop';
       const vol = Number.isFinite(layer.volume) ? Math.max(0, Math.min(1, layer.volume)) : 0.5;
-      const url = Jukebox._resolveAudioUrl(resolved);
-      if (!url) continue;
-      const player = new HttpAudioPlayer();
-      player.loop = loop;
-      player.volume = vol;
-      player.play(url);
-      this.tableHttpPlayers.push(player);
-      started = true;
+
+      if (isServerAudio(resolved)) {
+        // server: プレフィックス（ライブラリ曲）は HttpAudioPlayer
+        const url = Jukebox._resolveAudioUrl(resolved);
+        if (!url) continue;
+        const player = new HttpAudioPlayer();
+        player.loop = loop;
+        player.volume = vol;
+        player.play(url);
+        this.tableHttpPlayers.push(player);
+        started = true;
+      } else {
+        // upload: 音声は P2P (AudioStorage) で再生
+        const strippedId = stripPrefix(resolved);
+        const audio = AudioStorage.instance.get(strippedId);
+        if (audio && audio.isReady) {
+          const player = new AudioPlayer();
+          player.loop = loop;
+          player.volume = vol;
+          player.play(audio);
+          this.tableAudioPlayers.push(player);
+          started = true;
+        } else {
+          needRetry = true;
+        }
+      }
     }
-    if (!started) this.playAfterFileUpdate();
+    if (!started && needRetry) this.playAfterFileUpdate();
+    else if (!started) this.playAfterFileUpdate();
     return started;
   }
 
@@ -382,34 +423,69 @@ export class Jukebox extends GameObject {
     if (this._jukeboxLayerOverrideActive) {
       const layers = this.getJukeboxLayers().filter(l => l.enabled && l.audioIdentifier);
       let started = false;
+      let needRetry = false;
       for (const layer of layers) {
         const resolved = resolveAudioSource(layer.audioIdentifier);
         const loop = layer.mode === 'loop';
         const vol = Number.isFinite(layer.volume) ? Math.max(0, Math.min(1, layer.volume)) : 0.5;
-        const url = Jukebox._resolveAudioUrl(resolved);
-        if (!url) continue;
-        const player = new HttpAudioPlayer();
-        player.loop = loop;
-        player.volume = vol;
-        player.play(url);
-        this.jukeboxHttpPlayers.push(player);
-        started = true;
+
+        if (isServerAudio(resolved)) {
+          const url = Jukebox._resolveAudioUrl(resolved);
+          if (!url) continue;
+          const player = new HttpAudioPlayer();
+          player.loop = loop;
+          player.volume = vol;
+          player.play(url);
+          this.jukeboxHttpPlayers.push(player);
+          started = true;
+        } else {
+          const strippedId = stripPrefix(resolved);
+          const audio = AudioStorage.instance.get(strippedId);
+          if (audio && audio.isReady) {
+            const player = new AudioPlayer();
+            player.loop = loop;
+            player.volume = vol;
+            player.play(audio);
+            this.jukeboxLayerPlayers.push(player);
+            started = true;
+          } else {
+            needRetry = true;
+          }
+        }
       }
       if (!started) this.playAfterFileUpdate();
       return started;
     } else if (this.isPlaying && this.audioIdentifier) {
       const resolved = resolveAudioSource(this.audioIdentifier);
-      const url = Jukebox._resolveAudioUrl(resolved);
-      if (!url) {
-        this.playAfterFileUpdate();
-        return false;
+
+      if (isServerAudio(resolved)) {
+        const url = Jukebox._resolveAudioUrl(resolved);
+        if (!url) {
+          this.playAfterFileUpdate();
+          return false;
+        }
+        const player = new HttpAudioPlayer();
+        player.loop = true;
+        player.volume = this.volume;
+        player.play(url);
+        this.jukeboxHttpPlayers.push(player);
+        return true;
       }
-      const player = new HttpAudioPlayer();
-      player.loop = true;
-      player.volume = this.volume;
-      player.play(url);
-      this.jukeboxHttpPlayers.push(player);
-      return true;
+
+      // upload: 音声は P2P (AudioStorage) で再生
+      const strippedId = stripPrefix(resolved);
+      const audio = AudioStorage.instance.get(strippedId);
+      if (audio && audio.isReady) {
+        const player = new AudioPlayer();
+        player.loop = true;
+        player.volume = this.volume;
+        player.play(audio);
+        this.jukeboxLayerPlayers.push(player);
+        return true;
+      }
+      Logger.debug('[BGM] jukebox audio not yet synced, waiting:', strippedId);
+      this.playAfterFileUpdate();
+      return false;
     }
     return false;
   }
