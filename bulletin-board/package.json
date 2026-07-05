@@ -1,0 +1,9 @@
+{
+  "name": "udonarium-board",
+  "version": "1.0.0",
+  "description": "Bulletin board API for Udonarium Lycoris",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

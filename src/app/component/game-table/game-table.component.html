@@ -26,7 +26,7 @@
         </ng-container>
         <div *ngIf="layerVisibility.range" class="range">
           <div class="dummy"></div>
-          <peer-cursor class="is-3d will-change-transform" *ngFor="let cursor of peerCursors; trackBy: trackByGameObject" [cursor]="cursor"></peer-cursor>
+          <peer-cursor class="is-3d will-change-transform" *ngFor="let cursor of peerCursors; trackBy: trackByGameObject" [cursor]="cursor" [isFlatMode]="isFlatMode"></peer-cursor>
         </div>
         <ng-container *ngIf="layerVisibility.range">
         <range class="is-3d will-change-transform" *ngFor="let range of ranges; trackBy: trackByGameObject" [range]="range"></range>
@@ -45,7 +45,7 @@
         </div>
         <div *ngIf="layerVisibility.cursor" class="layer cursor-layer">
           <div class="dummy"></div>
-          <peer-cursor class="is-3d will-change-transform" *ngFor="let cursor of peerCursors; trackBy: trackByGameObject" [cursor]="cursor"></peer-cursor>
+          <peer-cursor class="is-3d will-change-transform" *ngFor="let cursor of peerCursors; trackBy: trackByGameObject" [cursor]="cursor" [isFlatMode]="isFlatMode"></peer-cursor>
         </div>
       </ng-container>
       <canvas class="drawing-canvas is-fill" [class.is-drawing-mode]="isDrawingMode" #drawingCanvas
@@ -67,8 +67,13 @@
     <button type="button" class="danger" (click)="moveSelectedCharactersToGraveyard()">墓場</button>
     <button type="button" (click)="clearRangeSelection()">選択解除</button>
   </div>
-  <div class="drawing-toolbar" [class.is-open]="isDrawingToolOpen">
-    <button type="button" class="toolbar-toggle" [class.active]="isFlatMode" (click)="toggleFlatMode()">{{isFlatMode ? '平面ON' : '平面'}}</button>
+  <div class="table-top-toolbar">
+    <div class="target-status-toolbar" *ngIf="targetedCharacterCount > 0">
+      <span>{{targetedCharacterCount}}体ターゲット中</span>
+      <button type="button" (click)="clearAllTargets()">解除</button>
+    </div>
+    <div class="drawing-toolbar" [class.is-open]="isDrawingToolOpen">
+      <button type="button" class="toolbar-toggle" [class.active]="isFlatMode" (click)="toggleFlatMode()">{{isFlatMode ? '平面ON' : '平面'}}</button>
     <ng-container *ngIf="isFlatMode">
       <button type="button" title="縮小" (click)="zoomFlatMode(-0.1)">－</button>
       <button type="button" title="等倍" (click)="resetFlatZoom()">{{(flatViewScale * 100) | number:'1.0-0'}}%</button>
@@ -112,6 +117,7 @@
       <label class="drawing-check"><input type="checkbox" [(ngModel)]="drawingFill">塗り</label>
       <button type="button" [class.active]="isDrawingEraser" (click)="isDrawingEraser = !isDrawingEraser">消しゴム</button>
       <button type="button" (click)="clearDrawing()">全消し</button>
-    </ng-container>
+      </ng-container>
+    </div>
   </div>
 </div>

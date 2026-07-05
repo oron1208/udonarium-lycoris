@@ -86,3 +86,25 @@
 .is-pointer-events-none {
   pointer-events: none;
 }
+/* 平面モードでは3D用の直立回転を使わず、2Dのピンとして表示する */
+.component.is-flat-cursor {
+  transform-style: flat;
+  z-index: 1000000;
+}
+
+.component.is-flat-cursor .upright-transform {
+  transform-style: flat;
+}
+
+.component.is-flat-cursor .peer-cursor {
+  transform: translateX(-50%) translateY(-100%) rotateZ(45deg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.component.is-flat-cursor .is-back {
+  display: none;
+}
+
+.component.is-flat-cursor .icon {
+  transform: rotateZ(-45deg) scale(0.85);
+}

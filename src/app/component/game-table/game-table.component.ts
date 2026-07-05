@@ -260,6 +260,9 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
       .on('GM_MODE_CHANGED', event => {
         this.changeDetector.markForCheck();
       })
+      .on('CHK_TARGET_CHANGE', event => {
+        this.changeDetector.markForCheck();
+      })
       .on('TABLE_LAYER_VISIBILITY_CHANGED', event => {
         this.ngZone.run(() => {
           this.layerVisibility = {
@@ -848,6 +851,25 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
 
   get selectedCharacters(): GameCharacter[] {
     return this.characters.filter(character => this.selectedCharacterIds.has(character.identifier) && character.location.name === 'table');
+  }
+
+  get targetedCharacters(): GameCharacter[] {
+    return this.characters.filter(character => character.targeted && character.location.name === 'table');
+  }
+
+  get targetedCharacterCount(): number {
+    return this.targetedCharacters.length;
+  }
+
+  clearAllTargets() {
+    const targets = this.targetedCharacters;
+    if (targets.length < 1) return;
+    for (const character of targets) {
+      character.targeted = false;
+      EventSystem.trigger('CHK_TARGET_CHANGE', { identifier: character.identifier, className: character.aliasName });
+    }
+    SoundEffect.play(PresetSound.sweep);
+    this.changeDetector.markForCheck();
   }
 
   clearRangeSelection() {

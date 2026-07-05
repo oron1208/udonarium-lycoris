@@ -24,6 +24,7 @@ import { DiceBot } from '@udonarium/dice-bot';
 import { EventSystem, Network } from '@udonarium/core/system';
 import { GameCharacter, AutoBuffEntry, AutoBuffOperation } from '@udonarium/game-character';
 import { GameCharacterGroup } from '@udonarium/game-character-group';
+import { DataElement } from '@udonarium/data-element';
 import { GameTable } from '@udonarium/game-table';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
 import { ChatPaletteComponent } from 'component/chat-palette/chat-palette.component';
@@ -162,6 +163,12 @@ export class CharacterGroupComponent implements OnInit, OnDestroy, AfterViewInit
   private foldingBuffAutoCollapse: boolean = true;
   isVnBoardButtonVisible: boolean = false;
   gridSize: number = 50;
+
+  // ホバー部位パネル（body直下に追加してtransformの影響を受けないようにする）
+  isHoverPanelVisible: boolean = false;
+  private hoverPanelEl: HTMLElement | null = null;
+  private hoverHideTimer: any = null;
+  private static readonly HOVER_DELAY_MS = 350;
   math = Math;
 
   viewRotateX = 50;
@@ -438,6 +445,7 @@ export class CharacterGroupComponent implements OnInit, OnDestroy, AfterViewInit
   ngOnDestroy() {
     this.stopDirectionMarkerRotate();
     this.input.destroy();
+    this.hideHoverPanel();
     EventSystem.unregister(this);
   }
 
@@ -1240,6 +1248,252 @@ export class CharacterGroupComponent implements OnInit, OnDestroy, AfterViewInit
     let option: PanelOption = { left: coordinate.x - 250, top: coordinate.y - 200, width: 500, height: 500 };
     let component = this.panelService.open<CharacterGroupPartsPanelComponent>(CharacterGroupPartsPanelComponent, option);
     component.characterGroup = this.characterGroup;
+  }
+
+  // ===== ホバー部位フローティングパネル =====
+
+  /**
+   * グループコマにマウスホバー → 部位一覧パネルを表示。
+   * パネル上にマウスを乗せている間は消えない(遅延付きで消える)。
+   */
+  onGroupMouseEnter(event?: MouseEvent) {
+    if (!this.characterGroup || this.characterGroup.parts.length === 0) return;
+    if (this.hoverHideTimer) { clearTimeout(this.hoverHideTimer); this.hoverHideTimer = null; }
+    const x = event && event.clientX !== undefined ? event.clientX : 0;
+    const y = event && event.clientY !== undefined ? event.clientY : 0;
+    this.showHoverPanel(x, y);
+    this.isHoverPanelVisible = true;
+    this.changeDetector.markForCheck();
+  }
+
+  onGroupMouseLeave() {
+    this.hoverHideTimer = setTimeout(() => {
+      this.isHoverPanelVisible = false;
+      this.hideHoverPanel();
+      this.changeDetector.markForCheck();
+    }, CharacterGroupComponent.HOVER_DELAY_MS);
+  }
+
+  onPanelMouseEnter() {
+    if (this.hoverHideTimer) { clearTimeout(this.hoverHideTimer); this.hoverHideTimer = null; }
+  }
+
+  onPanelMouseLeave() {
+    this.hoverHideTimer = setTimeout(() => {
+      this.isHoverPanelVisible = false;
+      this.hideHoverPanel();
+      this.changeDetector.markForCheck();
+    }, CharacterGroupComponent.HOVER_DELAY_MS);
+  }
+
+  /**
+   * 部位をクリック → ターゲット切り替え。
+   */
+  togglePartTarget(part: GameCharacter, event: Event) {
+    event.stopPropagation();
+    event.preventDefault();
+    part.targeted = !part.targeted;
+    EventSystem.trigger('CHK_TARGET_CHANGE', { identifier: part.identifier, className: part.aliasName });
+    // グループ自身のtargetedも連動（全部位ターゲット状態に合わせる）
+    this.syncGroupTargeted();
+    this.changeDetector.markForCheck();
+  }
+
+  /**
+   * 全部位がターゲットされたらグループもtargeted、全解除ならグループも解除。
+   */
+  private syncGroupTargeted() {
+    if (!this.characterGroup) return;
+    const parts = this.characterGroup.parts;
+    if (parts.length === 0) return;
+    const allTargeted = parts.every(p => p.targeted);
+    this.characterGroup.targeted = allTargeted;
+    EventSystem.trigger('CHK_TARGET_CHANGE', { identifier: this.characterGroup.identifier, className: this.characterGroup.aliasName });
+  }
+
+  /**
+   * ホバーパネル内の部位の右クリックメニュー。
+   */
+  onPartContextMenuHover(event: Event, part: GameCharacter) {
+    event.stopPropagation();
+    event.preventDefault();
+    if (!part) return;
+    const position = this.pointerDeviceService.pointers[0];
+    const actions: ContextMenuAction[] = [
+      { name: '詳細を表示', action: () => this.showDetail(part) },
+      { name: 'チャットパレットを表示', action: () => this.showChatPalette(part) },
+      { name: 'リモコンを表示', action: () => this.showRemoteController(part) },
+      { name: 'VNステージに送る', action: () => EventSystem.trigger('VN_STAGE_SELECT_CHARACTER', { characterId: part.identifier }) },
+      ContextMenuSeparator,
+      { name: 'グループから外す', action: () => { this.characterGroup.removePart(part); SoundEffect.play(PresetSound.cardPut); } },
+    ];
+    this.contextMenuService.open(position, actions, part.name);
+  }
+
+  /**
+   * 部位のHP/リソースを取得（表示用）。
+   */
+  getPartResource(part: GameCharacter): string {
+    if (!part || !part.rootDataElement) return '';
+    const hpEls = part.rootDataElement.getElementsByName('HP');
+    const hpEl = hpEls.length > 0 ? hpEls[0] : null;
+    if (!hpEl) return '';
+    const value = hpEl.value != null ? String(hpEl.value) : '';
+    const maxEls = part.rootDataElement.getElementsByName('最大HP');
+    const maxEl = maxEls.length > 0 ? maxEls[0] : null;
+    const max = maxEl?.value != null ? String(maxEl.value) : '';
+    if (max) return `${value}/${max}`;
+    return value;
+  }
+
+  /**
+   * 部位の主要リソース（HP以外も含めて最初の数値要素を拾う）。
+   */
+  getPartResourceList(part: GameCharacter): { name: string; value: string }[] {
+    if (!part || !part.rootDataElement) return [];
+    const result: { name: string; value: string }[] = [];
+    // 共通データ要素から数値っぽいものを最大3つ拾う
+    for (const child of part.rootDataElement.children) {
+      if (child instanceof DataElement && child.name) {
+        const v = child.value != null ? String(child.value) : '';
+        if (v && /^[-\d]+$/.test(v.trim())) {
+          result.push({ name: child.name, value: v });
+          if (result.length >= 3) break;
+        }
+      }
+    }
+    return result;
+  }
+
+  trackByIdentifier(index: number, part: GameCharacter): string {
+    return part ? part.identifier : index.toString();
+  }
+
+  // ===== Body直下ホバーパネル（transformの影響を受けない） =====
+
+  private showHoverPanel(mouseX: number, mouseY: number) {
+    if (!this.characterGroup) return;
+
+    if (!this.hoverPanelEl) {
+      this.hoverPanelEl = document.createElement('div');
+      this.hoverPanelEl.className = 'cg-hover-portal';
+      this.hoverPanelEl.addEventListener('mouseenter', () => {
+        if (this.hoverHideTimer) { clearTimeout(this.hoverHideTimer); this.hoverHideTimer = null; }
+      });
+      this.hoverPanelEl.addEventListener('mouseleave', () => {
+        this.hoverHideTimer = setTimeout(() => {
+          this.isHoverPanelVisible = false;
+          this.hideHoverPanel();
+          this.changeDetector.markForCheck();
+        }, CharacterGroupComponent.HOVER_DELAY_MS);
+      });
+      document.body.appendChild(this.hoverPanelEl);
+    }
+
+    this.renderHoverPanelContent();
+    this.positionHoverPanel(mouseX, mouseY);
+  }
+
+  private positionHoverPanel(mouseX: number, mouseY: number) {
+    if (!this.hoverPanelEl) return;
+    const panelWidth = 240;
+    const panelMaxHeight = 340;
+    let left = mouseX + 20;
+    let top = mouseY - 10;
+    if (left + panelWidth > window.innerWidth - 8) {
+      left = mouseX - panelWidth - 8;
+    }
+    if (top + panelMaxHeight > window.innerHeight - 8) {
+      top = Math.max(8, window.innerHeight - panelMaxHeight - 8);
+    }
+    if (left < 8) {
+      left = Math.min(mouseX + 20, window.innerWidth - panelWidth - 8);
+    }
+    this.hoverPanelEl.style.left = left + 'px';
+    this.hoverPanelEl.style.top = top + 'px';
+  }
+
+  private renderHoverPanelContent() {
+    if (!this.hoverPanelEl || !this.characterGroup) return;
+    const parts = this.characterGroup.parts;
+    const group = this.characterGroup;
+
+    let html = '<div class="cg-hover-header">';
+    html += `<span class="cg-hover-title">${this.escapeHtml(group.name)}の部位</span>`;
+    html += `<span class="cg-hover-count">${parts.length}体</span>`;
+    html += '</div>';
+    html += '<div class="cg-hover-list">';
+
+    for (const part of parts) {
+      const targeted = part.targeted ? ' is-targeted' : '';
+      const img = part.imageFile && part.imageFile.url ? part.imageFile.url : '';
+      const resources = this.getPartResourceList(part);
+
+      html += `<div class="cg-hover-item${targeted}" data-part-id="${part.identifier}">`;
+      html += '<div class="cg-hover-icon-wrap">';
+      if (img) {
+        html += `<img src="${this.escapeAttr(img)}" class="cg-hover-icon" />`;
+      } else {
+        html += '<div class="cg-hover-placeholder">​</div>';
+      }
+      if (part.targeted) html += '<div class="cg-hover-target">🎯</div>';
+      html += '</div>';
+      html += '<div class="cg-hover-info">';
+      html += `<div class="cg-hover-name">${this.escapeHtml(part.name)}</div>`;
+      if (resources.length > 0) {
+        html += '<div class="cg-hover-resources">';
+        for (const r of resources) {
+          html += `<span class="cg-hover-resource"><span class="r-name">${this.escapeHtml(r.name)}</span>: <span class="r-val">${this.escapeHtml(r.value)}</span></span>`;
+        }
+        html += '</div>';
+      }
+      html += '</div></div>';
+    }
+    html += '</div>';
+
+    this.hoverPanelEl.innerHTML = html;
+
+    // イベントリスナーを各部位に登録
+    const items = this.hoverPanelEl.querySelectorAll('.cg-hover-item');
+    items.forEach((item) => {
+      const partId = item.getAttribute('data-part-id');
+      if (!partId) return;
+      const part = ObjectStore.instance.get<GameCharacter>(partId);
+      if (!part) return;
+
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        part.targeted = !part.targeted;
+        part.update();
+        EventSystem.trigger('CHK_TARGET_CHANGE', { identifier: part.identifier, className: part.aliasName });
+        this.syncGroupTargeted();
+        this.renderHoverPanelContent();
+      });
+
+      item.addEventListener('contextmenu', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        this.onPartContextMenuHover(e as any, part);
+      });
+    });
+  }
+
+  private hideHoverPanel() {
+    if (this.hoverPanelEl) {
+      this.hoverPanelEl.remove();
+      this.hoverPanelEl = null;
+    }
+  }
+
+  private escapeHtml(s: string): string {
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  private escapeAttr(s: string): string {
+    return s.replace(/"/g, '&quot;');
   }
 
   checkKey(event) {

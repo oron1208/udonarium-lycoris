@@ -1,5 +1,5 @@
 <ng-container *ngIf="!isMine">
-  <div #cursor class="component is-3d is-transition is-pointer-events-none">
+  <div #cursor class="component is-3d is-transition is-pointer-events-none" [class.is-flat-cursor]="isFlatMode">
     <div #opacity class="upright-transform is-3d is-transition">
       <div *ngFor="let cssClass of ['is-front', 'is-back']" class="peer-cursor is-front" [ngClass]="cssClass">
         <div class="icon" [style.background-image]="'url(' + iconUrl + ')' | safe: 'style'">

@@ -3,7 +3,7 @@
 </div>
 <div *ngIf="canDisplayByRole" class="component is-3d is-grab is-pointer-events-none" [class.gm-only-token]="isGmOnly" [class.my-piece-token]="isMyPiece" [class.is-range-selected]="isRangeSelected" [class.is-current-turn]="isCurrentCombatTurn && isTurnMarkerVisible" [style.width.px]="size * gridSize"
   [style.height.px]="size * gridSize" appMovable [movable.option]="movableOption" (movable.ondragstart)="onMove()"
-  (movable.ondragend)="onMoved()" (mousedown)="checkKey($event)" (dblclick)="onDoubleClick()" #root>
+  (movable.ondragend)="onMoved()" (mousedown)="checkKey($event)" (dblclick)="onDoubleClick()" (mouseenter)="onGroupMouseEnter($event)" (mouseleave)="onGroupMouseLeave()" #root>
   <div class="turn-marker-floating is-pointer-events-none" *ngIf="isCurrentCombatTurn && isTurnMarkerVisible && (shouldUseFlatIcon || shouldUseSimpleView)"></div>
   <div class="status-marker-ring is-pointer-events-none" *ngIf="0 < statusMarkers.length">
     <span class="status-marker" *ngFor="let marker of statusMarkers; let i = index" [style.background-color]="marker.color" [style.transform]="markerRingTransform(i, statusMarkers.length)" [title]="marker.name">{{marker.icon}}</span>
@@ -225,3 +225,5 @@
     </div>
   </div>
 </div>
+
+

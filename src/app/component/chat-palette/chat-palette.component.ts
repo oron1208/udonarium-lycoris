@@ -6,6 +6,7 @@ import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { EventSystem } from '@udonarium/core/system';
 import { DiceBot } from '@udonarium/dice-bot';
 import { GameCharacter } from '@udonarium/game-character';
+import { GameCharacterGroup } from '@udonarium/game-character-group';
 import { PeerCursor } from '@udonarium/peer-cursor';
 import { ChatInputComponent } from 'component/chat-input/chat-input.component';
 import { ChatMessageService } from 'service/chat-message.service';
@@ -212,9 +213,23 @@ export class ChatPaletteComponent implements OnInit, OnDestroy {
 
   private targetedGameCharacterList( ): GameCharacter[]{
     let objects :GameCharacter[] = [];
+    // 卓上のコマ
     objects = ObjectStore.instance
         .getObjects<GameCharacter>(GameCharacter)
         .filter(character => this.targeted(character));
+    // キャラクターグループの部位（targeted状態のものを追加）
+    const groups = ObjectStore.instance.getObjects<GameCharacterGroup>(GameCharacterGroup);
+    console.log('[CG-DEBUG] groups found:', groups.length);
+    for (const group of groups) {
+      console.log('[CG-DEBUG] group:', group.name, 'parts:', group.parts.length);
+      for (const part of group.parts) {
+        console.log('[CG-DEBUG] part:', part.name, 'targeted:', part.targeted, 'location:', part.location?.name);
+        if (part.targeted && !objects.some(o => o.identifier === part.identifier)) {
+          objects.push(part);
+        }
+      }
+    }
+    console.log('[CG-DEBUG] total targeted objects:', objects.length);
     return objects;
   }
 

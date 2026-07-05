@@ -590,6 +590,15 @@ export class DiceBot extends GameObject {
     objects = ObjectStore.instance
         .getObjects<GameCharacter>(GameCharacter)
         .filter(character => this.targeted(character));
+    // キャラクターグループの部位も対象に含める
+    const groups = ObjectStore.instance.getObjects<GameCharacterGroup>(GameCharacterGroup);
+    for (const group of groups) {
+      for (const part of group.parts) {
+        if (part.targeted && !objects.some(o => o.identifier === part.identifier)) {
+          objects.push(part);
+        }
+      }
+    }
     return objects;
   }
 

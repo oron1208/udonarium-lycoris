@@ -185,6 +185,45 @@
   pointer-events: auto;
 }
 
+.table-top-toolbar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.target-status-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  color: #fff;
+  background: rgba(80, 34, 34, 0.9);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+  font-size: 12px;
+  font-weight: bold;
+  pointer-events: auto;
+  height: fit-content;
+}
+
+.target-status-toolbar button {
+  height: 24px;
+  box-sizing: border-box;
+  border: 1px solid #d16a6a;
+  border-radius: 4px;
+  color: #fff;
+  background: #8a3333;
+  cursor: pointer;
+}
+
+.target-status-toolbar button:hover {
+  background: #a63d3d;
+}
+
 .selection-toolbar button {
   height: 24px;
   box-sizing: border-box;
@@ -201,10 +240,10 @@
 }
 
 .drawing-toolbar {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 1000;
+  position: relative;
+  top: auto;
+  right: auto;
+  z-index: auto;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
