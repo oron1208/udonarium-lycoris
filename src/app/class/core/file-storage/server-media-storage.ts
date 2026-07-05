@@ -13,7 +13,7 @@ export type FetchResult<T = ImageFile | AudioFile> =
   | { status: 'unreachable' }; // ネットワークエラー/5xx: サーバーが応答しない
 
 type RawFetchResult =
-  | { status: 'ok'; blob: Blob }
+  | { status: 'ok'; blob: Blob; name?: string }
   | { status: 'missing' }
   | { status: 'unreachable' };
 
@@ -43,13 +43,23 @@ export class ServerMediaStorage {
   /** 画像を取得。戻り値で「成功/不在/サーバー障害」を区別する。in-flight なら同じ Promise を待つ。 */
   static async fetchImage(identifier: string): Promise<FetchResult<ImageFile>> {
     const raw = await this.fetchBlob('image', identifier);
-    return this.toFetchResult<ImageFile>(raw, async blob => await ImageFile.createAsync(blob));
+    return this.toFetchResult<ImageFile>(raw, async blob => {
+      if (raw.status === 'ok' && raw.name) {
+        return await ImageFile.createAsync(blob, raw.name);
+      }
+      return await ImageFile.createAsync(blob);
+    });
   }
 
   /** 音声を取得。戻り値で「成功/不在/サーバー障害」を区別する。in-flight なら同じ Promise を待つ。 */
   static async fetchAudio(identifier: string): Promise<FetchResult<AudioFile>> {
     const raw = await this.fetchBlob('audio', identifier);
-    return this.toFetchResult<AudioFile>(raw, async blob => await AudioFile.createAsync(blob));
+    return this.toFetchResult<AudioFile>(raw, async blob => {
+      if (raw.status === 'ok' && raw.name) {
+        return await AudioFile.createAsync(blob, raw.name);
+      }
+      return await AudioFile.createAsync(blob);
+    });
   }
 
   /** blob が取得できた場合のみファイル化。在/不在/障害の区別なし(従来互換のキャッシュミス埋め用)。 */
@@ -115,7 +125,10 @@ export class ServerMediaStorage {
     const promise = (async (): Promise<RawFetchResult> => {
       try {
         const response = await fetch(`/api/media/${kind}/${encodeURIComponent(identifier)}`);
-        if (response.ok) return { status: 'ok', blob: await response.blob() };
+        if (response.ok) {
+          const name = this.extractFileName(response);
+          return { status: 'ok', blob: await response.blob(), name };
+        }
         if (response.status === 404) {
           this.notifyMissing(kind, identifier);
           return { status: 'missing' };
@@ -135,6 +148,13 @@ export class ServerMediaStorage {
 
     this.fetching.set(key, promise);
     return promise;
+  }
+
+  /** レスポンスヘッダーからファイル名を抽出 */
+  private static extractFileName(response: Response): string | undefined {
+    const raw = response.headers.get('X-File-Name');
+    if (!raw) return undefined;
+    try { return decodeURIComponent(raw); } catch { return raw; }
   }
 
   /**

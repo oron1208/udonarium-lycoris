@@ -78,12 +78,12 @@ export class ImageFile {
   }
 
   static async createAsync(file: File): Promise<ImageFile>
-  static async createAsync(blob: Blob): Promise<ImageFile>
-  static async createAsync(arg: any): Promise<ImageFile> {
+  static async createAsync(blob: Blob, name?: string): Promise<ImageFile>
+  static async createAsync(arg: any, name?: string): Promise<ImageFile> {
     if (arg instanceof File) {
       return await ImageFile._createAsync(arg, arg.name);
     } else if (arg instanceof Blob) {
-      return await ImageFile._createAsync(arg);
+      return await ImageFile._createAsync(arg, name);
     }
   }
 

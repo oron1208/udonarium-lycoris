@@ -63,12 +63,12 @@ export class AudioFile {
   }
 
   static async createAsync(file: File): Promise<AudioFile>
-  static async createAsync(blob: Blob): Promise<AudioFile>
-  static async createAsync(arg: any): Promise<AudioFile> {
+  static async createAsync(blob: Blob, name?: string): Promise<AudioFile>
+  static async createAsync(arg: any, name?: string): Promise<AudioFile> {
     if (arg instanceof File) {
       return await AudioFile._createAsync(arg, arg.name);
     } else if (arg instanceof Blob) {
-      return await AudioFile._createAsync(arg);
+      return await AudioFile._createAsync(arg, name);
     }
   }
 
@@ -94,9 +94,12 @@ export class AudioFile {
   apply(context: AudioFileContext) {
     if (!this.context.identifier && context.identifier) this.context.identifier = context.identifier;
     if (context.name) {
-      const currentIsEmptyOrHash = !this.context.name || this.context.name === this.context.identifier;
+      const currentIsProper = this.context.name && this.context.name !== this.context.identifier;
       const incomingIsNotHash = context.name !== context.identifier;
-      if (incomingIsNotHash || currentIsEmptyOrHash) this.context.name = context.name;
+      // 既存のproper nameをハッシュ名で上書きしない
+      if (incomingIsNotHash || (!currentIsProper && !this.context.name)) {
+        this.context.name = context.name;
+      }
     }
     if (!this.context.blob && context.blob) this.context.blob = context.blob;
     if (!this.context.type && context.type) this.context.type = context.type;

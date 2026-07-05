@@ -44,8 +44,8 @@ export class AudioSharingSystem {
             audio = AudioFile.createEmpty(item.identifier);
             AudioStorage.instance.add(audio);
           }
-          // カタログにnameが含まれていれば事前設定（ハッシュ値表示を防ぐ）
-          if (item.name && audio.name === audio.identifier) {
+          // カタログにnameが含まれていれば事前設定（ハッシュ値・空文字表示を防ぐ）
+          if (item.name && (!audio.name || audio.name === audio.identifier)) {
             let ctx = audio.toContext();
             ctx.name = item.name;
             audio.apply(ctx);

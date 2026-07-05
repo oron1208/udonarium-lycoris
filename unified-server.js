@@ -798,9 +798,11 @@ function handleMediaGet(req, res, kind, hash) {
   let meta = {};
   try { meta = JSON.parse(fs.readFileSync(metaFile, 'utf8')); } catch (_) { }
   const contentType = meta.type || (kind === 'image' ? 'image/*' : 'audio/*');
+  const fileName = meta.name || hash;
   res.writeHead(200, {
     'Content-Type': contentType,
     'Cache-Control': 'public, max-age=31536000, immutable',
+    'X-File-Name': encodeURIComponent(fileName),
   });
   fs.createReadStream(file).pipe(res);
 }
