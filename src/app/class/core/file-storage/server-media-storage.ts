@@ -19,6 +19,8 @@ type RawFetchResult =
 
 export class ServerMediaStorage {
   private static uploading: Set<string> = new Set();
+  /** サーバーに存在確認済みのidentifier（HEADリクエストを省略するためのキャッシュ） */
+  private static knownOnServer: Set<string> = new Set();
   /** in-flight fetch を Promise 共有で dedup する(同ID並行fetchの2個目が即失敗扱いになるバグ防止) */
   private static fetching: Map<string, Promise<RawFetchResult>> = new Map();
   private static missingNotified: Set<string> = new Set();
@@ -95,7 +97,22 @@ export class ServerMediaStorage {
     if (this.uploading.has(key)) return;
     this.uploading.add(key);
     try {
-      const uploadUrl = `/api/media/${kind}/${encodeURIComponent(identifier)}`;
+      // キャッシュ済みならスキップ
+      if (this.knownOnServer.has(identifier)) {
+        Logger.debug(`[media] skip upload ${kind}:${identifier} (cached)`);
+        return;
+      }
+      // サーバーに既存かチェック（HEADリクエスト）
+      // 既にある場合はアップロードをスキップして通信量を節約
+      const checkUrl = `/api/media/${kind}/${encodeURIComponent(identifier)}`;
+      const headResp = await fetch(checkUrl, { method: 'HEAD' });
+      if (headResp.ok) {
+        this.knownOnServer.add(identifier);
+        Logger.debug(`[media] skip upload ${kind}:${identifier} (already on server)`);
+        return;
+      }
+
+      const uploadUrl = checkUrl;
       const uploadHeaders = {
         'Content-Type': blob.type || 'application/octet-stream',
         'X-File-Name': encodeURIComponent(name || identifier),
@@ -106,6 +123,7 @@ export class ServerMediaStorage {
         response = await fetch(uploadUrl, { method: 'POST', headers: uploadHeaders, body: blob });
       }
       if (!response.ok && response.status !== 409) Logger.warn(`media upload failed ${kind}:${identifier}`, response.status, await response.text().catch(() => ''));
+      else this.knownOnServer.add(identifier);
     } catch (error) {
       Logger.warn(`media upload failed ${kind}:${identifier}`, error);
     } finally {
@@ -126,6 +144,7 @@ export class ServerMediaStorage {
       try {
         const response = await fetch(`/api/media/${kind}/${encodeURIComponent(identifier)}`);
         if (response.ok) {
+          this.knownOnServer.add(identifier);
           const name = this.extractFileName(response);
           return { status: 'ok', blob: await response.blob(), name };
         }
