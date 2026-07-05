@@ -402,6 +402,7 @@ export class CutInListComponent implements OnInit, OnDestroy {
   }
 
   previewCutIn(){
+    if (!this.selectedCutIn) return;
     if ( this.selectedCutIn.originalSize ){
       let imageurl = this.selectedCutIn.cutInImage.url;
       if ( imageurl.length > 0 ){
@@ -418,6 +419,7 @@ export class CutInListComponent implements OnInit, OnDestroy {
 
 
   playCutIn(){
+    if (!this.selectedCutIn) return;
     if ( this.selectedCutIn.originalSize ){
       let imageurl = this.selectedCutIn.cutInImage.url;
       if ( imageurl.length > 0 ){
