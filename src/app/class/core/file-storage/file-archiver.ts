@@ -92,13 +92,22 @@ export class FileArchiver {
     if (!files) return;
     let loadFiles: File[] = files instanceof FileList ? toArrayOfFileList(files) : files;
 
-    for (let file of loadFiles) {
-      await this.handleImage(file);
-      await this.handleAudio(file);
-      await this.handleMediaManifest(file);
-      await this.handleText(file);
-      await this.handleZip(file);
-      EventSystem.trigger('FILE_LOADED', { file: file });
+    // 画像圧縮やハッシュ計算はCPU負荷が高いため、同時並列数を制限
+    const BATCH_SIZE = 6;
+    for (let i = 0; i < loadFiles.length; i += BATCH_SIZE) {
+      const batch = loadFiles.slice(i, i + BATCH_SIZE);
+      await Promise.all(batch.map(async file => {
+        try {
+          await this.handleImage(file);
+          await this.handleAudio(file);
+          await this.handleMediaManifest(file);
+          await this.handleText(file);
+          await this.handleZip(file);
+          EventSystem.trigger('FILE_LOADED', { file: file });
+        } catch (e) {
+          Logger.warn(`FileArchiver: error processing ${file.name}`, e);
+        }
+      }));
     }
   }
 
