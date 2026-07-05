@@ -15,8 +15,8 @@ export class AudioSharingSystem {
 
   private sendTaskMap: Map<string, BufferSharingTask<AudioFileContext>> = new Map();
   private receiveTaskMap: Map<string, BufferSharingTask<AudioFileContext>> = new Map();
-  private maxSendTask: number = 4;
-  private maxReceiveTask: number = 8;
+  private maxSendTask: number = 6;
+  private maxReceiveTask: number = 12;
 
 
   private constructor() { }
@@ -58,8 +58,8 @@ export class AudioSharingSystem {
           }
         }
 
-        // バッチ並列fetch（同時8本まで）
-        const BATCH_SIZE = 8;
+        // バッチ並列fetch（同時16本まで）
+        const BATCH_SIZE = 16;
         for (let i = 0; i < needFetch.length; i += BATCH_SIZE) {
           const batch = needFetch.slice(i, i + BATCH_SIZE);
           const results = await Promise.all(

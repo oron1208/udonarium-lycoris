@@ -17,8 +17,8 @@ export class ImageSharingSystem {
 
   private sendTaskMap: Map<string, BufferSharingTask<ImageContext[]>> = new Map();
   private receiveTaskMap: Map<string, BufferSharingTask<ImageContext[]>> = new Map();
-  private maxSendTask: number = 4;
-  private maxReceiveTask: number = 8;
+  private maxSendTask: number = 6;
+  private maxReceiveTask: number = 12;
 
   private constructor() {
     Logger.debug('FileSharingSystem ready...');
@@ -41,8 +41,8 @@ export class ImageSharingSystem {
         let otherCatalog: CatalogItem[] = event.data;
         let request: CatalogItem[] = [];
 
-        // サーバーfetchを並列バッチで実行（同時8枚まで）
-        const BATCH_SIZE = 8;
+        // サーバーfetchを並列バッチで実行（同時16枚まで）
+        const BATCH_SIZE = 16;
         const needFetch: CatalogItem[] = [];
 
         for (let item of otherCatalog) {
