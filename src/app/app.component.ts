@@ -528,20 +528,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   }
 
   private startDeveloperClientBridge() {
-    // サーバーAPIが存在するか事前チェック（/api/dev/announcementsを1回試行）
-    // 404 = サーバーAPIなし（さくら等の静的ホスティング）→ ポーリングしない
-    fetch('/api/dev/announcements?since=0', { cache: 'no-cache' }).then(response => {
-      if (!response.ok) {
-        Logger.debug('Developer API not available, skipping dev client bridge');
-        return;
-      }
-      this.pollDeveloperAnnouncements();
-      this.sendDeveloperHeartbeat();
-      this.developerPollTimer = setInterval(() => this.pollDeveloperAnnouncements(), 3000);
-      this.developerHeartbeatTimer = setInterval(() => this.sendDeveloperHeartbeat(), 10000);
-    }).catch(() => {
-      Logger.debug('Developer API unreachable, skipping dev client bridge');
-    });
+    this.pollDeveloperAnnouncements();
+    this.sendDeveloperHeartbeat();
+    this.developerPollTimer = setInterval(() => this.pollDeveloperAnnouncements(), 3000);
+    this.developerHeartbeatTimer = setInterval(() => this.sendDeveloperHeartbeat(), 10000);
   }
 
   private async pollDeveloperAnnouncements() {
