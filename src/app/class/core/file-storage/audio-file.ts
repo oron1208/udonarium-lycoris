@@ -73,12 +73,10 @@ export class AudioFile {
   }
 
   private static async _createAsync(blob: Blob, name?: string): Promise<AudioFile> {
-    let arrayBuffer = await FileReaderUtil.readAsArrayBufferAsync(blob);
-
     let audio = new AudioFile();
-    audio.context.identifier = await FileReaderUtil.calcSHA256Async(arrayBuffer);
+    audio.context.identifier = await FileReaderUtil.calcSHA256Async(blob);
     audio.context.name = name;
-    audio.context.blob = new Blob([arrayBuffer], { type: blob.type });
+    audio.context.blob = new Blob([blob], { type: blob.type });
     audio.context.type = audio.context.blob.type;
     audio.context.url = window.URL.createObjectURL(audio.context.blob);
 

@@ -7,6 +7,7 @@ import { XmlUtil } from '../system/util/xml-util';
 import { AudioFile } from './audio-file';
 import { AudioStorage } from './audio-storage';
 import { FileReaderUtil } from './file-reader-util';
+import { FileProcessingWorker } from './file-processing-worker';
 import { ImageStorage } from './image-storage';
 import { MimeType } from './mime-type';
 
@@ -143,12 +144,26 @@ export class FileArchiver {
   }
 
   /**
-   * 画像を自動圧縮する（Canvas経由）
+   * 画像を自動圧縮する。
+   * Worker + OffscreenCanvasを優先し、非対応環境では従来のメインスレッドCanvasへfallbackする。
    * - 最大幅1920px、最大高さ1920pxにリサイズ
    * - JPEG/WebP → quality 0.85で再圧縮
    * - PNG → PNGのまま（透過保持）
    */
   private async compressImage(file: File, maxDim = 1920, quality = 0.85): Promise<File | null> {
+    try {
+      const result = await FileProcessingWorker.compressImage(file, maxDim, quality);
+      if (result?.blob && result.blob.size < file.size) {
+        return new File([result.blob], file.name, { type: result.type || result.blob.type });
+      }
+      return null;
+    } catch (e) {
+      Logger.warn('[FileArchiver] image compression worker fallback', e);
+      return await this.compressImageOnMainThread(file, maxDim, quality);
+    }
+  }
+
+  private async compressImageOnMainThread(file: File, maxDim = 1920, quality = 0.85): Promise<File | null> {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = (e) => {

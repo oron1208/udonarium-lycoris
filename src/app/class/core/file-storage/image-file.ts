@@ -1,5 +1,7 @@
 import { CanvasUtil } from './canvas-util';
 import { FileReaderUtil } from './file-reader-util';
+import { FileProcessingWorker } from './file-processing-worker';
+import { Logger } from '../system/util/logger';
 
 export enum ImageState {
   NULL = 0,
@@ -88,12 +90,10 @@ export class ImageFile {
   }
 
   private static async _createAsync(blob: Blob, name?: string): Promise<ImageFile> {
-    let arrayBuffer = await FileReaderUtil.readAsArrayBufferAsync(blob);
-
     let imageFile = new ImageFile();
-    imageFile.context.identifier = await FileReaderUtil.calcSHA256Async(arrayBuffer);
+    imageFile.context.identifier = await FileReaderUtil.calcSHA256Async(blob);
     imageFile.context.name = name;
-    imageFile.context.blob = new Blob([arrayBuffer], { type: blob.type });
+    imageFile.context.blob = new Blob([blob], { type: blob.type });
     imageFile.context.url = window.URL.createObjectURL(imageFile.context.blob);
 
     try {
@@ -156,7 +156,21 @@ export class ImageFile {
     window.URL.revokeObjectURL(this.context.thumbnail.url);
   }
 
-  private static createThumbnailAsync(context: ImageContext): Promise<ThumbnailContext> {
+  private static async createThumbnailAsync(context: ImageContext): Promise<ThumbnailContext> {
+    try {
+      const result = await FileProcessingWorker.createThumbnail(context.blob, 128);
+      return {
+        type: result.type || result.blob.type,
+        blob: result.blob,
+        url: window.URL.createObjectURL(result.blob),
+      };
+    } catch (e) {
+      Logger.warn('[ImageFile] thumbnail worker fallback', e);
+      return await ImageFile.createThumbnailOnMainThreadAsync(context);
+    }
+  }
+
+  private static createThumbnailOnMainThreadAsync(context: ImageContext): Promise<ThumbnailContext> {
     return new Promise((resolve, reject) => {
       let image: HTMLImageElement = new Image();
       image.onload = (event) => {
