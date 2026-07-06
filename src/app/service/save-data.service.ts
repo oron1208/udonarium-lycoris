@@ -10,6 +10,7 @@ import { AudioStorage } from '@udonarium/core/file-storage/audio-storage';
 import { ImageFile, ImageState } from '@udonarium/core/file-storage/image-file';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 import { MimeType } from '@udonarium/core/file-storage/mime-type';
+import { ServerMediaStorage } from '@udonarium/core/file-storage/server-media-storage';
 import { GameObject } from '@udonarium/core/synchronize-object/game-object';
 import { PromiseQueue } from '@udonarium/core/system/util/promise-queue';
 import { XmlUtil } from '@udonarium/core/system/util/xml-util';
@@ -44,7 +45,7 @@ export class SaveDataService {
     return SaveDataService.queue.add((resolve, reject) => resolve(this._saveRoomAsync(fileName, updateCallback)));
   }
 
-  private _saveRoomAsync(fileName: string = 'ルームデータ', updateCallback?: UpdateCallback): Promise<void> {
+  private async _saveRoomAsync(fileName: string = 'ルームデータ', updateCallback?: UpdateCallback): Promise<void> {
     let files: File[] = [];
     let roomXml = this.convertToXml(new Room());
     let chatXml = this.convertToXml(ChatTabList.instance);
@@ -64,6 +65,7 @@ export class SaveDataService {
     let images: ImageFile[] = [];
     images = images.concat(this.searchImageFiles(roomXml));
     images = images.concat(this.searchImageFiles(chatXml));
+    await this.ensureImagesComplete(images);
     let incompleteCount = 0;
     for (const image of images) {
       if (image.state === ImageState.COMPLETE) {
@@ -84,7 +86,7 @@ export class SaveDataService {
     return SaveDataService.queue.add((resolve, reject) => resolve(this._saveGameObjectAsync(gameObject, fileName, updateCallback)));
   }
 
-  private _saveGameObjectAsync(gameObject: GameObject, fileName: string = 'xml_data', updateCallback?: UpdateCallback): Promise<void> {
+  private async _saveGameObjectAsync(gameObject: GameObject, fileName: string = 'xml_data', updateCallback?: UpdateCallback): Promise<void> {
     let files: File[] = [];
     let xml: string = this.convertToXml(gameObject);
 
@@ -93,6 +95,7 @@ export class SaveDataService {
 //    files = files.concat(this.searchImageFiles(xml));
     let images: ImageFile[] = [];
     images = images.concat(this.searchImageFiles(xml));
+    await this.ensureImagesComplete(images);
     let incompleteCount = 0;
     for (const image of images) {
       if (image.state === ImageState.COMPLETE) {
@@ -117,6 +120,38 @@ export class SaveDataService {
       progresPercent = percent;
       this.ngZone.run(() => updateCallback(progresPercent));
     });
+  }
+
+  /**
+   * ZIP保存前に、サーバー上にあるがローカル未取得の画像を取得して保存漏れを防ぐ。
+   * 大量画像でも待ちすぎないよう、サーバーfetchは16並列バッチ。
+   */
+  private async ensureImagesComplete(images: ImageFile[]): Promise<void> {
+    const seen = new Set<string>();
+    const targets: ImageFile[] = [];
+    for (const image of images) {
+      if (!image || image.state === ImageState.COMPLETE) continue;
+      if (!/^[a-f0-9]{64}$/i.test(image.identifier || '')) continue;
+      if (seen.has(image.identifier)) continue;
+      seen.add(image.identifier);
+      targets.push(image);
+    }
+    if (targets.length < 1) return;
+
+    const BATCH_SIZE = 16;
+    for (let i = 0; i < targets.length; i += BATCH_SIZE) {
+      const batch = targets.slice(i, i + BATCH_SIZE);
+      const results = await Promise.all(batch.map(async image => {
+        try {
+          return await ServerMediaStorage.fetchImage(image.identifier);
+        } catch (e) {
+          return { status: 'unreachable' as const };
+        }
+      }));
+      for (const result of results) {
+        if (result.status === 'ok') ImageStorage.instance.add(result.file);
+      }
+    }
   }
 
   /**
