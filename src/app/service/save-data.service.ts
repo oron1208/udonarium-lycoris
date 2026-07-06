@@ -123,7 +123,7 @@ export class SaveDataService {
   }
 
   /**
-   * ZIP保存前に、サーバー上にあるがローカル未取得の画像を取得して保存漏れを防ぐ。
+   * ZIP保存前に、未取得画像をサーバーまたはURLから取得して保存漏れを防ぐ。
    * 大量画像でも待ちすぎないよう、サーバーfetchは16並列バッチ。
    */
   private async ensureImagesComplete(images: ImageFile[]): Promise<void> {
@@ -131,7 +131,6 @@ export class SaveDataService {
     const targets: ImageFile[] = [];
     for (const image of images) {
       if (!image || image.state === ImageState.COMPLETE) continue;
-      if (!/^[a-f0-9]{64}$/i.test(image.identifier || '')) continue;
       if (seen.has(image.identifier)) continue;
       seen.add(image.identifier);
       targets.push(image);
@@ -141,16 +140,32 @@ export class SaveDataService {
     const BATCH_SIZE = 16;
     for (let i = 0; i < targets.length; i += BATCH_SIZE) {
       const batch = targets.slice(i, i + BATCH_SIZE);
-      const results = await Promise.all(batch.map(async image => {
+      await Promise.all(batch.map(async image => {
         try {
-          return await ServerMediaStorage.fetchImage(image.identifier);
+          // ハッシュidentifierの場合はサーバーから取得
+          if (/^[a-f0-9]{64}$/i.test(image.identifier || '')) {
+            const result = await ServerMediaStorage.fetchImage(image.identifier);
+            if (result.status === 'ok') {
+              ImageStorage.instance.add(result.file);
+            }
+            return;
+          }
+          // URL画像の場合はfetchしてblob化
+          if (image.url && image.state === ImageState.URL) {
+            const response = await fetch(image.url);
+            if (response.ok) {
+              const blob = await response.blob();
+              const newImage = await ImageFile.createAsync(blob, image.name || image.identifier);
+              // 元のidentifierを維持して更新
+              const ctx = newImage.toContext();
+              ctx.identifier = image.identifier;
+              image.apply(ctx);
+            }
+          }
         } catch (e) {
-          return { status: 'unreachable' as const };
+          // silent
         }
       }));
-      for (const result of results) {
-        if (result.status === 'ok') ImageStorage.instance.add(result.file);
-      }
     }
   }
 
