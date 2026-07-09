@@ -6,6 +6,7 @@ import { EventSystem, Network } from '../system';
 import { XmlUtil } from '../system/util/xml-util';
 import { AudioFile } from './audio-file';
 import { AudioStorage } from './audio-storage';
+import { CanvasUtil } from './canvas-util';
 import { FileReaderUtil } from './file-reader-util';
 import { FileProcessingWorker } from './file-processing-worker';
 import { ImageStorage } from './image-storage';
@@ -169,23 +170,22 @@ export class FileArchiver {
       reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-          let { width, height } = img;
-          // サイズオーバー時のみリサイズ
+          let width = img.naturalWidth;
+          let height = img.naturalHeight;
+          // サイズオーバー時のみリサイズ（拡大はしない）
           if (width > maxDim || height > maxDim) {
             const ratio = Math.min(maxDim / width, maxDim / height);
             width = Math.round(width * ratio);
             height = Math.round(height * ratio);
           }
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-          
-          // フォーマット選択
+
+          // 多段階縮小で高品質リサイズ
+          const canvas = CanvasUtil.resizeCanvas(img, width, height);
+
+          // フォーマット選択: PNGは透過保持、それ以外はJPEG
           const isPng = file.type === 'image/png';
           const mimeType = isPng ? 'image/png' : 'image/jpeg';
-          
+
           canvas.toBlob((blob) => {
             if (blob && blob.size < file.size) {
               const compressed = new File([blob], file.name, { type: mimeType });

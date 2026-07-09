@@ -174,17 +174,13 @@ export class ImageFile {
     return new Promise((resolve, reject) => {
       let image: HTMLImageElement = new Image();
       image.onload = (event) => {
-        let scale: number = Math.min(128 / Math.max(image.width, image.height), 1.0);
-        let dstWidth = image.width * scale;
-        let dstHeight = image.height * scale;
+        const maxDim = 128;
+        const scale: number = Math.min(maxDim / Math.max(image.naturalWidth, image.naturalHeight), 1.0);
+        const dstWidth = Math.max(1, Math.round(image.naturalWidth * scale));
+        const dstHeight = Math.max(1, Math.round(image.naturalHeight * scale));
 
-        let canvas: HTMLCanvasElement = document.createElement('canvas');
-        let render: CanvasRenderingContext2D = canvas.getContext('2d');
-        canvas.width = image.width;
-        canvas.height = image.height;
-
-        render.drawImage(image, 0, 0);
-        CanvasUtil.resize(canvas, dstWidth, dstHeight, true);
+        // 多段階縮小で高品質なサムネイルを生成
+        const canvas = CanvasUtil.resizeCanvas(image, dstWidth, dstHeight);
 
         canvas.toBlob(blob => {
           let thumbnail: ThumbnailContext = {

@@ -100,15 +100,17 @@ export class AudioStorage {
     return false;
   }
 
-  get(identifier: string): AudioFile {
+  get(identifier: string, autoFetch: boolean = true): AudioFile {
     let audio: AudioFile = this.hash[identifier];
     if (audio) return audio;
     if (/^[a-f0-9]{64}$/i.test(identifier || '')) {
       audio = AudioFile.createEmpty(identifier);
       this.hash[identifier] = audio;
-      ServerMediaStorage.fetchAudioOrNull(identifier).then(fetched => {
-        if (fetched) this.add(fetched);
-      });
+      if (autoFetch) {
+        ServerMediaStorage.fetchAudioOrNull(identifier).then(fetched => {
+          if (fetched) this.add(fetched);
+        });
+      }
       return audio;
     }
     return null;

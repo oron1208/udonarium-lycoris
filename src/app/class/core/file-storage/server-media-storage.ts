@@ -2,6 +2,7 @@ import { EventSystem } from '../system';
 import { AudioFile } from './audio-file';
 import { ImageFile } from './image-file';
 import { Logger } from '../system/util/logger';
+import { MediaPriority } from './media-load-priority';
 
 /**
  * サーバー fetch の結果を「本当に無い」「サーバー障害」「取得成功」で区別する。
@@ -43,8 +44,8 @@ export class ServerMediaStorage {
   }
 
   /** 画像を取得。戻り値で「成功/不在/サーバー障害」を区別する。in-flight なら同じ Promise を待つ。 */
-  static async fetchImage(identifier: string): Promise<FetchResult<ImageFile>> {
-    const raw = await this.fetchBlob('image', identifier);
+  static async fetchImage(identifier: string, priority: MediaPriority = 'auto'): Promise<FetchResult<ImageFile>> {
+    const raw = await this.fetchBlob('image', identifier, priority);
     return this.toFetchResult<ImageFile>(raw, async blob => {
       if (raw.status === 'ok' && raw.name) {
         return await ImageFile.createAsync(blob, raw.name);
@@ -54,8 +55,8 @@ export class ServerMediaStorage {
   }
 
   /** 音声を取得。戻り値で「成功/不在/サーバー障害」を区別する。in-flight なら同じ Promise を待つ。 */
-  static async fetchAudio(identifier: string): Promise<FetchResult<AudioFile>> {
-    const raw = await this.fetchBlob('audio', identifier);
+  static async fetchAudio(identifier: string, priority: MediaPriority = 'auto'): Promise<FetchResult<AudioFile>> {
+    const raw = await this.fetchBlob('audio', identifier, priority);
     return this.toFetchResult<AudioFile>(raw, async blob => {
       if (raw.status === 'ok' && raw.name) {
         return await AudioFile.createAsync(blob, raw.name);
@@ -135,14 +136,17 @@ export class ServerMediaStorage {
    * サーバーからメディアを取得。in-flight なら同じ Promise を共有する。
    * 404 = missing、ネットワークエラー/5xx = unreachable、200 = ok。
    */
-  private static fetchBlob(kind: 'image' | 'audio', identifier: string): Promise<RawFetchResult> {
+  private static fetchBlob(kind: 'image' | 'audio', identifier: string, priority: MediaPriority = 'auto'): Promise<RawFetchResult> {
     const key = `${kind}:${identifier}`;
     const inflight = this.fetching.get(key);
     if (inflight) return inflight;
 
-    const promise = (async (): Promise<RawFetchResult> => {
+    const promise = (async(): Promise<RawFetchResult> => {
       try {
-        const response = await fetch(`/api/media/${kind}/${encodeURIComponent(identifier)}`);
+        const response = await fetch(
+          `/api/media/${kind}/${encodeURIComponent(identifier)}`,
+          priority === 'auto' ? undefined : ({ priority } as RequestInit & { priority: MediaPriority })
+        );
         if (response.ok) {
           this.knownOnServer.add(identifier);
           const name = this.extractFileName(response);

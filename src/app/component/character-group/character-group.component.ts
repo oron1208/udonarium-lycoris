@@ -16,6 +16,7 @@ import {
 } from '@angular/core';
 import { GameObject } from '@udonarium/core/synchronize-object/game-object';
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
+import { ImageRenderCache } from '@udonarium/core/file-storage/image-render-cache';
 import { ObjectNode } from '@udonarium/core/synchronize-object/object-node';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { ChatTabList } from '@udonarium/chat-tab-list';
@@ -187,6 +188,20 @@ export class CharacterGroupComponent implements OnInit, OnDestroy, AfterViewInit
   private directionMarkerRotated: boolean = false;
   private flatIconNaturalWidth: number = 0;
   private flatIconNaturalHeight: number = 0;
+  private highQualityKomaImageUrl: string = '';
+  private highQualityKomaImageSource: string = '';
+  private highQualityKomaImageKey: string = '';
+
+  get komaDisplayImageUrl(): string {
+    const sourceUrl = this.imageFile?.url || '';
+    if (sourceUrl !== this.highQualityKomaImageSource) {
+      this.highQualityKomaImageUrl = '';
+      this.highQualityKomaImageSource = sourceUrl;
+      this.highQualityKomaImageKey = '';
+    }
+    return this.highQualityKomaImageUrl || sourceUrl;
+  }
+
 
   get flatIconImageStyle(): { [key: string]: string } {
     const mode = this.resolveFlatIconFitMode();
@@ -223,6 +238,38 @@ export class CharacterGroupComponent implements OnInit, OnDestroy, AfterViewInit
     this.changeDetector.markForCheck();
   }
 
+  async onKomaImageLoad(event: Event) {
+    const img = event.target as HTMLImageElement;
+    const sourceUrl = this.imageFile?.url || '';
+    if (!img || !sourceUrl || img.currentSrc !== sourceUrl) return;
+
+    const naturalWidth = img.naturalWidth || img.width || 0;
+    const naturalHeight = img.naturalHeight || img.height || 0;
+    if (naturalWidth <= 0 || naturalHeight <= 0) return;
+
+    const cssSize = this.resolveKomaImageCssSize(naturalWidth, naturalHeight);
+    if (!cssSize || !ImageRenderCache.shouldDownscale(naturalWidth, naturalHeight, cssSize.width, cssSize.height)) return;
+
+    const cacheKey = `${sourceUrl}|${Math.round(cssSize.width)}x${Math.round(cssSize.height)}`;
+    if (this.highQualityKomaImageKey === cacheKey && this.highQualityKomaImageUrl) return;
+    this.highQualityKomaImageKey = cacheKey;
+
+    const renderUrl = await ImageRenderCache.get(sourceUrl, cssSize.width, cssSize.height);
+    if (!renderUrl || this.imageFile?.url !== sourceUrl || this.highQualityKomaImageKey !== cacheKey) return;
+
+    this.highQualityKomaImageUrl = renderUrl;
+    this.changeDetector.markForCheck();
+  }
+
+  private resolveKomaImageCssSize(naturalWidth: number, naturalHeight: number): { width: number; height: number } {
+    const tokenWidth = Math.max(1, this.size * this.gridSize);
+    if (this.characterGroup.specifyKomaImageFlag) {
+      const height = Math.max(1, Number(this.characterGroup.komaImageHeignt || tokenWidth));
+      return { width: Math.max(1, naturalWidth * height / naturalHeight), height };
+    }
+    return { width: tokenWidth, height: Math.max(1, naturalHeight * tokenWidth / naturalWidth) };
+  }
+
   private resolveFlatIconFitMode(): 'center' | 'top' | 'contain' {
     const mode = this.characterGroup?.flatIconFitMode || 'auto';
     if (mode === 'contain') return 'contain';
@@ -255,7 +302,7 @@ export class CharacterGroupComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   get chatBubbleAltitude(): number {
-/*
+    /*
     let cos =  Math.cos(this.roll * Math.PI / 180);
     let sin = Math.abs(Math.sin(this.roll * Math.PI / 180));
     if (cos < 0.5) cos = 0.5;
@@ -442,7 +489,16 @@ export class CharacterGroupComponent implements OnInit, OnDestroy, AfterViewInit
     this.input.onStart = this.onInputStart.bind(this);
   }
 
+
+  private releaseHighQualityKomaImageSource() {
+    if (!this.highQualityKomaImageSource) return;
+    this.highQualityKomaImageUrl = '';
+    this.highQualityKomaImageSource = '';
+    this.highQualityKomaImageKey = '';
+  }
+
   ngOnDestroy() {
+    this.releaseHighQualityKomaImageSource();
     this.stopDirectionMarkerRotate();
     this.input.destroy();
     this.hideHoverPanel();
@@ -534,11 +590,11 @@ export class CharacterGroupComponent implements OnInit, OnDestroy, AfterViewInit
               name: '☑ 影の表示', action: () => {
                 this.isDropShadow = false;
                 SoundEffect.play(PresetSound.sweep);
-               EventSystem.trigger('UPDATE_INVENTORY', null);
-               }
+                EventSystem.trigger('UPDATE_INVENTORY', null);
+              }
             } : {
               name: '☐ 影の表示', action: () => {
-               this.isDropShadow = true;
+                this.isDropShadow = true;
                 SoundEffect.play(PresetSound.sweep);
                 EventSystem.trigger('UPDATE_INVENTORY', null);
               },
@@ -569,7 +625,7 @@ export class CharacterGroupComponent implements OnInit, OnDestroy, AfterViewInit
           SoundEffect.play(PresetSound.sweep);
         }
       },
-/*
+      /*
       {
         name: '削除', action: () => {
           Logger.debug("円柱_削除実行_キャラコマ");
@@ -823,16 +879,16 @@ export class CharacterGroupComponent implements OnInit, OnDestroy, AfterViewInit
       },
       ContextMenuSeparator,
       ...(this.isAdvancedRoom ? [
-      {
-        name: '🎲 イニシアチブロール', action: null, subActions: [
-          { name: '📋 登録式でロール', action: () => this.rollInitiativeBatchByFormula(characters) },
-          { name: '✏️ 手入力でロール...', action: () => this.openInitiativeDiceRoller(characters) },
-        ]
-      },
-      ContextMenuSeparator,
-      {
-        name: '🎲 ダイス一括ロール', action: () => this.openBatchDiceRoller(characters)
-      },
+        {
+          name: '🎲 イニシアチブロール', action: null, subActions: [
+            { name: '📋 登録式でロール', action: () => this.rollInitiativeBatchByFormula(characters) },
+            { name: '✏️ 手入力でロール...', action: () => this.openInitiativeDiceRoller(characters) },
+          ]
+        },
+        ContextMenuSeparator,
+        {
+          name: '🎲 ダイス一括ロール', action: () => this.openBatchDiceRoller(characters)
+        },
       ] : []),
     ];
 

@@ -101,15 +101,17 @@ export class ImageStorage {
     return false;
   }
 
-  get(identifier: string): ImageFile {
+  get(identifier: string, autoFetch: boolean = true): ImageFile {
     let image: ImageFile = this.imageHash[identifier];
     if (image) return image;
     if (/^[a-f0-9]{64}$/i.test(identifier || '')) {
       image = ImageFile.createEmpty(identifier);
       this.imageHash[identifier] = image;
-      ServerMediaStorage.fetchImageOrNull(identifier).then(fetched => {
-        if (fetched) this.add(fetched);
-      });
+      if (autoFetch) {
+        ServerMediaStorage.fetchImageOrNull(identifier).then(fetched => {
+          if (fetched) this.add(fetched);
+        });
+      }
       return image;
     }
     return null;

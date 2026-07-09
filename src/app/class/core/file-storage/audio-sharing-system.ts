@@ -4,6 +4,7 @@ import { AudioStorage, CatalogItem } from './audio-storage';
 import { BufferSharingTask } from './buffer-sharing-task';
 import { FileReaderUtil } from './file-reader-util';
 import { ServerMediaStorage } from './server-media-storage';
+import { MediaLoadPriority } from './media-load-priority';
 import { Logger } from '../system/util/logger';
 
 export class AudioSharingSystem {
@@ -42,7 +43,7 @@ export class AudioSharingSystem {
         // name復元＋フィルタを先に処理
         const needFetch: CatalogItem[] = [];
         for (let item of otherCatalog) {
-          let audio: AudioFile = AudioStorage.instance.get(item.identifier);
+          let audio: AudioFile = AudioStorage.instance.get(item.identifier, false);
           if (audio === null) {
             audio = AudioFile.createEmpty(item.identifier);
             AudioStorage.instance.add(audio);
@@ -58,14 +59,21 @@ export class AudioSharingSystem {
           }
         }
 
-        // バッチ並列fetch（同時16本まで）
-        const BATCH_SIZE = 16;
-        for (let i = 0; i < needFetch.length; i += BATCH_SIZE) {
-          const batch = needFetch.slice(i, i + BATCH_SIZE);
+        // 再生中/参照中の音声を先に、未使用BGM素材は低優先度・少数並列で後回しにする
+        const priorityScores = MediaLoadPriority.getAudioScoreMap();
+        const prioritizedFetch = MediaLoadPriority.sortByScore(needFetch, priorityScores);
+        const hasActiveAudio = prioritizedFetch.some(item => MediaLoadPriority.scoreOf(priorityScores, item.identifier) >= MediaLoadPriority.ACTIVE_AUDIO_SCORE);
+        if (!hasActiveAudio && prioritizedFetch.length > 0) await this.sleep(750);
+        for (let i = 0; i < prioritizedFetch.length;) {
+          const score = MediaLoadPriority.scoreOf(priorityScores, prioritizedFetch[i].identifier);
+          const batchSize = score >= MediaLoadPriority.ACTIVE_AUDIO_SCORE ? 8 : 3;
+          const priority = MediaLoadPriority.fetchPriority(score, MediaLoadPriority.ACTIVE_AUDIO_SCORE);
+          const batch = prioritizedFetch.slice(i, i + batchSize);
+          i += batch.length;
           const results = await Promise.all(
             batch.map(async item => {
               try {
-                const result = await ServerMediaStorage.fetchAudio(item.identifier);
+                const result = await ServerMediaStorage.fetchAudio(item.identifier, priority);
                 return { item, result };
               } catch (e) {
                 return { item, result: { status: 'unreachable' as const } };
@@ -99,7 +107,7 @@ export class AudioSharingSystem {
         let randomRequest: CatalogItem[] = [];
 
         for (let item of request) {
-          let audio: AudioFile = AudioStorage.instance.get(item.identifier);
+          let audio: AudioFile = AudioStorage.instance.get(item.identifier, false);
           if (audio && item.state < audio.state) randomRequest.push({ identifier: item.identifier, state: item.state });
         }
 
@@ -108,7 +116,7 @@ export class AudioSharingSystem {
           Logger.debug('REQUEST_AUDIO_RESOURE Send!!! ' + event.data.receiver + ' -> ' + randomRequest);
           let index = Math.floor(Math.random() * randomRequest.length);
           let item: { identifier: string, state: number } = randomRequest[index];
-          let audio: AudioFile = AudioStorage.instance.get(item.identifier);
+          let audio: AudioFile = AudioStorage.instance.get(item.identifier, false);
           this.startSendTask(audio, event.data.receiver);
         } else {
           // 中継
@@ -135,7 +143,7 @@ export class AudioSharingSystem {
       .on('START_AUDIO_TRANSMISSION', event => {
         Logger.debug('START_AUDIO_TRANSMISSION ' + event.data.fileIdentifier);
         let identifier: string = event.data.fileIdentifier;
-        let audio: AudioFile = AudioStorage.instance.get(identifier);
+        let audio: AudioFile = AudioStorage.instance.get(identifier, false);
         if (this.receiveTaskMap.has(identifier) || (audio && AudioState.COMPLETE <= audio.state)) {
           Logger.warn('CANCEL_TASK_ ' + identifier);
           EventSystem.call('CANCEL_TASK_' + identifier, null, event.sendFrom);
@@ -179,7 +187,7 @@ export class AudioSharingSystem {
   }
 
   private startReceiveTask(identifier: string) {
-    let audio: AudioFile = AudioStorage.instance.get(identifier);
+    let audio: AudioFile = AudioStorage.instance.get(identifier, false);
     let task = BufferSharingTask.createReceiveTask<AudioFileContext>(identifier);
     this.receiveTaskMap.set(identifier, task);
 
@@ -227,6 +235,10 @@ export class AudioSharingSystem {
     let peerIds = Network.peerIds;
     peerIds.splice(peerIds.indexOf(Network.peerId), 1);
     EventSystem.call('REQUEST_AUDIO_RESOURE', { identifiers: request, receiver: Network.peerId, candidatePeers: peerIds }, peerId);
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   private hasActiveTask(): boolean {

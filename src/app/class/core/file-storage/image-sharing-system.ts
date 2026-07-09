@@ -6,6 +6,7 @@ import { ImageContext, ImageFile, ImageState } from './image-file';
 import { CatalogItem, ImageStorage } from './image-storage';
 import { MimeType } from './mime-type';
 import { ServerMediaStorage } from './server-media-storage';
+import { MediaLoadPriority } from './media-load-priority';
 import { Logger } from '../system/util/logger';
 
 export class ImageSharingSystem {
@@ -46,7 +47,7 @@ export class ImageSharingSystem {
         const needFetch: CatalogItem[] = [];
 
         for (let item of otherCatalog) {
-          let image: ImageFile = ImageStorage.instance.get(item.identifier);
+          let image: ImageFile = ImageStorage.instance.get(item.identifier, false);
           if (image === null) {
             image = ImageFile.createEmpty(item.identifier);
             ImageStorage.instance.add(image);
@@ -56,13 +57,19 @@ export class ImageSharingSystem {
           }
         }
 
-        // バッチ並列fetch
-        for (let i = 0; i < needFetch.length; i += BATCH_SIZE) {
-          const batch = needFetch.slice(i, i + BATCH_SIZE);
+        // 見える範囲（卓背景・卓上コマ・VN立ち絵など）を先に、未参照/控え画像を後で取得する
+        const priorityScores = MediaLoadPriority.getImageScoreMap();
+        const prioritizedFetch = MediaLoadPriority.sortByScore(needFetch, priorityScores);
+        for (let i = 0; i < prioritizedFetch.length;) {
+          const score = MediaLoadPriority.scoreOf(priorityScores, prioritizedFetch[i].identifier);
+          const batchSize = score >= MediaLoadPriority.VISIBLE_IMAGE_SCORE ? BATCH_SIZE : 6;
+          const priority = MediaLoadPriority.fetchPriority(score, MediaLoadPriority.VISIBLE_IMAGE_SCORE);
+          const batch = prioritizedFetch.slice(i, i + batchSize);
+          i += batch.length;
           const results = await Promise.all(
             batch.map(async item => {
               try {
-                const result = await ServerMediaStorage.fetchImage(item.identifier);
+                const result = await ServerMediaStorage.fetchImage(item.identifier, priority);
                 return { item, result };
               } catch (e) {
                 return { item, result: { status: 'unreachable' as const } };
@@ -95,7 +102,7 @@ export class ImageSharingSystem {
         let randomRequest: CatalogItem[] = [];
 
         for (let item of request) {
-          let image: ImageFile = ImageStorage.instance.get(item.identifier);
+          let image: ImageFile = ImageStorage.instance.get(item.identifier, false);
           if (image && item.state < image.state)
             randomRequest.push({ identifier: item.identifier, state: item.state });
         }
@@ -131,7 +138,7 @@ export class ImageSharingSystem {
       .on('START_FILE_TRANSMISSION', event => {
         Logger.debug('START_FILE_TRANSMISSION ' + event.data.taskIdentifier);
         let identifier = event.data.taskIdentifier;
-        let image: ImageFile = ImageStorage.instance.get(identifier);
+        let image: ImageFile = ImageStorage.instance.get(identifier, false);
         if (this.receiveTaskMap.has(identifier) || (image && ImageState.COMPLETE <= image.state)) {
           Logger.warn('CANCEL_TASK_ ' + identifier);
           EventSystem.call('CANCEL_TASK_' + identifier, null, event.sendFrom);
@@ -223,7 +230,7 @@ export class ImageSharingSystem {
 
     for (let i = 0; i < catalog.length; i++) {
       let item: { identifier: string, state: number } = catalog[i];
-      let image: ImageFile = ImageStorage.instance.get(item.identifier);
+      let image: ImageFile = ImageStorage.instance.get(item.identifier, false);
 
       let context: ImageContext = {
         identifier: image.identifier,

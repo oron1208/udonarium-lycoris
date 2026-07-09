@@ -222,6 +222,54 @@
     </div>
     <div class="timeline">
       <div class="timeline-item fade-up">
+        <div class="timeline-badge">v1.57</div>
+        <div class="timeline-content">
+          <div class="timeline-date">2026-07-09</div>
+          <h3>初期読み込み高速化・コマ画像の高品質表示</h3>
+          <ul>
+            <li><b>メディア取得の優先度制御</b> — 入室直後は卓背景・卓上コマ・再生中音声など、今見える/鳴っている素材を優先して取得。未参照素材は低優先度で後回しにし、初期表示の待ち時間を軽減</li>
+            <li><b>音声取得の負荷分散</b> — 再生中音声を先に取得し、未使用BGM素材は少数並列でゆっくり取得することで、入室直後の通信集中を抑制</li>
+            <li><b>コマ画像の高品質縮小表示</b> — 大きい立ち絵やコマ画像を表示サイズに近い解像度へ多段階縮小してから描画し、ジャギ・モアレ・ガビガビ感を軽減</li>
+            <li><b>画像処理品質の改善</b> — Canvas/Worker双方のリサイズ処理を多段階縮小化し、アップロード時圧縮や表示用キャッシュの品質を改善</li>
+          </ul>
+        </div>
+      </div>
+      <div class="timeline-item fade-up">
+        <div class="timeline-badge">v1.56</div>
+        <div class="timeline-content">
+          <div class="timeline-date">2026-07-09</div>
+          <h3>ファイル処理Worker化・画像処理品質改善</h3>
+          <ul>
+            <li><b>重いファイル処理をWorker化</b> — 画像処理・保存処理中のUI停止を軽減し、大きな部屋データでも操作感を改善</li>
+            <li><b>多段階リサイズ</b> — 画像圧縮時の縮小処理を改善し、細部のジャギや粗さを軽減</li>
+          </ul>
+        </div>
+      </div>
+      <div class="timeline-item fade-up">
+        <div class="timeline-badge">v1.55</div>
+        <div class="timeline-content">
+          <div class="timeline-date">2026-07-09</div>
+          <h3>アップロード高速化・ZIP保存画像漏れ修正</h3>
+          <ul>
+            <li><b>サーバー重複確認</b> — アップロード前に既存ファイルを確認し、同一素材の再アップロードを削減</li>
+            <li><b>ZIP保存の安定化</b> — サーバー上にある不足画像を保存前に取得し、部屋データ保存時の画像漏れを防止</li>
+            <li><b>ファイル名表示修正</b> — サーバー配信素材の名前表示を改善</li>
+          </ul>
+        </div>
+      </div>
+      <div class="timeline-item fade-up">
+        <div class="timeline-badge">v1.54</div>
+        <div class="timeline-content">
+          <div class="timeline-date">2026-07-05</div>
+          <h3>サーバー配信化強化・平面モード/ホットバー改善</h3>
+          <ul>
+            <li><b>画像・音声ファイルのサーバー配信化</b> — P2Pだけに頼らず、サーバー優先取得とリトライで再接続時の安定性を向上</li>
+            <li><b>平面モード改善</b> — マウスホイール拡大縮小（Ctrl不要）とマウスポインタ共有に対応</li>
+            <li><b>ホットバー改善</b> — 右クリック編集、Ctrl+クリック削除、マクロコピーを追加</li>
+          </ul>
+        </div>
+      </div>
+      <div class="timeline-item fade-up">
         <div class="timeline-badge">v1.53</div>
         <div class="timeline-content">
           <div class="timeline-date">2026-07-03</div>
