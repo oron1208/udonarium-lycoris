@@ -62,6 +62,7 @@ export class WebSocketRelayConnection implements Connection {
   private snapshotSaveDueAt = 0;
   private snapshotDirtyAt = 0;
   private forceSnapshotApply = false;
+  private bundleDownloaded = false;
   open(peerId: string)
   open(userId: string, roomId: string, roomName: string, password: string)
   open(...args: any[]) {
@@ -221,7 +222,7 @@ export class WebSocketRelayConnection implements Connection {
         this.setPeers(message.peers.filter(peerId => peerId !== this.peerId && this.isSameRoomPeer(peerId)));
         break;
       case 'room-snapshot':
-        this.receiveSnapshot(message.events || [], message.seq || 0, message.snapshot, message.snapshotSeq || 0);
+        this.receiveSnapshot(message.events || [], message.seq || 0, message.snapshot, message.snapshotSeq || 0, message.roomKey);
         break;
       case 'relay-data':
         this.receiveRelayData(message.from, message.container, message.seq || 0);
@@ -244,8 +245,13 @@ export class WebSocketRelayConnection implements Connection {
     }
   }
 
-  private receiveSnapshot(events: StoredRelayEvent[], serverSeq: number, snapshot?: RoomSnapshot, snapshotSeq: number = 0) {
+  private async receiveSnapshot(events: StoredRelayEvent[], serverSeq: number, snapshot?: RoomSnapshot, snapshotSeq: number = 0, roomKey?: string) {
     this.inboundQueue = this.inboundQueue.then(async () => {
+      // 入室時の初回スナップショットの場合、メディアを一括ダウンロードしてから適用する
+      if (snapshot && snapshot.data && snapshot.data.objects && roomKey && !this.bundleDownloaded) {
+        this.bundleDownloaded = true;
+        await this.downloadMediaBundle(snapshot.data.objects, roomKey);
+      }
       if (snapshot && snapshot.data && snapshot.data.objects && (snapshotSeq > this.lastSeq || this.forceSnapshotApply)) {
         await this.applyObjectSnapshot(snapshot.data.objects, snapshot.from || 'server-snapshot');
         this.forceSnapshotApply = false;
@@ -264,6 +270,89 @@ export class WebSocketRelayConnection implements Connection {
 
   private createObjectSnapshot(): { objects: ObjectContext[] } {
     return { objects: ObjectStore.instance.getObjects().map(object => object.toContext()) };
+  }
+
+  /**
+   * 入室時にルームの全メディアを一括ダウンロードする。
+   * サーバーのmanifest APIから必要なhash一覧を取得し、並列バッチでfetchする。
+   * ダウンロード完了後にスナップショットが適用されるため、画像欠落を防げる。
+   */
+  private async downloadMediaBundle(objects: ObjectContext[], roomKey: string): Promise<void> {
+    // スナップショットから64文字のhex hashを抽出
+    const hashPattern = /^[a-f0-9]{64}$/i;
+ const allHashes = new Set<string>();
+    for (const obj of objects) {
+      const text = JSON.stringify(obj);
+      const parts = text.match(/[a-f0-9]{64}/gi) || [];
+      for (const p of parts) {
+        if (hashPattern.test(p)) allHashes.add(p.toLowerCase());
+      }
+    }
+    if (allHashes.size === 0) return;
+
+    // サーバーのmanifest APIで実際に存在するメディアを確認
+    let manifest: { images?: string[]; audios?: string[] };
+    try {
+      const resp = await fetch(`/api/room/${encodeURIComponent(roomKey)}/media-manifest`);
+      if (!resp.ok) return;
+      manifest = await resp.json();
+    } catch (e) {
+      Logger.warn('[bundle] manifest fetch failed, skipping bulk download', e);
+      return;
+    }
+
+    const images = manifest.images || [];
+    const audios = manifest.audios || [];
+    const total = images.length + audios.length;
+    if (total === 0) return;
+
+    Logger.info(`[bundle] downloading ${total} media files (${images.length} images, ${audios.length} audios)`);
+    EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { status: 'downloading', total, done: 0 });
+
+    // ServerMediaStorageを動的import（循環参照を避ける）
+    const { ServerMediaStorage } = await import('../../file-storage/server-media-storage');
+    const { ImageStorage } = await import('../../file-storage/image-storage');
+    const { AudioStorage } = await import('../../file-storage/audio-storage');
+
+    let done = 0;
+    const BATCH = 16;
+
+    // 画像を並列バッチでダウンロード
+    for (let i = 0; i < images.length; i += BATCH) {
+      const batch = images.slice(i, i + BATCH);
+      await Promise.all(batch.map(async (hash: string) => {
+        try {
+          const result = await ServerMediaStorage.fetchImage(hash, 'high');
+          if (result.status === 'ok') {
+            ImageStorage.instance.add(result.file);
+          }
+        } catch (e) {
+          // 個別ファイル失敗は続行
+        }
+        done++;
+        EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { status: 'downloading', total, done });
+      }));
+    }
+
+    // 音声を並列バッチでダウンロード
+    for (let i = 0; i < audios.length; i += BATCH) {
+      const batch = audios.slice(i, i + BATCH);
+      await Promise.all(batch.map(async (hash: string) => {
+        try {
+          const result = await ServerMediaStorage.fetchAudio(hash, 'high');
+          if (result.status === 'ok') {
+            AudioStorage.instance.add(result.file);
+          }
+        } catch (e) {
+          // 個別ファイル失敗は続行
+        }
+        done++;
+        EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { status: 'downloading', total, done });
+      }));
+    }
+
+    EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { status: 'done', total, done });
+    Logger.info(`[bundle] download complete: ${done}/${total}`);
   }
 
   private async applyObjectSnapshot(objects: ObjectContext[], sendFrom: string) {

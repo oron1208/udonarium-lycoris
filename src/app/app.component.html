@@ -1,6 +1,18 @@
 <div id="app-table-layer" style="position: absolute; width: 100%; height: 100%; overflow: hidden;">
   <game-table></game-table>
 </div>
+
+<!-- メディア一括ダウンロード中表示 -->
+<div *ngIf="isBundleLoading" class="bundle-loading-overlay">
+  <div class="bundle-loading-card">
+    <div class="bundle-loading-spinner"></div>
+    <div class="bundle-loading-text">\u30c7\u30fc\u30bf\u3092\u4e00\u62ec\u30c0\u30a6\u30f3\u30ed\u30fc\u30c9\u4e2d...</div>
+    <div class="bundle-loading-progress">
+      <div class="bundle-loading-bar" [style.width.%]="bundleTotal > 0 ? (bundleDone / bundleTotal * 100) : 0"></div>
+    </div>
+    <div class="bundle-loading-count">{{ bundleDone }} / {{ bundleTotal }}</div>
+  </div>
+</div>
 <div *ngIf="developerAnnouncementText" class="developer-announcement" [class.danger]="developerAnnouncementLevel === 'danger'">
   <span>{{ developerAnnouncementText }}</span>
   <button type="button" (click)="developerAnnouncementText = ''">×</button>

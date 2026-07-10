@@ -103,6 +103,11 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   developerAnnouncementText = '';
   developerAnnouncementLevel = 'warning';
 
+  // メディア一括ダウンロード中表示
+  isBundleLoading = false;
+  bundleTotal = 0;
+  bundleDone = 0;
+
   get isGmMode(): boolean { return this.gmModeService.isGm; }
 
   toggleMacroHotbarVisible() {
@@ -298,6 +303,18 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         this.ngZone.run(() => {
           const data = event.data || {};
           this.handleDeveloperControlMessage(data);
+        });
+      })
+      .on('MEDIA_BUNDLE_PROGRESS', event => {
+        this.ngZone.run(() => {
+          const data = event.data || {};
+          if (data.status === 'downloading') {
+            this.isBundleLoading = true;
+            this.bundleTotal = data.total || 0;
+            this.bundleDone = data.done || 0;
+          } else {
+            this.isBundleLoading = false;
+          }
         });
       })
       .on('UPDATE_GAME_OBJECT', event => { this.syncAdvancedRoomUiClass(); this.lazyNgZoneUpdate(event.isSendFromSelf); })

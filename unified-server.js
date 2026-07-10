@@ -1489,6 +1489,36 @@ function createAppHandler() {
     return;
   }
 
+  // ===== Room Media Manifest (一括ダウンロード用) =====
+  const manifestMatch = requestPath.match(/^\/api\/room\/([^/]+)\/media-manifest$/);
+  if (manifestMatch && req.method === 'GET') {
+    const roomKey = decodeURIComponent(manifestMatch[1]);
+    const room = roomStates.get(roomKey);
+    if (!room || roomKey === 'lobby') {
+      res.writeHead(404, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ ok: false, error: 'room-not-found' }));
+      return;
+    }
+    const text = JSON.stringify({ snapshot: room.snapshot || null, events: room.events || [] });
+    const hashes = new Set();
+    let match;
+    MEDIA_HASH_PATTERN.lastIndex = 0;
+    while ((match = MEDIA_HASH_PATTERN.exec(text))) hashes.add(match[0].toLowerCase());
+
+    // 各hashがサーバーに存在するか確認
+    const images = [];
+    const audios = [];
+    for (const hash of hashes) {
+      const imgPath = path.join(MEDIA_ROOT, 'image', hash);
+      const audPath = path.join(MEDIA_ROOT, 'audio', hash);
+      try { fs.statSync(imgPath); images.push(hash); } catch (_) {}
+      try { fs.statSync(audPath); audios.push(hash); } catch (_) {}
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache' });
+    res.end(JSON.stringify({ ok: true, images, audios, total: images.length + audios.length }));
+    return;
+  }
+
   // ===== Audio Library API =====
   if (requestPath === '/api/audio-library' && req.method === 'GET') {
     handleAudioLibraryList(req, res);
