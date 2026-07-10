@@ -57,6 +57,9 @@
     <button (click)="forceResync()" [disabled]="!networkService.isOpen">
       <span>強制再同期</span>
     </button>
+    <button (click)="saveSnapshot()" [disabled]="!networkService.isOpen">
+      <span>💾 ルームデータを保存</span>
+    </button>
     <ng-container *ngIf="networkService.peerIds.length > 1">
       <button (click)="showReConnect()" class="danger">
         <span>再接続</span>

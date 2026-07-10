@@ -30,4 +30,5 @@ export interface Connection {
   setIceServers?(iceServers: RTCIceServer[]);
   listAllPeers(): Promise<string[]>
   forceResync?(): void
+  manualSaveSnapshot?(): boolean
 }

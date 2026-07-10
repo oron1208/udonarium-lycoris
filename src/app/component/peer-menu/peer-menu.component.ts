@@ -132,6 +132,13 @@ export class PeerMenuComponent implements OnInit, OnDestroy, AfterViewInit {
     this.help = '強制再同期を要求しました。数秒待ってから表示を確認してください。';
   }
 
+  saveSnapshot() {
+    const ok = Network.manualSaveSnapshot();
+    this.help = ok
+      ? 'ルームデータをサーバーに保存しました。次に参加する人がデータを受け取りやすくなります。'
+      : '保存に失敗しました。部屋に入室済みであることを確認してください。';
+  }
+
   toggleGmCursorShareDisabled() {
     this.isGmCursorShareDisabled = !this.isGmCursorShareDisabled;
     try {

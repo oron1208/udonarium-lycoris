@@ -168,6 +168,11 @@ export class Network {
     if (this.connection && this.connection.forceResync) this.connection.forceResync();
   }
 
+  manualSaveSnapshot(): boolean {
+    if (this.connection && this.connection.manualSaveSnapshot) return this.connection.manualSaveSnapshot();
+    return false;
+  }
+
   private initializeConnection(): Connection {
     // 通信方式だけ最新版ユドナリウムのSkyWay 2023(P2P)へ戻す。
     // リコリス側の卓改造/サーバー保存APIは残す。

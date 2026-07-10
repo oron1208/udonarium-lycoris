@@ -248,6 +248,7 @@ export class WebSocketRelayConnection implements Connection {
   private async receiveSnapshot(events: StoredRelayEvent[], serverSeq: number, snapshot?: RoomSnapshot, snapshotSeq: number = 0, roomKey?: string) {
     this.inboundQueue = this.inboundQueue.then(async () => {
       // 入室時の初回スナップショットの場合、メディアを一括ダウンロードしてから適用する
+      Logger.info(`[bundle-check] snapshot=${!!snapshot} hasData=${!!(snapshot && snapshot.data)} hasObjects=${!!(snapshot && snapshot.data && snapshot.data.objects)} roomKey=${roomKey} bundleDownloaded=${this.bundleDownloaded}`);
       if (snapshot && snapshot.data && snapshot.data.objects && roomKey && !this.bundleDownloaded) {
         this.bundleDownloaded = true;
         await this.downloadMediaBundle(snapshot.data.objects, roomKey);
@@ -419,6 +420,13 @@ export class WebSocketRelayConnection implements Connection {
     if (this.snapshotSaveTimer != null) clearTimeout(this.snapshotSaveTimer);
     this.snapshotSaveDueAt = dueAt;
     this.snapshotSaveTimer = setTimeout(() => this.saveSnapshot(), Math.max(0, dueAt - now));
+  }
+
+  /** 手動スナップショット保存（UIボタンから呼び出し可能） */
+  manualSaveSnapshot(): boolean {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN || !this.peerContext.isRoom) return false;
+    this.saveSnapshot();
+    return true;
   }
 
   private saveSnapshot() {
