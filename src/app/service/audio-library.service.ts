@@ -31,12 +31,7 @@ export class AudioLibraryService {
   }
 
   private detectBaseUrl(): string {
-    // ローカル開発環境（localhost / 192.168.x.x）の場合はVPSを参照
-    const host = window.location.hostname;
-    if (host === 'localhost' || host.startsWith('192.168.') || host.startsWith('127.')) {
-      return 'https://udonarium-lycoris.ddns.net';
-    }
-    // 本番環境は同じオリジン
+    // 常に同じオリジンを使用（ローカル・本番どちらでも動作）
     return '';
   }
 
