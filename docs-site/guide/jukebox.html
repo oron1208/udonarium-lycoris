@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
+<title>ジュークボックス・ミュージックライブラリ 操作説明 - ユドナリウムリコリス</title>
+<meta name="description" content="ユドナリウムリコリスのジュークボックス機能（BGM・SE・環境音）とミュージックライブラリの使い方を解説">
+<link rel="canonical" href="https://udonarium-lycoris.ddns.net/docs/guide/jukebox.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+
+<div class="bg-fixed">
+  <div class="bg-layer bg-layer-1"></div>
+  <div class="bg-layer bg-layer-2"></div>
+</div>
+
+<canvas id="particles"></canvas>
+
+<nav class="nav scrolled">
+  <div class="nav-inner">
+    <a href="../" class="nav-logo"><span class="logo-icon">◈</span> ユドナリウムリコリス</a>
+    <div class="nav-links">
+      <a href="../#about">概要</a>
+      <a href="../#connect">接続先</a>
+      <a href="../#guide">操作説明</a>
+      <a href="../#updates">更新履歴</a>
+      <a href="https://github.com/oron1208/udonarium-lycoris" target="_blank" class="nav-link-github">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<aside class="guide-toc fade-up" id="toc">
+  <details open>
+    <summary>📑 目次</summary>
+    <ol>
+      <li><a href="#overview">ジュークボックスとは</a></li>
+      <li><a href="#panel">ジュークボックスを開く</a></li>
+      <li><a href="#modes">3つの再生モード</a></li>
+      <li><a href="#table-bgm">テーブルBGM</a></li>
+      <li><a href="#combat-bgm">戦闘BGM</a></li>
+      <li><a href="#priority">BGM優先度システム</a></li>
+      <li><a href="#volume">音量調整</a></li>
+      <li><a href="#library">ミュージックライブラリ</a></li>
+      <li><a href="#streaming">サーバー配信について</a></li>
+      <li><a href="#tips">Tips</a></li>
+    </ol>
+  </details>
+</aside>
+
+<article class="section guide-article" style="padding-top: 100px;">
+  <div class="container">
+
+    <div class="guide-page-header fade-up">
+      <span class="section-tag">GUIDE</span>
+      <h2 class="section-title">🎵 ジュークボックス・ミュージックライブラリ</h2>
+      <p class="section-sub">BGM・効果音・環境音の再生と、サーバー配信のミュージックライブラリを利用できます。</p>
+    </div>
+
+    <!-- セクション1: 概要 -->
+    <section id="overview" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">01</span>
+        <h3>ジュークボックスとは</h3>
+      </div>
+      <p>TRPGの雰囲気作りに欠かせない音楽再生機能です。以下のことができます。</p>
+      <ul class="guide-feature-list">
+        <li><span class="guide-feature-icon">🎵</span>BGMのループ再生（音量調整付き）</li>
+        <li><span class="guide-feature-icon">🔊</span>効果音（SE）の1回再生</li>
+        <li><span class="guide-feature-icon">🌧️</span>環境音のループ再生</li>
+        <li><span class="guide-feature-icon">🗺️</span>テーブルごとの自動BGM切り替え</li>
+        <li><span class="guide-feature-icon">⚔️</span>戦闘開始時の自動BGM切り替え</li>
+        <li><span class="guide-feature-icon">📚</span>サーバー配信のミュージックライブラリ</li>
+      </ul>
+    </section>
+
+    <!-- セクション2: パネルを開く -->
+    <section id="panel" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">02</span>
+        <h3>ジュークボックスを開く</h3>
+      </div>
+      <p>サイドメニューから「<strong>ジュークボックス</strong>」ボタンをクリックすると、ジュークボックスパネルが開きます。</p>
+      <div class="guide-image-card fade-up" style="margin-top: 16px;">
+        <img src="../assets/guide/jukebox-01-panel.png" alt="ジュークボックスパネル">
+        <p class="guide-image-caption">▲ ジュークボックスパネル。上部のタブでBGM・SE・環境音を切り替え、音量スライダーで調整できる。</p>
+      </div>
+    </section>
+
+    <!-- セクション3: 3つの再生モード -->
+    <section id="modes" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">03</span>
+        <h3>3つの再生モード</h3>
+      </div>
+      <p>ジュークボックスには<b>3つの再生モード</b>があります。タブを切り替えて使い分けます。</p>
+
+      <h4 class="guide-subhead">🎵 BGMモード</h4>
+      <ul>
+        <li>音楽ファイルを<b>ループ再生</b>する</li>
+        <li>音量スライダーで調整可能</li>
+        <li>テーブルBGM・戦闘BGMの再生にも使用される</li>
+        <li>複数のBGMを同時に再生可能（優先度システムで自動調整）</li>
+      </ul>
+
+      <h4 class="guide-subhead">🔊 SE（効果音）モード</h4>
+      <ul>
+        <li>効果音を<b>1回だけ再生</b>する</li>
+        <li>ドアの開閉音、爆発音、ファンファーレなどに最適</li>
+        <li>音量スライダーで調整可能</li>
+        <li>停止ボタンですぐに止められる</li>
+      </ul>
+
+      <h4 class="guide-subhead">🌧️ 環境音モード</h4>
+      <ul>
+        <li>環境音を<b>ループ再生</b>する</li>
+        <li>雨音、風音、川のせせらぎなどの場面作りに</li>
+        <li>BGMと同時に再生可能</li>
+        <li>音量スライダーで調整可能</li>
+      </ul>
+      
+    </section>
+
+    <!-- セクション4: テーブルBGM -->
+    <section id="table-bgm" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">04</span>
+        <h3>テーブルBGM <span class="guide-section-badge">自動再生</span></h3>
+      </div>
+      <p>テーブルごとにBGMを設定しておくと、そのテーブルに入った時に<b>自動的にBGMが再生</b>されます。</p>
+      <div class="guide-steps">
+        <ol>
+          <li>テーブル設定パネルを開く</li>
+          <li>BGM欄で音楽ファイルを選択</li>
+          <li>テーブルに入ったプレイヤー全員に自動再生</li>
+        </ol>
+      </div>
+      <div class="guide-callout callout-tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <p>街・ダンジョン・ボス部屋など、テーブルを切り替えるだけで雰囲気をがらりと変えられます。</p>
+        </div>
+      </div>
+      <div class="guide-image-card fade-up" style="margin-top: 16px;">
+        <img src="../assets/guide/jukebox-02-table-bgm.png" alt="テーブル設定のBGM指定">
+        <p class="guide-image-caption">▲ テーブル設定でBGMを指定する。テーブルに入ったプレイヤー全員に自動再生される。</p>
+      </div>
+    </section>
+
+    <!-- セクション5: 戦闘BGM -->
+    <section id="combat-bgm" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">05</span>
+        <h3>戦闘BGM <span class="guide-section-badge">自動切替</span></h3>
+      </div>
+      <p>戦闘管理パネルで「<strong>戦闘BGM</strong>」を設定しておくと、戦闘開始ボタンを押した瞬間に<b>自動的に戦闘BGMに切り替わります</b>。</p>
+      <ul>
+        <li>戦闘開始 → 戦闘BGMが自動再生</li>
+        <li>戦闘終了 → 元のBGM（テーブルBGM等）に自動的に戻る</li>
+        <li>戦闘管理パネルから直接BGMを選択・再生できる</li>
+      </ul>
+      <div class="guide-image-card fade-up" style="margin-top: 16px;">
+        <img src="../assets/guide/jukebox-03-combat-bgm.png" alt="戦闘管理パネルの戦闘BGM">
+        <p class="guide-image-caption">▲ 戦闘管理パネルで戦闘BGMを設定。戦闘開始ボタンを押すと自動的に切り替わる。</p>
+      </div>
+    </section>
+
+    <!-- セクション6: 優先度システム -->
+    <section id="priority" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">06</span>
+        <h3>BGM優先度システム</h3>
+      </div>
+      <p>複数のBGMソースが競合した場合、<b>優先度が高い方が勝つ</b>仕組みになっています。</p>
+      <div class="guide-priority-list" style="display: flex; flex-direction: column; gap: 8px; margin: 16px 0;">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: rgba(200,60,60,0.12); border-radius: 6px; border-left: 3px solid #c83c3c;">
+          <span style="font-size: 20px;">⚔️</span>
+          <div><b>戦闘BGM</b> <span style="color: #888; font-size: 13px;">— 優先度：最高</span></div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: rgba(60,120,200,0.12); border-radius: 6px; border-left: 3px solid #3c78c8;">
+          <span style="font-size: 20px;">🗺️</span>
+          <div><b>テーブルBGM</b> <span style="color: #888; font-size: 13px;">— 優先度：高</span></div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: rgba(60,160,80,0.12); border-radius: 6px; border-left: 3px solid #3ca050;">
+          <span style="font-size: 20px;">🎵</span>
+          <div><b>手動再生（BGMモード）</b> <span style="color: #888; font-size: 13px;">— 優先度：通常</span></div>
+        </div>
+      </div>
+      <p>例：街でテーブルBGMが流れている状態で戦闘が始まると、戦闘BGMが優先されて切り替わります。戦闘が終わるとテーブルBGMに戻ります。</p>
+    </section>
+
+    <!-- セクション7: 音量調整 -->
+    <section id="volume" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">07</span>
+        <h3>音量調整</h3>
+      </div>
+      <p>各再生モードごとに<b>独立した音量スライダー</b>があります。</p>
+      <ul>
+        <li><b>BGM音量</b> — BGMモード・テーブルBGM・戦闘BGMすべてに適用</li>
+        <li><b>SE音量</b> — 効果音専用</li>
+        <li><b>環境音音量</b> — 環境音専用</li>
+      </ul>
+      <div class="guide-image-card fade-up" style="margin-top: 16px;">
+        <img src="../assets/guide/jukebox-01-panel.png" alt="ジュークボックスパネルの音量スライダー">
+        <p class="guide-image-caption">▲ パネル上部の音量スライダー。BGM音量・試聴音量などを個別に調整できる。</p>
+      </div>
+      <p class="guide-note">音量設定は各プレイヤー個別です。他のプレイヤーの音量は変更されません。</p>
+    </section>
+
+    <!-- セクション8: ミュージックライブラリ -->
+    <section id="library" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">08</span>
+        <h3>ミュージックライブラリ <span class="guide-section-badge">サーバー配信</span></h3>
+      </div>
+      <p>サーバーに登録された音楽ファイルを、全プレイヤーに<b>ストリーミング配信</b>します。各プレイヤーが自分で音源を用意する必要はありません。</p>
+
+      <h4 class="guide-subhead">使い方</h4>
+      <ul>
+        <li>ジュークボックスまたはテーブル設定で、ライブラリから音楽を選択して再生</li>
+        <li>ファイルはサーバーから配信されるので、P2Pの接続状況に依存しない</li>
+        <li>カテゴリ別（BGM/SE/環境音）に整理されている</li>
+      </ul>
+
+      <h4 class="guide-subhead">試聴・ダウンロード</h4>
+      <p>ライブラリの楽曲は以下のページから試聴・ダウンロードできます。</p>
+      <div style="margin: 16px 0;">
+        <a href="../library/index.html" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 24px; background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; text-decoration: none; border-radius: 6px; font-weight: 500;">
+          🎹 ミュージックライブラリを見る
+        </a>
+      </div>
+
+      <div class="guide-callout callout-tip" style="border-left-color: #e8a030;">
+        <div class="callout-icon">🎵</div>
+        <div class="callout-body">
+          <p><b>本ライブラリの楽曲は、AI（生成AI）を用いて作成された音源です。</b>著作権フリーで TRPG や卓上ゲームのBGMとしてご自由にお使いいただけます。商用利用についてはお問い合わせください。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- セクション9: サーバー配信 -->
+    <section id="streaming" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">09</span>
+        <h3>サーバー配信について</h3>
+      </div>
+      <p>ユドナリウムリコリスでは、音声ファイルの同期に<b>サーバー配信方式</b>を採用しています。</p>
+      <ul>
+        <li><b>サーバーから直接ストリーミング</b> — P2Pに頼らず安定配信</li>
+        <li><b>リトライ強化</b> — P2Pフォールバック前にサーバー配信を複数回リトライ</li>
+        <li><b>全プレイヤーに同時配信</b> — 接続状況による音切れを軽減</li>
+      </ul>
+      <p class="guide-note">v1.54.0から、画像・音声ファイルともにサーバー配信優先に切り替わりました。</p>
+    </section>
+
+    <!-- Tips -->
+    <section id="tips" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">10</span>
+        <h3>Tips</h3>
+      </div>
+      <ul class="guide-tips-list">
+        <li>🎵 BGM + 環境音を同時に再生して、より臨場感のある音環境を作れる</li>
+        <li>⚔️ 戦闘BGMを設定しておけば、戦闘のたびに手動で切り替える必要がない</li>
+        <li>🗺️ テーブルごとにBGMを設定すれば、場面転換がスムーズ</li>
+        <li>🔊 SEは1回再生なので、ファンファーレや開門音などに最適</li>
+        <li>📺 音量は各プレイヤー個別設定。ヘッドホン派とスピーカー派が混在してもOK</li>
+        <li>💾 部屋データ保存時にジュークボックス設定も一緒に保存される</li>
+      </ul>
+    </section>
+
+    <div class="guide-nav fade-up">
+      <a href="index.html" class="guide-nav-back">← 操作説明一覧に戻る</a>
+    </div>
+  </div>
+</article>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand"><span class="logo-icon">◈</span> ユドナリウムリコリス</div>
+      <div class="footer-links">
+        <a href="https://cylinder-lily.com" target="_blank">リリィ</a>
+        <a href="https://github.com/TK11235/udonarium" target="_blank">オリジナル版</a>
+        <a href="https://github.com/oron1208/udonarium-lycoris" target="_blank">GitHub</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 Udonarium Lycoris.</div>
+    </div>
+  </div>
+</footer>
+
+<script src="../main.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) entry.target.classList.add('visible');
+    });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+});
+</script>
+</body>
+</html>
