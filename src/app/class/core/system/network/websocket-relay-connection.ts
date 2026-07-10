@@ -273,86 +273,93 @@ export class WebSocketRelayConnection implements Connection {
   }
 
   /**
-   * 入室時にルームの全メディアを一括ダウンロードする。
-   * サーバーのmanifest APIから必要なhash一覧を取得し、並列バッチでfetchする。
-   * ダウンロード完了後にスナップショットが適用されるため、画像欠落を防げる。
+   * 入室時にルームの全メディアをZIPで一括ダウンロードする。
+   * サーバーの /api/room/:roomKey/bundle から全画像・音声を1つのZIPで受け取り、
+   * 展開して ImageStorage / AudioStorage に登録する。
    */
   private async downloadMediaBundle(objects: ObjectContext[], roomKey: string): Promise<void> {
-    // スナップショットから64文字のhex hashを抽出
-    const hashPattern = /^[a-f0-9]{64}$/i;
- const allHashes = new Set<string>();
-    for (const obj of objects) {
-      const text = JSON.stringify(obj);
-      const parts = text.match(/[a-f0-9]{64}/gi) || [];
-      for (const p of parts) {
-        if (hashPattern.test(p)) allHashes.add(p.toLowerCase());
-      }
-    }
-    if (allHashes.size === 0) return;
-
-    // サーバーのmanifest APIで実際に存在するメディアを確認
-    let manifest: { images?: string[]; audios?: string[] };
+    let total = 0;
     try {
-      const resp = await fetch(`/api/room/${encodeURIComponent(roomKey)}/media-manifest`);
+      const resp = await fetch(`/api/room/${encodeURIComponent(roomKey)}/bundle`, { method: 'HEAD' });
+      const len = parseInt(resp.headers.get('content-length') || '0', 10);
+      // HEADで存在確認（0件の場合はmanifest JSONが返る）
       if (!resp.ok) return;
-      manifest = await resp.json();
     } catch (e) {
-      Logger.warn('[bundle] manifest fetch failed, skipping bulk download', e);
+      Logger.warn('[bundle] HEAD check failed, skipping', e);
       return;
     }
 
-    const images = manifest.images || [];
-    const audios = manifest.audios || [];
-    const total = images.length + audios.length;
-    if (total === 0) return;
+    Logger.info('[bundle] downloading media bundle ZIP...');
+    EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { status: 'downloading', total: 0, done: 0 });
 
-    Logger.info(`[bundle] downloading ${total} media files (${images.length} images, ${audios.length} audios)`);
-    EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { status: 'downloading', total, done: 0 });
+    try {
+      const { ServerMediaStorage } = await import('../../file-storage/server-media-storage');
+      const { ImageStorage } = await import('../../file-storage/image-storage');
+      const { AudioStorage } = await import('../../file-storage/audio-storage');
+      const JSZip = (await import('jszip')).default;
 
-    // ServerMediaStorageを動的import（循環参照を避ける）
-    const { ServerMediaStorage } = await import('../../file-storage/server-media-storage');
-    const { ImageStorage } = await import('../../file-storage/image-storage');
-    const { AudioStorage } = await import('../../file-storage/audio-storage');
+      const resp = await fetch(`/api/room/${encodeURIComponent(roomKey)}/bundle`);
+      if (!resp.ok) {
+        Logger.warn('[bundle] fetch failed', resp.status);
+        EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { status: 'done', total: 0, done: 0 });
+        return;
+      }
 
-    let done = 0;
-    const BATCH = 16;
+      const arrayBuffer = await resp.arrayBuffer();
+      const zip = await JSZip.loadAsync(arrayBuffer);
 
-    // 画像を並列バッチでダウンロード
-    for (let i = 0; i < images.length; i += BATCH) {
-      const batch = images.slice(i, i + BATCH);
-      await Promise.all(batch.map(async (hash: string) => {
+      // manifestから件数取得
+      const manifestFile = zip.file('_manifest.json');
+      let manifest: Array<{ kind: string; hash: string; name: string; type: string }> = [];
+      if (manifestFile) {
+        manifest = JSON.parse(await manifestFile.async('text'));
+      }
+      total = manifest.length;
+      if (total === 0) {
+        EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { status: 'done', total: 0, done: 0 });
+        return;
+      }
+
+      Logger.info(`[bundle] ZIP contains ${total} media files, extracting...`);
+
+      let done = 0;
+      // ファイルを順次展開してStorageに登録
+      for (const entry of manifest) {
+        const zipEntry = zip.file(`${entry.kind}/${entry.hash}`);
+        if (!zipEntry) { done++; continue; }
+
         try {
-          const result = await ServerMediaStorage.fetchImage(hash, 'high');
-          if (result.status === 'ok') {
-            ImageStorage.instance.add(result.file);
+          const blob = await zipEntry.async('blob');
+          if (entry.kind === 'image') {
+            const file = entry.name && entry.name !== entry.hash
+              ? await (await import('../../file-storage/image-file')).ImageFile.createAsync(blob, entry.name)
+              : await (await import('../../file-storage/image-file')).ImageFile.createAsync(blob);
+            ImageStorage.instance.add(file);
+          } else if (entry.kind === 'audio') {
+            const file = entry.name && entry.name !== entry.hash
+              ? await (await import('../../file-storage/audio-file')).AudioFile.createAsync(blob, entry.name)
+              : await (await import('../../file-storage/audio-file')).AudioFile.createAsync(blob);
+            AudioStorage.instance.add(file);
           }
         } catch (e) {
-          // 個別ファイル失敗は続行
+          Logger.warn(`[bundle] failed to extract ${entry.kind}/${entry.hash}`, e);
         }
+
         done++;
         EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { status: 'downloading', total, done });
-      }));
-    }
+      }
 
-    // 音声を並列バッチでダウンロード
-    for (let i = 0; i < audios.length; i += BATCH) {
-      const batch = audios.slice(i, i + BATCH);
-      await Promise.all(batch.map(async (hash: string) => {
-        try {
-          const result = await ServerMediaStorage.fetchAudio(hash, 'high');
-          if (result.status === 'ok') {
-            AudioStorage.instance.add(result.file);
-          }
-        } catch (e) {
-          // 個別ファイル失敗は続行
-        }
-        done++;
-        EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { status: 'downloading', total, done });
-      }));
-    }
+      // サーバーに存在をマーク（個別fetchをスキップさせる）
+      for (const entry of manifest) {
+        (ServerMediaStorage as any).knownOnServer?.add?.(entry.hash);
+      }
 
-    EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { status: 'done', total, done });
-    Logger.info(`[bundle] download complete: ${done}/${total}`);
+      EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { status: 'done', total, done });
+      Logger.info(`[bundle] extraction complete: ${done}/${total}`);
+    } catch (e) {
+      Logger.warn('[bundle] download failed', e);
+      EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { status: 'done', total, done: 0 });
+    }
   }
 
   private async applyObjectSnapshot(objects: ObjectContext[], sendFrom: string) {

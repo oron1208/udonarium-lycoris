@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const lzbase62 = require('lzbase62');
+const archiver = require('archiver');
 const { WebSocketServer } = require('./signaling-server/node_modules/ws');
 
 try { require('dotenv').config({ path: path.join(__dirname, '.env') }); } catch (_) {}
@@ -1489,33 +1490,77 @@ function createAppHandler() {
     return;
   }
 
-  // ===== Room Media Manifest (一括ダウンロード用) =====
-  const manifestMatch = requestPath.match(/^\/api\/room\/([^/]+)\/media-manifest$/);
-  if (manifestMatch && req.method === 'GET') {
-    const roomKey = decodeURIComponent(manifestMatch[1]);
+  // ===== Room Media Bundle (ZIP一括ダウンロード) =====
+  const bundleMatch = requestPath.match(/^\/api\/room\/([^/]+)\/bundle$/);
+  if (bundleMatch && (req.method === 'GET' || req.method === 'HEAD')) {
+    const roomKey = decodeURIComponent(bundleMatch[1]);
     const room = roomStates.get(roomKey);
     if (!room || roomKey === 'lobby') {
       res.writeHead(404, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify({ ok: false, error: 'room-not-found' }));
       return;
     }
+
+    // ルームの全hashを抽出
     const text = JSON.stringify({ snapshot: room.snapshot || null, events: room.events || [] });
     const hashes = new Set();
-    let match;
+    let m;
     MEDIA_HASH_PATTERN.lastIndex = 0;
-    while ((match = MEDIA_HASH_PATTERN.exec(text))) hashes.add(match[0].toLowerCase());
+    while ((m = MEDIA_HASH_PATTERN.exec(text))) hashes.add(m[0].toLowerCase());
 
-    // 各hashがサーバーに存在するか確認
-    const images = [];
-    const audios = [];
+    // 存在するメディアファイルを収集
+    const entries = [];
     for (const hash of hashes) {
-      const imgPath = path.join(MEDIA_ROOT, 'image', hash);
-      const audPath = path.join(MEDIA_ROOT, 'audio', hash);
-      try { fs.statSync(imgPath); images.push(hash); } catch (_) {}
-      try { fs.statSync(audPath); audios.push(hash); } catch (_) {}
+      for (const kind of ['image', 'audio']) {
+        const filePath = path.join(MEDIA_ROOT, kind, hash);
+        try {
+          const stat = fs.statSync(filePath);
+          if (stat.isFile()) {
+            const meta = safeReadMediaMeta(kind, hash);
+            entries.push({ path: filePath, name: `${kind}/${hash}`, kind, hash, meta });
+          }
+        } catch (_) {}
+      }
     }
-    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache' });
-    res.end(JSON.stringify({ ok: true, images, audios, total: images.length + audios.length }));
+
+    if (entries.length === 0) {
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ ok: true, total: 0 }));
+      return;
+    }
+
+    // ZIPストリーム配信
+    res.writeHead(200, {
+      'Content-Type': 'application/zip',
+      'Content-Disposition': 'attachment; filename="media-bundle.zip"',
+      'Cache-Control': 'no-cache',
+    });
+
+    if (req.method === 'HEAD') {
+      res.end();
+      return;
+    }
+
+    const archive = archiver('zip', { zlib: { level: 1 } }); // 高速化のため圧縮レベル1
+    archive.on('error', (err) => {
+      console.error('[bundle] zip error', err);
+      res.end();
+    });
+    archive.pipe(res);
+
+    // メタデータJSONを先頭に追加（クライアント側で画像/音声を区別するため）
+    const manifest = entries.map(e => ({
+      kind: e.kind,
+      hash: e.hash,
+      name: e.meta.name || e.hash,
+      type: e.meta.type || '',
+    }));
+    archive.append(JSON.stringify(manifest), { name: '_manifest.json' });
+
+    for (const entry of entries) {
+      archive.file(entry.path, { name: `${entry.kind}/${entry.hash}` });
+    }
+    archive.finalize();
     return;
   }
 
