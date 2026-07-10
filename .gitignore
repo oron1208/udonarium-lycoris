@@ -66,3 +66,4 @@ VPSサーバー設定/
 ローカルサーバー設定/
 data/
 backups/*.pem.bak
+検証ファイル/

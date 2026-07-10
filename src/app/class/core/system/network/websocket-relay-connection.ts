@@ -267,9 +267,26 @@ export class WebSocketRelayConnection implements Connection {
   }
 
   private async applyObjectSnapshot(objects: ObjectContext[], sendFrom: string) {
+    // Prioritize chat logs and core table objects so players see conversation
+    // history and the game board first when joining a large room.
+    const priorityOrder: Record<string, number> = {
+      'ChatTabList': 0,
+      'ChatTab': 1,
+      'ChatMessage': 2,
+      'GameTable': 3,
+      'PeerCursor': 4,
+      'GameCharacter': 5,
+      'GameCharacterGroup': 6,
+    };
+    const sorted = objects.slice().sort((a, b) => {
+      const pa = priorityOrder[a.aliasName] ?? 99;
+      const pb = priorityOrder[b.aliasName] ?? 99;
+      return pa - pb;
+    });
+
     const batchSize = 100;
     let applied = 0;
-    for (let context of objects) {
+    for (let context of sorted) {
       if (!context || !context.identifier || ObjectStore.instance.isDeleted(context.identifier)) continue;
       EventSystem.trigger({ eventName: 'UPDATE_GAME_OBJECT', data: context, sendFrom });
       applied++;
