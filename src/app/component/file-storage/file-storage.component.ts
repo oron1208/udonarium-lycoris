@@ -174,6 +174,7 @@ export class FileStorageComponent implements OnInit, OnDestroy, AfterViewInit {
   imgBlockClick(identifier){
     Logger.debug( "identifier:"+identifier);
     let box = <HTMLInputElement>document.getElementById(identifier+'_'+ this.initTimestamp);
+    if (!box) return;
     box.checked = !box.checked;
   }
   

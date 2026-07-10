@@ -165,7 +165,11 @@ export class ImageFile {
         url: window.URL.createObjectURL(result.blob),
       };
     } catch (e) {
-      Logger.warn('[ImageFile] thumbnail worker fallback', e);
+      if (!FileProcessingWorker.isAvailable()) {
+        // Worker非対応環境：フォールバックで処理（WARNは出さない）
+      } else {
+        Logger.warn('[ImageFile] thumbnail worker fallback', e);
+      }
       return await ImageFile.createThumbnailOnMainThreadAsync(context);
     }
   }

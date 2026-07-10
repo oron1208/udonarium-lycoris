@@ -10,11 +10,12 @@ type PendingTask = {
 
 export namespace FileProcessingWorker {
   let worker: Worker | null | undefined;
+  let workerFailed = false; // Worker生成失敗フラグ（1回検出したら以降は試さない）
   let nextId = 1;
   const pending = new Map<number, PendingTask>();
 
   export function isAvailable(): boolean {
-    return !!getWorker();
+    return !workerFailed && !!getWorker();
   }
 
   export async function sha256(data: Blob | ArrayBuffer): Promise<string> {
@@ -30,8 +31,10 @@ export namespace FileProcessingWorker {
   }
 
   function getWorker(): Worker | null {
+    if (workerFailed) return null;
     if (worker !== undefined) return worker;
     if (typeof Worker === 'undefined') {
+      workerFailed = true;
       worker = null;
       return worker;
     }
@@ -49,7 +52,9 @@ export namespace FileProcessingWorker {
         Logger.warn('[FileProcessingWorker] worker error', error);
       };
     } catch (error) {
-      Logger.warn('[FileProcessingWorker] unavailable', error);
+      // Angular 13等、Workerバンドル未対応環境では1回だけ警告して以降は黙ってフォールバック
+      Logger.info('[FileProcessingWorker] Worker unavailable, using main-thread fallback', error);
+      workerFailed = true;
       worker = null;
     }
     return worker;

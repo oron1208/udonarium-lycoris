@@ -28,7 +28,11 @@ export namespace FileReaderUtil {
     try {
       return await FileProcessingWorker.sha256(arg);
     } catch (e) {
-      Logger.warn('[FileReaderUtil] SHA-256 worker fallback', e);
+      if (!FileProcessingWorker.isAvailable()) {
+        // Worker非対応環境：フォールバックで処理（WARNは出さない）
+      } else {
+        Logger.warn('[FileReaderUtil] SHA-256 worker fallback', e);
+      }
       if (arg instanceof Blob) {
         return _calcSHA256Async(arg);
       } else {

@@ -159,7 +159,11 @@ export class FileArchiver {
       }
       return null;
     } catch (e) {
-      Logger.warn('[FileArchiver] image compression worker fallback', e);
+      if (!FileProcessingWorker.isAvailable()) {
+        // Worker非対応環境：フォールバックで処理（WARNは出さない）
+      } else {
+        Logger.warn('[FileArchiver] image compression worker fallback', e);
+      }
       return await this.compressImageOnMainThread(file, maxDim, quality);
     }
   }
