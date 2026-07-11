@@ -1,0 +1,601 @@
+{
+  "audioBase": "/audio-library",
+  "catLabels": {
+    "ADV": "🎄 ADV",
+    "battle": "⚔️ 戦闘",
+    "Boss": "🐉 ボス",
+    "Dungeon": "🏰 ダンジョン",
+    "field": "🌲 フィールド",
+    "town": "🏠 町",
+    "ホラー": "👻 ホラー",
+    "環境音": "🌊 環境音",
+    "SE": "💥 効果音"
+  },
+  "tracks": [
+    {
+      "cat": "ADV",
+      "name": "Cosmic Encounter",
+      "file": "ADV/Cosmic Encounter.mp3"
+    },
+    {
+      "cat": "ADV",
+      "name": "Starlit Afternoon with a",
+      "file": "ADV/Starlit Afternoon with a.mp3"
+    },
+    {
+      "cat": "ADV",
+      "name": "The Girl Beyond the Stars",
+      "file": "ADV/The Girl Beyond the Stars.mp3"
+    },
+    {
+      "cat": "ADV",
+      "name": "エンディング",
+      "file": "ADV/エンディング.mp3"
+    },
+    {
+      "cat": "ADV",
+      "name": "二人だけの夜",
+      "file": "ADV/二人だけの夜.mp3"
+    },
+    {
+      "cat": "ADV",
+      "name": "二人だけの屋上",
+      "file": "ADV/二人だけの屋上.mp3"
+    },
+    {
+      "cat": "ADV",
+      "name": "告白",
+      "file": "ADV/告白.mp3"
+    },
+    {
+      "cat": "ADV",
+      "name": "夏祭りの朝",
+      "file": "ADV/夏祭りの朝.mp3"
+    },
+    {
+      "cat": "ADV",
+      "name": "幼馴染との帰り道",
+      "file": "ADV/幼馴染との帰り道.mp3"
+    },
+    {
+      "cat": "ADV",
+      "name": "放課後の教室で",
+      "file": "ADV/放課後の教室で.mp3"
+    },
+    {
+      "cat": "ADV",
+      "name": "文化祭準備",
+      "file": "ADV/文化祭準備.mp3"
+    },
+    {
+      "cat": "ADV",
+      "name": "桜並木の通学路",
+      "file": "ADV/桜並木の通学路.mp3"
+    },
+    {
+      "cat": "ADV",
+      "name": "海デート",
+      "file": "ADV/海デート.mp3"
+    },
+    {
+      "cat": "ADV",
+      "name": "遊園地デート",
+      "file": "ADV/遊園地デート.mp3"
+    },
+    {
+      "cat": "Boss",
+      "name": "Ancient Gold Dragon",
+      "file": "Boss/Ancient Gold Dragon.mp3"
+    },
+    {
+      "cat": "Boss",
+      "name": "Ancient Red Dragon",
+      "file": "Boss/Ancient Red Dragon.mp3"
+    },
+    {
+      "cat": "Boss",
+      "name": "Black Dragon's Lair",
+      "file": "Boss/Black Dragon's Lair.mp3"
+    },
+    {
+      "cat": "Boss",
+      "name": "Green Dragon",
+      "file": "Boss/Green Dragon.mp3"
+    },
+    {
+      "cat": "Boss",
+      "name": "Mad Mage Madness",
+      "file": "Boss/Mad Mage Madness.mp3"
+    },
+    {
+      "cat": "Boss",
+      "name": "White Dragon",
+      "file": "Boss/White Dragon.mp3"
+    },
+    {
+      "cat": "Dungeon",
+      "name": "Crystal Echoes of the Frozen",
+      "file": "Dungeon/Crystal Echoes of the Frozen.mp3"
+    },
+    {
+      "cat": "Dungeon",
+      "name": "Sky of the Floating Ruins",
+      "file": "Dungeon/Sky of the Floating Ruins.mp3"
+    },
+    {
+      "cat": "Dungeon",
+      "name": "The Abyssal Gate",
+      "file": "Dungeon/The Abyssal Gate.mp3"
+    },
+    {
+      "cat": "Dungeon",
+      "name": "The Haunted Mansion",
+      "file": "Dungeon/The Haunted Mansion.mp3"
+    },
+    {
+      "cat": "SE",
+      "name": "アサルトライフル・連射",
+      "file": "SE/アサルトライフル・連射.mp3"
+    },
+    {
+      "cat": "SE",
+      "name": "サプレッサー・消音銃",
+      "file": "SE/サプレッサー・消音銃.mp3"
+    },
+    {
+      "cat": "SE",
+      "name": "ショットガン・重い一撃",
+      "file": "SE/ショットガン・重い一撃.mp3"
+    },
+    {
+      "cat": "SE",
+      "name": "スナイパーライフル・長距離",
+      "file": "SE/スナイパーライフル・長距離.mp3"
+    },
+    {
+      "cat": "SE",
+      "name": "テレポート・瞬間移動",
+      "file": "SE/テレポート・瞬間移動.mp3"
+    },
+    {
+      "cat": "SE",
+      "name": "ヒール・回復",
+      "file": "SE/ヒール・回復.mp3"
+    },
+    {
+      "cat": "SE",
+      "name": "ピストル・屋外発砲",
+      "file": "SE/ピストル・屋外発砲.mp3"
+    },
+    {
+      "cat": "SE",
+      "name": "受け・パリー（防御成功）",
+      "file": "SE/受け・パリー（防御成功）.mp3"
+    },
+    {
+      "cat": "SE",
+      "name": "呪詛魔法",
+      "file": "SE/呪詛魔法.mp3"
+    },
+    {
+      "cat": "SE",
+      "name": "大剣・重い一撃",
+      "file": "SE/大剣・重い一撃.mp3"
+    },
+    {
+      "cat": "SE",
+      "name": "屋内発砲・強い反響",
+      "file": "SE/屋内発砲・強い反響.mp3"
+    },
+    {
+      "cat": "SE",
+      "name": "強化・エンチャント",
+      "file": "SE/強化・エンチャント.mp3"
+    },
+    {
+      "cat": "SE",
+      "name": "打ち合い・激突（攻防",
+      "file": "SE/打ち合い・激突（攻防.mp3"
+    },
+    {
+      "cat": "SE",
+      "name": "抜刀・納刀",
+      "file": "SE/抜刀・納刀.mp3"
+    },
+    {
+      "cat": "SE",
+      "name": "斬る・切断",
+      "file": "SE/斬る・切断.mp3"
+    },
+    {
+      "cat": "SE",
+      "name": "水流魔法",
+      "file": "SE/水流魔法.mp3"
+    },
+    {
+      "cat": "SE",
+      "name": "氷結魔法",
+      "file": "SE/氷結魔法.mp3"
+    },
+    {
+      "cat": "SE",
+      "name": "火炎魔法",
+      "file": "SE/火炎魔法.mp3"
+    },
+    {
+      "cat": "SE",
+      "name": "神秘的・魔法剣",
+      "file": "SE/神秘的・魔法剣.mp3"
+    },
+    {
+      "cat": "SE",
+      "name": "稲妻魔法",
+      "file": "SE/稲妻魔法.mp3"
+    },
+    {
+      "cat": "SE",
+      "name": "空振り・風切り音",
+      "file": "SE/空振り・風切り音.mp3"
+    },
+    {
+      "cat": "SE",
+      "name": "突風魔法",
+      "file": "SE/突風魔法.mp3"
+    },
+    {
+      "cat": "SE",
+      "name": "防御魔法",
+      "file": "SE/防御魔法.mp3"
+    },
+    {
+      "cat": "battle",
+      "name": "Ancient Dragon's Roar",
+      "file": "battle/Ancient Dragon's Roar.mp3"
+    },
+    {
+      "cat": "battle",
+      "name": "Eagle’s Climb",
+      "file": "battle/Eagle’s Climb.mp3"
+    },
+    {
+      "cat": "battle",
+      "name": "Forest of the First Light",
+      "file": "battle/Forest of the First Light.mp3"
+    },
+    {
+      "cat": "battle",
+      "name": "Grassland Battle",
+      "file": "battle/Grassland Battle.mp3"
+    },
+    {
+      "cat": "battle",
+      "name": "Rushing Rapids",
+      "file": "battle/Rushing Rapids.mp3"
+    },
+    {
+      "cat": "battle",
+      "name": "battle-crystal-fortress",
+      "file": "battle/battle-crystal-fortress.mp3"
+    },
+    {
+      "cat": "field",
+      "name": "Ancient Ruins",
+      "file": "field/Ancient Ruins.mp3"
+    },
+    {
+      "cat": "field",
+      "name": "Castle Town at Night",
+      "file": "field/Castle Town at Night.mp3"
+    },
+    {
+      "cat": "field",
+      "name": "Mistbound Marsh",
+      "file": "field/Mistbound Marsh.mp3"
+    },
+    {
+      "cat": "field",
+      "name": "Sky Continent",
+      "file": "field/Sky Continent.mp3"
+    },
+    {
+      "cat": "field",
+      "name": "Trade Road",
+      "file": "field/Trade Road.mp3"
+    },
+    {
+      "cat": "field",
+      "name": "Underground Canal",
+      "file": "field/Underground Canal.mp3"
+    },
+    {
+      "cat": "field",
+      "name": "Whispering Grove",
+      "file": "field/Whispering Grove.mp3"
+    },
+    {
+      "cat": "town",
+      "name": "1st town",
+      "file": "town/1st town.mp3"
+    },
+    {
+      "cat": "town",
+      "name": "2nd town",
+      "file": "town/2nd town.mp3"
+    },
+    {
+      "cat": "town",
+      "name": "Bard's Rest",
+      "file": "town/Bard's Rest.mp3"
+    },
+    {
+      "cat": "town",
+      "name": "Forge of the Blacksmith",
+      "file": "town/Forge of the Blacksmith.mp3"
+    },
+    {
+      "cat": "town",
+      "name": "Forge of the Quiet Valley",
+      "file": "town/Forge of the Quiet Valley.mp3"
+    },
+    {
+      "cat": "town",
+      "name": "Grassland Dawn",
+      "file": "town/Grassland Dawn.mp3"
+    },
+    {
+      "cat": "town",
+      "name": "Harbor Town",
+      "file": "town/Harbor Town.mp3"
+    },
+    {
+      "cat": "town",
+      "name": "Harbor of the Seven Tides",
+      "file": "town/Harbor of the Seven Tides.mp3"
+    },
+    {
+      "cat": "town",
+      "name": "Market Square",
+      "file": "town/Market Square.mp3"
+    },
+    {
+      "cat": "town",
+      "name": "Moonshadow Village",
+      "file": "town/Moonshadow Village.mp3"
+    },
+    {
+      "cat": "town",
+      "name": "Oasis Capital",
+      "file": "town/Oasis Capital.mp3"
+    },
+    {
+      "cat": "town",
+      "name": "The Capital of Knights and",
+      "file": "town/The Capital of Knights and.mp3"
+    },
+    {
+      "cat": "town",
+      "name": "town-001",
+      "file": "town/town-001.mp3"
+    },
+    {
+      "cat": "ホラー",
+      "name": "The Cursed Cathedral",
+      "file": "ホラー/The Cursed Cathedral.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "カーチェイス・タイヤの音（アクション）",
+      "file": "環境音/カーチェイス・タイヤの音（アクション）.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "トラック・大型車（街の風景・物流）",
+      "file": "環境音/トラック・大型車（街の風景・物流）.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "人ごみのざわめき中心",
+      "file": "環境音/人ごみのざわめき中心.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "儀式のクライマックス・悪魔降臨",
+      "file": "環境音/儀式のクライマックス・悪魔降臨.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "儀式の開始",
+      "file": "環境音/儀式の開始.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "南国・無人島の海",
+      "file": "環境音/南国・無人島の海.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "呪われた場所・異境",
+      "file": "環境音/呪われた場所・異境.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "噴火中の火山",
+      "file": "環境音/噴火中の火山.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "夏の縁側・昼下がり　セミうるさい",
+      "file": "環境音/夏の縁側・昼下がり　セミうるさい.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "夕焼けの海",
+      "file": "環境音/夕焼けの海.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "夜祭の神社の境内",
+      "file": "環境音/夜祭の神社の境内.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "子犬の鳴き声",
+      "file": "環境音/子犬の鳴き声.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "嵐の前_室内の風の音",
+      "file": "環境音/嵐の前_室内の風の音.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "嵐の風_窓にうちつける風の音",
+      "file": "環境音/嵐の風_窓にうちつける風の音.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "工場内の音",
+      "file": "環境音/工場内の音.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "悪魔の囁き",
+      "file": "環境音/悪魔の囁き.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "接近する嵐・緊張感",
+      "file": "環境音/接近する嵐・緊張感.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "洞窟の隙間風",
+      "file": "環境音/洞窟の隙間風.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "港町・海岸の入り江",
+      "file": "環境音/港町・海岸の入り江.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "濡れた砂の上を裸足で歩くI",
+      "file": "環境音/濡れた砂の上を裸足で歩くI.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "火口の縁・活発な火山",
+      "file": "環境音/火口の縁・活発な火山.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "火山の内部・溶岩地帯",
+      "file": "環境音/火山の内部・溶岩地帯.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "犬　遠吠え",
+      "file": "環境音/犬　遠吠え.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "犬の嬉しい鳴き声",
+      "file": "環境音/犬の嬉しい鳴き声.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "犬の鳴き声悲しげ・寂しげ",
+      "file": "環境音/犬の鳴き声悲しげ・寂しげ.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "猫の鳴き声",
+      "file": "環境音/猫の鳴き声.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "砂嵐・砂漠の嵐",
+      "file": "環境音/砂嵐・砂漠の嵐.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "砂漠の夜・星空",
+      "file": "環境音/砂漠の夜・星空.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "砂漠の昼・灼熱の広野",
+      "file": "環境音/砂漠の昼・灼熱の広野.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "穏やかな浜辺",
+      "file": "環境音/穏やかな浜辺.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "花火大会_打ち上げ花火",
+      "file": "環境音/花火大会_打ち上げ花火.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "荒れ狂う海・嵐の海岸",
+      "file": "環境音/荒れ狂う海・嵐の海岸.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "複数犬の群れ",
+      "file": "環境音/複数犬の群れ.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "警戒・番犬の鳴き声",
+      "file": "環境音/警戒・番犬の鳴き声.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "車のエンジン音アイドリング",
+      "file": "環境音/車のエンジン音アイドリング.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "車内・ドライブ中",
+      "file": "環境音/車内・ドライブ中.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "軒下の雨",
+      "file": "環境音/軒下の雨.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "遠くの雷雨W",
+      "file": "環境音/遠くの雷雨W.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "雨音室内",
+      "file": "環境音/雨音室内.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "雷雨の海辺・崖",
+      "file": "環境音/雷雨の海辺・崖.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "電車の音",
+      "file": "環境音/電車の音.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "静寂と虫の夜",
+      "file": "環境音/静寂と虫の夜.mp3"
+    },
+    {
+      "cat": "環境音",
+      "name": "風鈴",
+      "file": "環境音/風鈴.mp3"
+    }
+  ]
+}

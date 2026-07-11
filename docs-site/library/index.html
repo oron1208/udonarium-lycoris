@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
+<title>ミュージックライブラリ - ユドナリウムリコリス</title>
+<meta name="description" content="ユドナリウムリコリスのミュージックライブラリ。BGM・効果音の試聴・ダウンロードができます。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<style>
+.library-section { max-width: 900px; margin: 0 auto; padding: 100px 20px 40px; }
+.library-header { text-align: center; margin-bottom: 40px; }
+.library-header h1 { font-size: 28px; color: #e8e8e8; margin: 12px 0; }
+.library-header p { color: #999; font-size: 14px; }
+
+.category-tabs { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 32px; }
+.category-tab { padding: 8px 20px; border-radius: 20px; border: 1px solid rgba(120,120,140,0.3); background: rgba(40,40,50,0.5); color: #aaa; cursor: pointer; font-size: 14px; transition: all 150ms ease; }
+.category-tab:hover { background: rgba(60,60,80,0.6); color: #ddd; }
+.category-tab.active { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; border-color: transparent; }
+
+.track-list { display: flex; flex-direction: column; gap: 8px; }
+.track-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: rgba(40,40,50,0.4); border-radius: 8px; border: 1px solid rgba(120,120,140,0.15); transition: background 150ms ease; }
+.track-item:hover { background: rgba(50,50,65,0.5); }
+.track-play-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: transform 100ms ease; }
+.track-play-btn:hover { transform: scale(1.1); }
+.track-play-btn.playing { background: linear-gradient(135deg, #e84855, #e88030); }
+.track-info { flex: 1; min-width: 0; }
+.track-name { font-size: 14px; color: #ddd; font-weight: 500; }
+.track-meta { font-size: 12px; color: #666; margin-top: 2px; }
+.track-download { flex-shrink: 0; width: 36px; height: 36px; border-radius: 6px; border: 1px solid rgba(120,120,140,0.2); background: rgba(60,60,70,0.4); color: #888; cursor: pointer; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 150ms ease; }
+.track-download:hover { background: rgba(80,80,100,0.5); color: #ddd; }
+
+.library-notice { margin: 32px 0; padding: 16px 20px; background: rgba(60,60,70,0.3); border-left: 3px solid rgba(180,180,200,0.3); border-radius: 4px; }
+.library-notice h3 { font-size: 13px; color: #888; margin: 0 0 8px 0; }
+.library-notice p { font-size: 12px; color: #777; line-height: 1.8; margin: 0; }
+
+.library-footer { text-align: center; padding: 32px 0; }
+.library-footer a { color: #7eb8ff; text-decoration: none; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<div class="bg-fixed">
+  <div class="bg-layer bg-layer-1"></div>
+  <div class="bg-layer bg-layer-2"></div>
+</div>
+<canvas id="particles"></canvas>
+
+<nav class="nav scrolled">
+  <div class="nav-inner">
+    <a href="../" class="nav-logo"><span class="logo-icon">◈</span> ユドナリウムリコリス</a>
+    <div class="nav-links">
+      <a href="../#guide">操作説明</a>
+      <a href="../guide/jukebox.html">ジュークボックス</a>
+      <a href="https://github.com/oron1208/udonarium-lycoris" target="_blank" class="nav-link-github">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<div class="library-section">
+  <div class="library-header">
+    <span style="font-size: 40px;">🎵</span>
+    <h1>ミュージックライブラリ</h1>
+    <p>ジュークボックス機能で使用できる楽曲の一覧です。試聴・ダウンロードができます。</p>
+  </div>
+
+  <div class="category-tabs" id="categoryTabs"></div>
+  <div class="track-list" id="trackList"></div>
+
+  <div class="library-notice">
+    <h3>📌 音源について</h3>
+    <p>本ライブラリの楽曲は、<b>生成AIを用いて作成された音源</b>です。TRPGや卓上ゲームのBGMとしてご自由にお使いいただけます。</p>
+  </div>
+
+  <div class="library-footer">
+    <a href="../guide/jukebox.html">← ジュークボックス操作説明に戻る</a>
+  </div>
+</div>
+
+<script>
+let AUDIO_BASE = "/audio-library";
+let tracks = [];
+let catLabels = {};
+
+async function loadTracks() {
+  try {
+    const res = await fetch("tracks.json?v=" + Date.now());
+    const data = await res.json();
+    AUDIO_BASE = data.audioBase || "/audio-library";
+    tracks = data.tracks || [];
+    catLabels = data.catLabels || {};
+  } catch (e) {
+    console.error("Failed to load tracks", e);
+  }
+  renderTabs();
+  renderTracks();
+}
+
+let currentCategory = "all";
+let currentAudio = null;
+let currentBtn = null;
+
+function renderTabs() {
+  const cats = ["all", ...Object.keys(catLabels)];
+  const tabs = document.getElementById("categoryTabs");
+  tabs.innerHTML = cats.map(c =>
+    `<button class="category-tab ${c === currentCategory ? "active" : ""}" onclick="selectCategory('${c}')">${c === "all" ? "\u{1F3B5} \u5168\u3066" : catLabels[c]}</button>`
+  ).join("");
+}
+
+function selectCategory(cat) {
+  currentCategory = cat;
+  renderTabs();
+  renderTracks();
+}
+
+function renderTracks() {
+  const list = document.getElementById("trackList");
+  const filtered = currentCategory === "all" ? tracks : tracks.filter(t => t.cat === currentCategory);
+
+  list.innerHTML = filtered.map((t, i) => `
+    <div class="track-item">
+      <button class="track-play-btn" id="btn-${i}" onclick="togglePlay(${i})">\u25B6</button>
+      <div class="track-info">
+        <div class="track-name">${t.name}</div>
+        <div class="track-meta">${catLabels[t.cat] || t.cat}</div>
+      </div>
+      <a class="track-download" href="${AUDIO_BASE}/${t.file}" download title="\u30C0\u30A6\u30F3\u30ED\u30FC\u30C9">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </a>
+    </div>
+  `).join("");
+}
+
+function togglePlay(idx) {
+  const filtered = currentCategory === "all" ? tracks : tracks.filter(t => t.cat === currentCategory);
+  const track = filtered[idx];
+  const btn = document.getElementById(`btn-${idx}`);
+
+  if (currentAudio && currentBtn === btn) {
+    currentAudio.pause();
+    currentAudio = null;
+    btn.classList.remove("playing");
+    btn.textContent = "\u25B6";
+    currentBtn = null;
+    return;
+  }
+
+  if (currentAudio) {
+    currentAudio.pause();
+    if (currentBtn) { currentBtn.classList.remove("playing"); currentBtn.textContent = "\u25B6"; }
+  }
+
+  currentAudio = new Audio(`${AUDIO_BASE}/${track.file}`);
+  currentAudio.play();
+  btn.classList.add("playing");
+  btn.textContent = "\u23F8";
+  currentBtn = btn;
+
+  currentAudio.onended = () => {
+    btn.classList.remove("playing");
+    btn.textContent = "\u25B6";
+    currentAudio = null;
+    currentBtn = null;
+  };
+}
+
+loadTracks();
+</script>
+
+<script src="../main.js"></script>
+</body>
+</html>
