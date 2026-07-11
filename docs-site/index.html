@@ -222,6 +222,18 @@
     </div>
     <div class="timeline">
       <div class="timeline-item fade-up">
+        <div class="timeline-badge">v1.62</div>
+        <div class="timeline-content">
+          <div class="timeline-date">2026-07-11</div>
+          <h3>カード・ダイス画像のZIP同期バグ修正</h3>
+          <ul>
+            <li><b>URL識別子のプレースホルダー問題を修正</b> — 初期ルーム同期時にトランプやダイスの画像（./assets/〜）が空エントリとして登録され、画像が表示されなくなる問題を解消。SHA-256ハッシュ識別子のみプレースホルダーを作成するよう修正</li>
+            <li><b>カタログ同期時のURL画像取り込みを修正</b> — SYNCHRONIZE_FILE_LISTでURL識別子を受け取った際、正しくURL画像として追加するよう修正</li>
+            <li><b>archiverパッケージのバージョン固定</b> — v8の破関的変更によりクラッシュする問題を解消（v5.3.xに固定）。ZIP生成のtry/catch強化・起動時バージョンチェック追加</li>
+          </ul>
+        </div>
+      </div>
+      <div class="timeline-item fade-up">
         <div class="timeline-badge">v1.61</div>
         <div class="timeline-content">
           <div class="timeline-date">2026-07-11</div>

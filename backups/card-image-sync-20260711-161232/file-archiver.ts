@@ -88,9 +88,9 @@ export class FileArchiver {
     this.load(files);
   };
 
-  async load(files: File[], preserveImageBytes?: boolean): Promise<void>
-  async load(files: FileList, preserveImageBytes?: boolean): Promise<void>
-  async load(files: any, preserveImageBytes: boolean = false): Promise<void> {
+  async load(files: File[]): Promise<void>
+  async load(files: FileList): Promise<void>
+  async load(files: any): Promise<void> {
     if (!files) return;
     let loadFiles: File[] = files instanceof FileList ? toArrayOfFileList(files) : files;
 
@@ -100,7 +100,7 @@ export class FileArchiver {
       const batch = loadFiles.slice(i, i + BATCH_SIZE);
       await Promise.all(batch.map(async file => {
         try {
-          await this.handleImage(file, preserveImageBytes);
+          await this.handleImage(file);
           await this.handleAudio(file);
           await this.handleMediaManifest(file);
           await this.handleText(file);
@@ -113,17 +113,13 @@ export class FileArchiver {
     }
   }
 
-  private async handleImage(file: File, preserveImageBytes: boolean = false) {
+  private async handleImage(file: File) {
     if (file.type.indexOf('image/') < 0) return;
     if (!this.reloadCheck.isLoadOk() ) return;
     
     let processedFile = file;
     // 2MB超の場合は自動圧縮
-    // Room ZIP object data refers to images by the SHA-256 of the original
-    // bytes. Recompressing an archived image changes that identifier while
-    // data.xml keeps the old hash, leaving cards/dice with a missing image.
-    // Direct user uploads can still use the existing size optimization.
-    if (!preserveImageBytes && this.maxImageSize < file.size) {
+    if (this.maxImageSize < file.size) {
       Logger.debug(`Image compression: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB) → compressing...`);
       const compressed = await this.compressImage(file);
       if (compressed && compressed.size <= this.maxImageSize) {
@@ -303,10 +299,7 @@ export class FileArchiver {
       try {
         let arraybuffer = await zipEntry.async('arraybuffer');
         Logger.debug(zipEntry.name + ' 解凍...');
-        await this.load(
-          [new File([arraybuffer], zipEntry.name, { type: MimeType.type(zipEntry.name) })],
-          true,
-        );
+        await this.load([new File([arraybuffer], zipEntry.name, { type: MimeType.type(zipEntry.name) })]);
       } catch (reason) {
         Logger.warn(reason);
       }

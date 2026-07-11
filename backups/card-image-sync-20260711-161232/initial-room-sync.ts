@@ -3,7 +3,7 @@ import * as JSZip from 'jszip';
 import { AudioFile } from '../file-storage/audio-file';
 import { AudioStorage, CatalogItem as AudioCatalogItem } from '../file-storage/audio-storage';
 import { BufferSharingTask } from '../file-storage/buffer-sharing-task';
-import { ImageFile, ImageState } from '../file-storage/image-file';
+import { ImageFile } from '../file-storage/image-file';
 import { CatalogItem as ImageCatalogItem, ImageStorage } from '../file-storage/image-storage';
 import { EventSystem, Network } from '../system';
 import { Logger } from '../system/util/logger';
@@ -456,7 +456,6 @@ export class InitialRoomSync {
     let batchIndex = 0;
     let objectJsonParts: string[] = [];
     let objectBatchBytes = 2;
-    let referencedImages = new Set<string>();
 
     let flushObjectBatch = () => {
       if (objectJsonParts.length < 1) return;
@@ -473,9 +472,7 @@ export class InitialRoomSync {
 
     let objects = ObjectStore.instance.getObjects().slice().sort(this.compareObjectPriority);
     for (let object of objects) {
-      let context = object.toContext();
-      this.collectReferencedImages(context, referencedImages);
-      let json = JSON.stringify(context);
+      let json = JSON.stringify(object.toContext());
       let bytes = this.byteLength(json);
       if (bytes + 2 > MAX_OBJECT_ENTRY_BYTES) throw new Error(`object context is too large: ${object.identifier}`);
       let separatorBytes = objectJsonParts.length ? 1 : 0;
@@ -489,7 +486,7 @@ export class InitialRoomSync {
     }
     flushObjectBatch();
 
-    let images = this.mergeReferencedImages(ImageStorage.instance.getCatalog(), referencedImages);
+    let images = ImageStorage.instance.getCatalog();
     let imageJson = JSON.stringify(images);
     let imageBytes = this.byteLength(imageJson);
     if (imageBytes > MAX_CATALOG_ENTRY_BYTES) throw new Error('image catalog is too large');
@@ -544,51 +541,6 @@ export class InitialRoomSync {
     };
     let diff = (priority[a.aliasName] ?? 99) - (priority[b.aliasName] ?? 99);
     return diff || a.identifier.localeCompare(b.identifier);
-  }
-
-  /**
-   * A room object can already reference an image whose local ImageStorage
-   * entry is still an empty/lazy placeholder. Include those hashes in the
-   * initial catalog so the following HTTP media ZIP can fetch card and dice
-   * faces directly from the server instead of silently omitting them.
-   */
-  private collectReferencedImages(context: ObjectContext, identifiers: Set<string>): void {
-    const hashPattern = /^[a-f0-9]{64}$/i;
-    const syncData: any = context && context.syncData;
-    if (!syncData || typeof syncData !== 'object') return;
-
-    const isImageDataElement = context.aliasName === 'data'
-      && (syncData.type === 'image' || syncData.attributes?.type === 'image');
-    if (isImageDataElement && typeof syncData.value === 'string' && hashPattern.test(syncData.value)) {
-      identifiers.add(syncData.value.toLowerCase());
-    }
-
-    const seen = new Set<any>();
-    const walk = (value: any, key: string = '') => {
-      if (typeof value === 'string') {
-        if (/imageIdentifier$/i.test(key) && hashPattern.test(value)) identifiers.add(value.toLowerCase());
-        return;
-      }
-      if (!value || typeof value !== 'object' || seen.has(value)) return;
-      seen.add(value);
-      if (Array.isArray(value)) {
-        for (const child of value) walk(child);
-      } else {
-        for (const childKey of Object.keys(value)) walk(value[childKey], childKey);
-      }
-    };
-    walk(syncData);
-  }
-
-  private mergeReferencedImages(catalog: ImageCatalogItem[], identifiers: Set<string>): ImageCatalogItem[] {
-    const merged = catalog.slice();
-    const existing = new Set(catalog.map(item => item.identifier.toLowerCase()));
-    for (const identifier of identifiers) {
-      if (existing.has(identifier)) continue;
-      existing.add(identifier);
-      merged.push({ identifier, state: ImageState.COMPLETE });
-    }
-    return merged;
   }
 
   private startReceive(peerId: PeerId, start: InitialRoomSyncStart) {
@@ -759,20 +711,12 @@ export class InitialRoomSync {
     // Installing empty records first prevents object onStoreAdded hooks from
     // issuing thousands of eager individual HTTP requests while the snapshot
     // itself is still being applied.
-    // Only create placeholders for SHA-256 hash identifiers. URL-based
-    // identifiers (e.g. ./assets/images/trump/x02.gif) are local assets
-    // that must NOT be pre-registered as empty, otherwise
-    // ImageStorage.get(url) returns the empty entry and blocks the
-    // normal add(url) path that sets the URL.
-    const hashPattern = /^[a-f0-9]{64}$/i;
     for (let item of images) {
-      if (!hashPattern.test(item.identifier)) continue;
       if (!ImageStorage.instance.get(item.identifier, false)) {
         ImageStorage.instance.add(ImageFile.createEmpty(item.identifier));
       }
     }
     for (let item of audios) {
-      if (!hashPattern.test(item.identifier)) continue;
       let audio = AudioStorage.instance.get(item.identifier, false);
       if (!audio) {
         audio = AudioFile.createEmpty(item.identifier);

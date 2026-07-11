@@ -55,11 +55,19 @@ export class ImageSharingSystem {
         const BATCH_SIZE = 16;
         const needFetch: CatalogItem[] = [];
 
+        const hashPattern = /^[a-f0-9]{64}$/i;
         for (let item of otherCatalog) {
           let image: ImageFile = ImageStorage.instance.get(item.identifier, false);
           if (image === null) {
-            image = ImageFile.createEmpty(item.identifier);
-            ImageStorage.instance.add(image);
+            if (hashPattern.test(item.identifier)) {
+              // SHA-256 hash: create empty placeholder, fetch from server later
+              image = ImageFile.createEmpty(item.identifier);
+              ImageStorage.instance.add(image);
+            } else {
+              // URL-based identifier (e.g. ./assets/images/trump/x02.gif):
+              // add as a URL image so the browser loads it from the app assets
+              image = ImageStorage.instance.add(item.identifier);
+            }
           }
           if (image.state < ImageState.COMPLETE && !this.receiveTaskMap.has(item.identifier)) {
             needFetch.push(item);
