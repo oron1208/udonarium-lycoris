@@ -222,6 +222,36 @@
     </div>
     <div class="timeline">
       <div class="timeline-item fade-up">
+        <div class="timeline-badge">v1.61</div>
+        <div class="timeline-content">
+          <div class="timeline-date">2026-07-11</div>
+          <h3>強制再同期ボタン改善・UI修正</h3>
+          <ul>
+            <li><b>強制再同期ボタンの機能改善</b> — SkyWay P2P環境で実質機能していなかった問題を修正。接続品質の良い参加者から部屋データをZIP再取得し、失敗時は別の参加者へ自動切り替え</li>
+            <li><b>再同期の進捗・安全機能</b> — 準備・受信・展開・反映の進捗表示、連打防止、成功後30秒/失敗後10秒のクールダウン、180秒タイムアウト表示を実装</li>
+            <li><b>実行前確認ダイアログ</b> — 誤実行を防ぐ確認ダイアログを追加</li>
+            <li><b>WebSocketリレー時の挙動</b> — リレー環境では従来どおりサーバー保存データから再同期</li>
+            <li><b>オプションパネルのスクロールバー二重表示を修正</b> — 内外で重複していたスクロールバーを統一</li>
+            <li><b>接続情報のルームデータ保存ボタンを削除</b> — 実質意味のなかった保存ボタンを整理</li>
+          </ul>
+        </div>
+      </div>
+      <div class="timeline-item fade-up">
+        <div class="timeline-badge">v1.60</div>
+        <div class="timeline-content">
+          <div class="timeline-date">2026-07-11</div>
+          <h3>部屋データ一括ZIP同期・メモリ安全設計</h3>
+          <ul>
+            <li><b>部屋データを1つのZIPに圧縮して一括同期</b> — 画像・音声もまとめてZIPで取得し、同期の効率を大幅向上</li>
+            <li><b>安全なチャンク分割転送</b> — ZIPを小さいチャンクに分けて転送し、通信の安定性を確保</li>
+            <li><b>段階的展開・反映</b> — 展開と反映を少しずつ行い、メモリ急増や画面停止を防止</li>
+            <li><b>メモリ上限設定</b> — ZIPサイズ・展開サイズに上限を設定し、4GB PCでも落ちにくく安定動作</li>
+            <li><b>同期進捗表示</b> — 「準備・ダウンロード・展開・反映」の各フェーズの進捗をリアルタイム表示</li>
+            <li><b>自動フォールバック</b> — 失敗時や旧クライアントでは従来方式へ自動的に戻る</li>
+          </ul>
+        </div>
+      </div>
+      <div class="timeline-item fade-up">
         <div class="timeline-badge">v1.57</div>
         <div class="timeline-content">
           <div class="timeline-date">2026-07-09</div>

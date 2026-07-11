@@ -143,14 +143,15 @@ export class WebSocketRelayConnection implements Connection {
     });
   }
 
-  forceResync() {
-    if (!this.socket || this.socket.readyState !== WebSocket.OPEN || !this.peerContext.isRoom) return;
+  forceResync(): boolean {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN || !this.peerContext.isRoom) return false;
     this.forceSnapshotApply = true;
     this.sendSignal({ type: 'resync-request' });
     setTimeout(() => {
       if (!this.socket || this.socket.readyState !== WebSocket.OPEN || !this.peerContext.isRoom) return;
       this.sendSignal({ type: 'sync-request', sinceSeq: 0 });
     }, 2000);
+    return true;
   }
 
   private openSocket() {
@@ -279,6 +280,7 @@ export class WebSocketRelayConnection implements Connection {
    * 展開して ImageStorage / AudioStorage に登録する。
    */
   private async downloadMediaBundle(objects: ObjectContext[], roomKey: string): Promise<void> {
+    const operationId = `relay-room-media-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     let total = 0;
     try {
       const resp = await fetch(`/api/room/${encodeURIComponent(roomKey)}/bundle`, { method: 'HEAD' });
@@ -291,7 +293,7 @@ export class WebSocketRelayConnection implements Connection {
     }
 
     Logger.info('[bundle] downloading media bundle ZIP...');
-    EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { status: 'downloading', total: 0, done: 0 });
+    EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'downloading', total: 0, done: 0 });
 
     try {
       const { ServerMediaStorage } = await import('../../file-storage/server-media-storage');
@@ -302,11 +304,12 @@ export class WebSocketRelayConnection implements Connection {
       const resp = await fetch(`/api/room/${encodeURIComponent(roomKey)}/bundle`);
       if (!resp.ok) {
         Logger.warn('[bundle] fetch failed', resp.status);
-        EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { status: 'done', total: 0, done: 0 });
+        EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'done', total: 0, done: 0 });
         return;
       }
 
       const arrayBuffer = await resp.arrayBuffer();
+      EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'extracting', total: 0, done: 0 });
       const zip = await JSZip.loadAsync(arrayBuffer);
 
       // manifestから件数取得
@@ -317,17 +320,22 @@ export class WebSocketRelayConnection implements Connection {
       }
       total = manifest.length;
       if (total === 0) {
-        EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { status: 'done', total: 0, done: 0 });
+        EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'done', total: 0, done: 0 });
         return;
       }
 
       Logger.info(`[bundle] ZIP contains ${total} media files, extracting...`);
 
       let done = 0;
+      EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'extracting', total, done });
       // ファイルを順次展開してStorageに登録
       for (const entry of manifest) {
         const zipEntry = zip.file(`${entry.kind}/${entry.hash}`);
-        if (!zipEntry) { done++; continue; }
+        if (!zipEntry) {
+          done++;
+          EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'extracting', total, done });
+          continue;
+        }
 
         try {
           const blob = await zipEntry.async('blob');
@@ -347,7 +355,7 @@ export class WebSocketRelayConnection implements Connection {
         }
 
         done++;
-        EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { status: 'downloading', total, done });
+        EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'extracting', total, done });
       }
 
       // サーバーに存在をマーク（個別fetchをスキップさせる）
@@ -355,15 +363,16 @@ export class WebSocketRelayConnection implements Connection {
         (ServerMediaStorage as any).knownOnServer?.add?.(entry.hash);
       }
 
-      EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { status: 'done', total, done });
+      EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'done', total, done });
       Logger.info(`[bundle] extraction complete: ${done}/${total}`);
     } catch (e) {
       Logger.warn('[bundle] download failed', e);
-      EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { status: 'done', total, done: 0 });
+      EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'done', total, done: 0 });
     }
   }
 
   private async applyObjectSnapshot(objects: ObjectContext[], sendFrom: string) {
+    const syncId = `relay-snapshot-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     // Prioritize chat logs and core table objects so players see conversation
     // history and the game board first when joining a large room.
     const priorityOrder: Record<string, number> = {
@@ -382,16 +391,45 @@ export class WebSocketRelayConnection implements Connection {
     });
 
     const batchSize = 100;
-    let applied = 0;
-    for (let context of sorted) {
-      if (!context || !context.identifier || ObjectStore.instance.isDeleted(context.identifier)) continue;
-      EventSystem.trigger({ eventName: 'UPDATE_GAME_OBJECT', data: context, sendFrom });
-      applied++;
-      // Large rooms can have 2000+ objects. Yield between batches so the browser
-      // can paint/process input and avoid appearing frozen during snapshot apply.
-      if (applied % batchSize === 0) {
-        await new Promise<void>(resolve => setTimeout(resolve, 0));
+    let processed = 0;
+    EventSystem.trigger('INITIAL_ROOM_SYNC_PROGRESS', {
+      syncId,
+      phase: 'applying',
+      total: sorted.length,
+      done: 0
+    });
+    try {
+      for (let context of sorted) {
+        processed++;
+        if (context && context.identifier && !ObjectStore.instance.isDeleted(context.identifier)) {
+          EventSystem.trigger({ eventName: 'UPDATE_GAME_OBJECT', data: context, sendFrom });
+        }
+        // Large rooms can have 2000+ objects. Yield between batches so the browser
+        // can paint/process input and avoid appearing frozen during snapshot apply.
+        if (processed % batchSize === 0) {
+          EventSystem.trigger('INITIAL_ROOM_SYNC_PROGRESS', {
+            syncId,
+            phase: 'applying',
+            total: sorted.length,
+            done: processed
+          });
+          await new Promise<void>(resolve => setTimeout(resolve, 0));
+        }
       }
+      EventSystem.trigger('INITIAL_ROOM_SYNC_PROGRESS', {
+        syncId,
+        phase: 'complete',
+        total: sorted.length,
+        done: processed
+      });
+    } catch (error) {
+      EventSystem.trigger('INITIAL_ROOM_SYNC_PROGRESS', {
+        syncId,
+        phase: 'failed',
+        total: sorted.length,
+        done: processed
+      });
+      throw error;
     }
   }
 

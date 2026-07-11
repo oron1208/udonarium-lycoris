@@ -29,6 +29,11 @@ export class ObjectSynchronizer {
       .on('CONNECT_PEER', 2, event => {
         if (!event.isSendFromSelf) return;
         Logger.debug('CONNECT_PEER GameRoomService !!!', event.data.peerId);
+        // InitialRoomSync negotiates a single ZIP snapshot first.  A legacy
+        // catalog is sent only when that negotiation explicitly falls back.
+      })
+      .on('INITIAL_ROOM_SYNC_FALLBACK', event => {
+        if (!event.isSendFromSelf || !event.data?.peerId) return;
         this.sendCatalog(event.data.peerId);
       })
       .on('DISCONNECT_PEER', event => {

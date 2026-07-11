@@ -2,15 +2,26 @@
   <game-table></game-table>
 </div>
 
-<!-- メディア一括ダウンロード中表示 -->
-<div *ngIf="isBundleLoading" class="bundle-loading-overlay">
-  <div class="bundle-loading-card">
-    <div class="bundle-loading-spinner"></div>
-    <div class="bundle-loading-text">\u30c7\u30fc\u30bf\u3092\u4e00\u62ec\u30c0\u30a6\u30f3\u30ed\u30fc\u30c9\u4e2d...</div>
-    <div class="bundle-loading-progress">
-      <div class="bundle-loading-bar" [style.width.%]="bundleTotal > 0 ? (bundleDone / bundleTotal * 100) : 0"></div>
+<!-- 初期ルーム同期・メディア一括ダウンロード中表示 -->
+<div *ngIf="isBundleLoading" class="bundle-loading-overlay" aria-busy="true">
+  <div class="bundle-loading-card" #bundleLoadingCard tabindex="-1"
+       role="dialog" aria-modal="true"
+       aria-labelledby="bundle-loading-title" aria-describedby="bundle-loading-detail bundle-loading-hint">
+    <div class="bundle-loading-spinner" aria-hidden="true"></div>
+    <div id="bundle-loading-title" class="bundle-loading-text"
+         role="status" aria-live="polite" aria-atomic="true">{{ bundleLoadingText }}</div>
+    <div id="bundle-loading-detail" class="bundle-loading-detail">{{ bundleLoadingDetail }}</div>
+    <div class="bundle-loading-progress" role="progressbar"
+         aria-label="同期の進捗" [attr.aria-valuetext]="bundleLoadingProgressText"
+         [class.is-indeterminate]="bundleProgressPercent == null"
+         [attr.aria-valuemin]="bundleProgressPercent == null ? null : 0"
+         [attr.aria-valuemax]="bundleProgressPercent == null ? null : 100"
+         [attr.aria-valuenow]="bundleProgressAriaValue">
+      <div class="bundle-loading-bar"
+           [style.width.%]="bundleProgressPercent == null ? 35 : bundleProgressPercent"></div>
     </div>
-    <div class="bundle-loading-count">{{ bundleDone }} / {{ bundleTotal }}</div>
+    <div class="bundle-loading-count">{{ bundleLoadingProgressText }}</div>
+    <div id="bundle-loading-hint" class="bundle-loading-hint">完了するまで、この画面を閉じずにお待ちください。</div>
   </div>
 </div>
 <div *ngIf="developerAnnouncementText" class="developer-announcement" [class.danger]="developerAnnouncementLevel === 'danger'">

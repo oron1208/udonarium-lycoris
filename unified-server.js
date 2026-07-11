@@ -17,6 +17,9 @@ const MEDIA_ROOT = path.join(__dirname, 'data', 'media');
 const MEDIA_AUDIT_LOG = path.join(__dirname, 'data', 'media-audit.log');
 const MAX_SIGNAL_BYTES = 1024 * 1024;
 const MAX_MEDIA_BYTES = Number(process.env.MAX_MEDIA_BYTES || 100 * 1024 * 1024);
+const MAX_MEDIA_BUNDLE_ITEMS = 4096;
+const MAX_MEDIA_BUNDLE_BODY_BYTES = 512 * 1024;
+const MAX_MEDIA_BUNDLE_TOTAL_BYTES = readPositiveSafeIntegerEnv('MEDIA_BUNDLE_MAX_TOTAL_BYTES', 192 * 1024 * 1024);
 const HEARTBEAT_MS = 30000;
 const SAVE_DEBOUNCE_MS = Number(process.env.ROOM_SAVE_DEBOUNCE_MS || 1000);
 const SAVE_MAX_DEBOUNCE_MS = Number(process.env.ROOM_SAVE_MAX_DEBOUNCE_MS || 10000);
@@ -34,6 +37,15 @@ const DEV_ADMIN_TOKEN = process.env.DEV_ADMIN_TOKEN || '';
 // When events since last snapshot exceed this, server requests snapshot save from clients
 const ROOM_ID_PATTERN = /^(\w{6})(\w{3})(\w*)-(\w*)/i;
 const MEDIA_HASH_PATTERN = /\b[a-f0-9]{64}\b/ig;
+
+function readPositiveSafeIntegerEnv(name, fallback) {
+  const raw = process.env[name];
+  if (raw == null || raw === '') return fallback;
+  const value = Number(raw);
+  if (Number.isSafeInteger(value) && value > 0) return value;
+  console.warn(`[config] ignoring invalid ${name}=${JSON.stringify(raw)}`);
+  return fallback;
+}
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -826,6 +838,246 @@ function readRequestBody(req, maxBytes = 1024 * 1024) {
   });
 }
 
+function sendMediaBundleJson(res, status, body, extraHeaders = {}) {
+  if (res.destroyed || res.writableEnded) return;
+  res.writeHead(status, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store',
+    'X-Content-Type-Options': 'nosniff',
+    ...extraHeaders,
+  });
+  res.end(JSON.stringify(body));
+}
+
+function mediaBundleRequestError(code, detail = {}) {
+  const error = new Error(code);
+  error.code = code;
+  Object.assign(error, detail);
+  return error;
+}
+
+function parseMediaBundleRequest(body) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    throw mediaBundleRequestError('invalid-request');
+  }
+
+  const requested = [];
+  const seen = new Set();
+  for (const [property, kind] of [['images', 'image'], ['audios', 'audio']]) {
+    const hashes = body[property];
+    if (hashes === undefined) continue;
+    if (!Array.isArray(hashes)) {
+      throw mediaBundleRequestError('invalid-hash-list', { property });
+    }
+
+    for (let index = 0; index < hashes.length; index++) {
+      const hash = hashes[index];
+      if (typeof hash !== 'string' || !/^[a-f0-9]{64}$/i.test(hash)) {
+        throw mediaBundleRequestError('invalid-hash', { property, index });
+      }
+      const normalizedHash = hash.toLowerCase();
+      const key = `${kind}:${normalizedHash}`;
+      if (seen.has(key)) continue;
+      if (requested.length >= MAX_MEDIA_BUNDLE_ITEMS) {
+        throw mediaBundleRequestError('too-many-items');
+      }
+      seen.add(key);
+      requested.push({ kind, hash: normalizedHash });
+    }
+  }
+  return requested;
+}
+
+function collectRequestedMediaBundleEntries(requested) {
+  const entries = [];
+  const missing = [];
+  let totalBytes = 0;
+
+  for (const item of requested) {
+    const filePath = mediaPath(item.kind, item.hash);
+    let stat;
+    try {
+      stat = fs.statSync(filePath);
+    } catch (error) {
+      if (error.code === 'ENOENT' || error.code === 'ENOTDIR') {
+        missing.push(item);
+        continue;
+      }
+      throw error;
+    }
+
+    if (!stat.isFile()) {
+      missing.push(item);
+      continue;
+    }
+    if (!Number.isSafeInteger(stat.size) || stat.size < 0) {
+      throw new Error(`Invalid media size for ${item.kind}/${item.hash}`);
+    }
+    if (stat.size > MAX_MEDIA_BUNDLE_TOTAL_BYTES - totalBytes) {
+      throw mediaBundleRequestError('bundle-too-large', { totalBytes, nextBytes: stat.size });
+    }
+
+    const meta = safeReadMediaMeta(item.kind, item.hash);
+    const name = typeof meta.name === 'string' && meta.name
+      ? meta.name.slice(0, 256)
+      : item.hash;
+    const type = typeof meta.type === 'string' ? meta.type.slice(0, 128) : '';
+    totalBytes += stat.size;
+    entries.push({
+      filePath,
+      kind: item.kind,
+      hash: item.hash,
+      name,
+      type,
+      size: stat.size,
+    });
+  }
+
+  return { entries, missing, totalBytes };
+}
+
+async function handleMediaBundlePost(req, res) {
+  const advertisedLength = Number(req.headers['content-length']);
+  if (Number.isFinite(advertisedLength) && advertisedLength > MAX_MEDIA_BUNDLE_BODY_BYTES) {
+    sendMediaBundleJson(res, 413, {
+      ok: false,
+      error: 'request-too-large',
+      maxBytes: MAX_MEDIA_BUNDLE_BODY_BYTES,
+    }, { Connection: 'close' });
+    return;
+  }
+
+  let rawBody;
+  try {
+    rawBody = await readRequestBody(req, MAX_MEDIA_BUNDLE_BODY_BYTES);
+  } catch (error) {
+    if (error && error.message === 'request-too-large') {
+      sendMediaBundleJson(res, 413, {
+        ok: false,
+        error: 'request-too-large',
+        maxBytes: MAX_MEDIA_BUNDLE_BODY_BYTES,
+      }, { Connection: 'close' });
+      return;
+    }
+    console.warn('[media-bundle] failed to read request', error && error.message);
+    sendMediaBundleJson(res, 400, { ok: false, error: 'request-read-failed' });
+    return;
+  }
+
+  let body;
+  try {
+    body = JSON.parse(rawBody);
+  } catch (_) {
+    sendMediaBundleJson(res, 400, { ok: false, error: 'invalid-json' });
+    return;
+  }
+
+  let requested;
+  try {
+    requested = parseMediaBundleRequest(body);
+  } catch (error) {
+    if (error && error.code === 'too-many-items') {
+      sendMediaBundleJson(res, 413, {
+        ok: false,
+        error: error.code,
+        maxItems: MAX_MEDIA_BUNDLE_ITEMS,
+      });
+      return;
+    }
+    sendMediaBundleJson(res, 400, {
+      ok: false,
+      error: error && error.code || 'invalid-request',
+      ...(error && error.property ? { property: error.property } : {}),
+      ...(error && Number.isInteger(error.index) ? { index: error.index } : {}),
+    });
+    return;
+  }
+
+  let bundle;
+  try {
+    bundle = collectRequestedMediaBundleEntries(requested);
+  } catch (error) {
+    if (error && error.code === 'bundle-too-large') {
+      sendMediaBundleJson(res, 413, {
+        ok: false,
+        error: error.code,
+        maxBytes: MAX_MEDIA_BUNDLE_TOTAL_BYTES,
+      });
+      return;
+    }
+    console.error('[media-bundle] failed to collect media', error);
+    sendMediaBundleJson(res, 500, { ok: false, error: 'bundle-prepare-failed' });
+    return;
+  }
+
+  const manifest = {
+    version: 1,
+    entries: bundle.entries.map(entry => ({
+      kind: entry.kind,
+      hash: entry.hash,
+      name: entry.name,
+      type: entry.type,
+      size: entry.size,
+    })),
+    missing: bundle.missing,
+    requested: requested.length,
+    totalBytes: bundle.totalBytes,
+  };
+
+  const archive = archiver('zip', { zlib: { level: 1 } });
+  let archiveFailed = false;
+  const failArchive = error => {
+    if (archiveFailed) return;
+    archiveFailed = true;
+    console.error('[media-bundle] zip stream failed', error);
+    try { archive.abort(); } catch (_) { }
+    if (!res.headersSent) {
+      sendMediaBundleJson(res, 500, { ok: false, error: 'bundle-stream-failed' });
+    } else if (!res.destroyed) {
+      res.destroy(error);
+    }
+  };
+
+  archive.on('warning', failArchive);
+  archive.on('error', failArchive);
+  req.once('aborted', () => {
+    if (!res.writableEnded) {
+      try { archive.abort(); } catch (_) { }
+    }
+  });
+  res.once('close', () => {
+    if (!res.writableEnded) {
+      try { archive.abort(); } catch (_) { }
+    }
+  });
+
+  res.writeHead(200, {
+    'Content-Type': 'application/zip',
+    'Content-Disposition': 'attachment; filename="media-bundle.zip"',
+    'Cache-Control': 'no-store',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Media-Bundle-Bytes': String(bundle.totalBytes),
+    'X-Media-Bundle-Entries': String(bundle.entries.length),
+  });
+  archive.pipe(res);
+
+  try {
+    archive.append(JSON.stringify(manifest), { name: '_manifest.json' });
+    for (const entry of bundle.entries) {
+      archive.file(entry.filePath, {
+        name: `${entry.kind}/${entry.hash}`,
+        store: true,
+      });
+    }
+    await archive.finalize();
+    if (!archiveFailed) {
+      console.log(`[media-bundle] streamed requested=${requested.length} found=${bundle.entries.length} missing=${bundle.missing.length} bytes=${bundle.totalBytes}`);
+    }
+  } catch (error) {
+    failArchive(error);
+  }
+}
+
 function getClientIp(req) {
   const forwardedFor = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
   return forwardedFor || req.socket.remoteAddress || '';
@@ -1445,6 +1697,15 @@ function createAppHandler() {
     return;
   }
 
+  if (requestPath === '/api/media/bundle') {
+    if (req.method !== 'POST') {
+      sendMediaBundleJson(res, 405, { ok: false, error: 'method-not-allowed' }, { Allow: 'POST' });
+      return;
+    }
+    await handleMediaBundlePost(req, res);
+    return;
+  }
+
   const mediaMatch = requestPath.match(/^\/api\/media\/(image|audio)\/([a-f0-9]{64})$/i);
   if (mediaMatch) {
     const [, kind, hash] = mediaMatch;
@@ -1542,25 +1803,42 @@ function createAppHandler() {
     }
 
     const archive = archiver('zip', { zlib: { level: 1 } }); // 高速化のため圧縮レベル1
-    archive.on('error', (err) => {
+    let bundleFailed = false;
+    const failBundle = (err) => {
+      if (bundleFailed) return;
+      bundleFailed = true;
       console.error('[bundle] zip error', err);
-      res.end();
-    });
+      try { archive.abort(); } catch (_) {}
+      if (!res.headersSent) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'bundle-stream-failed' }));
+      } else if (!res.destroyed) {
+        res.destroy(err);
+      }
+    };
+    archive.on('warning', failBundle);
+    archive.on('error', failBundle);
+    req.once('aborted', () => { try { archive.abort(); } catch (_) {} });
+    res.once('close', () => { if (!res.writableEnded) { try { archive.abort(); } catch (_) {} } });
     archive.pipe(res);
 
-    // メタデータJSONを先頭に追加（クライアント側で画像/音声を区別するため）
-    const manifest = entries.map(e => ({
-      kind: e.kind,
-      hash: e.hash,
-      name: e.meta.name || e.hash,
-      type: e.meta.type || '',
-    }));
-    archive.append(JSON.stringify(manifest), { name: '_manifest.json' });
+    try {
+      // メタデータJSONを先頭に追加（クライアント側で画像/音声を区別するため）
+      const manifest = entries.map(e => ({
+        kind: e.kind,
+        hash: e.hash,
+        name: e.meta.name || e.hash,
+        type: e.meta.type || '',
+      }));
+      archive.append(JSON.stringify(manifest), { name: '_manifest.json' });
 
-    for (const entry of entries) {
-      archive.file(entry.path, { name: `${entry.kind}/${entry.hash}` });
+      for (const entry of entries) {
+        archive.file(entry.path, { name: `${entry.kind}/${entry.hash}` });
+      }
+      await archive.finalize();
+    } catch (error) {
+      failBundle(error);
     }
-    archive.finalize();
     return;
   }
 
@@ -1707,4 +1985,14 @@ server.listen(httpsPort || PORT, '0.0.0.0', () => {
   console.log(`  Relay WS:  ${scheme === 'https' ? 'wss' : 'ws'}://0.0.0.0:${httpsPort || PORT}/signaling`);
   console.log(`  Status:    ${scheme}://0.0.0.0:${httpsPort || PORT}/api/status`);
   console.log(`  Storage:   ${DATA_ROOT}`);
+  try {
+    const archiverVersion = require('archiver/package.json').version;
+    const archiverType = typeof archiver;
+    console.log(`  archiver:  v${archiverVersion} (${archiverType})`);
+    if (archiverType !== 'function') {
+      console.error('  ⚠ archiver is not a function! ZIP sync will crash. Need archiver@5.x.');
+    }
+  } catch (e) {
+    console.log(`  archiver:  unknown (${e.message})`);
+  }
 });

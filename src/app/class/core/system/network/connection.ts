@@ -29,6 +29,6 @@ export interface Connection {
   setSignalingUrl?(url: string);
   setIceServers?(iceServers: RTCIceServer[]);
   listAllPeers(): Promise<string[]>
-  forceResync?(): void
+  forceResync?(): boolean
   manualSaveSnapshot?(): boolean
 }

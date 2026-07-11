@@ -53,7 +53,7 @@ export class SkyWayConnection implements Connection {
   setApiKey(key: string) { /* SkyWay 2023 uses backend-issued tokens, not client API keys. */ }
   setSignalingUrl(url: string) { if (url) this.skyWay.url = url; }
   setIceServers(iceServers: RTCIceServer[]) { /* SkyWay 2023 controls ICE via SkyWay platform/backend token. */ }
-  forceResync() { /* P2P mode has no central snapshot to force-resync. */ }
+  forceResync(): boolean { return false; /* InitialRoomSync handles P2P ZIP resync. */ }
 
   open(userId?: string)
   open(userId: string, roomId: string, roomName: string, password: string)

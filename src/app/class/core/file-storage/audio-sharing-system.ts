@@ -29,7 +29,16 @@ export class AudioSharingSystem {
       .on('CONNECT_PEER', -1, event => {
         if (!event.isSendFromSelf) return;
         Logger.debug('CONNECT_PEER AudioStorageService !!!', event.data.peerId);
-        AudioStorage.instance.synchronize();
+        // InitialRoomSync sends one room ZIP first.  Older peers are handled by
+        // the explicit INITIAL_ROOM_SYNC_FALLBACK path below.
+      })
+      .on('INITIAL_ROOM_SYNC_FALLBACK', event => {
+        if (!event.isSendFromSelf || !event.data?.peerId) return;
+        AudioStorage.instance.synchronize(event.data.peerId);
+      })
+      .on('INITIAL_ROOM_MEDIA_CATALOG_FALLBACK', event => {
+        if (!event.isSendFromSelf || !Array.isArray(event.data?.audios)) return;
+        this.applyInitialCatalog(event.data.audios, event.data.sourcePeerId);
       })
       .on('SYNCHRONIZE_AUDIO_LIST', async event => {
         if (event.isSendFromSelf) return;
@@ -151,6 +160,16 @@ export class AudioSharingSystem {
           this.startReceiveTask(identifier);
         }
       });
+  }
+
+  /** Re-enters the existing individual media synchronization path. */
+  applyInitialCatalog(catalog: CatalogItem[], sourcePeerId: string) {
+    if (!Array.isArray(catalog) || !sourcePeerId) return;
+    EventSystem.trigger({
+      eventName: 'SYNCHRONIZE_AUDIO_LIST',
+      data: catalog,
+      sendFrom: sourcePeerId
+    });
   }
 
   private destroy() {

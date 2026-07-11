@@ -30,7 +30,16 @@ export class ImageSharingSystem {
       .on('CONNECT_PEER', 1, event => {
         if (!event.isSendFromSelf) return;
         Logger.debug('CONNECT_PEER ImageStorageService !!!', event.data.peerId);
-        ImageStorage.instance.synchronize();
+        // InitialRoomSync sends one room ZIP first.  Older peers are handled by
+        // the explicit INITIAL_ROOM_SYNC_FALLBACK path below.
+      })
+      .on('INITIAL_ROOM_SYNC_FALLBACK', event => {
+        if (!event.isSendFromSelf || !event.data?.peerId) return;
+        ImageStorage.instance.synchronize(event.data.peerId);
+      })
+      .on('INITIAL_ROOM_MEDIA_CATALOG_FALLBACK', event => {
+        if (!event.isSendFromSelf || !Array.isArray(event.data?.images)) return;
+        this.applyInitialCatalog(event.data.images, event.data.sourcePeerId);
       })
       .on('XML_LOADED', event => {
         convertUrlImage(event.data.xmlElement);
@@ -146,6 +155,20 @@ export class ImageSharingSystem {
           this.startReceiveTask(identifier);
         }
       });
+  }
+
+  /**
+   * Reuses the normal per-file HTTP/P2P path for a catalog embedded in the
+   * initial room ZIP.  The event is local but carries the selected source peer
+   * so missing server media can still fall back to that peer.
+   */
+  applyInitialCatalog(catalog: CatalogItem[], sourcePeerId: string) {
+    if (!Array.isArray(catalog) || !sourcePeerId) return;
+    EventSystem.trigger({
+      eventName: 'SYNCHRONIZE_FILE_LIST',
+      data: catalog,
+      sendFrom: sourcePeerId
+    });
   }
 
   private destroy() {

@@ -2,6 +2,7 @@ import { AfterViewInit, ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit 
 import { Logger } from '../../class/core/system/util/logger';
 
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
+import { ForceRoomResyncResult, InitialRoomSync } from '@udonarium/core/synchronize-object/initial-room-sync';
 import { ChatTabList } from '@udonarium/chat-tab-list';
 import { PeerContext } from '@udonarium/core/system/network/peer-context';
 import { EventSystem, Network } from '@udonarium/core/system';
@@ -51,6 +52,21 @@ export class PeerMenuComponent implements OnInit, OnDestroy, AfterViewInit {
   disptimer = null;
   dispDetailFlag = false;
   isGmCursorShareDisabled = this.loadGmCursorShareDisabled();
+  isForceResyncRunning = false;
+  private forceResyncRequested = false;
+  private forceResyncSyncId = '';
+  private forceResyncCooldownUntil = 0;
+  private forceResyncTimeout: any = null;
+
+  get forceResyncCooldownSeconds(): number {
+    return Math.max(0, Math.ceil((this.forceResyncCooldownUntil - Date.now()) / 1000));
+  }
+  get isForceResyncDisabled(): boolean {
+    return !this.networkService.isOpen || this.isForceResyncRunning || 0 < this.forceResyncCooldownSeconds;
+  }
+  get forceResyncButtonLabel(): string {
+    return this.isForceResyncRunning ? '再同期中…' : '強制再同期';
+  }
 
   get myPeer(): PeerCursor { return PeerCursor.myCursor; }
   get isGmMode(): boolean { return this.gmModeService.isGm; }
@@ -89,6 +105,10 @@ export class PeerMenuComponent implements OnInit, OnDestroy, AfterViewInit {
     EventSystem.register(this)
       .on('OPEN_NETWORK', event => {
         this.ngZone.run(() => { });
+      })
+      .on('INITIAL_ROOM_SYNC_PROGRESS', event => {
+        if (!event.isSendFromSelf || !this.forceResyncRequested) return;
+        this.ngZone.run(() => this.handleForceResyncProgress(event.data));
       });
 
     this.disptimer = setInterval(() => {
@@ -98,7 +118,10 @@ export class PeerMenuComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnDestroy() {
     EventSystem.unregister(this);
+    if (this.disptimer != null) clearInterval(this.disptimer);
+    if (this.forceResyncTimeout != null) clearTimeout(this.forceResyncTimeout);
     this.disptimer = null;
+    this.forceResyncTimeout = null;
   }
 
   changeIcon() {
@@ -128,8 +151,97 @@ export class PeerMenuComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   forceResync() {
-    Network.forceResync();
-    this.help = '強制再同期を要求しました。数秒待ってから表示を確認してください。';
+    if (this.isForceResyncDisabled) return;
+    const confirmed = window.confirm(
+      '接続中の参加者またはサーバーから部屋データを再取得します。\n' +
+      '表示ずれや再接続後の不整合がある場合だけ実行してください。\n\n強制再同期を開始しますか？'
+    );
+    if (!confirmed) return;
+
+    this.forceResyncRequested = true;
+    this.forceResyncSyncId = '';
+    this.isForceResyncRunning = true;
+    this.help = '再同期データを要求しています。操作せずにお待ちください。';
+    this.startForceResyncTimeout();
+
+    // Central relay has its own canonical snapshot. SkyWay P2P falls back to
+    // the ZIP snapshot path and tries connected peers in connection-quality order.
+    if (Network.forceResync()) return;
+    const result: ForceRoomResyncResult = InitialRoomSync.instance.forceResync();
+    if (result === 'started') return;
+
+    this.forceResyncRequested = false;
+    this.isForceResyncRunning = false;
+    this.clearForceResyncTimeout();
+    switch (result) {
+      case 'busy':
+        this.help = 'すでに同期処理中です。完了してからもう一度お試しください。';
+        break;
+      case 'no-peer':
+        this.help = '再同期元になる参加者が見つかりません。ほかの参加者の接続を確認してください。';
+        break;
+      default:
+        this.help = 'ネットワークに接続されていないため、再同期を開始できませんでした。';
+        break;
+    }
+  }
+
+  private handleForceResyncProgress(data: any) {
+    const phase = typeof data?.phase === 'string' ? data.phase : '';
+    const syncId = typeof data?.syncId === 'string' ? data.syncId : '';
+    if (this.forceResyncSyncId && syncId && this.forceResyncSyncId !== syncId) return;
+    if (!this.forceResyncSyncId && syncId && (phase === 'preparing' || phase === 'downloading' || phase === 'extracting' || phase === 'applying')) {
+      this.forceResyncSyncId = syncId;
+    }
+    const done = Number.isSafeInteger(data?.done) ? data.done : 0;
+    const total = Number.isSafeInteger(data?.total) ? data.total : 0;
+    switch (phase) {
+      case 'preparing':
+        this.help = '再同期用ZIPを準備しています。';
+        break;
+      case 'downloading':
+        this.help = 0 < total ? `再同期データを受信中です（${Math.floor(done / total * 100)}%）。` : '再同期データを受信しています。';
+        break;
+      case 'extracting':
+        this.help = '再同期データを展開しています。';
+        break;
+      case 'applying':
+        this.help = 0 < total ? `部屋データを反映中です（${done.toLocaleString()} / ${total.toLocaleString()}件）。` : '部屋データを反映しています。';
+        break;
+      case 'complete':
+        this.finishForceResync(true, '強制再同期が完了しました。表示内容を確認してください。');
+        break;
+      case 'fallback':
+        this.finishForceResync(false, 'ZIP再同期に失敗したため、互換同期へ切り替えました。少し待ってから表示を確認してください。');
+        break;
+      case 'failed':
+        this.finishForceResync(false, '強制再同期に失敗しました。接続状態を確認してから再実行してください。');
+        break;
+    }
+  }
+
+  private startForceResyncTimeout() {
+    this.clearForceResyncTimeout();
+    this.forceResyncTimeout = setTimeout(() => {
+      this.ngZone.run(() => {
+        if (!this.forceResyncRequested) return;
+        this.finishForceResync(false, '再同期が180秒以内に完了しませんでした。接続状態を確認してください。');
+      });
+    }, 180 * 1000);
+  }
+
+  private clearForceResyncTimeout() {
+    if (this.forceResyncTimeout != null) clearTimeout(this.forceResyncTimeout);
+    this.forceResyncTimeout = null;
+  }
+
+  private finishForceResync(success: boolean, message: string) {
+    this.clearForceResyncTimeout();
+    this.forceResyncRequested = false;
+    this.forceResyncSyncId = '';
+    this.isForceResyncRunning = false;
+    this.forceResyncCooldownUntil = Date.now() + (success ? 30 : 10) * 1000;
+    this.help = message;
   }
 
   saveSnapshot() {

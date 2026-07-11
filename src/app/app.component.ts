@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, NgZone, OnDestroy, ViewChild, ViewContainerRef } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, NgZone, OnDestroy, ViewChild, ViewContainerRef } from '@angular/core';
 import { NgSelectConfig } from '@ng-select/ng-select';
 import * as lzbase62 from 'lzbase62';
 import { Logger } from './class/core/system/util/logger';
@@ -15,6 +15,7 @@ import { ImageSharingSystem } from '@udonarium/core/file-storage/image-sharing-s
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 import { ServerMediaStorage } from '@udonarium/core/file-storage/server-media-storage';
 import { ObjectFactory } from '@udonarium/core/synchronize-object/object-factory';
+import { InitialRoomSync } from '@udonarium/core/synchronize-object/initial-room-sync';
 import { ObjectSerializer } from '@udonarium/core/synchronize-object/object-serializer';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { ObjectSynchronizer } from '@udonarium/core/synchronize-object/object-synchronizer';
@@ -71,6 +72,13 @@ import { VoteWindowComponent } from 'component/vote-window/vote-window.component
 import { AlarmWindowComponent } from 'component/alarm-window/alarm-window.component';
 import { ChatMessageFixComponent } from 'component/chat-message-fix/chat-message-fix.component';
 
+interface BundleLoadingState {
+  operationId: string;
+  source: 'room' | 'media';
+  phase: string;
+  done: number;
+  total: number;
+}
 
 @Component({
   selector: 'app-root',
@@ -103,10 +111,20 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   developerAnnouncementText = '';
   developerAnnouncementLevel = 'warning';
 
-  // メディア一括ダウンロード中表示
+  // 初期ルーム同期・メディア一括ダウンロードの共通表示
   isBundleLoading = false;
   bundleTotal = 0;
   bundleDone = 0;
+  bundleLoadingText = '部屋データを準備しています';
+  bundleLoadingDetail = '同期処理を開始しています。';
+  bundleLoadingProgressText = 'しばらくお待ちください';
+  bundleProgressPercent: number | null = null;
+  bundleProgressAriaValue: number | null = null;
+  private initialRoomLoadingState: BundleLoadingState | null = null;
+  private mediaBundleLoadingStates: Map<string, BundleLoadingState> = new Map();
+  private mediaBundleOperationSequence = 0;
+  private previousBundleFocusedElement: HTMLElement | null = null;
+  private bundleModalBackground: Array<{ element: HTMLElement, inert: boolean, ariaHidden: string | null }> = [];
 
   get isGmMode(): boolean { return this.gmModeService.isGm; }
 
@@ -172,7 +190,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     public gmModeService: GmModeService,
     private ngSelectConfig: NgSelectConfig,
     private ngZone: NgZone,
-    private audioLibraryService: AudioLibraryService
+    private audioLibraryService: AudioLibraryService,
+    private hostElement: ElementRef<HTMLElement>
   ) {
 
     // AudioLibraryServiceをJukeboxに注入
@@ -193,6 +212,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       ObjectSerializer.instance;
       ObjectStore.instance;
       ObjectSynchronizer.instance.initialize();
+      InitialRoomSync.instance.initialize();
     });
     this.appConfigService.initialize();
     this.pointerDeviceService.initialize();
@@ -305,16 +325,43 @@ export class AppComponent implements AfterViewInit, OnDestroy {
           this.handleDeveloperControlMessage(data);
         });
       })
+      .on('INITIAL_ROOM_MEDIA_CATALOG', 1000, event => {
+        if (!event.isSendFromSelf) return;
+        const data = event.data as any;
+        if (!data || data.handled) return;
+        // The low-priority legacy listeners inspect this flag synchronously.
+        // Claim the catalog before starting the asynchronous HTTP ZIP request.
+        data.handled = true;
+        this.loadInitialRoomMediaBundle(data);
+      })
+      .on('INITIAL_ROOM_SYNC_PROGRESS', event => {
+        if (!event.isSendFromSelf) return;
+        this.ngZone.run(() => this.updateInitialRoomLoadingState(event.data));
+      })
       .on('MEDIA_BUNDLE_PROGRESS', event => {
+        if (!event.isSendFromSelf) return;
         this.ngZone.run(() => {
           const data = event.data || {};
-          if (data.status === 'downloading') {
-            this.isBundleLoading = true;
-            this.bundleTotal = data.total || 0;
-            this.bundleDone = data.done || 0;
+          const operationId = typeof data.operationId === 'string' && data.operationId.length <= 128
+            ? data.operationId
+            : 'legacy-media-bundle';
+          if (data.status === 'downloading' || data.status === 'extracting') {
+            const next: BundleLoadingState = {
+              operationId,
+              source: 'media',
+              phase: data.status,
+              total: this.toProgressNumber(data.total),
+              done: this.toProgressNumber(data.done)
+            };
+            const previous = this.mediaBundleLoadingStates.get(operationId);
+            if (!this.shouldUpdateMediaProgress(previous, next)) return;
+            // Reinsert so the operation with the newest visible progress wins.
+            this.mediaBundleLoadingStates.delete(operationId);
+            this.mediaBundleLoadingStates.set(operationId, next);
           } else {
-            this.isBundleLoading = false;
+            this.mediaBundleLoadingStates.delete(operationId);
           }
+          this.refreshBundleLoadingOverlay();
         });
       })
       .on('UPDATE_GAME_OBJECT', event => { this.syncAdvancedRoomUiClass(); this.lazyNgZoneUpdate(event.isSendFromSelf); })
@@ -422,6 +469,182 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       });
   }
 
+  private updateInitialRoomLoadingState(data: any) {
+    const phase = typeof data?.phase === 'string' ? data.phase : '';
+    const syncId = typeof data?.syncId === 'string' && data.syncId.length <= 128 ? data.syncId : '';
+    if (phase === 'idle') {
+      this.initialRoomLoadingState = null;
+    } else if (phase === 'complete' || phase === 'failed' || phase === 'fallback') {
+      if (!this.initialRoomLoadingState || !syncId || this.initialRoomLoadingState.operationId === syncId) {
+        this.initialRoomLoadingState = null;
+      }
+    } else if (phase === 'preparing' || phase === 'downloading' || phase === 'extracting' || phase === 'applying') {
+      this.initialRoomLoadingState = {
+        operationId: syncId || 'initial-room-sync',
+        source: 'room',
+        phase,
+        total: this.toProgressNumber(data.total),
+        done: this.toProgressNumber(data.done)
+      };
+    } else {
+      return;
+    }
+    this.refreshBundleLoadingOverlay();
+  }
+
+  private refreshBundleLoadingOverlay() {
+    // Media starts immediately after the room objects are applied. Keeping the
+    // states separate prevents the room-complete event from hiding media work.
+    const mediaStates = Array.from(this.mediaBundleLoadingStates.values());
+    const state = mediaStates[mediaStates.length - 1] || this.initialRoomLoadingState;
+    const wasLoading = this.isBundleLoading;
+    this.isBundleLoading = state != null;
+    if (wasLoading !== this.isBundleLoading) this.setBundleModalActive(this.isBundleLoading);
+    if (!state) {
+      this.bundleTotal = 0;
+      this.bundleDone = 0;
+      this.bundleProgressPercent = null;
+      this.bundleProgressAriaValue = null;
+      return;
+    }
+
+    this.bundleTotal = state.total;
+    this.bundleDone = 0 < state.total ? Math.min(state.done, state.total) : state.done;
+    this.bundleProgressPercent = 0 < state.total
+      ? Math.max(0, Math.min(100, this.bundleDone / state.total * 100))
+      : null;
+    this.bundleProgressAriaValue = this.bundleProgressPercent == null
+      ? null
+      : Math.floor(this.bundleProgressPercent);
+
+    if (state.source === 'media') {
+      if (state.phase === 'extracting') {
+        this.bundleLoadingText = '画像・音声を展開中';
+        this.bundleLoadingDetail = '受信したメディアZIPを順番に展開しています。';
+      } else {
+        this.bundleLoadingText = '画像・音声をダウンロード中';
+        this.bundleLoadingDetail = '部屋で使用するメディアをまとめて取得しています。';
+      }
+    } else if (state.phase === 'preparing') {
+      this.bundleLoadingText = '部屋データを準備中';
+      this.bundleLoadingDetail = '同期元の端末でZIPファイルを作成しています。';
+    } else if (state.phase === 'downloading') {
+      this.bundleLoadingText = '部屋データをダウンロード中';
+      this.bundleLoadingDetail = '同期用ZIPファイルを受信しています。';
+    } else if (state.phase === 'extracting') {
+      this.bundleLoadingText = '部屋データを展開中';
+      this.bundleLoadingDetail = '受信したZIPファイルを確認して展開しています。';
+    } else {
+      this.bundleLoadingText = '部屋データを反映中';
+      this.bundleLoadingDetail = 'キャラクターやチャットなどを部屋に反映しています。';
+    }
+
+    if (this.bundleProgressPercent == null) {
+      this.bundleLoadingProgressText = state.phase === 'preparing'
+        ? 'ZIPファイルを準備しています'
+        : state.phase === 'extracting'
+          ? 'ZIPファイルを確認しています'
+          : '処理を開始しています';
+    } else if (state.source === 'media' || state.phase === 'applying') {
+      this.bundleLoadingProgressText = `${this.bundleDone.toLocaleString()} / ${this.bundleTotal.toLocaleString()} 件`;
+    } else {
+      this.bundleLoadingProgressText = `${Math.floor(this.bundleProgressPercent)}%`;
+    }
+  }
+
+  private toProgressNumber(value: any): number {
+    return Number.isSafeInteger(value) && 0 <= value ? value : 0;
+  }
+
+  private shouldUpdateMediaProgress(previous: BundleLoadingState | undefined, next: BundleLoadingState): boolean {
+    if (!previous || previous.phase !== next.phase || previous.total !== next.total) return true;
+    if (0 < next.total && next.total <= next.done) return true;
+    if (next.total < 1) return false;
+    const previousPercent = Math.floor(Math.min(previous.done, previous.total) / previous.total * 100);
+    const nextPercent = Math.floor(Math.min(next.done, next.total) / next.total * 100);
+    return previousPercent !== nextPercent;
+  }
+
+  private setBundleModalActive(active: boolean) {
+    const host = this.hostElement.nativeElement;
+    if (active) {
+      const focused = document.activeElement;
+      this.previousBundleFocusedElement = focused instanceof HTMLElement && focused !== document.body ? focused : null;
+    }
+
+    setTimeout(() => {
+      if (active) {
+        this.restoreBundleModalBackground();
+        this.bundleModalBackground = Array.from(host.children)
+          .filter(element => !element.classList.contains('bundle-loading-overlay'))
+          .map(element => ({
+            element: element as HTMLElement,
+            inert: element.hasAttribute('inert'),
+            ariaHidden: element.getAttribute('aria-hidden')
+          }));
+        for (const item of this.bundleModalBackground) {
+          item.element.setAttribute('inert', '');
+          item.element.setAttribute('aria-hidden', 'true');
+        }
+        const card = host.querySelector('.bundle-loading-card') as HTMLElement;
+        if (card) card.focus({ preventScroll: true });
+      } else {
+        this.restoreBundleModalBackground();
+        const previous = this.previousBundleFocusedElement;
+        this.previousBundleFocusedElement = null;
+        if (previous && previous.isConnected) previous.focus({ preventScroll: true });
+      }
+    }, 0);
+  }
+
+  private restoreBundleModalBackground() {
+    for (const item of this.bundleModalBackground) {
+      if (item.inert) item.element.setAttribute('inert', '');
+      else item.element.removeAttribute('inert');
+      if (item.ariaHidden == null) item.element.removeAttribute('aria-hidden');
+      else item.element.setAttribute('aria-hidden', item.ariaHidden);
+    }
+    this.bundleModalBackground = [];
+  }
+
+  private async loadInitialRoomMediaBundle(data: any): Promise<void> {
+    const images = Array.isArray(data.images)
+      ? data.images.map(item => item && item.identifier).filter(identifier => typeof identifier === 'string')
+      : [];
+    const audios = Array.isArray(data.audios)
+      ? data.audios.map(item => item && item.identifier).filter(identifier => typeof identifier === 'string')
+      : [];
+    const fallback = typeof data.fallback === 'function' ? data.fallback : () => { };
+    const operationId = `initial-room-media-${Date.now().toString(36)}-${++this.mediaBundleOperationSequence}`;
+
+    EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', {
+      operationId,
+      status: 'downloading',
+      total: images.length + audios.length,
+      done: 0,
+    });
+    try {
+      const result = await ServerMediaStorage.fetchBundle(images, audios, progress => {
+        EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', {
+          operationId,
+          status: 'extracting',
+          total: progress.total,
+          done: progress.done,
+        });
+      });
+      if (result.missing.length || result.failed.length) {
+        Logger.warn(`[media-bundle] loaded=${result.loaded} missing=${result.missing.length} failed=${result.failed.length}`);
+      }
+    } catch (error) {
+      // Old servers and interrupted ZIP transfers immediately return to the
+      // existing individual HTTP/P2P path instead of blocking room entry.
+      Logger.warn('[media-bundle] bulk download failed; using legacy fallback', error);
+    } finally {
+      fallback();
+      EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'done', total: 0, done: 0 });
+    }
+  }
+
   ngAfterViewInit() {
     PanelService.defaultParentViewContainerRef = ModalService.defaultParentViewContainerRef = ContextMenuService.defaultParentViewContainerRef = this.modalLayerViewContainerRef;
     this.syncAdvancedRoomUiClass();
@@ -525,7 +748,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    InitialRoomSync.instance.destroy();
     EventSystem.unregister(this);
+    this.restoreBundleModalBackground();
     document.body.classList.remove('udonarium-advanced-room');
     if (this.developerPollTimer != null) clearInterval(this.developerPollTimer);
     if (this.developerHeartbeatTimer != null) clearInterval(this.developerHeartbeatTimer);

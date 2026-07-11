@@ -54,17 +54,23 @@
     </span>
   </div>
   <div>
-    <button (click)="forceResync()" [disabled]="!networkService.isOpen">
-      <span>強制再同期</span>
-    </button>
-    <button (click)="saveSnapshot()" [disabled]="!networkService.isOpen">
-      <span>💾 ルームデータを保存</span>
-    </button>
+    <span class="force-resync-control">
+      <button class="force-resync-button" (click)="forceResync()"
+        [disabled]="isForceResyncDisabled" [attr.aria-busy]="isForceResyncRunning">
+        <span>{{forceResyncButtonLabel}}</span>
+      </button>
+      <span class="force-resync-cooldown" *ngIf="!isForceResyncRunning && forceResyncCooldownSeconds > 0">
+        {{forceResyncCooldownSeconds}}秒後に再実行できます
+      </span>
+    </span>
     <ng-container *ngIf="networkService.peerIds.length > 1">
       <button (click)="showReConnect()" class="danger">
         <span>再接続</span>
       </button>
     </ng-container>
+    <div class="force-resync-description">
+      表示ずれや再接続後の不整合がある場合に、部屋データをZIPで再取得します。通常時は実行不要です。
+    </div>
   </div>
 </ng-container>
 <hr/>

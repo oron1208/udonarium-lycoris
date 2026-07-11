@@ -19,14 +19,17 @@ export class BufferSharingTask<T> {
   private chanks: Uint8Array[] = [];
   private chankSize: number = 32 * 1024;
   private chankReceiveCount: number = 0;
+  private receivedByteLength: number = 0;
   private sendChankTimer!: number;
 
   private sentChankIndex = 0;
-  private bufferingChankRange: number = 4;
+  private bufferingChankRange: number = 16;
   private completedChankIndex = 0;
 
   private startTime = 0;
   private isCanceled = false;
+  private receiveFrom?: string;
+  private maxReceiveBytes: number = Number.POSITIVE_INFINITY;
 
   private onstart!: () => void;
   onprogress!: (task: BufferSharingTask<T>, loded: number, total: number) => void;
@@ -36,10 +39,12 @@ export class BufferSharingTask<T> {
 
   private timeoutTimer!: ResettableTimeout;
 
-  private constructor(identifier: string, sendTo?: string, data?: T) {
+  private constructor(identifier: string, sendTo?: string, data?: T, receiveFrom?: string, maxReceiveBytes?: number) {
     this.identifier = identifier;
     this.sendTo = sendTo;
     this.data = data;
+    this.receiveFrom = receiveFrom;
+    if (Number.isSafeInteger(maxReceiveBytes) && 0 < maxReceiveBytes) this.maxReceiveBytes = maxReceiveBytes;
   }
 
   static createSendTask<T>(identifier: string, sendTo: string, data?: T): BufferSharingTask<T> {
@@ -48,8 +53,8 @@ export class BufferSharingTask<T> {
     return task;
   }
 
-  static createReceiveTask<T>(identifier: string): BufferSharingTask<T> {
-    let task = new BufferSharingTask<T>(identifier);
+  static createReceiveTask<T>(identifier: string, receiveFrom?: string, maxReceiveBytes?: number): BufferSharingTask<T> {
+    let task = new BufferSharingTask<T>(identifier, undefined, undefined, receiveFrom, maxReceiveBytes);
     task.onstart = () => task.initializeReceive();
     return task;
   }
@@ -128,6 +133,7 @@ export class BufferSharingTask<T> {
         this._cancel();
       })
       .on('CANCEL_TASK_' + this.identifier, event => {
+        if (this.sendTo && event.sendFrom !== this.sendTo) return;
         Logger.warn('送信キャンセル', this, event.sendFrom);
         this._cancel();
       });
@@ -157,56 +163,95 @@ export class BufferSharingTask<T> {
     this.resetTimeout();
     this.startTime = performance.now();
     this.chankReceiveCount = 0;
+    this.receivedByteLength = 0;
     EventSystem.register(this)
       .on<ChankData>('FILE_SEND_CHANK_' + this.identifier, event => {
-        if (this.chanks.length < 1) this.chanks = new Array(event.data.length);
+        if (this.receiveFrom && event.sendFrom !== this.receiveFrom) return;
+        let data = event.data;
+        let maxChunks = Number.isFinite(this.maxReceiveBytes)
+          ? Math.ceil(this.maxReceiveBytes / this.chankSize) + 1
+          : 100000;
+        if (!data
+          || !Number.isSafeInteger(data.index) || data.index < 0
+          || !Number.isSafeInteger(data.length) || data.length < 1 || maxChunks < data.length
+          || data.length <= data.index
+          || !(data.chank instanceof Uint8Array) || this.chankSize < data.chank.byteLength) {
+          this.rejectReceive(event.sendFrom, 'invalid chunk metadata');
+          return;
+        }
+        if (this.chanks.length < 1) this.chanks = new Array(data.length);
+        if (this.chanks.length !== data.length) {
+          this.rejectReceive(event.sendFrom, 'chunk count changed');
+          return;
+        }
 
-        if (this.chanks[event.data.index] != null) {
-          Logger.debug(`already received. [${event.data.index}] <${this.identifier}>`);
+        if (this.chanks[data.index] != null) {
+          Logger.debug(`already received. [${data.index}] <${this.identifier}>`);
+          return;
+        }
+        if (this.maxReceiveBytes < this.receivedByteLength + data.chank.byteLength) {
+          this.rejectReceive(event.sendFrom, 'buffer exceeds receive limit');
           return;
         }
         this.chankReceiveCount++;
-        this.chanks[event.data.index] = event.data.chank;
-        this.progress(event.data.index, event.data.length);
+        this.receivedByteLength += data.chank.byteLength;
+        this.chanks[data.index] = data.chank;
+        this.progress(data.index, data.length);
         if (this.chanks.length <= this.chankReceiveCount) {
           this.finishReceive();
         } else {
           this.resetTimeout();
-          EventSystem.call('FILE_MORE_CHANK_' + this.identifier, event.data.index, event.sendFrom);
+          // The reliable ordered DataChannel does not need an application ACK
+          // for every 32 KiB. A window ACK provides backpressure without
+          // multiplying round trips for one logical ZIP/file transfer.
+          if ((data.index + 1) % this.bufferingChankRange === 0) {
+            EventSystem.call('FILE_MORE_CHANK_' + this.identifier, data.index, event.sendFrom);
+          }
         }
       })
       .on('DISCONNECT_PEER', event => {
-        if (event.data.peerId !== this.sendTo) return;
+        if (event.data.peerId !== this.receiveFrom) return;
         Logger.warn('受信キャンセル（Peer切断）', this, event.data.peerId);
         this._cancel();
       })
       .on('CANCEL_TASK_' + this.identifier, event => {
+        if (this.receiveFrom && event.sendFrom !== this.receiveFrom) return;
         Logger.warn('受信キャンセル', this, event.sendFrom);
         this._cancel();
       });
   }
 
+  private rejectReceive(sendFrom: string, reason: string) {
+    Logger.warn(`BufferSharingTask rejected: ${reason}`, this.identifier);
+    if (sendFrom) EventSystem.call('CANCEL_TASK_' + this.identifier, null, sendFrom);
+    this._cancel();
+  }
+
   private finishReceive() {
     Logger.debug('バッファ受信完了', this.identifier);
 
+    let receivedChanks = this.chanks;
     let sumLength = 0;
-    for (let chank of this.chanks) { sumLength += chank.byteLength; }
+    for (let chank of receivedChanks) { sumLength += chank.byteLength; }
 
     this.outputTransferRate(sumLength);
     let uint8Array = new Uint8Array(sumLength);
     let pos = 0;
 
-    for (let chank of this.chanks) {
+    for (let chank of receivedChanks) {
       uint8Array.set(chank, pos);
       pos += chank.byteLength;
     }
 
+    this.chanks = [];
+    receivedChanks.length = 0;
+    this.receivedByteLength = 0;
     this.data = MessagePack.decode(uint8Array) as T;
     this.finish();
   }
 
   private resetTimeout() {
-    if (this.timeoutTimer == null) this.timeoutTimer = new ResettableTimeout(() => this.timeout(), 10 * 1000);
+    if (this.timeoutTimer == null) this.timeoutTimer = new ResettableTimeout(() => this.timeout(), 30 * 1000);
     this.timeoutTimer.reset();
   }
 

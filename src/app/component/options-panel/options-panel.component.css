@@ -2,8 +2,6 @@
   padding: 8px 12px;
   font-size: 14px;
   min-width: 300px;
-  max-height: 80vh;
-  overflow-y: auto;
 }
 
 .options-panel.compact {

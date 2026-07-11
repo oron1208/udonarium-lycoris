@@ -164,8 +164,9 @@ export class Network {
     return this.connection ? this.connection.listAllPeers() : Promise.resolve([]);
   }
 
-  forceResync() {
-    if (this.connection && this.connection.forceResync) this.connection.forceResync();
+  forceResync(): boolean {
+    if (this.connection && this.connection.forceResync) return this.connection.forceResync();
+    return false;
   }
 
   manualSaveSnapshot(): boolean {

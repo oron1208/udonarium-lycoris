@@ -11,7 +11,7 @@ COPY dev-admin.html ./
 COPY dist ./dist
 COPY signaling-server/package*.json ./signaling-server/
 
-RUN npm install --omit=dev --no-audit --no-fund --no-save lzbase62@^2.0.0 \
+RUN npm install --omit=dev --no-audit --no-fund --no-save lzbase62@^2.0.0 archiver@^5.3.0 \
     && cd signaling-server && npm ci --omit=dev --no-audit --no-fund
 
 # Persistent data lives here. Mount this in TrueNAS Apps.
