@@ -223,44 +223,24 @@
     </div>
     <div class="timeline">
       <div class="timeline-item fade-up">
-        <div class="timeline-badge">v1.62</div>
+        <div class="timeline-badge">v1.66</div>
         <div class="timeline-content">
-          <div class="timeline-date">2026-07-11</div>
-          <h3>カード・ダイス画像のZIP同期バグ修正</h3>
+          <div class="timeline-date">2026-07-14</div>
+          <h3>接続インフラ大改修・WebSocket Relayデフォルト化・サーバー状況可視化</h3>
           <ul>
-            <li><b>URL識別子のプレースホルダー問題を修正</b> — 初期ルーム同期時にトランプやダイスの画像（./assets/〜）が空エントリとして登録され、画像が表示されなくなる問題を解消。SHA-256ハッシュ識別子のみプレースホルダーを作成するよう修正</li>
-            <li><b>カタログ同期時のURL画像取り込みを修正</b> — SYNCHRONIZE_FILE_LISTでURL識別子を受け取った際、正しくURL画像として追加するよう修正</li>
-            <li><b>archiverパッケージのバージョン固定</b> — v8の破関的変更によりクラッシュする問題を解消（v5.3.xに固定）。ZIP生成のtry/catch強化・起動時バージョンチェック追加</li>
-          </ul>
-        </div>
-      </div>
-      <div class="timeline-item fade-up">
-        <div class="timeline-badge">v1.61</div>
-        <div class="timeline-content">
-          <div class="timeline-date">2026-07-11</div>
-          <h3>強制再同期ボタン改善・UI修正</h3>
-          <ul>
-            <li><b>強制再同期ボタンの機能改善</b> — SkyWay P2P環境で実質機能していなかった問題を修正。接続品質の良い参加者から部屋データをZIP再取得し、失敗時は別の参加者へ自動切り替え</li>
-            <li><b>再同期の進捗・安全機能</b> — 準備・受信・展開・反映の進捗表示、連打防止、成功後30秒/失敗後10秒のクールダウン、180秒タイムアウト表示を実装</li>
-            <li><b>実行前確認ダイアログ</b> — 誤実行を防ぐ確認ダイアログを追加</li>
-            <li><b>WebSocketリレー時の挙動</b> — リレー環境では従来どおりサーバー保存データから再同期</li>
-            <li><b>オプションパネルのスクロールバー二重表示を修正</b> — 内外で重複していたスクロールバーを統一</li>
-            <li><b>接続情報のルームデータ保存ボタンを削除</b> — 実質意味のなかった保存ボタンを整理</li>
-          </ul>
-        </div>
-      </div>
-      <div class="timeline-item fade-up">
-        <div class="timeline-badge">v1.60</div>
-        <div class="timeline-content">
-          <div class="timeline-date">2026-07-11</div>
-          <h3>部屋データ一括ZIP同期・メモリ安全設計</h3>
-          <ul>
-            <li><b>部屋データを1つのZIPに圧縮して一括同期</b> — 画像・音声もまとめてZIPで取得し、同期の効率を大幅向上</li>
-            <li><b>安全なチャンク分割転送</b> — ZIPを小さいチャンクに分けて転送し、通信の安定性を確保</li>
-            <li><b>段階的展開・反映</b> — 展開と反映を少しずつ行い、メモリ急増や画面停止を防止</li>
-            <li><b>メモリ上限設定</b> — ZIPサイズ・展開サイズに上限を設定し、4GB PCでも落ちにくく安定動作</li>
-            <li><b>同期進捗表示</b> — 「準備・ダウンロード・展開・反映」の各フェーズの進捗をリアルタイム表示</li>
-            <li><b>自動フォールバック</b> — 失敗時や旧クライアントでは従来方式へ自動的に戻る</li>
+            <li><b>デフォルト接続をWebSocket Relayモードに変更</b> — 従来のSkyWay P2Pをデフォルトから外し、サーバー経由のWebSocketリレーをデフォルトに。NAT・モバイル回線・ファイアウォール環境での「自分一人だけ島」現象を解消。config.yamlで <code>websocket-relay</code> / <code>websocket-signaling</code> / <code>skyway2023</code> を選択可能</li>
+            <li><b>SkyWay SDKのTURN・STUNを強化</b> — TURNサーバーを有効化（<code>turn: true</code>）、STUNポート443/3478を指定。トークン更新リマインド120秒・キープアライブ30秒を設定し、長時間セッションの接続落ちを軽減</li>
+            <li><b>SkyWay通信の自動再接続・タイムアウト監視</b> — ピアのhealth低下時に自動再接続（health &lt; 0.35 または grade MIDDLE未満で health &lt; 0.7）。データ受信15秒タイムアウト監視を追加し、死んだ接続を検出して再接続</li>
+            <li><b>接続不安定通知</b> — ピアの接続品質が低下した際、チャットにシステムメッセージ「〇〇さんの接続が不安定です」を表示</li>
+            <li><b>サーバー負荷・混雑状況を接続情報に表示</b> — 接続メニューにサーバーステータスパネルを追加。メモリ使用量・CPU負荷・接続ピア数・部屋数を30秒ごとに更新表示。サーバーが混雑している際に状況が一目で分かる</li>
+            <li><b>SkyWay SDK v1/v2互換ラッパー</b> — subscription.cancel() / unsubscribe()、publication.cancel() / unpublish() の両方に対応し、SDK バージョン差による切断エラーを防止</li>
+            <li><b>部屋データ一括ZIP同期</b> — 入室時の全画像・音声を1つのZIPでサーバーから一括取得し、HTTPリクエスト1回で完了。チャットログを最優先で適用し、2000+オブジェクトの部屋でもチャットと卓が先に表示される</li>
+            <li><b>手動スナップショット保存</b> — 接続メニューに「💾 ルームデータを保存」ボタンを追加。GMが任意のタイミングでサーバーに保存でき、次の参加者が確実にデータを受け取れる</li>
+            <li><b>強制再同期ボタンを改善</b> — P2P環境で実質機能していなかった問題を修正。ZIP再取得・進捗表示・確認ダイアログ・クールダウンを実装</li>
+            <li><b>カード・ダイス画像のZIP同期バグ修正</b> — 初期ルーム同期時にトランプやダイス画像が空エントリとして登録され表示されなくなる問題を解消</li>
+            <li><b>メディアfetchタイムアウト・Firefox対応</b> — サーバーから画像/音声を取得する際15秒タイムアウトを設定。FirefoxはHTTP/2接続プール上限が厳しいため並列数を6本に抑制。404を「サーバーに存在しない」と判定し再取得をスキップ</li>
+            <li><b>リレー用シグナル上限拡張</b> — WebSocketリレーモードで大きい部屋データを通すため、MAX_SIGNAL_BYTESを1MB→64MBに拡張（環境変数で調整可能）</li>
+            <li><b>その他安定性向上</b> — Worker未対応環境のフォールバック整備、音声ライブラリCORS修正、null安全性向上、archiverバージョン固定(v5.3.x)、UI修正（スクロールバー二重表示・不要ボタン削除）、ジュークボックス操作説明ページ追加</li>
           </ul>
         </div>
       </div>

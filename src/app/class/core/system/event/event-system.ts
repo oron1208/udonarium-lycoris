@@ -147,6 +147,10 @@ export class EventSystem implements Subject {
       this.sendSystemMessage('<' + peerId + '> ' + errorMessage);
       this.trigger('NETWORK_ERROR', { peerId: peerId, errorType: errorType, errorMessage: errorMessage, errorObject: errorObject });
     }
+
+    callback.onPeerUnstable = (peerId, health) => {
+      this.trigger('PEER_UNSTABLE', { peerId: peerId, health: health });
+    }
   }
 
   private sendSystemMessage(message: string) {

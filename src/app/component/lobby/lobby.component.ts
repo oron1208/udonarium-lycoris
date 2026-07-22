@@ -25,6 +25,10 @@ import { PanelService } from 'service/panel.service';
   styleUrls: ['./lobby.component.css'],
 })
 export class LobbyComponent implements OnInit, OnDestroy {
+  initialMediaBundleEnabled = (() => {
+    try { return localStorage.getItem('udonarium.initialMediaBundle.enabled.v1') === '1'; } catch (_) { return false; }
+  })();
+
   rooms: { alias: string, roomName: string, peerContexts: PeerContext[], isSavedEmptyRoom?: boolean }[] = [];
 
   isReloading: boolean = false;
@@ -197,4 +201,9 @@ export class LobbyComponent implements OnInit, OnDestroy {
     }
     ObjectStore.instance.clearDeleteHistory();
   }
+  toggleInitialMediaBundle(enabled: boolean) {
+    this.initialMediaBundleEnabled = !!enabled;
+    try { localStorage.setItem('udonarium.initialMediaBundle.enabled.v1', this.initialMediaBundleEnabled ? '1' : '0'); } catch (_) { }
+  }
+
 }

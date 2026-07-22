@@ -7,6 +7,8 @@ export class ConnectionCallback {
   onDisconnect!: (peerId: string) => void;
   onData!: (peerId: string, data: any) => void;
   onError!: (peerId: string, errorType: string, errorMessage: string, errorObject: any) => void;
+  /** ピアの接続品質が低下した際に呼ばれる（チャット通知用） */
+  onPeerUnstable?: (peerId: string, health: number) => void;
 }
 
 export interface Connection {

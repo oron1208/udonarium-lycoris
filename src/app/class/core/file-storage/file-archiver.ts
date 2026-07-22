@@ -94,22 +94,21 @@ export class FileArchiver {
     if (!files) return;
     let loadFiles: File[] = files instanceof FileList ? toArrayOfFileList(files) : files;
 
-    // 画像圧縮やハッシュ計算はCPU負荷が高いため、同時並列数を制限
-    const BATCH_SIZE = 6;
-    for (let i = 0; i < loadFiles.length; i += BATCH_SIZE) {
-      const batch = loadFiles.slice(i, i + BATCH_SIZE);
-      await Promise.all(batch.map(async file => {
-        try {
-          await this.handleImage(file, preserveImageBytes);
-          await this.handleAudio(file);
-          await this.handleMediaManifest(file);
-          await this.handleText(file);
-          await this.handleZip(file);
-          EventSystem.trigger('FILE_LOADED', { file: file });
-        } catch (e) {
-          Logger.warn(`FileArchiver: error processing ${file.name}`, e);
-        }
-      }));
+    // ファイルは順次処理することでドロップ時の並び順を維持する。
+    // 重い計算（SHA256・画像圧縮）は Web Worker にオフロード済みなので、
+    // メインスレッドの逐次ループでも実用十分な速度となる。
+    for (let i = 0; i < loadFiles.length; i++) {
+      const file = loadFiles[i];
+      try {
+        await this.handleImage(file, preserveImageBytes);
+        await this.handleAudio(file);
+        await this.handleMediaManifest(file);
+        await this.handleText(file);
+        await this.handleZip(file);
+        EventSystem.trigger('FILE_LOADED', { file: file });
+      } catch (e) {
+        Logger.warn(`FileArchiver: error processing ${file.name}`, e);
+      }
     }
   }
 

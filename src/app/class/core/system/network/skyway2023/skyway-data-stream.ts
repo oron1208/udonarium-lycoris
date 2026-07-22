@@ -37,8 +37,16 @@ export class SkyWayDataStream extends EventEmitter implements WebRTCConnection {
 
   private stats!: WebRTCStats;
 
+  /**
+   * データ受信タイムアウト監視。
+   * 一定時間データ受信がない場合、接続が死んでいると判断してcloseを発火する。
+   * 旧SkyWay版(skyway-data-connection.ts)の15秒タイムアウトの復元。
+   */
+  private static readonly DATA_TIMEOUT_MS = 15000;
+  private timeoutTimer: ReturnType<typeof setTimeout> | null = null;
+
   get open(): boolean { return this.peer.isOpen; }
-  get member(): RemoteMember { return this.skyWay.room?.members.find(member => member.name === this.peer.peerId); }
+  get member(): RemoteMember { return this.skyWay.room?.members.find(member => member.name === this.peer.peerId) as RemoteMember; }
 
   private isQueuing = false;
   private sendQueue: Set<Uint8Array> = new Set();
@@ -76,6 +84,24 @@ export class SkyWayDataStream extends EventEmitter implements WebRTCConnection {
 
   private onmessage = (event: MessageEvent<any>) => {
     this.onData(event.data as ArrayBuffer);
+  }
+
+  /** データ受信タイムアウトタイマーを開始/リセット */
+  private resetTimeoutTimer() {
+    this.clearTimeoutTimer();
+    this.timeoutTimer = setTimeout(() => {
+      Logger.warn(`data timeout ${this.peer.peerId} (${SkyWayDataStream.DATA_TIMEOUT_MS}ms without receiving data)`);
+      this.timeoutTimer = null;
+      // タイムアウト発生 → 強制切断通知
+      this.emit('close');
+    }, SkyWayDataStream.DATA_TIMEOUT_MS);
+  }
+
+  /** データ受信タイムアウトタイマーをクリア */
+  private clearTimeoutTimer() {
+    if (this.timeoutTimer == null) return;
+    clearTimeout(this.timeoutTimer);
+    this.timeoutTimer = null;
   }
 
   private constructor(readonly skyWay: SkyWayFacade, peer: IPeerContext) {
@@ -128,6 +154,7 @@ export class SkyWayDataStream extends EventEmitter implements WebRTCConnection {
   private dispose() {
     Logger.debug(`dispose ${this.peer.peerId}, isPublication: ${this.isPublication}`);
     this.peer.isOpen = false;
+    this.clearTimeoutTimer();
     this.stopMonitoring();
     this.removeAllListeners();
 
@@ -293,8 +320,10 @@ export class SkyWayDataStream extends EventEmitter implements WebRTCConnection {
       if (isOpen) {
         this.isOpend = true;
         this.state = 'connected';
+        this.resetTimeoutTimer();
         this.emit('open');
       } else {
+        this.clearTimeoutTimer();
         this.subscription = null;
         this.state = 'disconnected';
         this.emit('close');
@@ -426,6 +455,7 @@ export class SkyWayDataStream extends EventEmitter implements WebRTCConnection {
 
   private onData(data: ArrayBuffer) {
     this.timestamp = performance.now();
+    this.resetTimeoutTimer();
     let decoded: unknown = MessagePack.decode(new Uint8Array(data));
 
     let ping: Ping = decoded as Ping;

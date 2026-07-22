@@ -14,6 +14,8 @@ export class ImageStorage {
   }
 
   private imageHash: { [identifier: string]: ImageFile } = {};
+  /** サーバーに存在しないことが確定した画像identifier */
+  readonly missingOnServer: Set<string> = new Set();
 
   get images(): ImageFile[] {
     let images: ImageFile[] = [];
@@ -27,9 +29,17 @@ export class ImageStorage {
 
   private constructor() {
     Logger.debug('ImageStorage ready...');
+    EventSystem.register(this)
+      .on('SERVER_MEDIA_MISSING', event => {
+        if (event.data?.kind === 'image' && event.data?.identifier) {
+          this.missingOnServer.add(event.data.identifier);
+          Logger.debug(`[ImageStorage] marked missing on server: ${event.data.identifier}`);
+        }
+      });
   }
 
   private destroy() {
+    EventSystem.unregister(this);
     for (let identifier in this.imageHash) {
       this.delete(identifier);
     }

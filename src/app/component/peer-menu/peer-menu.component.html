@@ -18,6 +18,7 @@
       <span>ブラウザ時刻：</span>
       <span>{{myTime | date:'yy/MM/dd HH:mm:ss'}}</span>
     </div>
+    <server-status></server-status>
   </div>
 </div>
 <ng-container *ngIf="networkService.peerContext.isRoom">

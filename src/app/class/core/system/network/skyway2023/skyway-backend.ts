@@ -118,7 +118,7 @@ async function createSkyWayAuthTokenMock(channelName: string, peerId: string): P
     scope: {
       app: {
         id: _appId,
-        turn: false,
+        turn: true,
         actions: ['read'],
         channels: Array.from(channelMap.values()),
       },

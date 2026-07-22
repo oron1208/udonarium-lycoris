@@ -368,16 +368,23 @@ export class ServerMediaStorage {
    * サーバーからメディアを取得。in-flight なら同じ Promise を共有する。
    * 404 = missing、ネットワークエラー/5xx = unreachable、200 = ok。
    */
+  /** fetchタイムアウト（ms）。これを超えると強制的にunreachable扱い。*/
+  private static readonly FETCH_TIMEOUT_MS = 15_000;
+
   private static fetchBlob(kind: 'image' | 'audio', identifier: string, priority: MediaPriority = 'auto'): Promise<RawFetchResult> {
     const key = `${kind}:${identifier}`;
     const inflight = this.fetching.get(key);
     if (inflight) return inflight;
 
     const promise = (async(): Promise<RawFetchResult> => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.FETCH_TIMEOUT_MS);
       try {
+        const init: RequestInit = { signal: controller.signal };
+        if (priority !== 'auto') (init as any).priority = priority;
         const response = await fetch(
           `/api/media/${kind}/${encodeURIComponent(identifier)}`,
-          priority === 'auto' ? undefined : ({ priority } as RequestInit & { priority: MediaPriority })
+          init
         );
         if (response.ok) {
           this.knownOnServer.add(identifier);
@@ -392,11 +399,15 @@ export class ServerMediaStorage {
         this.markServerDead();
         return { status: 'unreachable' };
       } catch (error) {
-        // ネットワークエラー(DNS拒否/接続拒否/CORS/タイムアウト)= サーバー障害
-        Logger.warn(`media fetch failed ${kind}:${identifier}`, error);
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          Logger.warn(`media fetch timeout ${kind}:${identifier} (${this.FETCH_TIMEOUT_MS}ms)`);
+        } else {
+          Logger.warn(`media fetch failed ${kind}:${identifier}`, error);
+        }
         this.markServerDead();
         return { status: 'unreachable' };
       } finally {
+        clearTimeout(timeoutId);
         this.fetching.delete(key);
       }
     })();

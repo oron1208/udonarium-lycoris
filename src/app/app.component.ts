@@ -329,10 +329,16 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         if (!event.isSendFromSelf) return;
         const data = event.data as any;
         if (!data || data.handled) return;
-        // The low-priority legacy listeners inspect this flag synchronously.
-        // Claim the catalog before starting the asynchronous HTTP ZIP request.
         data.handled = true;
-        this.loadInitialRoomMediaBundle(data);
+        const useInitialBundle = (() => {
+          try { return localStorage.getItem('udonarium.initialMediaBundle.enabled.v1') === '1'; }
+          catch (_) { return false; }
+        })();
+        if (useInitialBundle) {
+          this.loadInitialRoomMediaBundle(data);
+        } else if (typeof data.fallback === 'function') {
+          data.fallback();
+        }
       })
       .on('INITIAL_ROOM_SYNC_PROGRESS', event => {
         if (!event.isSendFromSelf) return;
@@ -466,6 +472,19 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       })
       .on('DISCONNECT_PEER', event => {
         this.lazyNgZoneUpdate(event.isSendFromSelf);
+      })
+      .on('PEER_UNSTABLE', event => {
+        if (event.isSendFromSelf) return;
+        const peerId = event.data.peerId;
+        const health = event.data.health;
+        const cursor = PeerCursor.findByPeerId(peerId);
+        const name = cursor && cursor.name ? cursor.name : peerId.slice(0, 8);
+        const chatTabList = ObjectStore.instance.get<ChatTabList>('ChatTabList');
+        const sysTab = chatTabList ? chatTabList.systemMessageTab : null;
+        if (sysTab) {
+          this.chatMessageService.sendSystemMessage(sysTab, `${name}さんの接続が不安定です (health: ${health.toFixed(2)})`, '#B8860B');
+        }
+        this.lazyNgZoneUpdate(false);
       });
   }
 
@@ -634,6 +653,27 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       });
       if (result.missing.length || result.failed.length) {
         Logger.warn(`[media-bundle] loaded=${result.loaded} missing=${result.missing.length} failed=${result.failed.length}`);
+        // サーバーに存在しない/破損画像のplaceholderを削除して、永久ぐるぐるを防止
+        const { ImageStorage } = await import('@udonarium/core/file-storage/image-storage');
+        const { AudioStorage } = await import('@udonarium/core/file-storage/audio-storage');
+        for (const entry of result.missing) {
+          if (entry.kind === 'image') {
+            ImageStorage.instance.delete(entry.hash);
+            Logger.debug(`[media-bundle] removed missing image placeholder: ${entry.hash}`);
+          } else if (entry.kind === 'audio') {
+            AudioStorage.instance.delete(entry.hash);
+            Logger.debug(`[media-bundle] removed missing audio placeholder: ${entry.hash}`);
+          }
+        }
+        for (const entry of result.failed) {
+          if (entry.kind === 'image') {
+            ImageStorage.instance.delete(entry.hash);
+            Logger.debug(`[media-bundle] removed failed image placeholder: ${entry.hash}`);
+          } else if (entry.kind === 'audio') {
+            AudioStorage.instance.delete(entry.hash);
+            Logger.debug(`[media-bundle] removed failed audio placeholder: ${entry.hash}`);
+          }
+        }
       }
     } catch (error) {
       // Old servers and interrupted ZIP transfers immediately return to the

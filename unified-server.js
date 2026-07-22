@@ -5,6 +5,8 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const os = require('os');
+const v8 = require('v8');
 const lzbase62 = require('lzbase62');
 const archiver = require('archiver');
 const { WebSocketServer } = require('./signaling-server/node_modules/ws');
@@ -15,7 +17,10 @@ const WEB_ROOT = path.join(__dirname, 'dist', 'udonarium-lycoris');
 const DATA_ROOT = path.join(__dirname, 'data', 'rooms');
 const MEDIA_ROOT = path.join(__dirname, 'data', 'media');
 const MEDIA_AUDIT_LOG = path.join(__dirname, 'data', 'media-audit.log');
-const MAX_SIGNAL_BYTES = 1024 * 1024;
+// Central relay mode sends room snapshots through WebSocket.
+// Large rooms can exceed 1MB even without media, so keep this safely above
+// typical room JSON size. Override with MAX_SIGNAL_BYTES when needed.
+const MAX_SIGNAL_BYTES = readPositiveSafeIntegerEnv('MAX_SIGNAL_BYTES', 64 * 1024 * 1024);
 const MAX_MEDIA_BYTES = Number(process.env.MAX_MEDIA_BYTES || 100 * 1024 * 1024);
 const MAX_MEDIA_BUNDLE_ITEMS = 4096;
 const MAX_MEDIA_BUNDLE_BODY_BYTES = 512 * 1024;
@@ -1024,7 +1029,7 @@ async function handleMediaBundlePost(req, res) {
     totalBytes: bundle.totalBytes,
   };
 
-  const archive = archiver('zip', { zlib: { level: 1 } });
+  const archive = archiver('zip', { zlib: { level: 0 } }); // store mode: 圧縮なしで生成を最速化
   let archiveFailed = false;
   const failArchive = error => {
     if (archiveFailed) return;
@@ -1746,8 +1751,34 @@ function createAppHandler() {
       gcAfterMs: MEDIA_GC_MS,
       deletedTotal: stats.deletedMedia,
     };
+    const memoryUsage = process.memoryUsage();
+    const totalMemory = os.totalmem();
+    const freeMemory = os.freemem();
+    const usedMemory = Math.max(0, totalMemory - freeMemory);
+    const heapLimit = v8.getHeapStatistics().heap_size_limit;
+    const system = {
+      memory: {
+        total: totalMemory,
+        free: freeMemory,
+        used: usedMemory,
+        usedRatio: totalMemory > 0 ? usedMemory / totalMemory : 0,
+        rss: memoryUsage.rss,
+        heapUsed: memoryUsage.heapUsed,
+        heapTotal: memoryUsage.heapTotal,
+        heapLimit,
+        heapUsedRatio: heapLimit > 0 ? memoryUsage.heapUsed / heapLimit : 0,
+        external: memoryUsage.external,
+        arrayBuffers: memoryUsage.arrayBuffers,
+      },
+      cpu: {
+        loadavg: os.loadavg(),
+        cores: os.cpus().length,
+        loadRatio1m: os.cpus().length > 0 ? os.loadavg()[0] / os.cpus().length : 0,
+      },
+      uptimeSec: Math.floor(process.uptime()),
+    };
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache' });
-    res.end(JSON.stringify({ ok: true, peers: peers.size, rooms, roomDetails, media, ...stats }));
+    res.end(JSON.stringify({ ok: true, peers: peers.size, rooms, roomDetails, media, system, ...stats }));
     return;
   }
 
@@ -1802,7 +1833,7 @@ function createAppHandler() {
       return;
     }
 
-    const archive = archiver('zip', { zlib: { level: 1 } }); // 高速化のため圧縮レベル1
+    const archive = archiver('zip', { zlib: { level: 0 } }); // store mode: 圧縮なしで生成を最速化
     let bundleFailed = false;
     const failBundle = (err) => {
       if (bundleFailed) return;
@@ -1952,8 +1983,14 @@ wss.on('connection', (ws, req) => {
     }
   });
 
-  ws.on('close', () => unregister(ws));
-  ws.on('error', () => unregister(ws));
+  ws.on('close', (code, reason) => {
+    if (code && code !== 1000) console.warn(`[ws] closed peer=${ws.peerId || '?'} code=${code} reason=${reason ? reason.toString() : ''}`);
+    unregister(ws);
+  });
+  ws.on('error', error => {
+    console.warn(`[ws] error peer=${ws.peerId || '?'} ${error && error.message ? error.message : error}`);
+    unregister(ws);
+  });
 });
 
 setInterval(() => {

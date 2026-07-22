@@ -1,6 +1,8 @@
 backend:
+  # P2P mode (SkyWay 2023). Stable and battle-tested, same as official Udonarium.
+  # Available modes: skyway2023 (default), websocket-relay, websocket-signaling
   mode: skyway2023
-  # SkyWay 2023 token backend URL. Empty means current origin.
+  # Empty means current origin.
   url: ''
 webrtc:
   key: ''

@@ -5,8 +5,8 @@ import { FileReaderUtil } from './file-reader-util';
 import { ImageContext, ImageFile, ImageState } from './image-file';
 import { CatalogItem, ImageStorage } from './image-storage';
 import { MimeType } from './mime-type';
-import { ServerMediaStorage } from './server-media-storage';
 import { MediaLoadPriority } from './media-load-priority';
+import { ServerMediaStorage } from './server-media-storage';
 import { Logger } from '../system/util/logger';
 
 export class ImageSharingSystem {
@@ -51,8 +51,11 @@ export class ImageSharingSystem {
         let otherCatalog: CatalogItem[] = event.data;
         let request: CatalogItem[] = [];
 
-        // サーバーfetchを並列バッチで実行（同時16枚まで）
-        const BATCH_SIZE = 16;
+        // サーバーfetchを並列バッチで実行
+        // FirefoxはHTTP/2接続プール上限が厳しいため並列数を抑える
+        const isFirefox = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent);
+        const BATCH_SIZE = isFirefox ? 6 : 16;
+        const LOW_PRIORITY_BATCH = isFirefox ? 3 : 6;
         const needFetch: CatalogItem[] = [];
 
         const hashPattern = /^[a-f0-9]{64}$/i;
@@ -79,7 +82,7 @@ export class ImageSharingSystem {
         const prioritizedFetch = MediaLoadPriority.sortByScore(needFetch, priorityScores);
         for (let i = 0; i < prioritizedFetch.length;) {
           const score = MediaLoadPriority.scoreOf(priorityScores, prioritizedFetch[i].identifier);
-          const batchSize = score >= MediaLoadPriority.VISIBLE_IMAGE_SCORE ? BATCH_SIZE : 6;
+          const batchSize = score >= MediaLoadPriority.VISIBLE_IMAGE_SCORE ? BATCH_SIZE : LOW_PRIORITY_BATCH;
           const priority = MediaLoadPriority.fetchPriority(score, MediaLoadPriority.VISIBLE_IMAGE_SCORE);
           const batch = prioritizedFetch.slice(i, i + batchSize);
           i += batch.length;
@@ -96,6 +99,10 @@ export class ImageSharingSystem {
           for (const { item, result } of results) {
             if (result.status === 'ok') {
               ImageStorage.instance.add(result.file);
+            } else if (result.status === 'missing') {
+              // サーバーに存在しない画像はplaceholderを削除して永久ぐるぐるを防止
+              ImageStorage.instance.delete(item.identifier);
+              Logger.debug(`[ImageSharingSystem] removed missing placeholder: ${item.identifier}`);
             } else {
               request.push(item);
             }

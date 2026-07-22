@@ -1,3 +1,10 @@
+<div class="initial-media-bundle-option" style="margin: 6px 0 10px; padding: 8px; background: rgba(0,0,0,0.05); border-radius: 4px; font-size: 12px;">
+  <label style="cursor: pointer;">
+    <input type="checkbox" [checked]="initialMediaBundleEnabled" (change)="toggleInitialMediaBundle($any($event.target).checked)">
+    入室時に画像・音声をZIPで一括ダウンロードする
+  </label>
+  <div style="color: #666; margin-top: 4px;">OFF推奨: 通常はP2P同期。重い部屋で必要な場合だけONにしてください。</div>
+</div>
 <div *ngIf="!isConnected;else other_content">
   <button (click)="reload()" [disabled]="isReloading">一覧を更新</button>
   <button (click)="showRoomSetting()">新しいルームを作成する</button>

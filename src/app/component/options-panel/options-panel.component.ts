@@ -5,10 +5,16 @@ import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { GameTable } from '@udonarium/game-table';
 import { ChatTabList } from '@udonarium/chat-tab-list';
 import { PeerCursor } from '@udonarium/peer-cursor';
+import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
+import { AudioStorage } from '@udonarium/core/file-storage/audio-storage';
+import { ServerMediaStorage } from '@udonarium/core/file-storage/server-media-storage';
+import { ImageFile } from '@udonarium/core/file-storage/image-file';
+import { AudioFile } from '@udonarium/core/file-storage/audio-file';
 import { ChatMessageService } from 'service/chat-message.service';
 import { GmModeService } from 'service/gm-mode.service';
 import { PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
+import { Logger } from '@udonarium/core/system/util/logger';
 
 @Component({
   selector: 'options-panel',
@@ -51,6 +57,8 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
   isShowSideNameLabel = true;
   isShowTopDownNameLabel = true;
   isShowCharacterDirectionMarker = false;
+  isBundleLoading = false;
+  bundleProgressText = '';
 
   private static readonly CURSOR_SHARE_DISABLED_KEY = 'udonarium.gm.cursorShareDisabled';
   private static readonly VN_STAGE_HEIGHT_KEY = 'udonarium.vnStage.heightPercent.v1';
@@ -296,6 +304,48 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
     this.isShowCharacterDirectionMarker = !this.isShowCharacterDirectionMarker;
     try { localStorage.setItem(OptionsPanelComponent.SHOW_CHARACTER_DIRECTION_MARKER_KEY, this.isShowCharacterDirectionMarker ? '1' : '0'); } catch (_) { }
     EventSystem.trigger('CHARACTER_DIRECTION_MARKER_VISIBILITY_CHANGED', { visible: this.isShowCharacterDirectionMarker });
+  }
+
+  async downloadAllMedia() {
+    if (this.isBundleLoading) return;
+    // P2Pで取得済みでない画像・音声をサーバーから一括取得
+    const images = ImageStorage.instance.images
+      .filter(img => img && img.state < 2 && /^[a-f0-9]{64}$/i.test(img.identifier))
+      .map(img => img.identifier);
+    const audios = AudioStorage.instance.audios
+      .filter(aud => aud && !aud.blob && /^[a-f0-9]{64}$/i.test(aud.identifier))
+      .map(aud => aud.identifier);
+    if (images.length === 0 && audios.length === 0) {
+      EventSystem.trigger('CREATE_MESSAGE', { text: '一括ダウンロード対象のメディアがありません。', style: 'notice' });
+      return;
+    }
+    this.isBundleLoading = true;
+    this.bundleProgressText = `準備中... (${images.length + audios.length}件)`;
+    try {
+      const result = await ServerMediaStorage.fetchBundle(images, audios, progress => {
+        this.ngZone.run(() => {
+          this.bundleProgressText = `${progress.done}/${progress.total}件展開中`;
+        });
+      });
+      // missing/failed の placeholder を削除
+      for (const entry of result.missing) {
+        if (entry.kind === 'image') ImageStorage.instance.delete(entry.hash);
+        else AudioStorage.instance.delete(entry.hash);
+      }
+      for (const entry of result.failed) {
+        if (entry.kind === 'image') ImageStorage.instance.delete(entry.hash);
+        else AudioStorage.instance.delete(entry.hash);
+      }
+      const msg = `一括ダウンロード完了: 成功${result.loaded}件 / 欠落${result.missing.length + result.failed.length}件`;
+      EventSystem.trigger('CREATE_MESSAGE', { text: msg, style: 'notice' });
+      Logger.info(`[options-panel] ${msg}`);
+    } catch (e) {
+      Logger.warn('[options-panel] manual bundle download failed', e);
+      EventSystem.trigger('CREATE_MESSAGE', { text: '一括ダウンロードに失敗しました。', style: 'notice' });
+    } finally {
+      this.isBundleLoading = false;
+      this.bundleProgressText = '';
+    }
   }
 
   private loadNumber(key: string, fb: number): number {

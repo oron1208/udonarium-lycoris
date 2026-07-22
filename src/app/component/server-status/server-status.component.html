@@ -1,0 +1,58 @@
+<div class="server-status-inline" *ngIf="status; else statusError">
+  <div class="server-status-summary" (click)="toggle()">
+    <span>サーバー混雑：</span>
+    <span class="status-dot" [class.dot-low]="congestionLevel === 'low'"
+          [class.dot-medium]="congestionLevel === 'medium'"
+          [class.dot-high]="congestionLevel === 'high'"></span>
+    <span class="congestion-{{ congestionLevel }}">{{ congestionText }}</span>
+    <span class="resource-summary">
+      メモリ {{ memoryPercent }}% / Heap {{ heapPercent }}% / Load {{ loadPercent }}%
+    </span>
+    <button type="button" class="detail-btn">{{ expanded ? '閉じる' : '詳細' }}</button>
+  </div>
+
+  <div class="server-status-detail" *ngIf="expanded">
+    <div class="stat-row">
+      <span class="stat-label">接続人数</span>
+      <span class="stat-value">{{ status.peers }}人</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">アクティブ卓</span>
+      <span class="stat-value">{{ activeRooms }}卓</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">システムメモリ</span>
+      <span class="stat-value">{{ memoryPercent }}%（{{ formatBytes(status.system?.memory.used) }} / {{ formatBytes(status.system?.memory.total) }}）</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Node RSS</span>
+      <span class="stat-value">{{ formatBytes(status.system?.memory.rss) }}</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Node Heap</span>
+      <span class="stat-value">{{ heapPercent }}%（{{ formatBytes(status.system?.memory.heapUsed) }} / {{ formatBytes(status.system?.memory.heapLimit) }}）</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">CPU Load 1m</span>
+      <span class="stat-value">{{ status.system?.cpu.loadavg[0] | number:'1.2-2' }} / {{ status.system?.cpu.cores }} cores（{{ loadPercent }}%）</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">保存メディア</span>
+      <span class="stat-value">{{ status.savedMedia }}件</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">起動時間</span>
+      <span class="stat-value">{{ uptimeText }}</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">リレー通信数</span>
+      <span class="stat-value">{{ status.relayedDataMessages }}</span>
+    </div>
+  </div>
+</div>
+
+<ng-template #statusError>
+  <div class="server-status-inline server-status-error" *ngIf="error">
+    サーバー状態取得失敗：{{ error }}
+  </div>
+</ng-template>

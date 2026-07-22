@@ -4,6 +4,7 @@ import { MessagePack } from '../../util/message-pack';
 import { setZeroTimeout } from '../../util/zero-timeout';
 import { Connection, ConnectionCallback } from '../connection';
 import { IPeerContext, PeerContext } from '../peer-context';
+import { PeerSessionGrade } from '../peer-session-state';
 import { IRoomInfo, RoomInfo } from '../room-info';
 import { SkyWayDataStream } from './skyway-data-stream';
 import { SkyWayDataStreamList } from './skyway-data-stream-list';
@@ -270,7 +271,18 @@ export class SkyWayConnection implements Connection {
       this.disconnectStream(stream);
     });
     stream.on('stats', async () => {
-      // not implemented
+      const health = stream.peer.session.health;
+      const grade = stream.peer.session.grade;
+      // health低下時に自動再接続（旧SkyWay版のロジックを復元）
+      if (health < 0.35 || (grade < PeerSessionGrade.MIDDLE && health < 0.7)) {
+        Logger.debug(`reconnecting... ${stream.peer.peerId} (health=${health.toFixed(2)}, grade=${grade})`);
+        // 不安定通知を送信（チャット用）
+        if (this.callback.onPeerUnstable) this.callback.onPeerUnstable(stream.peer.peerId, health);
+        const peer = PeerContext.parse(stream.peer.peerId);
+        peer.userId = stream.peer.userId;
+        this.disconnectStream(stream);
+        this.connect(peer);
+      }
     });
 
     stream.connect();

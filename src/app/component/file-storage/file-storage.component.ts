@@ -96,6 +96,12 @@ export class FileStorageComponent implements OnInit, OnDestroy, AfterViewInit {
   
   fileStorageService = ImageStorage.instance;
 
+  previewUrl(file: ImageFile): string {
+    // ファイル一覧は本体画像よりサムネイルを優先表示して、一覧表示の描画負荷を下げる。
+    // 本体しか無い画像・URL画像は従来通り file.url にフォールバックする。
+    return file?.thumbnail?.url || file?.url || '';
+  }
+
   inputNewTag(newTag: string) { 
     this.newTagName = newTag;
   }
