@@ -4,6 +4,7 @@ import { setZeroTimeout } from '../util/zero-timeout';
 import { EventSystem } from '..';
 import { ObjectContext } from '../../synchronize-object/game-object';
 import { ObjectStore } from '../../synchronize-object/object-store';
+import { reconcileChatTabsFromSnapshot } from '../../synchronize-object/room-snapshot-reconciler';
 import { Connection, ConnectionCallback } from './connection';
 import { PeerContext } from './peer-context';
 import { PeerSessionGrade } from './peer-session-state';
@@ -376,13 +377,13 @@ export class WebSocketRelayConnection implements Connection {
     // Prioritize chat logs and core table objects so players see conversation
     // history and the game board first when joining a large room.
     const priorityOrder: Record<string, number> = {
-      'ChatTabList': 0,
-      'ChatTab': 1,
-      'ChatMessage': 2,
-      'GameTable': 3,
+      'chat-tab-list': 0,
+      'chat-tab': 1,
+      'chat': 2,
+      'game-table': 3,
       'PeerCursor': 4,
-      'GameCharacter': 5,
-      'GameCharacterGroup': 6,
+      'character': 5,
+      'character-group': 6,
     };
     const sorted = objects.slice().sort((a, b) => {
       const pa = priorityOrder[a.aliasName] ?? 99;
@@ -416,6 +417,7 @@ export class WebSocketRelayConnection implements Connection {
           await new Promise<void>(resolve => setTimeout(resolve, 0));
         }
       }
+      reconcileChatTabsFromSnapshot(sorted);
       EventSystem.trigger('INITIAL_ROOM_SYNC_PROGRESS', {
         syncId,
         phase: 'complete',

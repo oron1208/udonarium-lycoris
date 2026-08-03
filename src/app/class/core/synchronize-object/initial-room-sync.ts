@@ -10,6 +10,7 @@ import { Logger } from '../system/util/logger';
 import { UUID } from '../system/util/uuid';
 import { GameObject, ObjectContext } from './game-object';
 import { ObjectStore } from './object-store';
+import { reconcileChatTabsFromSnapshot } from './room-snapshot-reconciler';
 
 type PeerId = string;
 
@@ -534,13 +535,13 @@ export class InitialRoomSync {
 
   private compareObjectPriority(a: GameObject, b: GameObject): number {
     const priority: { [aliasName: string]: number } = {
-      ChatTabList: 0,
-      ChatTab: 1,
-      ChatMessage: 2,
-      GameTable: 3,
+      'chat-tab-list': 0,
+      'chat-tab': 1,
+      'chat': 2,
+      'game-table': 3,
       PeerCursor: 4,
-      GameCharacter: 5,
-      GameCharacterGroup: 6
+      'character': 5,
+      'character-group': 6
     };
     let diff = (priority[a.aliasName] ?? 99) - (priority[b.aliasName] ?? 99);
     return diff || a.identifier.localeCompare(b.identifier);
@@ -690,6 +691,7 @@ export class InitialRoomSync {
     this.assertActiveRequest(request);
     this.installMediaPlaceholders(imageCatalog, audioCatalog);
     let applied = 0;
+    const chatSnapshotContexts: ObjectContext[] = [];
     let objectEntries = manifest.entries.filter(entry => entry.kind === 'objects').sort((a, b) => a.name.localeCompare(b.name));
     this.reportProgress('applying', 0, manifest.objectCount, request.requestId);
 
@@ -707,6 +709,9 @@ export class InitialRoomSync {
       for (let context of contexts) {
         this.assertActiveRequest(request);
         if (!this.isValidObjectContext(context)) throw new Error(`invalid object context in ${entry.name}`);
+        if (context.aliasName === 'chat-tab-list' || context.aliasName === 'chat-tab') {
+          chatSnapshotContexts.push(context);
+        }
         EventSystem.trigger({ eventName: 'UPDATE_GAME_OBJECT', data: context, sendFrom: sourcePeerId });
         applied++;
         if (applied % APPLY_PROGRESS_OBJECTS === 0) {
@@ -720,6 +725,7 @@ export class InitialRoomSync {
       contexts.length = 0;
     }
     if (applied !== manifest.objectCount) throw new Error('initial room object count mismatch');
+    reconcileChatTabsFromSnapshot(chatSnapshotContexts);
     this.reportProgress('applying', applied, manifest.objectCount, request.requestId);
 
     this.assertActiveRequest(request);

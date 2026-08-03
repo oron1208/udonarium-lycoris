@@ -9,6 +9,7 @@ import { AudioStorage } from './audio-storage';
 import { CanvasUtil } from './canvas-util';
 import { FileReaderUtil } from './file-reader-util';
 import { FileProcessingWorker } from './file-processing-worker';
+import { ImageFile } from './image-file';
 import { ImageStorage } from './image-storage';
 import { MimeType } from './mime-type';
 
@@ -88,9 +89,9 @@ export class FileArchiver {
     this.load(files);
   };
 
-  async load(files: File[], preserveImageBytes?: boolean): Promise<void>
-  async load(files: FileList, preserveImageBytes?: boolean): Promise<void>
-  async load(files: any, preserveImageBytes: boolean = false): Promise<void> {
+  async load(files: File[], preserveImageBytes?: boolean, archivedImageIdentifier?: string): Promise<void>
+  async load(files: FileList, preserveImageBytes?: boolean, archivedImageIdentifier?: string): Promise<void>
+  async load(files: any, preserveImageBytes: boolean = false, archivedImageIdentifier: string = ''): Promise<void> {
     if (!files) return;
     let loadFiles: File[] = files instanceof FileList ? toArrayOfFileList(files) : files;
 
@@ -100,7 +101,7 @@ export class FileArchiver {
     for (let i = 0; i < loadFiles.length; i++) {
       const file = loadFiles[i];
       try {
-        await this.handleImage(file, preserveImageBytes);
+        await this.handleImage(file, preserveImageBytes, archivedImageIdentifier);
         await this.handleAudio(file);
         await this.handleMediaManifest(file);
         await this.handleText(file);
@@ -112,7 +113,7 @@ export class FileArchiver {
     }
   }
 
-  private async handleImage(file: File, preserveImageBytes: boolean = false) {
+  private async handleImage(file: File, preserveImageBytes: boolean = false, archivedImageIdentifier: string = '') {
     if (file.type.indexOf('image/') < 0) return;
     if (!this.reloadCheck.isLoadOk() ) return;
     
@@ -144,7 +145,19 @@ export class FileArchiver {
     }
     
     Logger.debug(processedFile.name + ' type:' + processedFile.type);
-    await ImageStorage.instance.addAsync(processedFile);
+    if (archivedImageIdentifier) {
+      const image = await ImageFile.createAsync(processedFile);
+      const context = image.toContext();
+      context.identifier = archivedImageIdentifier;
+      // Recreate object URLs in the stored ImageFile instead of sharing URLs
+      // owned by this temporary ImageFile.
+      context.url = '';
+      context.thumbnail.url = '';
+      image.destroy();
+      ImageStorage.instance.replace(context);
+    } else {
+      await ImageStorage.instance.addAsync(processedFile);
+    }
   }
 
   /**
@@ -298,18 +311,66 @@ export class FileArchiver {
     }
     let zipEntries: JSZip.JSZipObject[] = [];
     zip.forEach((relativePath, zipEntry) => zipEntries.push(zipEntry));
+    const archivedImageIdentifiers = await this.collectArchivedImageIdentifiers(zip);
     for (let zipEntry of zipEntries) {
+      if (zipEntry.dir) continue;
       try {
         let arraybuffer = await zipEntry.async('arraybuffer');
         Logger.debug(zipEntry.name + ' 解凍...');
+        const archivedImageIdentifier = archivedImageIdentifiers.get(this.archiveImageStem(zipEntry.name)) || '';
         await this.load(
           [new File([arraybuffer], zipEntry.name, { type: MimeType.type(zipEntry.name) })],
           true,
+          archivedImageIdentifier,
         );
       } catch (reason) {
         Logger.warn(reason);
       }
     }
+  }
+
+  private async collectArchivedImageIdentifiers(zip: JSZip): Promise<Map<string, string>> {
+    const identifiers = new Map<string, string>();
+    const metadataNames = ['data.xml', 'chat.xml', 'imagetag.xml'];
+
+    for (const metadataName of metadataNames) {
+      const entry = zip.file(metadataName);
+      if (!entry) continue;
+      try {
+        const xmlElement = XmlUtil.xml2element(await entry.async('string'));
+        if (!xmlElement) continue;
+
+        const imageElements = xmlElement.ownerDocument.querySelectorAll('*[type="image"]');
+        for (let i = 0; i < imageElements.length; i++) {
+          this.addArchivedImageIdentifier(identifiers, imageElements[i].textContent || '');
+        }
+
+        const attributeElements = xmlElement.ownerDocument.querySelectorAll('*[imageIdentifier], *[backgroundImageIdentifier]');
+        for (let i = 0; i < attributeElements.length; i++) {
+          this.addArchivedImageIdentifier(identifiers, attributeElements[i].getAttribute('imageIdentifier') || '');
+          this.addArchivedImageIdentifier(identifiers, attributeElements[i].getAttribute('backgroundImageIdentifier') || '');
+        }
+      } catch (reason) {
+        Logger.warn(`${metadataName} image identifier scan failed`, reason);
+      }
+    }
+    return identifiers;
+  }
+
+  private addArchivedImageIdentifier(identifiers: Map<string, string>, identifier: string): void {
+    const normalizedIdentifier = String(identifier || '').trim();
+    if (!normalizedIdentifier) return;
+    identifiers.set(this.normalizeArchivePath(normalizedIdentifier), normalizedIdentifier);
+  }
+
+  private archiveImageStem(name: string): string {
+    const normalized = this.normalizeArchivePath(name);
+    const extensionIndex = normalized.lastIndexOf('.');
+    return extensionIndex > normalized.lastIndexOf('/') ? normalized.slice(0, extensionIndex) : normalized;
+  }
+
+  private normalizeArchivePath(name: string): string {
+    return String(name || '').trim().replace(/^(?:\.\/|\/)+/, '');
   }
 
   async saveAsync(files: File[], zipName: string, updateCallback?: UpdateCallback): Promise<void>

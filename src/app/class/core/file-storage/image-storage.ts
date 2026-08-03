@@ -69,6 +69,19 @@ export class ImageStorage {
     return this._add(image);
   }
 
+  /** Replace an existing identifier's bytes instead of merge-filling empty fields. */
+  replace(context: ImageContext): ImageFile {
+    const image = this.imageHash[context.identifier];
+    if (!image) return this.add(context);
+
+    image.replace(context);
+    if (ImageState.COMPLETE <= image.state) {
+      this.lazySynchronize(100);
+      ServerMediaStorage.uploadImage(image);
+    }
+    return image;
+  }
+
   private _add(image: ImageFile): ImageFile {
     if (ImageState.COMPLETE <= image.state) {
       this.lazySynchronize(100);

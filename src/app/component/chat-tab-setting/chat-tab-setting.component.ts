@@ -85,13 +85,8 @@ export class ChatTabSettingComponent implements OnInit, OnDestroy {
   }
 
   onChangeSystemTab(){
-    if (!this.selectedTab ){
-      this.chatTabList.systemMessageTabIndex = 0;
-    }else{
-      const parentElement = this.selectedTab.parent;
-      const index: number = parentElement.children.indexOf(this.selectedTab);
-      this.chatTabList.systemMessageTabIndex = index;
-    }
+    const chatTab = this.selectedTab || this.chatTabs[0] || null;
+    this.chatTabList.setSystemMessageTab(chatTab);
   }
 
   create() {
@@ -173,6 +168,7 @@ export class ChatTabSettingComponent implements OnInit, OnDestroy {
         this.systemTabIndex --;
       }
       this.chkSystemTabIndex();
+      this.chatTabList.setSystemMessageTab(this.chatTabList.systemMessageTab);
     }
   }
 

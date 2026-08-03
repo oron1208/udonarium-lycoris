@@ -129,6 +129,25 @@ export class ImageFile {
     this.createURLs();
   }
 
+  /** Replace image bytes while preserving this ImageFile's identifier. */
+  replace(context: ImageContext) {
+    const identifier = this.context.identifier || context.identifier;
+    this.revokeURLs();
+    this.context = {
+      identifier,
+      name: context.name || identifier,
+      blob: context.blob || null,
+      type: context.type || '',
+      url: context.url || '',
+      thumbnail: {
+        blob: context.thumbnail?.blob || null,
+        type: context.thumbnail?.type || '',
+        url: context.thumbnail?.url || '',
+      }
+    };
+    this.createURLs();
+  }
+
   toContext(): ImageContext {
     return {
       identifier: this.context.identifier,
