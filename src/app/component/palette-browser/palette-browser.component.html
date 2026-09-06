@@ -1,0 +1,74 @@
+<div class="browser" *ngIf="palette" [class.has-form]="!!form">
+  <div class="tabs" role="group" aria-label="チャットパレットの分類">
+    <button type="button" [class.active]="active === -2" [attr.aria-pressed]="active === -2" [disabled]="!!form" (click)="selectTab(-2)">すべて</button>
+    <button type="button" *ngFor="let tab of tabs" [class.active]="active === tab.start" [attr.aria-pressed]="active === tab.start" [disabled]="!!form" (click)="selectTab(tab.start)" (dragover)="dragOverTab($event, tab)" (dragleave)="leaveDrop($event)" (drop)="receiveDrop($event, 'tab:' + tab.start)" [class.drop-tab]="dropHint?.key === 'tab:' + tab.start" title="クリックで切替／ドロップでこのタブの末尾へ">{{tab.name}}</button>
+    <button type="button" [disabled]="!!form" (click)="begin('add-tab')">＋ タブ</button>
+  </div>
+  <div class="tools">
+    <input class="search is-caret" type="search" aria-label="すべてのタブを検索" placeholder="すべてのタブを検索" [(ngModel)]="query">
+    <button type="button" [attr.aria-pressed]="managing" (click)="managing = !managing">{{managing ? '編集操作を閉じる' : '追加・編集'}}</button>
+    <button type="button" (click)="expandAll(false)">全展開</button>
+    <button type="button" (click)="expandAll(true)">全折りたたみ</button>
+  </div>
+  <fieldset class="tools edit-tools" *ngIf="managing" [disabled]="!!form">
+    <legend>チャパレ編集</legend>
+    <button type="button" (click)="begin('add-fold')">＋ 折りたたみ</button>
+    <button type="button" (click)="begin('add-lines')">＋ 行・説明文</button>
+    <button type="button" [disabled]="!selectedNode" (click)="begin('edit-node')">選択項目を編集</button>
+    <button type="button" [disabled]="!activeTab || activeTab.start < 0" (click)="begin('rename-tab')">タブ名変更</button>
+    <button type="button" [disabled]="!activeTab || activeTab.start < 0" (click)="moveTab(-1)" aria-label="タブを左へ移動">タブ ←</button>
+    <button type="button" [disabled]="!activeTab || activeTab.start < 0" (click)="moveTab(1)" aria-label="タブを右へ移動">タブ →</button>
+    <button type="button" [disabled]="selectedNode?.kind !== 'fold' && (!activeTab || activeTab.start < 0)" (click)="unwrap()">区切り解除（中身は残す）</button>
+    <button type="button" (click)="begin('source')">全文テキスト編集</button>
+    <button type="button" (click)="exportPlain()">通常テキスト出力</button>
+    <button type="button" class="danger" [disabled]="!selectedNode" (click)="begin('delete-node')">選択項目を削除…</button>
+    <button type="button" class="danger" [disabled]="!activeTab || activeTab.start < 0" (click)="begin('delete-tab')">タブごと削除…</button>
+  </fieldset>
+  <form class="editor" *ngIf="form" (ngSubmit)="save()">
+    <strong>{{formTitle}}</strong>
+    <label *ngIf="needsName">名前<input class="is-caret" name="name" [(ngModel)]="name" required autocomplete="off"></label>
+    <label *ngIf="needsBody">本文（1行ごとに選択・送信できます）<textarea class="is-caret" name="body" [(ngModel)]="body" rows="6"></textarea></label>
+    <p *ngIf="form === 'delete-tab' || form === 'delete-node'">中身も削除します。残したい場合はキャンセルし、「区切り解除」を使ってください。</p>
+    <label class="insert-option" *ngIf="(form === 'add-fold' || form === 'add-lines') && canInsertInside"><input type="checkbox" name="insertInside" [(ngModel)]="insertInside">選択した折りたたみの中に追加</label>
+    <small *ngIf="form === 'add-fold' || form === 'add-lines'">追加先：{{insertionLabel}}</small>
+    <small *ngIf="form === 'source'">区切りは // &#64;tab 名前、// &#64;fold 名前、// &#64;end。ボタンからの編集では入力不要です。</small>
+    <p role="alert" *ngIf="error">{{error}}</p>
+    <div><button type="submit">{{form.startsWith('delete') ? '中身ごと削除する' : '保存'}}</button> <button type="button" (click)="cancel()">キャンセル</button></div>
+  </form>
+  <small *ngIf="query.trim()">検索中は全タブ・折りたたみの中も表示します。</small>
+  <span role="alert" *ngIf="notice && notice !== '並び順を変更しました。' && notice !== 'コピーしました。コピー元は変更していません。' && notice !== '区切りを除いた本文を出力しました。' && notice !== '並び順は変わりません。'">{{notice}}</span>
+  <div class="rows" [class.editing]="!!form">
+    <section *ngFor="let tab of visibleTabs">
+      <h4 *ngIf="active === -2 || query.trim()">{{tab.name}}</h4>
+      <ng-container *ngTemplateOutlet="nodes; context: {$implicit: tab.children, depth: 0}"></ng-container>
+      <div class="drop-end" (dragover)="dragOverTab($event, tab)" (dragleave)="leaveDrop($event)" (drop)="receiveDrop($event, 'tab:' + tab.start)" [class.drop-tab]="dropHint?.key === 'tab:' + tab.start">{{dropHint?.key === 'tab:' + tab.start ? dropHint.label : 'このタブの末尾へドロップ'}}</div>
+      <small *ngIf="!tab.children.length">まだ項目がありません。「追加・編集」から追加できます。</small>
+    </section>
+    <div *ngIf="!tabs.length" class="drop-end" (dragover)="dragOverTab($event, document.tabs[0])" (dragleave)="leaveDrop($event)" (drop)="receiveDrop($event, 'tab:-1')" [class.drop-tab]="dropHint?.key === 'tab:-1'">ここへドロップしてコピー／「＋ タブ」「追加・編集」から新規作成</div>
+  </div>
+</div>
+<ng-template #nodes let-items let-depth="depth">
+  <ng-container *ngFor="let node of items">
+    <div *ngIf="matches(node)" [attr.data-palette-line]="node.start" [style.margin-left.px]="depth ? 12 : 0">
+      <div class="node-row" (dragover)="dragOverNode($event, node)" (dragleave)="leaveDrop($event)" (drop)="receiveDrop($event, 'node:' + node.start)"
+        [class.drop-before]="dropHint?.key === 'node:' + node.start && dropHint?.placement === 'before'"
+        [class.drop-after]="dropHint?.key === 'node:' + node.start && dropHint?.placement === 'after'"
+        [class.drop-inside]="dropHint?.key === 'node:' + node.start && dropHint?.placement === 'inside'">
+        <button type="button" class="drag-handle" [disabled]="!!form" [draggable]="!form" (dragstart)="startDrag($event, node)" (dragend)="endDrag($event)"
+          (pointerdown)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()" (click)="selected = node.start; $event.stopPropagation()"
+          [attr.aria-label]="'ドラッグして移動・別チャパレへコピー：' + (node.text || '空行')" title="ドラッグで移動／別チャパレへコピー">⠿</button>
+        <button *ngIf="node.kind === 'fold'" type="button" class="fold" [class.selected]="selected === node.start" [disabled]="!!form"
+          [attr.aria-expanded]="query.trim() || !collapsed.has(node.start) ? 'true' : 'false'" (click)="toggle(node)">
+          {{!query.trim() && collapsed.has(node.start) ? '▶' : '▼'}} {{node.text}}
+        </button>
+        <button *ngIf="node.kind === 'line'" type="button" class="line" [class.annotation]="!command(node.text)" [class.selected]="selected === node.start" [class.empty-line]="!node.text"
+          [attr.aria-label]="node.text || '空行'" [disabled]="!!form" (click)="choose(node)" (dblclick)="send(node)" (keydown.control.enter)="send(node); $event.preventDefault()"
+          [title]="command(node.text) ? 'クリックで入力／ダブルクリック・Ctrl+Enterで送信' : '見出し・定義・空行（送信しません）'">{{node.text || ' '}}</button>
+        <span class="drop-indicator" *ngIf="dropHint?.key === 'node:' + node.start">{{dropHint.label}}</span>
+      </div>
+      <ng-container *ngIf="node.kind === 'fold' && (query.trim() || !collapsed.has(node.start))">
+        <ng-container *ngTemplateOutlet="nodes; context: {$implicit: node.children, depth: depth + 1}"></ng-container>
+      </ng-container>
+    </div>
+  </ng-container>
+</ng-template>

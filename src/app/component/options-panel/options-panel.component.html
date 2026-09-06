@@ -11,13 +11,13 @@
     </button>
     <button type="button" class="compact-btn" [class.on]="!isCursorShareDisabled" (click)="toggleCursorShare()" title="カーソル共有 ON/OFF">
       <i class="material-icons">mouse</i>
-      <span class="compact-btn-label">CS</span>
+      <span class="compact-btn-label">共有</span>
     </button>
     <button type="button" class="compact-btn" [class.on]="isBuffTowerCollapsed" (click)="toggleBuffTowerCollapse()" title="バフタワー簡易表示">
       <i class="material-icons">layers</i>
       <span class="compact-btn-label">バフ</span>
     </button>
-    <button type="button" class="compact-btn" [class.on]="isActivePanelForeground" (click)="toggleActivePanelForeground()" title="アクティブパネルを手前に表示">
+    <button type="button" class="compact-btn" [class.on]="isActivePanelForeground" (click)="toggleActivePanelForeground()" title="クリックしたウィンドウを手前にする">
       <i class="material-icons">flip_to_front</i>
       <span class="compact-btn-label">前面</span>
     </button>
@@ -48,7 +48,7 @@
   </div>
 
   <section class="options-section">
-    <h3>UI設定</h3>
+    <h3>表示・共有の設定</h3>
     <div class="option-row">
       <span class="option-label">ホットバー</span>
       <button type="button" class="option-toggle" [class.on]="isMacroHotbarVisible" (click)="toggleMacroHotbar()">
@@ -62,7 +62,7 @@
       </button>
     </div>
     <div class="option-row">
-      <span class="option-label">VN立ち絵自動Fit</span>
+      <span class="option-label">立ち絵の高さを合わせる</span>
       <button type="button" class="option-toggle" [class.on]="isVnAutoFit" (click)="toggleVnAutoFit()">
         {{ isVnAutoFit ? 'ON' : 'OFF' }}
       </button>
@@ -83,7 +83,7 @@
         <button type="button" class="option-button mini" (click)="setVnStageHeight(100)">最大</button>
       </div>
     </div>
-    <div class="option-hint">全員の立ち絵をVNエリアの高さに合わせます</div>
+    <div class="option-hint">自分の画面で、表示中の立ち絵を会話エリアの高さに合わせます</div>
     <div class="option-row">
       <span class="option-label">盤面コマVNボタン</span>
       <button type="button" class="option-toggle" [class.on]="isVnBoardButtonVisible" (click)="toggleVnBoardButton()">
@@ -97,8 +97,9 @@
         {{ isCursorShareDisabled ? 'OFF' : 'ON' }}
       </button>
     </div>
+    <div class="option-hint">カーソル共有をONにすると、自分のカーソル位置が他の参加者にも見えます。</div>
     <div class="option-row">
-      <span class="option-label">アクティブパネルを手前に表示</span>
+      <span class="option-label">クリックしたウィンドウを手前にする</span>
       <button type="button" class="option-toggle" [class.on]="isActivePanelForeground" (click)="toggleActivePanelForeground()">
         {{ isActivePanelForeground ? 'ON' : 'OFF' }}
       </button>
@@ -135,11 +136,11 @@
   </section>
 
   <section class="options-section">
-    <h3>表示</h3>
+    <h3>自分の画面の表示</h3>
     <div class="option-row">
       <span class="option-label">バフタワー簡易表示</span>
       <button type="button" class="option-toggle" [class.on]="isBuffTowerCollapsed" (click)="toggleBuffTowerCollapse()">
-        {{ isBuffTowerCollapsed ? '畳む' : '展開' }}
+        {{ isBuffTowerCollapsed ? '簡易表示中' : '全段表示中' }}
       </button>
     </div>
     <div class="option-hint">2段以上のバフを簡易表示（畳む）にします</div>
@@ -161,14 +162,7 @@
         {{ isShowCharacterDirectionMarker ? 'ON' : 'OFF' }}
       </button>
     </div>
-    <div class="option-hint">コマの向き（光源コーンと同じ rotate + 90）を外側の矢印で表示します</div>
-    <div class="option-row">
-      <span class="option-label">パネルを最前面に表示</span>
-      <button type="button" class="option-toggle" [class.on]="isActivePanelForeground" (click)="toggleActivePanelForeground()">
-        {{ isActivePanelForeground ? 'ON' : 'OFF' }}
-      </button>
-    </div>
-    <div class="option-hint">操作中のパネルを常に最前面に表示します（他のパネルの裏に隠れません）</div>
+    <div class="option-hint">コマが向いている方向を外側の矢印で表示します</div>
     <div class="option-row">
       <span class="option-label">ホバープレビューを最前面に表示</span>
       <button type="button" class="option-toggle" [class.on]="isTooltipForeground" (click)="toggleTooltipForeground()">
@@ -186,11 +180,16 @@
     <div class="option-row" style="margin-top: 10px;">
       <button type="button" class="option-button" (click)="resetCamera()">視点を初期位置に戻す</button>
       <button type="button" class="option-button" (click)="resetHotbarPosition()">🎱 ホットバーを初期位置に戻す</button>
-      <button type="button" class="option-button" (click)="clearHotbarSlots()">🗑 ホットバーを全てクリア</button>
+
       <button type="button" class="option-button" (click)="resetVnUi()">💬 VN UIを初期位置に戻す</button>
     </div>
   </section>
 
+  <section class="options-section">
+    <h3>ホットバーの管理</h3>
+    <div class="option-hint">全削除の前に、ホットバーの「設定を保存」からバックアップしてください。</div>
+    <button type="button" class="option-button danger" (click)="clearHotbarSlots()">ホットバーの全スロットを削除…</button>
+  </section>
   <section class="options-section">
     <h3>ヘルプ</h3>
     <button type="button" class="option-button" (click)="openGuideSite()">
@@ -202,9 +201,9 @@
     <button type="button" class="option-button" (click)="addSampleCharacters()">
         🎭 サンプルキャラ追加
     </button>
-    <button type="button" class="option-button" (click)="downloadAllMedia()" disabled="{{ isBundleLoading }}">
+    <button type="button" class="option-button" (click)="downloadAllMedia()" [disabled]="isBundleLoading">
         {{ isBundleLoading ? ('⏳ ' + bundleProgressText) : '📦 画像・音声を一括ダウンロード' }}
     </button>
-    <div style="font-size: 0.75em; color: #888; text-align: right; padding: 4px 8px;">v1.67.0-lycoris</div>
+    <div style="font-size: 0.75em; color: #888; text-align: right; padding: 4px 8px;">v1.70</div>
   </section>
 </div>

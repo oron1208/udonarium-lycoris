@@ -292,7 +292,7 @@ export class MacroHotbarComponent {
     this.sendMacro(slot);
   }
 
-  onSlotContextMenu(event: MouseEvent, visibleIndex: number) {
+  onSlotContextMenu(event: MouseEvent | KeyboardEvent, visibleIndex: number) {
     event.preventDefault();
     event.stopPropagation();
     const index = this.toSlotIndex(visibleIndex);

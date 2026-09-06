@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.spec.json",
+  "include": [
+    "src/app/class/core/system/network/skyway2023/*.spec.ts",
+    "src/app/class/core/system/network/webrtc/*.spec.ts",
+    "src/**/*.d.ts"
+  ]
+}

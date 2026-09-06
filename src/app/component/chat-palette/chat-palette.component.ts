@@ -1,3 +1,5 @@
+import { PaletteBrowserComponent } from 'component/palette-browser/palette-browser.component';
+import { isPaletteCommand } from '@udonarium/palette-document';
 import { Component, ElementRef, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import GameSystemClass from 'bcdice/lib/game_system';
 import { ChatPalette , PaletteIndex , PaletteMatch} from '@udonarium/chat-palette';
@@ -27,7 +29,7 @@ import { ChatMessage, ChatMessageContext, ChatMessageTargetContext } from '@udon
 export class ChatPaletteComponent implements OnInit, OnDestroy {
   @ViewChild('root', { static: true }) rootElementRef!: ElementRef<HTMLElement>;
   @ViewChild('chatInput', { static: true }) chatInputComponent!: ChatInputComponent;
-  @ViewChild('chatPalette') chatPaletteElementRef!: ElementRef<HTMLSelectElement>;
+  @ViewChild('paletteBrowser') paletteBrowser: PaletteBrowserComponent;
   @Input() character: GameCharacter = null;
 
   get palette(): ChatPalette { return this.character.chatPalette; }
@@ -53,11 +55,8 @@ export class ChatPaletteComponent implements OnInit, OnDestroy {
   text: string = '';
   sendTo: string = '';
 
-  isEdit: boolean = false;
   isIndexOpen: boolean = false;
-  editPalette: string = '';
 
-  private doubleClickTimer: NodeJS.Timer = null;
 
   get diceBotInfos() { return DiceBot.diceBotInfos; }
 
@@ -97,7 +96,6 @@ export class ChatPaletteComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     EventSystem.unregister(this);
-    if (this.isEdit) this.toggleEditMode();
   }
 
   updatePanelTitle() {
@@ -105,7 +103,6 @@ export class ChatPaletteComponent implements OnInit, OnDestroy {
   }
 
   onSelectedCharacter(identifier: string) {
-    if (this.isEdit) this.toggleEditMode();
     let object = ObjectStore.instance.get(identifier);
     if (object instanceof GameCharacter) {
       this.character = object;
@@ -171,7 +168,7 @@ export class ChatPaletteComponent implements OnInit, OnDestroy {
 
   selectAutoComplete(text,selectText){
     const selectObj = <HTMLSelectElement>document.getElementById( this._timeId + '_complete');
-    let lineNo = this.palette.paletteMatchLine(text, selectObj.selectedIndex);
+    let lineNo = this.palette.getPalette().indexOf(selectText);
     Logger.debug(text + ' ' + selectText + ' index:' + selectObj.selectedIndex + ' lineNo' +lineNo);
     this.japmIndex(lineNo);
     this.selectPalette(selectText);
@@ -188,21 +185,9 @@ export class ChatPaletteComponent implements OnInit, OnDestroy {
   autoCompleteList(): string[]{
     let paletteMatch : string[] = new Array();
     if( this.text.length > 1){
-      paletteMatch = this.palette.paletteMatch(this.text);
+      paletteMatch = this.palette.paletteMatch(this.text).filter(isPaletteCommand);
     }
     return paletteMatch;
-  }
-
-  clickPalette(line: string) {
-    let multiLine = line.replace(/\\n/g, '\n');
-    if (this.doubleClickTimer && this.text === multiLine) {
-      clearTimeout(this.doubleClickTimer);
-      this.doubleClickTimer = null;
-      this.chatInputComponent.sendChat(null);
-    } else {
-      this.text = multiLine;
-      this.doubleClickTimer = setTimeout(() => { this.doubleClickTimer = null; }, 400);
-    }
   }
 
   private targeted(gameCharacter: GameCharacter): boolean {
@@ -285,55 +270,17 @@ export class ChatPaletteComponent implements OnInit, OnDestroy {
   }
 
   resetPaletteSelect() {
-    if (!this.chatPaletteElementRef.nativeElement) return;
-    this.chatPaletteElementRef.nativeElement.selectedIndex = -1;
+    if (this.paletteBrowser) this.paletteBrowser.selected = -1;
   }
 
-  toggleEditMode() {
-    this.isEdit = this.isEdit ? false : true;
-    if (this.isEdit) {
-      const selectObj = document.getElementById(this._timeId + '_select');
-      const textObj = document.getElementById(this._timeId + '_text');
-      Logger.debug('selectObj.clientHeight:' + selectObj.clientHeight);
-      Logger.debug('selectObj.scrollHeight:' + selectObj.scrollHeight);
-      Logger.debug('selectObj.scrollTop:' + selectObj.scrollTop);
-/*
-      const lineNum = this.palette.getPalette().length;
-      Logger.debug('lineNum:' + lineNum);
-*/
-      this.editPalette = this.palette.value + '';
-      const selectTop = selectObj.scrollTop;
-      const selectHeight = selectObj.scrollHeight;
-/*
-      const centerLine = lineNum > 0 ? (selectObj.clientHeight/2 + selectObj.scrollHeight) / lineNum : lineNum;
-      Logger.debug('centerLine:' + centerLine);
-*/
-      setTimeout(() => { 
-        Logger.debug('textObj.clientHeight:' + textObj.clientHeight);
-        Logger.debug('textObj.scrollHeight:' + textObj.scrollHeight);
-        Logger.debug('textObj.scrollTop:' + textObj.scrollTop);
-        textObj.scrollTop = ( selectTop * textObj.scrollHeight ) / selectHeight;
-      }, 10);
-    } else {
-      this.palette.setPalette(this.editPalette);
-    }
-  }
-
-  moveTest(){
-    const textObj = <HTMLInputElement>document.getElementById(this._timeId + '_text');
-    textObj.focus();
-    setTimeout(() => {  
-                        textObj.setSelectionRange(600,600); }, 10);
+  sendPaletteCommand(line: string) {
+    if (!isPaletteCommand(line)) return;
+    this.selectPalette(line);
+    this.chatInputComponent.sendChat(null);
   }
 
   japmIndex(lineNo: number) {
-    Logger.debug('JUMP_INDEX:' + lineNo);
-    let select = <HTMLSelectElement> document.getElementById(this._timeId + '_select');
-    if (select){
-      select.scrollTop = select.scrollHeight;
-      select.options[lineNo].selected = false;
-      select.options[lineNo].selected = true;
-    }
+    this.paletteBrowser?.jumpToLine(lineNo);
   }
 
   indexBtn() {

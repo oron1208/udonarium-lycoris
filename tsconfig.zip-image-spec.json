@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.spec.json",
+  "compilerOptions": { "types": ["node", "jasmine", "hammerjs"] },
+  "include": ["src/app/class/core/file-storage/zip-image-import-options.spec.ts", "src/**/*.d.ts"]
+}

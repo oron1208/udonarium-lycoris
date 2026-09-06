@@ -43,6 +43,8 @@ const GM_CURSOR_SHARE_DISABLED_KEY = 'udonarium.gm.cursorShareDisabled';
 })
 export class PeerMenuComponent implements OnInit, OnDestroy, AfterViewInit {
 
+  get connectedPeerCount(): number { return this.networkService.peerContexts.filter(peer => peer.isOpen && peer.peerId !== this.networkService.peerId).length; }
+
   targetUserId = '';
   networkService = Network;
   gameRoomService = ObjectStore.instance;

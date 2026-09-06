@@ -8,9 +8,9 @@
 
   <div class="title no-caret" #titleBar>
     <div class="title-button" *ngIf="title!=='メニュー'">
-      <button [disabled]="isFullScreen" (click)="toggleMinimize()"><i class="material-icons" style="font-size: 14px;">minimize</i></button>
-      <button [disabled]="isMinimized" (click)="toggleFullScreen()"><i class="material-icons" style="font-size: 14px;">fullscreen</i></button>
-      <button (click)="close()"><i class="material-icons" style="font-size: 14px;">close</i></button>
+      <button [disabled]="isFullScreen" (click)="toggleMinimize()" [attr.aria-label]="isMinimized ? 'ウィンドウを元に戻す' : 'ウィンドウを最小化'"><i class="material-icons" style="font-size: 14px;">minimize</i></button>
+      <button [disabled]="isMinimized" (click)="toggleFullScreen()" [attr.aria-label]="isFullScreen ? 'ウィンドウを元のサイズに戻す' : 'ウィンドウを最大化'"><i class="material-icons" style="font-size: 14px;">fullscreen</i></button>
+      <button (click)="close()" aria-label="ウィンドウを閉じる"><i class="material-icons" style="font-size: 14px;">close</i></button>
     </div>
     {{panelService.title}}
   </div>

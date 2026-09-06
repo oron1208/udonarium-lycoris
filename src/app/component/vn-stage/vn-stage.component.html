@@ -172,7 +172,7 @@
         <option *ngFor="let info of diceBotInfos" [value]="info.id">{{ info.name }}</option>
       </select>
       <button type="button" class="vn-palette-toggle" (mousedown)="togglePalette(); $event.preventDefault()"
-        [class.active]="paletteExpanded" [disabled]="!selectedCharacterId || selectedPaletteLines.length === 0">
+        [class.active]="paletteExpanded" [disabled]="!selectedCharacterId">
         チャパレ📋
       </button>
       <button type="button" class="vn-expand-btn" *ngIf="!chatLogExpanded"
@@ -209,7 +209,7 @@
   </div>
 
   <!-- ═══════ Floating Chat Palette Panel ═══════ -->
-  <div class="vn-float-panel vn-palette-wrap" *ngIf="paletteExpanded && selectedAllPaletteLines.length > 0"
+  <div class="vn-float-panel vn-palette-wrap" *ngIf="paletteExpanded && selectedChatPalette"
     [class.vn-front-pinned]="paletteFrontPinned"
     [class.vn-float-minimized]="paletteMinimized"
     [ngStyle]="paletteFloatStyle"
@@ -247,27 +247,8 @@
     </div>
     <div class="vn-palette-body">
       <div class="vn-palette-body-inner">
-        <div class="vn-palette-header">
-          <button type="button" class="vn-index-toggle" (mousedown)="toggleIndex(); $event.preventDefault()"
-            [class.active]="indexExpanded" [disabled]="selectedPaletteIndex.length === 0">
-            📑インデックス
-          </button>
-          <input class="vn-palette-search is-caret" name="vnPaletteSearch" [(ngModel)]="paletteSearchText"
-            type="text" placeholder="チャパレ検索" autocomplete="off">
-        </div>
-        <div class="vn-palette-scroll" #paletteScroll (scroll)="onPaletteScroll($event)">
-          <ng-container *ngFor="let line of visiblePaletteLines; let i = index">
-            <div *ngIf="isSectionHeader(line)" class="vn-palette-section">{{ sectionTitle(line) }}</div>
-            <button *ngIf="line && !isSectionHeader(line)" type="button" class="vn-palette-line"
-              [class.is-selected]="selectedPaletteLine === line"
-              (click)="selectPaletteLine(line); $event.preventDefault()"
-              (dblclick)="sendPaletteLine(line); $event.preventDefault()"
-              title="{{ line }}">
-              {{ line.length > 36 ? line.substring(0, 36) + '…' : line }}
-            </button>
-            <div *ngIf="!line" class="vn-palette-spacer"></div>
-          </ng-container>
-        </div>
+        <button type="button" class="vn-index-toggle" (click)="toggleIndex()" [class.active]="indexExpanded" [disabled]="selectedPaletteIndex.length === 0">📑 インデックス</button>
+        <palette-browser [palette]="selectedChatPalette" (chooseLine)="selectPaletteLine($event)" (sendLine)="sendPaletteLine($event)" #vnPaletteBrowser></palette-browser>
       </div>
     </div>
   </div>

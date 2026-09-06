@@ -16,7 +16,6 @@ import {
 } from '@angular/core';
 import { GameObject } from '@udonarium/core/synchronize-object/game-object';
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
-import { ImageRenderCache } from '@udonarium/core/file-storage/image-render-cache';
 import { ObjectNode } from '@udonarium/core/synchronize-object/object-node';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { ChatTabList } from '@udonarium/chat-tab-list';
@@ -179,20 +178,12 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
   private directionMarkerRotated: boolean = false;
   private flatIconNaturalWidth: number = 0;
   private flatIconNaturalHeight: number = 0;
-  private highQualityKomaImageUrl: string = '';
-  private highQualityKomaImageSource: string = '';
-  private highQualityKomaImageKey: string = '';
-
+  // Table zoom is a CSS 3D transform, not a layout resize. A thumbnail made
+  // at the untransformed token size stays blurry at every subsequent zoom.
+  // Keep the original source for all token modes, shadows and flash overlays.
   get komaDisplayImageUrl(): string {
-    const sourceUrl = this.imageFile?.url || '';
-    if (sourceUrl !== this.highQualityKomaImageSource) {
-      this.highQualityKomaImageUrl = '';
-      this.highQualityKomaImageSource = sourceUrl;
-      this.highQualityKomaImageKey = '';
-    }
-    return this.highQualityKomaImageUrl || sourceUrl;
+    return this.imageFile?.url || '';
   }
-
 
   get flatIconImageStyle(): { [key: string]: string } {
     const mode = this.resolveFlatIconFitMode();
@@ -227,38 +218,6 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
     this.flatIconNaturalWidth = img.naturalWidth || img.width || 0;
     this.flatIconNaturalHeight = img.naturalHeight || img.height || 0;
     this.changeDetector.markForCheck();
-  }
-
-  async onKomaImageLoad(event: Event) {
-    const img = event.target as HTMLImageElement;
-    const sourceUrl = this.imageFile?.url || '';
-    if (!img || !sourceUrl || img.currentSrc !== sourceUrl) return;
-
-    const naturalWidth = img.naturalWidth || img.width || 0;
-    const naturalHeight = img.naturalHeight || img.height || 0;
-    if (naturalWidth <= 0 || naturalHeight <= 0) return;
-
-    const cssSize = this.resolveKomaImageCssSize(naturalWidth, naturalHeight);
-    if (!cssSize || !ImageRenderCache.shouldDownscale(naturalWidth, naturalHeight, cssSize.width, cssSize.height)) return;
-
-    const cacheKey = `${sourceUrl}|${Math.round(cssSize.width)}x${Math.round(cssSize.height)}`;
-    if (this.highQualityKomaImageKey === cacheKey && this.highQualityKomaImageUrl) return;
-    this.highQualityKomaImageKey = cacheKey;
-
-    const renderUrl = await ImageRenderCache.get(sourceUrl, cssSize.width, cssSize.height);
-    if (!renderUrl || this.imageFile?.url !== sourceUrl || this.highQualityKomaImageKey !== cacheKey) return;
-
-    this.highQualityKomaImageUrl = renderUrl;
-    this.changeDetector.markForCheck();
-  }
-
-  private resolveKomaImageCssSize(naturalWidth: number, naturalHeight: number): { width: number; height: number } {
-    const tokenWidth = Math.max(1, this.size * this.gridSize);
-    if (this.gameCharacter.specifyKomaImageFlag) {
-      const height = Math.max(1, Number(this.gameCharacter.komaImageHeignt || tokenWidth));
-      return { width: Math.max(1, naturalWidth * height / naturalHeight), height };
-    }
-    return { width: tokenWidth, height: Math.max(1, naturalHeight * tokenWidth / naturalWidth) };
   }
 
   private resolveFlatIconFitMode(): 'center' | 'top' | 'contain' {
@@ -481,15 +440,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
   }
 
 
-  private releaseHighQualityKomaImageSource() {
-    if (!this.highQualityKomaImageSource) return;
-    this.highQualityKomaImageUrl = '';
-    this.highQualityKomaImageSource = '';
-    this.highQualityKomaImageKey = '';
-  }
-
   ngOnDestroy() {
-    this.releaseHighQualityKomaImageSource();
     this.stopDirectionMarkerRotate();
     this.input.destroy();
     EventSystem.unregister(this);
@@ -1326,7 +1277,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
 
   private showChatPalette(gameObject: GameCharacter) {
     let coordinate = this.pointerDeviceService.pointers[0];
-    let option: PanelOption = { left: coordinate.x - 250, top: coordinate.y - 175, width: 615, height: 350 };
+    let option: PanelOption = { left: coordinate.x - 250, top: Math.max(0, Math.min(coordinate.y - 280, window.innerHeight - 580)), width: 615, height: Math.min(560, Math.max(350, window.innerHeight - 60)) };
     let component = this.panelService.open<ChatPaletteComponent>(ChatPaletteComponent, option);
     component.character = gameObject;
   }

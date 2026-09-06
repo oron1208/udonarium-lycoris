@@ -60,7 +60,7 @@
 .component-content.char-anim-spin { animation: char-spin 0.7s ease; }
 .component-content.char-anim-lunge { animation: char-lunge 0.6s ease; }
 .component-content.char-anim-flash .image-flash-overlay,
-.component-content.char-anim-flash .flat-character-flash-overlay { animation: char-flash-overlay 0.65s ease; }
+.component-content.char-anim-flash .flat-character-flash-overlay { display: block; animation: char-flash-overlay 0.65s ease; }
 .component-content.char-anim-flash .simple-character-token { animation: char-flash-token 0.65s ease; }
 
 
@@ -329,6 +329,9 @@
 }
 
 .flat-character-flash-overlay {
+  /* An invisible screen-blend layer still degrades 3D raster resolution.
+     Only composite the duplicate image while the flash animation is active. */
+  display: none;
   position: absolute;
   inset: 0;
   opacity: 0;
@@ -480,6 +483,9 @@
 }
 
 .image-flash-overlay {
+  /* An invisible screen-blend layer still degrades 3D raster resolution.
+     Only composite the duplicate image while the flash animation is active. */
+  display: none;
   position: absolute;
   opacity: 0;
   pointer-events: none;

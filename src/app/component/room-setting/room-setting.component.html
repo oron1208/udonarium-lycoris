@@ -7,8 +7,8 @@
   </div>
   <div>ルーム名 : <input class="input" (input)="calcPeerId($event.target.value, password)" [(ngModel)]="roomName" required minlength="1" maxlength="128" #roomNameValidation="ngModel"
       placeholder="ルームの名前は必須" /></div>
-  <div>パスワード: <input class="input" (input)="calcPeerId(roomName, $event.target.value)" [(ngModel)]="password" maxlength="12" #passwordValidation="ngModel" placeholder="空ならパスワードなし"
-    /></div>
+  <div>パスワード: <input [type]="isPasswordVisible ? 'text' : 'password'" autocomplete="new-password" aria-label="ルームのパスワード" class="input" (input)="calcPeerId(roomName, $event.target.value)" [(ngModel)]="password" maxlength="12" #passwordValidation="ngModel" placeholder="空ならパスワードなし"
+    /><button type="button" (click)="isPasswordVisible = !isPasswordVisible" [attr.aria-pressed]="isPasswordVisible">{{isPasswordVisible ? 'パスワードを隠す' : 'パスワードを表示'}}</button></div>
   <div class="room-mode-select">
     <div class="room-mode-title">部屋モード</div>
     <label class="room-mode-card" [class.selected]="roomMode === 'standard'">

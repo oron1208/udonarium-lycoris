@@ -216,6 +216,20 @@ body {
  */
 .chrome-smooth-image-trick {
   transform-style: inherit;
+  /* Upstream TK11235/udonarium: avoid clipping/flattening the image's 3D
+     rendering context, which can magnify a low-resolution raster on zoom. */
+  overflow: visible;
+}
+
+/* Upstream Chrome 138 workaround: preserve the depth axis of a 3D image
+   when its parent is rotated 180 degrees. The marker must not take input. */
+.is-3d:has(> .chrome-smooth-image-trick)::before {
+  content: ".";
+  position: absolute;
+  color: transparent;
+  pointer-events: none;
+  width: 0;
+  height: 0;
 }
 
 /* ===== キャラクターグループ ホバー部位パネル (body直下) ===== */
@@ -360,3 +374,6 @@ body {
 
 .cg-hover-resource .r-name { color: #888; }
 .cg-hover-resource .r-val  { color: #e0c060; font-weight: 600; }
+
+/* Keyboard navigation for shared controls. */
+button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid #1976d2; outline-offset: 2px; }

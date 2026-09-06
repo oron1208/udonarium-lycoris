@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.spec.json",
+  "compilerOptions": { "types": ["node", "jasmine", "hammerjs"] },
+  "include": ["src/app/component/palette-browser/palette-browser.component.spec.ts", "src/**/*.d.ts"]
+}

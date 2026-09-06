@@ -1,3 +1,5 @@
+import { PaletteBrowserComponent } from 'component/palette-browser/palette-browser.component';
+import { isPaletteCommand } from '@udonarium/palette-document';
 import { Component, ElementRef, HostBinding, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Logger } from '../../class/core/system/util/logger';
 
@@ -63,6 +65,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
   @HostBinding('class.vn-has-front-pinned') get hasFrontPinnedSubPanel(): boolean { return this.paletteFrontPinned || this.logFrontPinned; }
   @ViewChild('logScroll', { static: false }) logScrollEl!: ElementRef;
   @ViewChild('paletteScroll', { static: false }) paletteScrollEl!: ElementRef;
+  @ViewChild('vnPaletteBrowser') vnPaletteBrowser: PaletteBrowserComponent;
 
   actors: VnActor[] = [];
   selectedCharacterId: string = '';
@@ -853,6 +856,11 @@ export class VnStageComponent implements OnInit, OnDestroy {
 
   sectionTitle(line: string): string {
     return line.replace(/^\/\/---+/, '').replace(/-+$/, '').replace(/^◆/, '');
+  }
+
+  get selectedChatPalette() {
+    const character = ObjectStore.instance.get<GameCharacter>(this.selectedCharacterId);
+    return character instanceof GameCharacter ? character.chatPalette : null;
   }
 
   get selectedPaletteLines(): string[] {
@@ -1747,22 +1755,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
   }
 
   jumpToIndex(idx: { name: string; line: number }) {
-    this.paletteSearchText = '';
-    this.scrollToIndex = idx.line;
-    this.refreshPaletteFade();
-    this.refreshIndexFade();
-    setTimeout(() => {
-      try {
-        const el = document.querySelector('.vn-palette-scroll');
-        if (!el) return;
-        // DOM childrenは空行含む全行に対応する要素を持つ
-        // paletteIndex.line == visiblePaletteLinesのインデックス == DOM childrenのインデックス
-        const children = el.children;
-        if (children[idx.line]) {
-          (children[idx.line] as HTMLElement).scrollIntoView({ block: 'center' });
-        }
-      } catch (e) { Logger.warn('jumpToIndex error', e); }
-    }, 200);
+    this.vnPaletteBrowser?.jumpToLine(idx.line);
   }
 
   selectPaletteLine(line: string) {
@@ -1787,6 +1780,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
   }
 
   sendPaletteLine(line: string) {
+    if (!isPaletteCommand(line)) return;
     const character = ObjectStore.instance.get<GameCharacter>(this.selectedCharacterId);
     if (!(character instanceof GameCharacter)) return;
     const palette = character.chatPalette;

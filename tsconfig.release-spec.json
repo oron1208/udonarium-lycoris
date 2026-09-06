@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.spec.json",
+  "compilerOptions": { "types": ["node", "jasmine", "hammerjs"] },
+  "include": [
+    "src/app/component/palette-browser/palette-browser.component.spec.ts",
+    "src/app/class/core/file-storage/zip-image-import-options.spec.ts",
+    "src/app/class/core/system/network/skyway2023/skyway-connection.spec.ts",
+    "src/app/class/core/system/network/skyway2023/skyway-data-stream.spec.ts",
+    "src/app/class/core/system/network/webrtc/webrtc-stats-monitor.spec.ts",
+    "src/**/*.d.ts"
+  ]
+}

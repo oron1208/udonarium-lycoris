@@ -81,6 +81,13 @@ interface TableLightSource {
   coneCoreRadius: number;
 }
 
+type WallGrid = {
+  grid: Uint8Array; cellSize: number; cols: number; rows: number;
+  version: number;
+  rects: { x1: number; y1: number; x2: number; y2: number }[]; // 壁AABB（px座標・高速パス/ブロッカー描画用）
+  hasPen: boolean; // ペン描き壁あり（AABB高速パス不可）
+};
+
 @Component({
   selector: 'game-table',
   templateUrl: './game-table.component.html',
@@ -176,11 +183,30 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   // 照明
   private lightingAnimFrame: number = 0;
   private flickerPhase: number = 0;
-  private cachedWallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null = null;
+  private cachedWallGrid: WallGrid | null = null;
   private wallGridDirty: boolean = true;
   private wallGridTableId: string = '';
-  private wallGridCacheTime: number = 0;
-  private static readonly WALL_GRID_CACHE_TTL = 200; // ms
+  private wallGridCacheBuilt: boolean = false;
+  private wallGridTableSize: string = '';
+  private static readonly LIGHTING_MIN_INTERVAL = 66; // ms（アニメ光源がある場合の描画間隔 ≈15fps）
+  private static readonly LIGHTING_SCALE = 0.75; // 照明canvasの解像度スケール
+  private lightingDirty: boolean = true;
+  private lightingNeedsAnimation: boolean = false;
+  private lightingInactiveClean: boolean = false;
+  private lastLightingRender: number = 0;
+  private lastLightingTs: number = 0;
+  private objectGeneration: number = 0;
+  private collectionCache: { key: string; lights: TableLightSource[]; superior: TableLightSource[]; sightChars: GameCharacter[] } = null;
+  private jsonIdCache: Map<string, boolean> = new Map();
+  private visibilityPathCache: Map<string, Path2D> = new Map();
+  private static readonly VISIBILITY_PATH_MAX = 96;
+  private blockerPathCache: Path2D = null;
+  private blockerPathVersion: string = '';
+  private lastWallGridVersion: number = -1;
+  private wallGridVersionCounter: number = 0;
+  private lightingAnimFlagCache: { gen: number; value: boolean } = { gen: -1, value: false };
+  private scratchMasks: HTMLCanvasElement[] = [];
+  private wallPenCache: { raw: string; canvas: HTMLCanvasElement } = null;
   get isLightingActive(): boolean {
     return this.currentTable?.lightingEnabled && this.currentTable?.lightingNightMode;
   }
@@ -243,14 +269,31 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   ngOnInit() {
     EventSystem.register(this)
       .on('UPDATE_GAME_OBJECT', event => {
+        const updated = ObjectStore.instance.get(event.data.identifier);
+        if (updated instanceof GameCharacter || updated instanceof Terrain || updated instanceof GameTableMask) {
+          this.objectGeneration++;
+          this.invalidateLighting();
+          if (!(updated instanceof GameCharacter)) this.invalidateWallGrid();
+        }
         if (event.data.identifier !== this.currentTable.identifier && event.data.identifier !== this.tableSelecter.identifier) return;
         Logger.debug('UPDATE_GAME_OBJECT GameTableComponent ' + this.currentTable.identifier);
         this.setGameTableGrid(this.currentTable.width, this.currentTable.height, this.currentTable.gridSize, this.currentTable.gridType, this.currentTable.gridColor);
         this.redrawDrawingCanvas();
         this.invalidateWallGrid();
+        this.invalidateLighting();
+      })
+      .on('DELETE_GAME_OBJECT', event => {
+        // 削除済みオブジェクトはidentifierから引けないのでaliasNameで判定する
+        const alias = (event.data as any)?.aliasName;
+        if (alias === GameCharacter.aliasName || alias === Terrain.aliasName || alias === GameTableMask.aliasName) {
+          this.objectGeneration++;
+          this.invalidateLighting();
+          if (alias !== GameCharacter.aliasName) this.invalidateWallGrid();
+        }
       })
       .on('RE_DRAW_TABLE', event => {
         Logger.debug("テーブル再描画");
+        this.invalidateLighting();
         this.changeDetector.detectChanges();
         this.changeDetector.markForCheck();
       })
@@ -258,6 +301,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
         this.changeDetector.markForCheck();
       })
       .on('GM_MODE_CHANGED', event => {
+        this.invalidateLighting();
         this.changeDetector.markForCheck();
       })
       .on('CHK_TARGET_CHANGE', event => {
@@ -271,6 +315,8 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
           };
           try { localStorage.setItem(GameTableComponent.LAYER_VISIBILITY_KEY, JSON.stringify(this.layerVisibility)); } catch (_) { }
           this.redrawDrawingCanvas();
+          this.invalidateWallGrid();
+          this.invalidateLighting();
           this.renderLighting();
           this.changeDetector.markForCheck();
         });
@@ -340,7 +386,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     this.redrawDrawingCanvas();
     this.setTransform(0, 0, 0, 0, 0, 0);
     this.coordinateService.tabletopOriginElement = this.gameObjects.nativeElement;
-    this.startLightingLoop();
+    this.ngZone.runOutsideAngular(() => this.startLightingLoop());
   }
 
   private static loadLayerVisibility(): TableLayerVisibility {
@@ -1022,14 +1068,14 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     return { x: character.location.x + size / 2, y: character.location.y + size / 2 };
   }
 
-  private isPointInSightOfCharacter(x: number, y: number, character: GameCharacter, gridSize: number, wallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null): boolean {
+  private isPointInSightOfCharacter(x: number, y: number, character: GameCharacter, gridSize: number, wallGrid: WallGrid | null): boolean {
     const origin = this.getCharacterCenter(character, gridSize);
     const radius = Math.max(1, character.sightRadius || 1) * gridSize;
     if (!character.sightUnlimited && Math.hypot(x - origin.x, y - origin.y) > radius) return false;
     return !this.isRayBlocked(origin.x, origin.y, x, y, wallGrid);
   }
 
-  private isPointLit(x: number, y: number, gridSize: number, wallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null): boolean {
+  private isPointLit(x: number, y: number, gridSize: number, wallGrid: WallGrid | null): boolean {
     if (this.isAmbientLightEnabled()) return true;
     if (!this.currentTable.lightingEnabled || !this.currentTable.lightingNightMode) return false;
     const sources = this.collectLightSourcesForPointCheck(gridSize);
@@ -1041,41 +1087,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private collectLightSourcesForPointCheck(gridSize: number): TableLightSource[] {
-    const sources: TableLightSource[] = [];
-    for (const c of ObjectStore.instance.getObjects<GameCharacter>(GameCharacter)) {
-      if (!c.lightSourceEnabled || c.location.name !== 'table') continue;
-      const center = this.getCharacterCenter(c, gridSize);
-      sources.push({
-        x: center.x,
-        y: center.y,
-        r: Math.max(10, c.lightRadius * gridSize),
-        intensity: c.lightIntensity,
-        color: c.lightColor,
-        type: c.lightType,
-        shape: c.lightType === 'laser' ? 'laser' : (c.lightShape || 'circle'),
-        coneAngle: c.lightConeAngle || 60,
-        direction: this.normalizeAngle((c.rotate || 0) + 90),
-        flat: c.lightType === 'flashlight',
-        coneCoreRadius: (c.lightType === 'flashlight' || c.lightType === 'laser' || c.lightShape === 'laser') ? gridSize * 0.5 : gridSize
-      });
-    }
-    for (const t of ObjectStore.instance.getObjects<Terrain>(Terrain)) {
-      if (!t.lightSourceEnabled || t.location.name !== 'table') continue;
-      sources.push({
-        x: t.location.x + (t.width || 1) * gridSize / 2,
-        y: t.location.y + (t.depth || 1) * gridSize / 2,
-        r: Math.max(10, t.lightRadius * gridSize),
-        intensity: t.lightIntensity,
-        color: t.lightColor,
-        type: t.lightType,
-        shape: t.lightType === 'laser' ? 'laser' : (t.lightShape || 'circle'),
-        coneAngle: t.lightConeAngle || 60,
-        direction: this.normalizeAngle((t.rotate || 0) + 90),
-        flat: t.lightType === 'flashlight',
-        coneCoreRadius: (t.lightType === 'flashlight' || t.lightType === 'laser' || t.lightShape === 'laser') ? gridSize * 0.5 : gridSize
-      });
-    }
-    return sources;
+    return this.getLightingCollections(gridSize).lights;
   }
 
   private isPointInsideLightShape(x: number, y: number, light: TableLightSource): boolean {
@@ -1097,7 +1109,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     return diff <= this.degreesToRadians(light.coneAngle || 60) / 2 || distance <= (light.coneCoreRadius || 0);
   }
 
-  private isRayBlocked(fromX: number, fromY: number, toX: number, toY: number, wallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null): boolean {
+  private isRayBlocked(fromX: number, fromY: number, toX: number, toY: number, wallGrid: WallGrid | null): boolean {
     if (!wallGrid) return false;
     const { grid, cellSize, cols, rows } = wallGrid;
     const distance = Math.hypot(toX - fromX, toY - fromY);
@@ -1133,14 +1145,117 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   // ===== 照明 =====
 
   private startLightingLoop() {
-    const render = () => {
-      this.renderLighting();
+    const render = (ts: number) => {
+      this.renderLighting(ts);
       this.lightingAnimFrame = requestAnimationFrame(render);
     };
     this.lightingAnimFrame = requestAnimationFrame(render);
   }
 
-  private renderLighting() {
+  private invalidateLighting() {
+    this.lightingDirty = true;
+  }
+
+  /** 光源ゆらぎ（松明・焚き火・魔法のソナー）などアニメが必要な光源が卓にあるか */
+  private detectLightingAnimation(): boolean {
+    if (this.lightingAnimFlagCache.gen === this.objectGeneration) return this.lightingAnimFlagCache.value;
+    const scan = (objects: { lightType?: string }[]) => {
+      for (const o of objects) {
+        const t = o.lightType;
+        if (t === 'torch' || t === 'campfire' || t === 'magic') return true;
+      }
+      return false;
+    };
+    const value = scan(ObjectStore.instance.getObjects<GameCharacter>(GameCharacter)) ||
+      scan(ObjectStore.instance.getObjects<Terrain>(Terrain));
+    this.lightingAnimFlagCache = { gen: this.objectGeneration, value };
+    return value;
+  }
+
+  /** 壁グリッドの版本が変わったらジオメトリ系キャッシュを捨てる */
+  private refreshLightingCaches(wallGrid: WallGrid | null) {
+    if (this.lastWallGridVersion === this.wallGridVersionCounter) return;
+    this.lastWallGridVersion = this.wallGridVersionCounter;
+    this.visibilityPathCache.clear();
+    this.blockerPathCache = null;
+    this.blockerPathVersion = '';
+  }
+
+  /**
+   * 光源・至暗・視界キャラクタの一括収集。
+   * オブジェクト更新世代（objectGeneration）が同じならキャッシュを返すので、
+   * 1フレーム内の多重スキャンと毎フレームの全収集を省略できる。
+   */
+  private getLightingCollections(gridSize: number): { lights: TableLightSource[]; superior: TableLightSource[]; sightChars: GameCharacter[] } {
+    const key = gridSize + ':' + this.objectGeneration;
+    if (this.collectionCache && this.collectionCache.key === key) return this.collectionCache;
+
+    const lights: TableLightSource[] = [];
+    for (const c of ObjectStore.instance.getObjects<GameCharacter>(GameCharacter)) {
+      if (!c.lightSourceEnabled || c.location.name !== 'table') continue;
+      const center = this.getCharacterCenter(c, gridSize);
+      lights.push(this.makeLightSource(center.x, center.y, c.lightRadius, c.lightIntensity, c.lightColor, c.lightType,
+        c.lightShape, c.lightConeAngle, c.rotate, gridSize));
+    }
+    for (const t of ObjectStore.instance.getObjects<Terrain>(Terrain)) {
+      if (!t.lightSourceEnabled || t.location.name !== 'table') continue;
+      lights.push(this.makeLightSource(
+        t.location.x + (t.width || 1) * gridSize / 2,
+        t.location.y + (t.depth || 1) * gridSize / 2,
+        t.lightRadius, t.lightIntensity, t.lightColor, t.lightType, t.lightShape, t.lightConeAngle, t.rotate, gridSize));
+    }
+
+    const superior: TableLightSource[] = [];
+    for (const c of ObjectStore.instance.getObjects<GameCharacter>(GameCharacter)) {
+      if (!c.superiorDarknessEnabled || c.location.name !== 'table') continue;
+      const center = this.getCharacterCenter(c, gridSize);
+      superior.push({
+        x: center.x, y: center.y,
+        r: Math.max(10, (c.superiorDarknessRadius || 3) * gridSize),
+        intensity: 1, color: '#000000', type: 'superiorDarkness',
+        shape: 'circle', coneAngle: 360, direction: 0, flat: true, coneCoreRadius: 0
+      });
+    }
+
+    const sightChars: GameCharacter[] = [];
+    if (this.currentTable?.roomMode === 'advanced') {
+      const peerId = Network.peerId;
+      const userId = Network.peerContext?.userId;
+      for (const c of ObjectStore.instance.getObjects<GameCharacter>(GameCharacter)) {
+        if (c.location.name !== 'table' || !c.sightEnabled) continue;
+        if (this.includesJsonId(c.ownerPeerIds, peerId) || this.includesJsonId(c.ownerUserIds, userId)) sightChars.push(c);
+      }
+    }
+
+    this.collectionCache = { key, lights, superior, sightChars };
+    return this.collectionCache;
+  }
+
+  private makeLightSource(x: number, y: number, radius: number, intensity: number, color: string,
+    type: string, shape: string, coneAngle: number, rotate: number, gridSize: number): TableLightSource {
+    const lightType: string = type || 'none';
+    return {
+      x, y,
+      r: Math.max(10, radius * gridSize),
+      intensity, color: color,
+      type: lightType,
+      shape: lightType === 'laser' ? 'laser' : (shape || 'circle'),
+      coneAngle: coneAngle || 60,
+      direction: this.normalizeAngle((rotate || 0) + 90),
+      flat: lightType === 'flashlight',
+      coneCoreRadius: (lightType === 'flashlight' || lightType === 'laser' || shape === 'laser') ? gridSize * 0.5 : gridSize
+    };
+  }
+
+  /** 松明・焚き火のゆらぎ（intensityのみ。ジオメトリは変わらないのでキャッシュと両立する） */
+  private applyFlicker(light: TableLightSource): TableLightSource {
+    if (light.type !== 'torch' && light.type !== 'campfire') return light;
+    const flicker = Math.sin(this.flickerPhase * 3 + light.x * 0.01) * 0.08
+      + Math.sin(this.flickerPhase * 7 + light.y * 0.02) * 0.05;
+    return { ...light, intensity: Math.min(1, Math.max(0, light.intensity + flicker)) };
+  }
+
+  private renderLighting(now: number = performance.now()) {
     const canvas = this.lightingCanvas?.nativeElement;
     if (!canvas) return;
 
@@ -1149,27 +1264,52 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
 
     const active = this.layerVisibility.lighting && ((table.lightingEnabled && table.lightingNightMode) || this.isAdvancedVisionActive);
     if (!active) {
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      canvas.style.display = 'none';
+      if (!this.lightingInactiveClean) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.style.display = 'none';
+        this.lightingInactiveClean = true;
+      }
       return;
     }
+    this.lightingInactiveClean = false;
     canvas.style.display = 'block';
 
     const gridSize = table.gridSize || 50;
     const w = table.width * gridSize;
     const h = table.height * gridSize;
-    if (canvas.width !== w || canvas.height !== h) {
-      canvas.width = w;
-      canvas.height = h;
+    const scale = GameTableComponent.LIGHTING_SCALE;
+    const bw = Math.max(1, Math.floor(w * scale));
+    const bh = Math.max(1, Math.floor(h * scale));
+    if (canvas.width !== bw || canvas.height !== bh) {
+      canvas.width = bw;
+      canvas.height = bh;
+    }
+    if (canvas.style.width !== w + 'px' || canvas.style.height !== h + 'px') {
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
     }
 
+    this.lightingNeedsAnimation = this.detectLightingAnimation();
+
+    if (!this.lightingDirty && this.lightingNeedsAnimation) {
+      const elapsed = now - this.lastLightingTs;
+      if (elapsed < GameTableComponent.LIGHTING_MIN_INTERVAL) return;
+    }
+    if (!this.lightingDirty && !this.lightingNeedsAnimation) return;
+
+    this.lastLightingTs = now;
+    this.lightingDirty = false;
+
     const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, w, h);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, bw, bh);
+    // 内部解像度が違うので、テーブル座標→canvas座標へスケール変換して描く
+    ctx.scale(scale, scale);
 
     const darkness = table.lightingEnabled && table.lightingNightMode ? table.lightingIntensity : 0.82;
     const isGm = this.gmModeService.isGm;
-    this.flickerPhase += 0.03;
+    this.updateFlickerPhase(now);
 
     // GMモードでは暗幕を描かない
     if (!isGm) {
@@ -1179,6 +1319,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // 壁グリッド構築
     const wallGrid = this.buildWallGrid(gridSize, w, h);
+    this.refreshLightingCaches(wallGrid);
 
     // 光源の穴を開ける（レイキャスト or 通常）
     // GMモードでは暗幕がないので、光源のグローだけ描く
@@ -1208,15 +1349,23 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     ctx.globalCompositeOperation = 'source-over';
   }
 
-  private drawAdvancedVisibility(ctx: CanvasRenderingContext2D, gridSize: number, wallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null, w: number, h: number) {
-    const normalSight = this.createMaskCanvas(w, h);
+  /** 時間ベースでゆらぎ位相を進める（フレームレートに依存しない） */
+  private updateFlickerPhase(now: number) {
+    if (!this.lastLightingRender) this.lastLightingRender = now;
+    const dt = Math.min(100, now - this.lastLightingRender);
+    this.lastLightingRender = now;
+    this.flickerPhase += dt * 0.0018;
+  }
+
+  private drawAdvancedVisibility(ctx: CanvasRenderingContext2D, gridSize: number, wallGrid: WallGrid | null, w: number, h: number) {
+    const normalSight = this.getScratchMask(0, w, h);
     const normalCtx = normalSight.getContext('2d');
     this.drawSightSources(normalCtx, gridSize, wallGrid, ['normal']);
 
     if (this.isAmbientLightEnabled()) {
       // 環境光がある時は、通常視界を「明るい場所」として扱う。
     } else if (this.currentTable.lightingEnabled && this.currentTable.lightingNightMode) {
-      const lightMask = this.createMaskCanvas(w, h);
+      const lightMask = this.getScratchMask(1, w, h);
       const lightCtx = lightMask.getContext('2d');
       this.drawLightSources(lightCtx, gridSize, wallGrid);
       normalCtx.globalCompositeOperation = 'destination-in';
@@ -1227,24 +1376,33 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     this.subtractSuperiorDarkness(normalCtx, gridSize, wallGrid);
 
-    const darkvisionSight = this.createMaskCanvas(w, h);
+    const darkvisionSight = this.getScratchMask(2, w, h);
     const darkvisionCtx = darkvisionSight.getContext('2d');
     this.drawSightSources(darkvisionCtx, gridSize, wallGrid, ['darkvision']);
     this.subtractSuperiorDarkness(darkvisionCtx, gridSize, wallGrid);
 
-    const superiorDarkvisionSight = this.createMaskCanvas(w, h);
+    const superiorDarkvisionSight = this.getScratchMask(3, w, h);
     const superiorDarkvisionCtx = superiorDarkvisionSight.getContext('2d');
     this.drawSightSources(superiorDarkvisionCtx, gridSize, wallGrid, ['superiorDarkvision']);
 
-    ctx.drawImage(normalSight, 0, 0);
-    ctx.drawImage(darkvisionSight, 0, 0);
-    ctx.drawImage(superiorDarkvisionSight, 0, 0);
+    ctx.drawImage(normalSight, 0, 0, w, h);
+    ctx.drawImage(darkvisionSight, 0, 0, w, h);
+    ctx.drawImage(superiorDarkvisionSight, 0, 0, w, h);
   }
 
-  private createMaskCanvas(w: number, h: number): HTMLCanvasElement {
-    const canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
+  /** 全面マスクcanvasをプールから取得（サイズ変化時のみ再確保。毎フレームのallocを避ける） */
+  private getScratchMask(index: number, w: number, h: number): HTMLCanvasElement {
+    let canvas = this.scratchMasks[index];
+    if (!canvas) {
+      canvas = document.createElement('canvas');
+      this.scratchMasks[index] = canvas;
+    }
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    } else {
+      canvas.getContext('2d').clearRect(0, 0, w, h);
+    }
     return canvas;
   }
 
@@ -1252,20 +1410,33 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.currentTable?.roomMode !== 'advanced') return [];
     const peerId = Network.peerId;
     const userId = Network.peerContext?.userId;
-    return ObjectStore.instance.getObjects<GameCharacter>(GameCharacter)
-      .filter(character => character.location.name === 'table')
-      .filter(character => !!character.sightEnabled)
-      .filter(character => this.includesJsonId(character.ownerPeerIds, peerId) || this.includesJsonId(character.ownerUserIds, userId));
+    const gridSize = this.currentTable?.gridSize || 50;
+    return this.getLightingCollections(gridSize).sightChars;
   }
 
   private includesJsonId(raw: string, id: string): boolean {
     if (!id) return false;
+    const key = raw + '\u0000' + id;
+    const cached = this.jsonIdCache.get(key);
+    if (cached !== undefined) return cached;
+    let result = false;
     try {
       const ids = JSON.parse(raw || '[]');
-      return Array.isArray(ids) && ids.map(value => String(value)).includes(id);
+      result = Array.isArray(ids) && ids.some(value => String(value) === id);
     } catch (e) {
-      return false;
+      result = false;
     }
+    this.jsonIdCache.set(key, result);
+    if (this.jsonIdCache.size > 1024) {
+      // 古いエントリから捨てる（Mapは挿入順を保持する）
+      const it = this.jsonIdCache.keys();
+      for (let i = 0; i < 256; i++) {
+        const k = it.next();
+        if (k.done) break;
+        this.jsonIdCache.delete(k.value);
+      }
+    }
+    return result;
   }
 
   private createSightSource(character: GameCharacter, gridSize: number): TableLightSource {
@@ -1290,7 +1461,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     };
   }
 
-  private drawSightSources(ctx: CanvasRenderingContext2D, gridSize: number, wallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null, modes: string[] = null) {
+  private drawSightSources(ctx: CanvasRenderingContext2D, gridSize: number, wallGrid: WallGrid | null, modes: string[] = null) {
     if (this.currentTable?.roomMode !== 'advanced') return;
     for (const character of this.getMySightCharacters()) {
       const mode = character.sightMode || 'normal';
@@ -1311,54 +1482,10 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  private drawLightSources(ctx: CanvasRenderingContext2D, gridSize: number, wallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null) {
-    const allLights: TableLightSource[] = [];
-
-    const characters = ObjectStore.instance.getObjects<GameCharacter>(GameCharacter);
-    for (const c of characters) {
-      if (!c.lightSourceEnabled || c.location.name !== 'table') continue;
-      const x = c.location.x + gridSize / 2;
-      const y = c.location.y + gridSize / 2;
-      const r = Math.max(10, c.lightRadius * gridSize);
-      const flicker = (c.lightType === 'torch' || c.lightType === 'campfire')
-        ? Math.sin(this.flickerPhase * 3 + x * 0.01) * 0.08 + Math.sin(this.flickerPhase * 7 + y * 0.02) * 0.05
-        : 0;
-      allLights.push({
-        x, y, r,
-        intensity: Math.min(1, c.lightIntensity + flicker),
-        color: c.lightColor,
-        type: c.lightType,
-        shape: c.lightType === 'laser' ? 'laser' : (c.lightShape || 'circle'),
-        coneAngle: c.lightConeAngle || 60,
-        direction: this.normalizeAngle((c.rotate || 0) + 90),
-        flat: c.lightType === 'flashlight',
-        coneCoreRadius: (c.lightType === 'flashlight' || c.lightType === 'laser' || c.lightShape === 'laser') ? gridSize * 0.5 : gridSize
-      });
-    }
-
-    const terrains = ObjectStore.instance.getObjects<Terrain>(Terrain);
-    for (const t of terrains) {
-      if (!t.lightSourceEnabled || t.location.name !== 'table') continue;
-      const x = t.location.x + (t.width || 1) * gridSize / 2;
-      const y = t.location.y + (t.depth || 1) * gridSize / 2;
-      const r = Math.max(10, t.lightRadius * gridSize);
-      const flicker = (t.lightType === 'torch' || t.lightType === 'campfire')
-        ? Math.sin(this.flickerPhase * 3 + x * 0.01) * 0.08 + Math.sin(this.flickerPhase * 7 + y * 0.02) * 0.05
-        : 0;
-      allLights.push({
-        x, y, r,
-        intensity: Math.min(1, t.lightIntensity + flicker),
-        color: t.lightColor,
-        type: t.lightType,
-        shape: t.lightType === 'laser' ? 'laser' : (t.lightShape || 'circle'),
-        coneAngle: t.lightConeAngle || 60,
-        direction: this.normalizeAngle((t.rotate || 0) + 90),
-        flat: t.lightType === 'flashlight',
-        coneCoreRadius: (t.lightType === 'flashlight' || t.lightType === 'laser' || t.lightShape === 'laser') ? gridSize * 0.5 : gridSize
-      });
-    }
-
-    for (const light of allLights) {
+  private drawLightSources(ctx: CanvasRenderingContext2D, gridSize: number, wallGrid: WallGrid | null) {
+    // 収集は getLightingCollections でキャッシュ。ここではゆらぎ（intensity）だけ毎フレーム載せる
+    for (const base of this.getLightingCollections(gridSize).lights) {
+      const light = this.applyFlicker(base);
       if (wallGrid) {
         this.drawLightWithRaycast(ctx, light, wallGrid);
       } else {
@@ -1368,35 +1495,17 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private collectSuperiorDarknessSources(gridSize: number): TableLightSource[] {
-    const sources: TableLightSource[] = [];
-    for (const c of ObjectStore.instance.getObjects<GameCharacter>(GameCharacter)) {
-      if (!c.superiorDarknessEnabled || c.location.name !== 'table') continue;
-      const center = this.getCharacterCenter(c, gridSize);
-      sources.push({
-        x: center.x,
-        y: center.y,
-        r: Math.max(10, (c.superiorDarknessRadius || 3) * gridSize),
-        intensity: 1,
-        color: '#000000',
-        type: 'superiorDarkness',
-        shape: 'circle',
-        coneAngle: 360,
-        direction: 0,
-        flat: true,
-        coneCoreRadius: 0
-      });
-    }
-    return sources;
+    return this.getLightingCollections(gridSize).superior;
   }
 
-  private drawSuperiorDarknessSources(ctx: CanvasRenderingContext2D, gridSize: number, wallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null) {
+  private drawSuperiorDarknessSources(ctx: CanvasRenderingContext2D, gridSize: number, wallGrid: WallGrid | null) {
     for (const darkness of this.collectSuperiorDarknessSources(gridSize)) {
       if (wallGrid) this.drawLightWithRaycast(ctx, darkness, wallGrid);
       else this.drawLightFill(ctx, darkness, false);
     }
   }
 
-  private subtractSuperiorDarkness(ctx: CanvasRenderingContext2D, gridSize: number, wallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null) {
+  private subtractSuperiorDarkness(ctx: CanvasRenderingContext2D, gridSize: number, wallGrid: WallGrid | null) {
     const sources = this.collectSuperiorDarknessSources(gridSize);
     if (sources.length < 1) return;
     ctx.globalCompositeOperation = 'destination-out';
@@ -1407,7 +1516,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     ctx.globalCompositeOperation = 'source-over';
   }
 
-  private isPointInSuperiorDarkness(x: number, y: number, gridSize: number, wallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null): boolean {
+  private isPointInSuperiorDarkness(x: number, y: number, gridSize: number, wallGrid: WallGrid | null): boolean {
     for (const darkness of this.collectSuperiorDarknessSources(gridSize)) {
       if (!this.isPointInsideLightShape(x, y, darkness)) continue;
       if (!this.isRayBlocked(darkness.x, darkness.y, x, y, wallGrid)) return true;
@@ -1459,45 +1568,8 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private drawLightColors(ctx: CanvasRenderingContext2D, gridSize: number) {
-    const allSources: TableLightSource[] = [];
-
-    const characters = ObjectStore.instance.getObjects<GameCharacter>(GameCharacter);
-    for (const c of characters) {
-      if (!c.lightSourceEnabled || c.location.name !== 'table') continue;
-      allSources.push({
-        x: c.location.x + gridSize / 2,
-        y: c.location.y + gridSize / 2,
-        r: c.lightRadius * gridSize,
-        color: c.lightColor,
-        intensity: c.lightIntensity,
-        type: c.lightType,
-        shape: c.lightType === 'laser' ? 'laser' : (c.lightShape || 'circle'),
-        coneAngle: c.lightConeAngle || 60,
-        direction: this.normalizeAngle((c.rotate || 0) + 90),
-        flat: c.lightType === 'flashlight',
-        coneCoreRadius: (c.lightType === 'flashlight' || c.lightType === 'laser' || c.lightShape === 'laser') ? gridSize * 0.5 : gridSize
-      });
-    }
-
-    const terrains = ObjectStore.instance.getObjects<Terrain>(Terrain);
-    for (const t of terrains) {
-      if (!t.lightSourceEnabled || t.location.name !== 'table') continue;
-      allSources.push({
-        x: t.location.x + (t.width || 1) * gridSize / 2,
-        y: t.location.y + (t.depth || 1) * gridSize / 2,
-        r: t.lightRadius * gridSize,
-        color: t.lightColor,
-        intensity: t.lightIntensity,
-        type: t.lightType,
-        shape: t.lightType === 'laser' ? 'laser' : (t.lightShape || 'circle'),
-        coneAngle: t.lightConeAngle || 60,
-        direction: this.normalizeAngle((t.rotate || 0) + 90),
-        flat: t.lightType === 'flashlight',
-        coneCoreRadius: (t.lightType === 'flashlight' || t.lightType === 'laser' || t.lightShape === 'laser') ? gridSize * 0.5 : gridSize
-      });
-    }
-
-    for (const light of allSources) {
+    for (const base of this.getLightingCollections(gridSize).lights) {
+      const light = this.applyFlicker(base);
       const r = Math.max(10, light.r) * 0.7;
       const alpha = light.intensity * 0.3;
       const hex = Math.round(alpha * 255).toString(16).padStart(2, '0');
@@ -1728,55 +1800,68 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     const table = this.currentTable;
     if (!table) return;
     const darkness = table.lightingEnabled && table.lightingNightMode ? table.lightingIntensity : 0.82;
-
-    // Terrain（壁）で光を遮断
-    const terrains = ObjectStore.instance.getObjects<Terrain>(Terrain);
-    for (const t of terrains) {
-      if (!t.lightBlocking || t.location.name !== 'table') continue;
-      const x = t.location.x;
-      const y = t.location.y;
-      const w = (t.width || 1) * gridSize;
-      const h = (t.depth || 1) * gridSize;
-      ctx.fillStyle = `rgba(0, 0, 0, ${darkness})`;
-      ctx.fillRect(x, y, w, h);
+    const versionKey = this.wallGridVersionCounter + ':' + darkness + ':' + gridSize;
+    if (!this.blockerPathCache || this.blockerPathVersion !== versionKey) {
+      const path = new Path2D();
+      // Terrain（壁）＋マップマスクの遮断矩形をまとめて焼く
+      const terrains = ObjectStore.instance.getObjects<Terrain>(Terrain);
+      for (const t of terrains) {
+        if (!t.lightBlocking || t.location.name !== 'table') continue;
+        path.rect(t.location.x, t.location.y, (t.width || 1) * gridSize, (t.depth || 1) * gridSize);
+      }
+      const masks = ObjectStore.instance.getObjects<GameTableMask>(GameTableMask);
+      for (const m of masks) {
+        if (!m.lightBlocking || m.location.name !== 'table') continue;
+        path.rect(m.location.x, m.location.y, (m.width || 1) * gridSize, (m.height || 1) * gridSize);
+      }
+      this.blockerPathCache = path;
+      this.blockerPathVersion = versionKey;
     }
-
-    // マップマスクで光を遮断
-    const masks = ObjectStore.instance.getObjects<GameTableMask>(GameTableMask);
-    for (const m of masks) {
-      if (!m.lightBlocking || m.location.name !== 'table') continue;
-      const x = m.location.x;
-      const y = m.location.y;
-      const w = (m.width || 1) * gridSize;
-      const h = (m.height || 1) * gridSize;
-      ctx.fillStyle = `rgba(0, 0, 0, ${darkness})`;
-      ctx.fillRect(x, y, w, h);
-    }
+    ctx.fillStyle = `rgba(0, 0, 0, ${darkness})`;
+    ctx.fill(this.blockerPathCache);
   }
 
-  private buildWallGrid(gridSize: number, canvasW: number, canvasH: number): { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null {
+  private buildWallGrid(gridSize: number, canvasW: number, canvasH: number): WallGrid | null {
     const tableId = this.currentTable?.identifier || '';
-    const now = performance.now();
-    if (!this.wallGridDirty && this.wallGridTableId === tableId && this.cachedWallGrid && (now - this.wallGridCacheTime) < GameTableComponent.WALL_GRID_CACHE_TTL) {
+    const sizeKey = canvasW + 'x' + canvasH;
+    // ダーティ・テーブル切替・サイズ変更時のみ再構築（TTLなし: イベント駆動で無効化される）
+    if (!this.wallGridDirty && this.wallGridTableId === tableId && this.wallGridTableSize === sizeKey && this.wallGridCacheBuilt) {
       return this.cachedWallGrid;
     }
+    const prev = this.cachedWallGrid;
     const result = this._buildWallGrid(gridSize, canvasW, canvasH);
+    // 中身が同じなら版本を上げない（キャッシュ thrash 防止）
+    let changed = true;
+    if (this.wallGridCacheBuilt && prev && result && prev.cols === result.cols && prev.rows === result.rows) {
+      changed = !this.equalsBytes(prev.grid, result.grid);
+    } else if (this.wallGridCacheBuilt && !prev && !result) {
+      changed = false;
+    }
+    if (changed) this.wallGridVersionCounter++;
     this.cachedWallGrid = result;
     this.wallGridDirty = false;
     this.wallGridTableId = tableId;
-    this.wallGridCacheTime = now;
+    this.wallGridTableSize = sizeKey;
+    this.wallGridCacheBuilt = true;
     return result;
+  }
+
+  private equalsBytes(a: Uint8Array, b: Uint8Array): boolean {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+    return true;
   }
 
   private invalidateWallGrid() {
     this.wallGridDirty = true;
   }
 
-  private _buildWallGrid(gridSize: number, canvasW: number, canvasH: number): { grid: Uint8Array; cellSize: number; cols: number; rows: number } | null {
+  private _buildWallGrid(gridSize: number, canvasW: number, canvasH: number): WallGrid | null {
     const cellSize = 4;
     const cols = Math.ceil(canvasW / cellSize);
     const rows = Math.ceil(canvasH / cellSize);
     const grid = new Uint8Array(cols * rows);
+    const rects: { x1: number; y1: number; x2: number; y2: number }[] = [];
     let hasWalls = false;
 
     // Terrain壁
@@ -1784,10 +1869,15 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     for (const t of terrains) {
       if (!t.lightBlocking || t.location.name !== 'table') continue;
       hasWalls = true;
-      const x1 = Math.max(0, Math.floor(t.location.x / cellSize));
-      const y1 = Math.max(0, Math.floor(t.location.y / cellSize));
-      const x2 = Math.min(cols, Math.ceil((t.location.x + (t.width || 1) * gridSize) / cellSize));
-      const y2 = Math.min(rows, Math.ceil((t.location.y + (t.depth || 1) * gridSize) / cellSize));
+      const px1 = t.location.x;
+      const py1 = t.location.y;
+      const px2 = px1 + (t.width || 1) * gridSize;
+      const py2 = py1 + (t.depth || 1) * gridSize;
+      rects.push({ x1: px1, y1: py1, x2: px2, y2: py2 });
+      const x1 = Math.max(0, Math.floor(px1 / cellSize));
+      const y1 = Math.max(0, Math.floor(py1 / cellSize));
+      const x2 = Math.min(cols, Math.ceil(px2 / cellSize));
+      const y2 = Math.min(rows, Math.ceil(py2 / cellSize));
       for (let gy = y1; gy < y2; gy++)
         for (let gx = x1; gx < x2; gx++)
           grid[gy * cols + gx] = 1;
@@ -1798,10 +1888,15 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     for (const m of masks) {
       if (!m.lightBlocking || m.location.name !== 'table') continue;
       hasWalls = true;
-      const x1 = Math.max(0, Math.floor(m.location.x / cellSize));
-      const y1 = Math.max(0, Math.floor(m.location.y / cellSize));
-      const x2 = Math.min(cols, Math.ceil((m.location.x + (m.width || 1) * gridSize) / cellSize));
-      const y2 = Math.min(rows, Math.ceil((m.location.y + (m.height || 1) * gridSize) / cellSize));
+      const px1 = m.location.x;
+      const py1 = m.location.y;
+      const px2 = px1 + (m.width || 1) * gridSize;
+      const py2 = py1 + (m.height || 1) * gridSize;
+      rects.push({ x1: px1, y1: py1, x2: px2, y2: py2 });
+      const x1 = Math.max(0, Math.floor(px1 / cellSize));
+      const y1 = Math.max(0, Math.floor(py1 / cellSize));
+      const x2 = Math.min(cols, Math.ceil(px2 / cellSize));
+      const y2 = Math.min(rows, Math.ceil(py2 / cellSize));
       for (let gy = y1; gy < y2; gy++)
         for (let gx = x1; gx < x2; gx++)
           grid[gy * cols + gx] = 1;
@@ -1810,6 +1905,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     // 壁ペン描画壁（縮小サンプリング）
     const wallCanvas = this.createWallDrawingCanvas(canvasW, canvasH);
     if (wallCanvas) {
+        const hasPen = true;
         const dCtx = wallCanvas.getContext('2d');
         const imgData = dCtx.getImageData(0, 0, wallCanvas.width, wallCanvas.height);
         const pixels = imgData.data;
@@ -1824,26 +1920,33 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
             }
           }
         }
+        return hasWalls ? { grid, cellSize, cols, rows, version: this.wallGridVersionCounter, rects, hasPen } : null;
     }
 
-    return hasWalls ? { grid, cellSize, cols, rows } : null;
+    return hasWalls ? { grid, cellSize, cols, rows, version: this.wallGridVersionCounter, rects, hasPen: false } : null;
   }
 
   private createWallDrawingCanvas(width: number, height: number): HTMLCanvasElement | null {
     if (!this.layerVisibility.wallDrawing) return null;
+    const raw = this.currentTable?.wallDrawingData || '';
+    const cacheKey = raw + '\u0000' + width + 'x' + height;
+    if (this.wallPenCache && this.wallPenCache.raw === cacheKey) return this.wallPenCache.canvas;
     const strokes = this.wallDrawingStrokes;
-    if (strokes.length < 1) return null;
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    for (const stroke of strokes) this.drawStrokeOnCanvas(canvas, stroke);
+    let canvas: HTMLCanvasElement = null;
+    if (strokes.length > 0) {
+      canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      for (const stroke of strokes) this.drawStrokeOnCanvas(canvas, stroke);
+    }
+    this.wallPenCache = { raw: cacheKey, canvas };
     return canvas;
   }
 
   private drawLaserWithRaycast(
     ctx: CanvasRenderingContext2D,
     light: TableLightSource,
-    wallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number }
+    wallGrid: WallGrid
   ) {
     const { grid, cellSize, cols, rows } = wallGrid;
     const angle = this.degreesToRadians(light.direction || 0);
@@ -1851,56 +1954,15 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     const dy = Math.sin(angle);
     let hitDist = light.r;
 
-    for (let d = cellSize; d <= light.r; d += cellSize) {
-      const gx = Math.floor((light.x + dx * d) / cellSize);
-      const gy = Math.floor((light.y + dy * d) / cellSize);
-      if (gx < 0 || gy < 0 || gx >= cols || gy >= rows) {
-        hitDist = d;
-        break;
-      }
-      if (grid[gy * cols + gx]) {
-        hitDist = d;
-        break;
-      }
-    }
-
-    this.drawLaserLightFill(ctx, light, hitDist);
-    this.drawConeCoreLightFill(ctx, light);
-  }
-
-  private drawLightWithRaycast(
-    ctx: CanvasRenderingContext2D,
-    light: TableLightSource,
-    wallGrid: { grid: Uint8Array; cellSize: number; cols: number; rows: number }
-  ) {
-    const { grid, cellSize, cols, rows } = wallGrid;
-    const cx = light.x;
-    const cy = light.y;
-    const radius = light.r;
-    if (this.isLaserLight(light)) {
-      this.drawLaserWithRaycast(ctx, light, wallGrid);
-      return;
-    }
-
-    const isCone = light.shape === 'cone';
-    const cone = this.getConeBounds(light);
-    const RAYS = isCone ? Math.max(24, Math.ceil((light.coneAngle || 60) / 2)) : 180;
-    const points: { x: number; y: number }[] = [];
-
-    if (isCone) points.push({ x: cx, y: cy });
-
-    for (let i = 0; i < RAYS; i++) {
-      const angle = isCone
-        ? cone.start + (cone.span * i / Math.max(1, RAYS - 1))
-        : (i / RAYS) * Math.PI * 2;
-      const dx = Math.cos(angle);
-      const dy = Math.sin(angle);
-
-      let hitDist = radius;
-      for (let d = cellSize; d <= radius; d += cellSize) {
-        const gx = Math.floor((cx + dx * d) / cellSize);
-        const gy = Math.floor((cy + dy * d) / cellSize);
-
+    // 光源の円がどの壁AABBとも交差しないならレイキャスト不要（フル到達）
+    if (!wallGrid.hasPen && wallGrid.rects.length > 0 && this.circleMissesAllRects(light.x, light.y, light.r, wallGrid.rects)) {
+      // hitDist = light.r のまま
+    } else if (!wallGrid.hasPen && wallGrid.rects.length < 1) {
+      // 壁なし（ペンもなし）→ フル到達
+    } else {
+      for (let d = cellSize; d <= light.r; d += cellSize) {
+        const gx = Math.floor((light.x + dx * d) / cellSize);
+        const gy = Math.floor((light.y + dy * d) / cellSize);
         if (gx < 0 || gy < 0 || gx >= cols || gy >= rows) {
           hitDist = d;
           break;
@@ -1910,24 +1972,122 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
           break;
         }
       }
-
-      points.push({ x: cx + dx * hitDist, y: cy + dy * hitDist });
     }
+
+    this.drawLaserLightFill(ctx, light, hitDist);
+    this.drawConeCoreLightFill(ctx, light);
+  }
+
+  /** 円(cx,cy,r)が全てのAABBの外にあるならtrue（高速パス用） */
+  private circleMissesAllRects(cx: number, cy: number, r: number, rects: { x1: number; y1: number; x2: number; y2: number }[]): boolean {
+    for (const rc of rects) {
+      const nearestX = Math.max(rc.x1, Math.min(cx, rc.x2));
+      const nearestY = Math.max(rc.y1, Math.min(cy, rc.y2));
+      const dx = cx - nearestX;
+      const dy = cy - nearestY;
+      if (dx * dx + dy * dy < r * r) return false;
+    }
+    return true;
+  }
+
+  private drawLightWithRaycast(
+    ctx: CanvasRenderingContext2D,
+    light: TableLightSource,
+    wallGrid: WallGrid
+  ) {
+    if (this.isLaserLight(light)) {
+      this.drawLaserWithRaycast(ctx, light, wallGrid);
+      return;
+    }
+
+    // 可視ポリゴンは壁配置×光源ジオメトリのみで決まるのでキャッシュする
+    const path = this.getVisibilityPath(light, wallGrid);
 
     // 可視ポリゴンをclipしてグラデーション描画
     ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-    for (let i = 1; i < points.length; i++) {
-      ctx.lineTo(points[i].x, points[i].y);
-    }
-    ctx.closePath();
-    ctx.clip();
+    ctx.clip(path);
 
     this.drawLightFill(ctx, light, false);
 
     ctx.restore();
 
     this.drawConeCoreLightFill(ctx, light);
+  }
+
+  /** 光源の可視ポリゴンPath2Dを取得（量子化キーでキャッシュ） */
+  private getVisibilityPath(light: TableLightSource, wallGrid: WallGrid): Path2D {
+    const quant = 4; // px量子化
+    const key = wallGrid.version + '|' + light.shape + '|' + Math.round(light.x / quant) + ',' + Math.round(light.y / quant)
+      + '|' + Math.round(light.r) + '|' + Math.round(light.coneAngle || 0) + '|' + Math.round((light.direction || 0) / 2);
+    const cached = this.visibilityPathCache.get(key);
+    if (cached) return cached;
+
+    const { grid, cellSize, cols, rows } = wallGrid;
+    const cx = light.x;
+    const cy = light.y;
+    const radius = light.r;
+    const path = new Path2D();
+
+    // 高速パス: 光源円がどの壁AABBとも交差しない（ペン壁なし）ならレイキャスト不要
+    const noWallHit = !wallGrid.hasPen && (wallGrid.rects.length < 1 || this.circleMissesAllRects(cx, cy, radius, wallGrid.rects));
+    if (noWallHit) {
+      if (light.shape === 'cone') {
+        const cone = this.getConeBounds(light);
+        path.moveTo(cx, cy);
+        path.arc(cx, cy, radius, cone.start, cone.end);
+        path.closePath();
+      } else {
+        path.arc(cx, cy, radius, 0, Math.PI * 2);
+        path.closePath();
+      }
+    } else {
+      const isCone = light.shape === 'cone';
+      const cone = this.getConeBounds(light);
+      const RAYS = isCone ? Math.max(24, Math.ceil((light.coneAngle || 60) / 2)) : 180;
+
+      if (isCone) path.moveTo(cx, cy);
+      let started = !isCone;
+
+      for (let i = 0; i < RAYS; i++) {
+        const angle = isCone
+          ? cone.start + (cone.span * i / Math.max(1, RAYS - 1))
+          : (i / RAYS) * Math.PI * 2;
+        const dx = Math.cos(angle);
+        const dy = Math.sin(angle);
+
+        let hitDist = radius;
+        for (let d = cellSize; d <= radius; d += cellSize) {
+          const gx = Math.floor((cx + dx * d) / cellSize);
+          const gy = Math.floor((cy + dy * d) / cellSize);
+
+          if (gx < 0 || gy < 0 || gx >= cols || gy >= rows) {
+            hitDist = d;
+            break;
+          }
+          if (grid[gy * cols + gx]) {
+            hitDist = d;
+            break;
+          }
+        }
+
+        const px = cx + dx * hitDist;
+        const py = cy + dy * hitDist;
+        if (started) path.lineTo(px, py);
+        else { path.moveTo(px, py); started = true; }
+      }
+      path.closePath();
+    }
+
+    if (this.visibilityPathCache.size >= GameTableComponent.VISIBILITY_PATH_MAX) {
+      // 古いものから捨てる（Mapは挿入順保持）
+      const it = this.visibilityPathCache.keys();
+      for (let i = 0; i < 32; i++) {
+        const k = it.next();
+        if (k.done) break;
+        this.visibilityPathCache.delete(k.value);
+      }
+    }
+    this.visibilityPathCache.set(key, path);
+    return path;
   }
 }

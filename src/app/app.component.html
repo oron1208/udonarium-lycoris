@@ -72,7 +72,7 @@
       <li (click)="open('LightingPanelComponent')" [class.options-active]="isLightingPanelOpen">
         <a routerLink="/" routerLinkActive="active">
           <div><i class="material-icons">lightbulb</i></div>
-          <div>{{ isLightingPanelOpen ? '照明視覚中' : '照明視覚' }}</div>
+          <div>照明・視界</div>
         </a>
       </li>
       <li (click)="open('InitiativePanelComponent')" [class.options-active]="isInitiativePanelOpen" *ngIf="isAdvancedRoom">
@@ -90,13 +90,13 @@
       <li (click)="open('OptionsPanelComponent')" [class.options-active]="isOptionsPanelOpen">
         <a routerLink="/" routerLinkActive="active">
           <div><i class="material-icons">settings</i></div>
-          <div>{{ isOptionsPanelOpen ? 'オプション中' : 'オプション' }}</div>
+          <div>オプション</div>
         </a>
       </li>
       <li *ngIf="!isSaveing" (click)="save()">
         <a routerLink="/" routerLinkActive="active">
           <div><i class="material-icons">sd_storage</i></div>
-          <div>保存</div>
+          <div>卓をZIP保存</div>
         </a>
       </li>
       <li *ngIf="isSaveing" style="pointer-events: none;">

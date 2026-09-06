@@ -1,3 +1,8 @@
+<div role="status" style="margin-bottom:8px">
+  通信サービス：{{networkService.isOpen ? '接続済み' : '未接続・接続処理中'}}<br>
+  自分との接続が確立している相手：{{connectedPeerCount}}人（自分を除く）
+  <div class="small-font">部屋全体の人数ではありません。接続済みでもデータが最新とは限りません。<span *ngIf="networkService.peerContext.isRoom">表示ずれが続く場合は下の再同期をお試しください。</span></div>
+</div>
 <div *ngIf="myPeer">
   <button (click)="changeIcon()">アイコンを変更する</button>
 </div>
@@ -81,7 +86,7 @@
 </div>
 <div *ngFor="let context of networkService.peerContexts" style="font-size: 15px;">
   <div>
-    <span *ngIf="!context.isOpen">[接続中]</span>
+    <span *ngIf="!context.isOpen">[接続処理中]</span>
     <span>他の参加者：{{findUserId(context.peerId)}} [{{findPeerName(context.peerId)}}] </span>
     <span *ngIf="findPeerIsGm(context.peerId)" style="color: #b71c1c; font-weight: bold;">[GM]</span>
     <span *ngIf="findPeerTimeReceive(context.peerId) <= 0">接続確認：[-:--:--]</span>

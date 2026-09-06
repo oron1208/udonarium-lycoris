@@ -1211,3 +1211,5 @@
   max-height: 40px;
   overflow: hidden;
 }
+
+.vn-palette-body-inner palette-browser { flex: 1; min-height: 0; min-width: 0; }

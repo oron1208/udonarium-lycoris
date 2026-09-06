@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.spec.json",
+  "compilerOptions": { "types": ["node", "jasmine", "hammerjs"] },
+  "include": ["src/app/class/core/file-storage/character-image-zoom.spec.ts", "src/**/*.d.ts"]
+}

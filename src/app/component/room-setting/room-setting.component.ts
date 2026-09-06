@@ -21,6 +21,7 @@ export class RoomSettingComponent implements OnInit, OnDestroy {
 
   roomName: string = 'ふつうの部屋';
   password: string = '';
+  isPasswordVisible = false;
   isPrivate: boolean = false;
   roomMode: RoomMode = 'standard';
 

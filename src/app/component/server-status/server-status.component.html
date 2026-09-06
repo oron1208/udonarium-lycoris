@@ -1,6 +1,6 @@
 <div class="server-status-inline" *ngIf="status; else statusError">
   <div class="server-status-summary" (click)="toggle()">
-    <span>サーバー混雑：</span>
+    <span>サーバー全体の混雑：</span>
     <span class="status-dot" [class.dot-low]="congestionLevel === 'low'"
           [class.dot-medium]="congestionLevel === 'medium'"
           [class.dot-high]="congestionLevel === 'high'"></span>
@@ -13,7 +13,7 @@
 
   <div class="server-status-detail" *ngIf="expanded">
     <div class="stat-row">
-      <span class="stat-label">接続人数</span>
+      <span class="stat-label">サーバー全体の接続人数</span>
       <span class="stat-value">{{ status.peers }}人</span>
     </div>
     <div class="stat-row">

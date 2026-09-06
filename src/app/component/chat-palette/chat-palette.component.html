@@ -23,7 +23,6 @@
     <div style="position:absolute;margin-top:-2em;">
       <button class="tab-setting small-font" (click)="indexBtn()">＜<i class="material-icons small-font">bookmarks</i></button>
     </div>
-    <div *ngIf="isEdit" class="edit-info"><i class="material-icons" style="vertical-align: bottom; size:0.8rem;">info_outline</i> チャットパレット編集中です</div>
     <div class="complete-box">
       <ng-container *ngIf="(autoCompleteList().length == 1 && autoCompleteList()[0] != text) || autoCompleteList().length > 1">
         <select class="complete" id="{{_timeId}}_complete"  style="overflow-y: auto;" size="5" (input)="selectAutoComplete(text,$event.target.value)" (click)="selectAutoComplete(text,$event.target.value)">
@@ -32,24 +31,7 @@
       </ng-container>
     </div>
   </div>
-  <div [hidden]="isEdit" style="flex-grow: 1; height: 0; min-height: 100px;">
-    <select class="palette" id="{{_timeId}}_select"  style="overflow-y: auto;" size="5" (input)="selectPalette($event.target.value)" (click)="clickPalette($event.target.value)" (focusout)="resizeChatInput()" #chatPalette>
-      <ng-container *ngIf="palette">
-        <option *ngFor="let palette of palette.getPalette()" value="{{palette}}">{{palette}}</option>
-      </ng-container>
-    </select>
-  </div>
-  <div [hidden]="!isEdit" style="flex-grow: 1; height: 0; min-height: 100px;">
-    <textarea class="palette is-caret" id="{{_timeId}}_text" style="resize: none;" [(ngModel)]="editPalette" placeholder="チャットパレット"></textarea>
-  </div>
-  <div style="flex-grow: 0;">
-    <button type="submit" (click)="toggleEditMode()">
-      <span *ngIf="!isEdit">チャットパレットの編集</span>
-      <span *ngIf="isEdit">チャットパレットを確定</span>
-    </button>
-<!--
-    <button type="submit" (click)="moveTest()">
-    </button>
--->
+  <div style="flex-grow: 1; height: 0; min-height: 100px;">
+    <palette-browser [palette]="palette" (chooseLine)="selectPalette($event)" (sendLine)="sendPaletteCommand($event)" #paletteBrowser></palette-browser>
   </div>
 </div>

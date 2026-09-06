@@ -21,10 +21,10 @@
           <span class="scale-label">{{hotbarScale}}%</span>
           <button type="button" (click)="adjustScale(10)">＋</button>
         </div>
-        <div class="macro-hotbar-pin-button"
+        <button type="button" class="macro-hotbar-pin-button" [attr.aria-pressed]="isPinned"
           (click)="togglePin()"
           [class.pinned]="isPinned"
-          title="{{isPinned ? 'ピン止めON' : 'ピン止め'}}">{{isPinned ? '📌' : '📍'}}</div>
+          title="{{isPinned ? 'ピン止めON' : 'ピン止め'}}">{{isPinned ? '📌' : '📍'}}</button>
       </div>
     </div>
     <div class="hotbar-controls-row">
@@ -52,6 +52,7 @@
       <div class="popover-body">{{hoverSlotText}}</div>
     </div>
 
+    <div class="small-font">空欄で登録・右クリックまたはF2で編集</div>
     <div class="macro-hotbar-pages">
       <button *ngFor="let page of pageNumbers" type="button" [class.active]="activePage === page" (click)="setActivePage(page)">
         {{page + 1}}
@@ -64,7 +65,7 @@
         [attr.aria-label]="getSlotTooltip(slot)"
         (mouseenter)="showSlotPopover(slot)"
         (mouseleave)="hideSlotPopover()"
-        (click)="onSlotClick($event, i)" (contextmenu)="onSlotContextMenu($event, i)">
+        (keydown.f2)="onSlotContextMenu($event, i)" (click)="onSlotClick($event, i)" (contextmenu)="onSlotContextMenu($event, i)">
         <span class="slot-number">{{activePage + 1}}-{{i + 1}}</span>
         <span class="slot-icon" *ngIf="getIconUrl(slot); else noIcon">
           <img [src]="getIconUrl(slot) | safe: 'resourceUrl'" />
@@ -72,17 +73,17 @@
         <ng-template #noIcon>
           <span class="slot-icon slot-icon-empty">＋</span>
         </ng-template>
-        <span class="slot-label">{{slot.label || (slot.text ? slot.text : '空')}}</span>
+        <span class="slot-label">{{slot.label || (slot.text ? slot.text : '登録')}}</span>
       </button>
     </div>
   </div>
 
   <div class="macro-hotbar-actions">
     <button type="button" (click)="exportSlots()" title="ホットバー設定をJSONで保存">
-      <i class="material-icons">file_download</i><span>保存</span>
+      <i class="material-icons">file_download</i><span>設定を保存</span>
     </button>
     <button type="button" (click)="openImportDialog()" title="ホットバー設定JSONを読み込み">
-      <i class="material-icons">file_upload</i><span>読込</span>
+      <i class="material-icons">file_upload</i><span>設定を読込</span>
     </button>
     <button type="button" (click)="clearAllSlots()" title="ホットバーを全てクリア" class="clear-all-button">
       <i class="material-icons">delete_sweep</i><span>全削除</span>

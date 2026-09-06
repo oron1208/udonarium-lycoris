@@ -12,6 +12,7 @@ import { FileProcessingWorker } from './file-processing-worker';
 import { ImageFile } from './image-file';
 import { ImageStorage } from './image-storage';
 import { MimeType } from './mime-type';
+import { chooseZipImageImport, ZIP_IMAGE_LIMIT, remapZipImageReferences } from './zip-image-import-options';
 
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { ReloadCheck } from '@udonarium/reload-check';
@@ -95,13 +96,31 @@ export class FileArchiver {
     if (!files) return;
     let loadFiles: File[] = files instanceof FileList ? toArrayOfFileList(files) : files;
 
+    // Ask once per direct-file batch, before importing any files.
+    if (!preserveImageBytes) {
+      const large = loadFiles.filter(file => file.type.startsWith('image/') && file.size > ZIP_IMAGE_LIMIT);
+      const options = large.length ? await chooseZipImageImport(large.length, large.reduce((sum, file) => sum + file.size, 0), 'files') : false;
+      if (options === null) return;
+      if (options) {
+        const prepared: File[] = [];
+        for (const file of loadFiles) {
+          let image = file;
+          if (file.size > ZIP_IMAGE_LIMIT && (file.type === 'image/png' || file.type === 'image/jpeg')) {
+            const compressed = await this.compressImage(file, options.maxDim, options.quality);
+            if (compressed && compressed.size < file.size) image = compressed;
+          }
+          prepared.push(image);
+        }
+        loadFiles = prepared;
+      }
+    }
     // ファイルは順次処理することでドロップ時の並び順を維持する。
     // 重い計算（SHA256・画像圧縮）は Web Worker にオフロード済みなので、
     // メインスレッドの逐次ループでも実用十分な速度となる。
     for (let i = 0; i < loadFiles.length; i++) {
       const file = loadFiles[i];
       try {
-        await this.handleImage(file, preserveImageBytes, archivedImageIdentifier);
+        await this.handleImage(file, true, archivedImageIdentifier);
         await this.handleAudio(file);
         await this.handleMediaManifest(file);
         await this.handleText(file);
@@ -118,32 +137,6 @@ export class FileArchiver {
     if (!this.reloadCheck.isLoadOk() ) return;
     
     let processedFile = file;
-    // 2MB超の場合は自動圧縮
-    // Room ZIP object data refers to images by the SHA-256 of the original
-    // bytes. Recompressing an archived image changes that identifier while
-    // data.xml keeps the old hash, leaving cards/dice with a missing image.
-    // Direct user uploads can still use the existing size optimization.
-    if (!preserveImageBytes && this.maxImageSize < file.size) {
-      Logger.debug(`Image compression: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB) → compressing...`);
-      const compressed = await this.compressImage(file);
-      if (compressed && compressed.size <= this.maxImageSize) {
-        Logger.debug(`Image compressed: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressed.size / 1024 / 1024).toFixed(2)}MB)`);
-        processedFile = compressed;
-      } else if (compressed) {
-        // 圧縮しても2MB超の場合でも、元より小さければ許可
-        if (compressed.size < file.size) {
-          Logger.debug(`Image compressed (still large): ${file.name} (${(compressed.size / 1024 / 1024).toFixed(2)}MB)`);
-          processedFile = compressed;
-        } else {
-          Logger.warn(`Image compression failed to reduce size: ${file.name}`);
-          return;
-        }
-      } else {
-        Logger.warn(`Image compression failed: ${file.name}`);
-        return;
-      }
-    }
-    
     Logger.debug(processedFile.name + ' type:' + processedFile.type);
     if (archivedImageIdentifier) {
       const image = await ImageFile.createAsync(processedFile);
@@ -312,14 +305,49 @@ export class FileArchiver {
     let zipEntries: JSZip.JSZipObject[] = [];
     zip.forEach((relativePath, zipEntry) => zipEntries.push(zipEntry));
     const archivedImageIdentifiers = await this.collectArchivedImageIdentifiers(zip);
+    // Ask once before importing any objects or media from this ZIP.
+    const largeImages: JSZip.JSZipObject[] = [];
+    let largeBytes = 0;
+    for (const entry of zipEntries) {
+      if (entry.dir || !MimeType.type(entry.name).startsWith('image/')) continue;
+      const knownSize = (entry as any)._data?.uncompressedSize;
+      const size = typeof knownSize === 'number' ? knownSize : (await entry.async('uint8array')).byteLength;
+      if (size > ZIP_IMAGE_LIMIT) { largeImages.push(entry); largeBytes += size; }
+    }
+    const options = largeImages.length ? await chooseZipImageImport(largeImages.length, largeBytes) : false;
+    if (options === null) return;
+    const prepared = new Map<string, File>();
+    const replacements = new Map<string, string>();
+    if (options) {
+      for (const entry of largeImages) {
+        const type = MimeType.type(entry.name);
+        // Do not flatten animations or discard WebP transparency.
+        if (type !== 'image/png' && type !== 'image/jpeg') continue;
+        const original = new File([await entry.async('arraybuffer')], entry.name, { type });
+        const compressed = await this.compressImage(original, options.maxDim, options.quality);
+        if (!compressed || compressed.size >= original.size) continue;
+        const oldHash = await FileReaderUtil.calcSHA256Async(original);
+        const newHash = await FileReaderUtil.calcSHA256Async(compressed);
+        replacements.set(oldHash, newHash);
+        const archivedId = archivedImageIdentifiers.get(this.archiveImageStem(entry.name));
+        if (archivedId) replacements.set(archivedId, newHash);
+        prepared.set(entry.name, compressed);
+      }
+    }
     for (let zipEntry of zipEntries) {
       if (zipEntry.dir) continue;
       try {
         let arraybuffer = await zipEntry.async('arraybuffer');
         Logger.debug(zipEntry.name + ' 解凍...');
-        const archivedImageIdentifier = archivedImageIdentifiers.get(this.archiveImageStem(zipEntry.name)) || '';
+        let archivedImageIdentifier = archivedImageIdentifiers.get(this.archiveImageStem(zipEntry.name)) || '';
+        let importedFile = prepared.get(zipEntry.name) || new File([arraybuffer], zipEntry.name, { type: MimeType.type(zipEntry.name) });
+        if (prepared.has(zipEntry.name)) {
+          archivedImageIdentifier = await FileReaderUtil.calcSHA256Async(importedFile);
+        } else if (/\.xml$/i.test(zipEntry.name) && replacements.size) {
+          importedFile = new File([remapZipImageReferences(await importedFile.text(), replacements)], zipEntry.name, { type: importedFile.type });
+        }
         await this.load(
-          [new File([arraybuffer], zipEntry.name, { type: MimeType.type(zipEntry.name) })],
+          [importedFile],
           true,
           archivedImageIdentifier,
         );
