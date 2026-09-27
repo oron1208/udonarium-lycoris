@@ -49,6 +49,8 @@ export class Jukebox extends GameObject {
   // 新規ログインユーザーが「今どのBGMが再生中か」を知るため
   @SyncVar() activeBgmSource: string = ''; // 'combat' | 'table' | 'jukebox' | ''
   @SyncVar() combatBgmIdentifierSync: string = '';
+  // 戦闘BGM開始後にジュークボックス側で手動制御した（戦闘BGMの自動再開を抑制する）
+  @SyncVar() combatBgmManualOverride: boolean = false;
   @SyncVar() activeTableIdentifier: string = ''; // 再生中のテーブルID
 
   get audio(): AudioFile { return AudioStorage.instance.get(this.audioIdentifier); }
@@ -97,6 +99,8 @@ export class Jukebox extends GameObject {
   private _currentBgmSource: 'combat' | 'table' | 'jukebox' | null = null;
   // Which table's audio is currently loaded
   private _tableAudioLoadedFor: string = '';
+  // Which combat BGM is currently loaded (to detect song switches)
+  private _combatAudioLoadedFor: string = '';
   // Which jukebox audio is currently playing (to detect song switches)
   private _jukeboxAudioLoadedFor: string = '';
   private _jukeboxLayerLoadedFor: string = '';
@@ -170,12 +174,15 @@ export class Jukebox extends GameObject {
     this.audioIdentifier = identifier;
     this.isPlaying = true;
     this.isLoop = isLoop;
+    // 戦闘BGM再生中のユーザー操作は戦闘BGMより優先する
+    if (this._combatBgmIdentifier) this.combatBgmManualOverride = true;
     this._updateBgmPlayback();
   }
 
   stop() {
     this.audioIdentifier = '';
     this.isPlaying = false;
+    if (this._combatBgmIdentifier) this.combatBgmManualOverride = true;
     this._updateBgmPlayback();
   }
 
@@ -233,11 +240,13 @@ export class Jukebox extends GameObject {
     this.audioIdentifier = '';
     this.isPlaying = false;
     this._jukeboxLayerOverrideActive = true;
+    if (this._combatBgmIdentifier) this.combatBgmManualOverride = true;
     this._updateBgmPlayback();
   }
 
   stopJukeboxLayers() {
     this._jukeboxLayerOverrideActive = false;
+    if (this._combatBgmIdentifier) this.combatBgmManualOverride = true;
     this._updateBgmPlayback();
   }
 
@@ -246,12 +255,14 @@ export class Jukebox extends GameObject {
   playCombatBgm(identifier: string) {
     this._combatBgmIdentifier = identifier || '';
     this.combatBgmIdentifierSync = identifier || '';
+    this.combatBgmManualOverride = false; // 新しい戦闘BGM開始トリガーで手動制御をリセット
     this._updateBgmPlayback();
   }
 
   stopCombatBgm() {
     this._combatBgmIdentifier = '';
     this.combatBgmIdentifierSync = '';
+    this.combatBgmManualOverride = false;
     this._updateBgmPlayback();
   }
 
@@ -259,7 +270,8 @@ export class Jukebox extends GameObject {
   // 優先度: 戦闘BGM ＞ テーブル設定BGM ＞ ジュークボックスBGM
 
   private _updateBgmPlayback() {
-    const combatReady = !!this._combatBgmIdentifier;
+    // 戦闘BGMは開始トリガーのみ優先。ジュークボックス側で手動制御したら以後はユーザー操作を優先する
+    const combatReady = !!this._combatBgmIdentifier && !this.combatBgmManualOverride;
     // テーブル音源が実際に存在するか確認
     const tableObj = this.activeTableIdentifier ? ObjectStore.instance.get<GameTable>(this.activeTableIdentifier) : null;
     const tableLayers = tableObj ? Jukebox.getTableAudioLayers(tableObj).filter(l => l.enabled && l.audioIdentifier) : [];
@@ -273,7 +285,9 @@ export class Jukebox extends GameObject {
 
     // 同一ソースかつ再スタート不要なら何もしない
     if (desired === this._currentBgmSource) {
-      if (desired === 'table' && this._tableAudioLoadedFor !== this.activeTableIdentifier) {
+      if (desired === 'combat' && this._combatAudioLoadedFor !== this._combatBgmIdentifier) {
+        // 戦闘BGMの曲が変わったら再スタート
+      } else if (desired === 'table' && this._tableAudioLoadedFor !== this.activeTableIdentifier) {
         // テーブルIDが変わったら再スタート
       } else if (desired === 'jukebox') {
         // ジュークボックス内で曲が変わったら再スタート
@@ -303,6 +317,7 @@ export class Jukebox extends GameObject {
     let actuallyStarted = false;
     if (desired === 'combat') {
       actuallyStarted = this._startCombatPlayback();
+      if (actuallyStarted) this._combatAudioLoadedFor = this._combatBgmIdentifier;
     } else if (desired === 'table') {
       actuallyStarted = this._startTablePlayback();
       if (actuallyStarted) this._tableAudioLoadedFor = this.activeTableIdentifier;
@@ -324,6 +339,7 @@ export class Jukebox extends GameObject {
     for (const p of this.jukeboxLayerPlayers) p.stop();
     this.jukeboxLayerPlayers = [];
     if (this.combatAudioPlayer) { this.combatAudioPlayer.stop(); this.combatAudioPlayer = null; }
+    this._combatAudioLoadedFor = '';
     // HttpAudioPlayer達も停止
     for (const p of this.tableHttpPlayers) p.stop();
     this.tableHttpPlayers = [];
@@ -559,6 +575,7 @@ export class Jukebox extends GameObject {
     // 戦闘BGM識別子の変化
     if (prevCombatId !== this.combatBgmIdentifierSync) {
       this._combatBgmIdentifier = this.combatBgmIdentifierSync;
+      this.combatBgmManualOverride = false;
       this._updateBgmPlayback();
       return;
     }

@@ -322,11 +322,7 @@ export class InitiativePanelComponent implements OnInit, OnDestroy {
   }
 
   set combatBgmIdentifier(value: string) {
-    const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected);
-    if (table) {
-      table.combatBgmIdentifier = value;
-      table.update();
-    }
+    this.initiativeService.setCombatBgm(value);
   }
 
   get audioFiles(): AudioFile[] {

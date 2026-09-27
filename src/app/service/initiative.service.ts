@@ -553,8 +553,16 @@ export class InitiativeService {
   setCombatBgm(identifier: string) {
     const table = this.getCurrentlySelectedTable();
     if (!table) return;
+    const previousIdentifier = table.combatBgmIdentifier;
     table.combatBgmIdentifier = identifier;
     table.update();
+
+    // 戦闘中の変更は全クライアントの再生にも即時反映する
+    if (table.combatActive && previousIdentifier !== identifier) {
+      identifier
+        ? EventSystem.call('COMBAT_BGM_PLAY', { identifier })
+        : EventSystem.call('COMBAT_BGM_STOP', {});
+    }
   }
 
   private sendCombatSystemMessage(text: string) {

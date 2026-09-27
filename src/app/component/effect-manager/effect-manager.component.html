@@ -173,8 +173,8 @@
       </div>
       <div class="em-palgen-row">
         <label>付与対象</label>
-        <label class="em-palgen-radio"><input type="radio" [(ngModel)]="palTargetSelf" [value]="false"> ターゲット (t&!)</label>
-        <label class="em-palgen-radio"><input type="radio" [(ngModel)]="palTargetSelf" [value]="true"> 自分 (&!)</label>
+        <label class="em-palgen-radio"><input type="radio" [(ngModel)]="palTargetSelf" [value]="false" (change)="generatePaletteCommand()"> ターゲット (t&!)</label>
+        <label class="em-palgen-radio"><input type="radio" [(ngModel)]="palTargetSelf" [value]="true" (change)="generatePaletteCommand()"> 自分 (&!)</label>
       </div>
 
       <!-- 生成結果 -->

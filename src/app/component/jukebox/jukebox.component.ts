@@ -119,6 +119,13 @@ export class JukeboxComponent implements OnInit, OnDestroy {
     this.auditionPlayer.stop();
   }
 
+  /** 戦闘BGM・テーブルBGM・ジュークボックスBGMをすべて停止する */
+  stopAllBgm() {
+    this.cutInLauncher.stopBlankTagCutIn();
+    this.jukebox.stopTableAudio();
+    this.jukebox.stop();
+  }
+
   playBGM(audio: AudioFile) {
     this.cutInLauncher.stopBlankTagCutIn();
     this.jukebox.play(audio.identifier, true);
