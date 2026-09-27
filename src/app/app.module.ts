@@ -100,6 +100,8 @@ import { BatchDamagePanelComponent } from 'component/batch-damage-panel/batch-da
 import { AlarmMenuComponent } from 'component/alarm-menu/alarm-menu.component';
 import { AlarmWindowComponent } from 'component/alarm-window/alarm-window.component';
 import { ChatMessageFixComponent } from 'component/chat-message-fix/chat-message-fix.component';
+import { PopupWindowComponent } from 'component/popup-window/popup-window.component';
+import { PopupChatComponent } from 'component/popup-chat/popup-chat.component';
 import { MacroHotbarComponent } from 'component/macro-hotbar/macro-hotbar.component';
 import { DataImportMenuComponent } from 'component/data-import-menu/data-import-menu.component';
 import { EffectManagerComponent } from 'component/effect-manager/effect-manager.component';
@@ -128,6 +130,8 @@ import { AppComponent } from './app.component';
 //    CardStackListImageComponent,
     ChatMessageComponent,
     ChatPaletteComponent,
+    PopupWindowComponent,
+    PopupChatComponent,
     ChatTabComponent,
     ChatTabSettingComponent,
     ChatWindowComponent,

@@ -19,6 +19,7 @@ import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 
 import { VoteMenuComponent } from 'component/vote-menu/vote-menu.component';
 import { AlarmMenuComponent } from 'component/alarm-menu/alarm-menu.component';
+import { PopupBridgeService } from 'service/popup-bridge.service';
 
 
 @Component({
@@ -75,7 +76,8 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
   constructor(
     public chatMessageService: ChatMessageService,
     private panelService: PanelService,
-    private pointerDeviceService: PointerDeviceService
+    private pointerDeviceService: PointerDeviceService,
+    private popupBridge: PopupBridgeService
   ) { }
 
   ngOnInit() {
@@ -84,6 +86,7 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
 
     EventSystem.register(this)
       .on('MESSAGE_ADDED', event => {
+        this.maybePushPopupAppend(event.data.tabIdentifier, event.data.messageIdentifier);
         if (event.data.tabIdentifier !== this.chatTabidentifier) return;
         let message = ObjectStore.instance.get<ChatMessage>(event.data.messageIdentifier);
         if (message && message.isSendFromSelf) {
@@ -93,6 +96,10 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
         }
         if (this.isAutoScroll && this.chatTab) this.chatTab.markForRead();
       });
+    this.popupOff = this.popupBridge.channel(ChatWindowComponent.POPUP_OWNER).onMessage(message => this.handlePopupMessage(message));
+    this.popupTimer = setInterval(() => {
+      if (this.isServing() && this.isSubLive()) this.pushPopupState();
+    }, 10000);
     Promise.resolve().then(() => this.updatePanelTitle());
   }
 
@@ -102,6 +109,135 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnDestroy() {
     EventSystem.unregister(this);
+    if (this.popupTimer) clearInterval(this.popupTimer);
+    if (this.popupOff) this.popupOff();
+    if (this.popupToken) {
+      this.popupBridge.channel(ChatWindowComponent.POPUP_OWNER).post({ type: 'owner-bye' });
+      this.popupBridge.releaseServe(ChatWindowComponent.POPUP_OWNER, this.popupToken);
+      this.popupToken = null;
+    }
+  }
+
+  /* ═══════════ 別ウィンドウ（チャットポップアウト）ブリッジ ═══════════ */
+
+  private static readonly POPUP_OWNER = 'chat:main';
+
+  private popupOff: () => void = null;
+  private popupTimer: any = null;
+  private popupToken: object = null;
+  private subLastSeen = 0;
+
+  private isSubLive(): boolean { return Date.now() - this.subLastSeen < 8000; }
+  private isServing(): boolean { return this.popupBridge.isServing(ChatWindowComponent.POPUP_OWNER, this.popupToken); }
+
+  openChatWindowPopup() {
+    this.popupToken = this.popupBridge.claimServe(ChatWindowComponent.POPUP_OWNER);
+    this.popupBridge.openPopup('chat', ChatWindowComponent.POPUP_OWNER, { width: 560, height: 820 });
+    this.compactHostPanel();
+  }
+
+  /** ポップアウト中はメイン画面のこのパネルを最小化して左下へ畳んでおく。 */
+  private compactHostPanel() {
+    const ref = (this.panelService as any).panelComponentRef;
+    const panel: any = ref ? ref.instance : null;
+    if (!panel || typeof panel.toggleMinimize !== 'function') return;
+    try {
+      if (!panel.isMinimized) panel.toggleMinimize();
+      const element: HTMLElement = panel.draggablePanel ? panel.draggablePanel.nativeElement : null;
+      // 最小化直後はレイアウト反映前のためタイトルバーの高さで計算する
+      const titleBar: HTMLElement = panel.titleBar ? panel.titleBar.nativeElement : null;
+      const height = titleBar ? titleBar.offsetHeight : 48;
+      panel.left = 12;
+      panel.top = Math.max(12, window.innerHeight - height - 12);
+      if (element) {
+        element.style.left = panel.left + 'px';
+        element.style.top = panel.top + 'px';
+      }
+    } catch (_) { /* パネル操作に失敗してもポップアウト自体は継続 */ }
+  }
+
+  private handlePopupMessage(message: any) {
+    if (!this.isServing()) return;
+    switch (message.type) {
+      case 'ready':
+        this.subLastSeen = Date.now();
+        this.pushPopupState();
+        break;
+      case 'bye':
+        this.subLastSeen = 0;
+        break;
+      case 'select-tab':
+        if (typeof message.identifier === 'string'
+          && this.chatMessageService.chatTabs.some(tab => tab.identifier === message.identifier)) {
+          this.chatTabidentifier = message.identifier;
+        }
+        this.pushPopupState();
+        break;
+      case 'select-sendfrom':
+        if (typeof message.identifier === 'string') this.sendFrom = message.identifier;
+        break;
+      case 'send-chat': {
+        const text = typeof message.text === 'string' ? message.text : '';
+        if (!text.trim()) break;
+        const sendFrom = typeof message.sendFrom === 'string' && message.sendFrom ? message.sendFrom : this.sendFrom;
+        DiceBot.loadGameSystemAsync(this.gameType).then(gameSystem => {
+          this.sendChat({ text, gameSystem, sendFrom, sendTo: '', tachieNum: null, messColor: '' });
+        });
+        break;
+      }
+    }
+  }
+
+  private serializeEntry(m: ChatMessage) {
+    return {
+      name: m.name || '',
+      text: String(m.text ?? ''),
+      timestamp: m.timestamp || 0,
+      messColor: m.messColor || '',
+      isSystem: !!m.isSystem,
+      isDicebot: !!m.isDicebot,
+      isSecret: !!m.isSecret,
+      secretVisible: !m.isDirect || m.isRelatedToMe,
+      isMine: !!m.isSendFromSelf
+    };
+  }
+
+  private pushPopupState() {
+    const characters = ObjectStore.instance.getObjects<GameCharacter>(GameCharacter)
+      .map(character => ({ identifier: character.identifier, name: character.name }));
+    const cursor = PeerCursor.myCursor;
+    this.popupBridge.channel(ChatWindowComponent.POPUP_OWNER).post({
+      type: 'state',
+      state: {
+        mode: 'chat',
+        title: this.chatTab ? this.chatTab.name : 'チャット',
+        tabs: this.chatMessageService.chatTabs.map(tab => ({ id: tab.identifier, name: tab.name })),
+        currentTab: this.chatTabidentifier,
+        characters,
+        sendFrom: this.sendFrom,
+        sendFromName: cursor ? cursor.name : '自分',
+        gameType: this.gameType,
+        messages: this.popupMessages()
+      }
+    });
+  }
+
+  private popupMessages(): any[] {
+    const tab = this.chatTab;
+    if (!tab) return [];
+    return (tab.chatMessages || []).filter(m => m.isDisplayable).slice(-250).map(m => this.serializeEntry(m));
+  }
+
+  private maybePushPopupAppend(tabIdentifier: string, messageIdentifier: string) {
+    if (!this.isServing() || !this.isSubLive()) return;
+    if (tabIdentifier !== this.chatTabidentifier) return;
+    const message = ObjectStore.instance.get<ChatMessage>(messageIdentifier);
+    if (!message || !message.isDisplayable) return;
+    this.popupBridge.channel(ChatWindowComponent.POPUP_OWNER).post({
+      type: 'chat-append',
+      tab: tabIdentifier,
+      entries: [this.serializeEntry(message)]
+    });
   }
 
   // @TODO やり方はもう少し考えた方がいいい

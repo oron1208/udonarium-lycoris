@@ -1,0 +1,52 @@
+:host { display: block; width: 100%; height: 100%; min-height: 0; }
+.chat-pane { display: flex; flex-direction: column; height: 100%; min-height: 0; background: #fff; }
+.chat-pane.vn { background: #14161a; }
+
+.tabs { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 6px;
+  border-bottom: 1px solid rgba(100, 80, 60, .25); background: #faf6ef; }
+.chat-pane.vn .tabs { background: #1d1f24; border-color: rgba(255, 255, 255, .14); }
+.tab { font: inherit; font-size: 12px; padding: 3px 10px; border: 1px solid rgba(100, 80, 60, .3);
+  border-radius: 10px; background: #fff; color: #555; cursor: pointer; max-width: 130px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tab.active { background: #5b4a3a; border-color: #5b4a3a; color: #fff; }
+.chat-pane.vn .tab { background: rgba(0, 0, 0, .4); border-color: rgba(255, 255, 255, .2); color: #ddd; }
+.chat-pane.vn .tab.active { background: #4a67d6; border-color: #4a67d6; color: #fff; }
+
+.log { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 8px 10px; }
+.log.empty { display: flex; align-items: center; justify-content: center; }
+.empty-note { margin: 0; color: #a09282; font-size: 13px; }
+.chat-pane.vn .empty-note { color: #777; }
+
+.entry { margin: 0 0 10px; }
+.entry .name { font-weight: bold; font-size: 12px; margin-bottom: 2px; color: #444; }
+.entry .badge { font-size: 10px; font-weight: normal; margin-left: 6px; padding: 1px 6px;
+  border-radius: 8px; background: rgba(90, 90, 90, .12); color: #777; }
+.chat-pane.vn .entry .name { color: #ccc; }
+.entry .text { font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; color: #333; }
+.chat-pane.vn .entry .text { color: #e6e6e6; }
+.entry.system .text { color: #8a7c6c; font-size: 12px; }
+.chat-pane.vn .entry.system .text { color: #999; }
+.entry.dicebot .text { color: #6b5d8c; }
+.chat-pane.vn .entry.dicebot .text { color: #b3a7d6; }
+.entry.mine .name::after { content: '（自分）'; font-size: 10px; font-weight: normal; opacity: .7; }
+.secret-hidden { opacity: .65; font-style: italic; }
+
+.composer { flex: 0 0 auto; border-top: 1px solid rgba(100, 80, 60, .25); padding: 6px 8px 8px; background: #faf6ef; }
+.chat-pane.vn .composer { background: #1d1f24; border-color: rgba(255, 255, 255, .14); }
+.composer-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.send-from { flex: 1 1 auto; min-width: 0; font: inherit; font-size: 12px; padding: 3px 6px;
+  border: 1px solid rgba(100, 80, 60, .35); border-radius: 4px; background: #fff; color: #444; }
+.chat-pane.vn .send-from { background: rgba(0, 0, 0, .45); border-color: rgba(255, 255, 255, .22); color: #eee; }
+.game-type { flex: 0 0 auto; font-size: 11px; color: #8a7c6c; }
+.chat-pane.vn .game-type { color: #aaa; }
+
+.input { display: block; width: 100%; box-sizing: border-box; font: inherit; font-size: 13px;
+  padding: 6px 8px; border: 1px solid rgba(100, 80, 60, .35); border-radius: 6px;
+  background: #fff; color: #333; resize: vertical; min-height: 48px; }
+.chat-pane.vn .input { background: rgba(0, 0, 0, .45); border-color: rgba(255, 255, 255, .22); color: #eee; }
+
+.composer-actions { display: flex; justify-content: flex-end; margin-top: 6px; }
+.send { font: inherit; font-size: 13px; padding: 4px 18px; border: 1px solid #5b4a3a; border-radius: 6px;
+  background: #5b4a3a; color: #fff; cursor: pointer; }
+.send:disabled { opacity: .45; cursor: default; }
+.chat-pane.vn .send { background: #4a67d6; border-color: #4a67d6; }

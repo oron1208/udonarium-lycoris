@@ -87,7 +87,9 @@ interface BundleLoadingState {
 })
 export class AppComponent implements AfterViewInit, OnDestroy {
 
-  @ViewChild('modalLayer', { read: ViewContainerRef, static: true }) modalLayerViewContainerRef!: ViewContainerRef;
+  @ViewChild('modalLayer', { read: ViewContainerRef, static: false }) modalLayerViewContainerRef!: ViewContainerRef;
+  /** ?paletteWindow=1 付きで開かれたチャパレ専用サブウィンドウ。部屋への接続・パネル・モーダルを一切初期化しない。 */
+  readonly isPopupWindow: boolean = new URLSearchParams(window.location.search).get('popup') === '1';
 
   get reloadCheck(): ReloadCheck { return ObjectStore.instance.get<ReloadCheck>('ReloadCheck'); }
   networkService = Network;
@@ -418,6 +420,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       .on('SYNCHRONIZE_FILE_LIST', event => { if (event.isSendFromSelf) this.lazyNgZoneUpdate(false); })
       .on<AppConfig>('LOAD_CONFIG', event => {
         Logger.debug('LOAD_CONFIG !!!');
+        if (this.isPopupWindow) return; // サブウィンドウは自分では部屋に接続しない（メイン画面とBridgeで繋ぐ）
         Network.configure(event.data);
         Network.setApiKey(event.data.webrtc.key);
         Network.setSignalingUrl(event.data.webrtc.signalingUrl || '');
@@ -457,7 +460,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
           if (!reconnectErrorTypes.includes(errorType)) return;
           await this.modalService.open(TextViewComponent, { title: 'ネットワークエラー', text: 'このウィンドウを閉じると再接続を試みます。' });
-          Network.open();
+          if (!this.isPopupWindow) Network.open();
         });
       })
       .on('SERVER_MEDIA_MISSING', event => {
@@ -686,6 +689,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit() {
+    if (this.isPopupWindow) return; // サブウィンドウはパネル・モーダル・開発者ブリッジを初期化しない
     PanelService.defaultParentViewContainerRef = ModalService.defaultParentViewContainerRef = ContextMenuService.defaultParentViewContainerRef = this.modalLayerViewContainerRef;
     this.syncAdvancedRoomUiClass();
     setTimeout(() => {
@@ -844,7 +848,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
           const chatTabList = ObjectStore.instance.get<ChatTabList>('ChatTabList');
           const sysTab = chatTabList ? chatTabList.systemMessageTab : null;
           this.chatMessageService.sendSystemMessage(sysTab, this.developerAnnouncementText, '#b71c1c');
-          Network.open();
+          if (!this.isPopupWindow) Network.open();
         }
         return;
       }

@@ -1,3 +1,4 @@
+<ng-container *ngIf="!isPopupWindow">
 <div id="app-table-layer" style="position: absolute; width: 100%; height: 100%; overflow: hidden;">
   <game-table></game-table>
 </div>
@@ -114,3 +115,7 @@
 <div #modalLayer></div>
 <macro-hotbar></macro-hotbar>
 <network-indicator class="networkIndicator"></network-indicator>
+</ng-container>
+
+<!-- チャパレ専用サブウィンドウ（?popup=1）：部屋には接続せずメイン画面とBridgeで繋ぐ -->
+<popup-window *ngIf="isPopupWindow"></popup-window>

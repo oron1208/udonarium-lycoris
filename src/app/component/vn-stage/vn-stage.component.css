@@ -1136,6 +1136,9 @@
   max-height: none;
   min-height: 150px;
 }
+.vn-float-panel.vn-chat-log.vn-float-minimized {
+  min-height: 36px;
+}
 .vn-float-panel.vn-chat-log .vn-log-tabs {
   flex-shrink: 0;
 }
@@ -1208,8 +1211,13 @@
 }
 
 .vn-control-minimized {
-  max-height: 40px;
+  height: 44px;
+  max-height: none;
   overflow: hidden;
+}
+
+.vn-float-minimized {
+  height: auto;
 }
 
 .vn-palette-body-inner palette-browser { flex: 1; min-height: 0; min-width: 0; }

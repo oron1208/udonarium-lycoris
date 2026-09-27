@@ -230,6 +230,7 @@
         <button type="button" class="vn-float-btn"
           (click)="toggleSubPanelMinimize('palette'); $event.preventDefault(); $event.stopPropagation()"
           [class.active]="paletteMinimized" title="最小化">_</button>
+        <button type="button" class="vn-float-btn" (click)="openPaletteWindow(); $event.preventDefault(); $event.stopPropagation()" title="別ウィンドウで開く（メインのチャパレは折りたたみます）">⧉</button>
         <button type="button" class="vn-float-btn" (click)="closeSubPanel('palette', $event)" title="閉じる">✕</button>
       </div>
     </div>
@@ -266,6 +267,7 @@
       (pointercancel)="onSubDragEnd('log', $event)">
       <span>💬 チャットログ</span>
       <div class="vn-float-actions" (pointerdown)="$event.stopPropagation()">
+        <button type="button" class="vn-float-btn" (click)="openVnChatWindow(); $event.preventDefault(); $event.stopPropagation()" title="別ウィンドウで開く">⧉</button>
         <button type="button" class="vn-float-btn" [class.active]="logFrontPinned"
           (click)="toggleSubPanelFrontPin('log'); $event.preventDefault(); $event.stopPropagation()"
           title="最前面＋画面固定">📌</button>

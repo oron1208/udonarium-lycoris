@@ -2,16 +2,16 @@
   <div class="tabs" role="group" aria-label="チャットパレットの分類">
     <button type="button" [class.active]="active === -2" [attr.aria-pressed]="active === -2" [disabled]="!!form" (click)="selectTab(-2)">すべて</button>
     <button type="button" *ngFor="let tab of tabs" [class.active]="active === tab.start" [attr.aria-pressed]="active === tab.start" [disabled]="!!form" (click)="selectTab(tab.start)" (dragover)="dragOverTab($event, tab)" (dragleave)="leaveDrop($event)" (drop)="receiveDrop($event, 'tab:' + tab.start)" [class.drop-tab]="dropHint?.key === 'tab:' + tab.start" title="クリックで切替／ドロップでこのタブの末尾へ">{{tab.name}}</button>
-    <button type="button" [disabled]="!!form" (click)="begin('add-tab')">＋ タブ</button>
+    <button type="button" *ngIf="!readOnly" [disabled]="!!form" (click)="begin('add-tab')">＋ タブ</button>
   </div>
   <div class="tools">
     <label class="wrap-option" title="OFFで各項目を1行表示（送信する本文は変わりません）"><input type="checkbox" [ngModel]="wrapLines" (ngModelChange)="wrapLines = $event">折り返し</label>
     <input class="search is-caret" type="search" aria-label="すべてのタブを検索" placeholder="すべてのタブを検索" [(ngModel)]="query">
-    <button type="button" [attr.aria-pressed]="managing" (click)="managing = !managing">{{managing ? '編集操作を閉じる' : '追加・編集'}}</button>
+    <button type="button" *ngIf="!readOnly" [attr.aria-pressed]="managing" (click)="managing = !managing">{{managing ? '編集操作を閉じる' : '追加・編集'}}</button>
     <button type="button" (click)="expandAll(false)">全展開</button>
     <button type="button" (click)="expandAll(true)">全折りたたみ</button>
   </div>
-  <fieldset class="tools edit-tools" *ngIf="managing" [disabled]="!!form">
+  <fieldset class="tools edit-tools" *ngIf="managing && !readOnly" [disabled]="!!form">
     <legend>チャパレ編集</legend>
     <button type="button" (click)="begin('add-fold')">＋ 折りたたみ</button>
     <button type="button" (click)="begin('add-lines')">＋ 行・説明文</button>
@@ -55,7 +55,7 @@
         [class.drop-before]="dropHint?.key === 'node:' + node.start && dropHint?.placement === 'before'"
         [class.drop-after]="dropHint?.key === 'node:' + node.start && dropHint?.placement === 'after'"
         [class.drop-inside]="dropHint?.key === 'node:' + node.start && dropHint?.placement === 'inside'">
-        <button type="button" class="drag-handle" [disabled]="!!form" [draggable]="!form" (dragstart)="startDrag($event, node)" (dragend)="endDrag($event)"
+        <button type="button" class="drag-handle" *ngIf="!readOnly" [disabled]="!!form" [draggable]="!form" (dragstart)="startDrag($event, node)" (dragend)="endDrag($event)"
           (pointerdown)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()" (click)="selected = node.start; $event.stopPropagation()"
           [attr.aria-label]="'ドラッグして移動・別チャパレへコピー：' + (node.text || '空行')" title="ドラッグで移動／別チャパレへコピー">⠿</button>
         <button *ngIf="node.kind === 'fold'" type="button" class="fold" [class.selected]="selected === node.start" [disabled]="!!form"

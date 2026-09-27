@@ -1,0 +1,37 @@
+<div class="chat-pane" [class.vn]="vn">
+  <div class="tabs" *ngIf="tabs.length > 0">
+    <button *ngFor="let tab of tabs; trackBy: trackByTab" type="button" class="tab"
+      [class.active]="tab.id === currentTab" (click)="selectTab.emit(tab.id)"
+      [title]="tab.name">{{ tab.name }}</button>
+  </div>
+  <div #logContainer class="log" [class.empty]="messages.length === 0">
+    <p *ngIf="messages.length === 0" class="empty-note">まだメッセージはありません</p>
+    <div *ngFor="let entry of messages; trackBy: trackByMessage" class="entry"
+      [class.system]="entry.isSystem" [class.dicebot]="entry.isDicebot" [class.mine]="entry.isMine">
+      <div class="name" *ngIf="entry.name"
+        [style.color]="entry.messColor || null">{{ entry.name }}<span class="badge" *ngIf="entry.isDicebot">ダイス</span><span class="badge" *ngIf="entry.isSecret && entry.secretVisible">シークレット</span></div>
+      <div class="text" *ngIf="!entry.isSecret || entry.secretVisible">{{ entry.text }}</div>
+      <div class="text secret-hidden" *ngIf="entry.isSecret && !entry.secretVisible">{{ secretLabel(entry) }}</div>
+    </div>
+  </div>
+  <div class="composer">
+    <div class="composer-row" *ngIf="!vn">
+      <select class="send-from" [ngModel]="sendFrom" (ngModelChange)="selectSendFrom.emit($event)" [disabled]="!connected" title="発言者">
+        <option [value]="sendFrom">{{ sendFromName }}</option>
+        <option *ngFor="let character of characters" [value]="character.identifier">{{ character.name }}</option>
+      </select>
+      <span class="game-type" [title]="'ダイスボット: ' + gameType">{{ gameType }}</span>
+    </div>
+    <div class="composer-row" *ngIf="vn">
+      <select class="send-from" [ngModel]="selectedCharacter" (ngModelChange)="selectCharacter.emit($event)" [disabled]="!connected" title="発言キャラ">
+        <option value="" disabled>キャラを選択</option>
+        <option *ngFor="let character of characters" [value]="character.identifier">{{ character.name }}</option>
+      </select>
+    </div>
+    <textarea class="input" [(ngModel)]="draft" rows="2" placeholder="メッセージを入力（Enterで送信 / Shift+Enterで改行）"
+      (keydown)="onKeydown($event)" [disabled]="!connected"></textarea>
+    <div class="composer-actions">
+      <button type="button" class="send" (click)="submit()" [disabled]="!connected || !draft.trim()">送信</button>
+    </div>
+  </div>
+</div>

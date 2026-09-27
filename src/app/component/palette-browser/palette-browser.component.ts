@@ -33,6 +33,7 @@ export class PaletteBrowserComponent implements OnChanges, DoCheck, OnDestroy {
   selected = -1;
   collapsed = new Set<number>();
   managing = false;
+  readOnly = false;
   form = '';
   name = '';
   body = '';
@@ -126,6 +127,7 @@ export class PaletteBrowserComponent implements OnChanges, DoCheck, OnDestroy {
     setTimeout(() => this.host.nativeElement.querySelector('[data-palette-line="' + line + '"]')?.scrollIntoView({ block: 'center' }));
   }
   begin(action: string) {
+    if (this.readOnly) return;
     this.base = this.source;
     this.insertInside = false;
     this.form = action;
@@ -194,6 +196,7 @@ export class PaletteBrowserComponent implements OnChanges, DoCheck, OnDestroy {
     if (this.commit(lines)) { this.active = nextActive; this.saveView(); }
   }
   unwrap() {
+    if (this.readOnly) return;
     this.base = this.source;
     const lines = this.document.lines.slice();
     const node = this.selectedNode;
@@ -205,6 +208,7 @@ export class PaletteBrowserComponent implements OnChanges, DoCheck, OnDestroy {
     if (this.commit(lines)) { this.active = -2; this.saveView(); }
   }
   moveTab(direction: number) {
+    if (this.readOnly) return;
     const tabs = this.document.tabs.filter(t => t.start >= 0);
     const i = tabs.findIndex(t => t.start === this.active);
     if (i < 0 || !tabs[i + direction]) return;
@@ -217,7 +221,7 @@ export class PaletteBrowserComponent implements OnChanges, DoCheck, OnDestroy {
   }
   startDrag(event: DragEvent, node: PaletteNode) {
     event.stopPropagation();
-    if (this.form || !event.dataTransfer) { event.preventDefault(); return; }
+    if (this.readOnly || this.form || !event.dataTransfer) { event.preventDefault(); return; }
     const text = this.document.lines.slice(node.start, node.end).join('\n');
     if (!isPaletteDragItem(text)) {
       event.preventDefault();
@@ -276,7 +280,7 @@ export class PaletteBrowserComponent implements OnChanges, DoCheck, OnDestroy {
     this.dropHint = null;
   }
   receiveDrop(event: DragEvent, key: string) {
-    if (!this.isPaletteDrag(event)) return;
+    if (this.readOnly || !this.isPaletteDrag(event)) return;
     event.preventDefault();
     event.stopPropagation();
     const hint = this.dropHint;

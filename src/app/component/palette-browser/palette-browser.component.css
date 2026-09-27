@@ -13,7 +13,8 @@
   --palette-fold: rgba(180, 137, 79, .15);
   --palette-danger: #9e2525;
 }
-:host-context(vn-stage) {
+:host-context(vn-stage),
+:host-context(.vn-palette-theme) {
   color-scheme: dark;
   --palette-text: #eee;
   --palette-muted: #bbb;

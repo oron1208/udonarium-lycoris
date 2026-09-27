@@ -108,3 +108,12 @@
 .is-caret {
   caret-color: rgba(0,0,0,0.95);
 }
+
+/* タブ行末の「別ウィンドウで開く」ボタン（入力欄に被せない配置） */
+.chat-tab .palette-window-btn {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 4px;
+  font-size: 10px;
+  padding: 1px 6px;
+}

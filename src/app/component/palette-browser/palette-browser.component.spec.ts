@@ -284,4 +284,31 @@ describe('Structured palette compatibility and editor', () => {
     const data = start(fixture, 0);
     expect(data.types.length).toBe(0); expect(palette.value).toBe('// @fold 未閉鎖\nA');
   });
+
+  it('locks editing and dragging while the palette window is connected', () => {
+    component.readOnly = true;
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('.drag-handle')).toBeNull();
+    expect(button(root, '追加・編集')).toBeUndefined();
+    expect(button(root, '＋ タブ')).toBeUndefined();
+    component.begin('add-lines');
+    expect(component.form).toBe('');
+    const transfer = new DataTransfer();
+    component.startDrag(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: transfer }), component.document.tabs[1].children[0]);
+    expect(transfer.types.length).toBe(0);
+  });
+
+  it('keeps click-input and double-click send working while read-only', () => {
+    component.readOnly = true;
+    fixture.detectChanges();
+    const chosen = spyOn(component.chooseLine, 'emit');
+    const sent = spyOn(component.sendLine, 'emit');
+    const line = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.line'))
+      .find(el => el.textContent.includes('2d6+{能力}')) as HTMLElement;
+    line.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    line.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    expect(chosen).toHaveBeenCalled();
+    expect(sent).toHaveBeenCalled();
+  });
 });

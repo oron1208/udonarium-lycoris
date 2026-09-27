@@ -20,6 +20,7 @@ import { ContextMenuSeparator, ContextMenuService } from 'service/context-menu.s
 import { PointerDeviceService } from 'service/pointer-device.service';
 
 import { ChatMessage, ChatMessageContext, ChatMessageTargetContext } from '@udonarium/chat-message';
+import { PopupBridgeService } from 'service/popup-bridge.service';
 
 @Component({
   selector: 'chat-palette',
@@ -69,7 +70,8 @@ export class ChatPaletteComponent implements OnInit, OnDestroy {
     private pointerDeviceService: PointerDeviceService,
     public chatMessageService: ChatMessageService,
     private panelService: PanelService,
-    private tabletopService: TabletopService
+    private tabletopService: TabletopService,
+    private popupBridge: PopupBridgeService
   ) { }
 
   ngOnInit() {
@@ -92,10 +94,112 @@ export class ChatPaletteComponent implements OnInit, OnDestroy {
         }
         this.japmIndex(event.data.lineNo);
       });
+    this.bridgeOff = this.popupBridge.channel(this.popupOwner).onMessage(message => this.handleBridgeMessage(message));
+    this.bridgeTimer = setInterval(() => {
+      if (this.isServing() && this.isSubLive()) this.pushBridgeState();
+    }, 2000);
   }
 
   ngOnDestroy() {
     EventSystem.unregister(this);
+    if (this.bridgeTimer) clearInterval(this.bridgeTimer);
+    if (this.bridgeOff) this.bridgeOff();
+    if (this.popupToken) {
+      this.popupBridge.channel(this.popupOwner).post({ type: 'owner-bye' });
+      this.popupBridge.releaseServe(this.popupOwner, this.popupToken);
+      this.popupToken = null;
+    }
+  }
+
+  /* ═══════════ 別ウィンドウ（チャパレポップアウト）ブリッジ ═══════════ */
+
+  /** このパネルが応答するポップアウトのオーナーID。キャラごとに独立なので複数同時ポップアウトできる。 */
+  private get popupOwner(): string {
+    const identifier = this.palette ? this.palette.identifier : (this.character ? this.character.identifier : 'panel');
+    return 'palette:panel:' + identifier;
+  }
+
+  private bridgeOff: () => void = null;
+  private bridgeTimer: any = null;
+  private popupToken: object = null;
+  private subLastSeen = 0;
+
+  private isSubLive(): boolean { return Date.now() - this.subLastSeen < 8000; }
+  private isServing(): boolean { return this.popupBridge.isServing(this.popupOwner, this.popupToken); }
+
+  openPaletteWindow() {
+    this.popupToken = this.popupBridge.claimServe(this.popupOwner);
+    this.popupBridge.openPopup('palette', this.popupOwner, { width: 540, height: 760 });
+    this.compactHostPanel();
+  }
+
+  /** ポップアウト中はメイン画面のこのパネルを最小化して左下へ畳んでおく。 */
+  private compactHostPanel() {
+    const ref = (this.panelService as any).panelComponentRef;
+    const panel: any = ref ? ref.instance : null;
+    if (!panel || typeof panel.toggleMinimize !== 'function') return;
+    try {
+      if (!panel.isMinimized) panel.toggleMinimize();
+      const element: HTMLElement = panel.draggablePanel ? panel.draggablePanel.nativeElement : null;
+      // 最小化直後はレイアウト反映前のためタイトルバーの高さで計算する
+      const titleBar: HTMLElement = panel.titleBar ? panel.titleBar.nativeElement : null;
+      const height = titleBar ? titleBar.offsetHeight : 48;
+      panel.left = 12;
+      panel.top = Math.max(12, window.innerHeight - height - 12);
+      if (element) {
+        element.style.left = panel.left + 'px';
+        element.style.top = panel.top + 'px';
+      }
+    } catch (_) { /* パネル操作に失敗してもポップアウト自体は継続 */ }
+  }
+
+  private applyReadOnly(value: boolean) {
+    if (this.paletteBrowser) this.paletteBrowser.readOnly = value;
+  }
+
+  private handleBridgeMessage(message: any) {
+    if (!this.isServing()) return;
+    switch (message.type) {
+      case 'ready':
+        this.subLastSeen = Date.now();
+        this.applyReadOnly(true);
+        this.pushBridgeState();
+        break;
+      case 'bye':
+        this.subLastSeen = 0;
+        this.applyReadOnly(false);
+        break;
+      case 'select-character':
+        if (typeof message.identifier === 'string') this.sendFrom = message.identifier;
+        break;
+      case 'edit-palette':
+        if (this.palette && typeof message.value === 'string' && String(this.palette.value ?? '') !== message.value) {
+          this.palette.setPalette(message.value);
+        }
+        break;
+      case 'choose-line':
+        this.selectPalette(message.line);
+        break;
+      case 'send-line':
+        this.sendPaletteCommand(message.line);
+        break;
+    }
+  }
+
+  private pushBridgeState() {
+    const characters = ObjectStore.instance.getObjects<GameCharacter>(GameCharacter)
+      .map(character => ({ identifier: character.identifier, name: character.name }));
+    this.popupBridge.channel(this.popupOwner).post({
+      type: 'state',
+      state: {
+        role: 'panel',
+        title: this.character ? this.character.name : '',
+        characters,
+        selected: this.character ? this.character.identifier : '',
+        paletteIdentifier: this.palette ? this.palette.identifier : '',
+        value: this.palette ? String(this.palette.value ?? '') : ''
+      }
+    });
   }
 
   updatePanelTitle() {
@@ -110,6 +214,7 @@ export class ChatPaletteComponent implements OnInit, OnDestroy {
       if (0 < gameType.length) this.gameType = gameType;
     }
     this.updatePanelTitle();
+    if (this.isServing() && this.isSubLive()) this.pushBridgeState();
   }
 
   resizeChatInput() {

@@ -1,0 +1,24 @@
+<div class="window" [class.vn]="bridge.theme === 'vn'">
+  <header class="bar">
+    <span class="label" aria-hidden="true">{{ kind === 'palette' ? '📋' : kind === 'vnchat' ? '💬' : '💬' }}</span>
+    <select *ngIf="kind === 'palette'" class="characters" [ngModel]="selected" (ngModelChange)="selectCharacter($event)"
+      [disabled]="!connected" aria-label="コマを選択" title="コマを選択">
+      <option value="" disabled>コマを選択</option>
+      <option *ngFor="let character of characters" [value]="character.identifier">{{character.name}}</option>
+    </select>
+    <span class="title" [title]="title">{{title}}</span>
+    <button type="button" class="close" (click)="close()" title="閉じる">✕</button>
+  </header>
+  <p class="status" *ngIf="ownerGone">メイン画面のパネルが閉じられたため切断されました。メイン画面の「⧉ 別ウィンドウで開く」から再接続できます。</p>
+  <p class="status" *ngIf="!connected && !ownerGone">メイン画面の「⧉ 別ウィンドウで開く」を押すと接続されます。メイン画面はそのまま開いておいてください。</p>
+  <div class="body" *ngIf="kind === 'palette'" [class.vn-palette-theme]="bridge.theme === 'vn'">
+    <palette-browser [palette]="palette" (chooseLine)="choose($event)" (sendLine)="send($event)"></palette-browser>
+  </div>
+  <div class="body body-chat" *ngIf="kind !== 'palette'">
+    <popup-chat [state]="chat" [connected]="connected" [vn]="kind === 'vnchat'"
+      (selectTab)="selectTab($event)"
+      (selectSendFrom)="selectSendFrom($event)"
+      (selectCharacter)="selectChatCharacter($event)"
+      (sendText)="sendChat($event)"></popup-chat>
+  </div>
+</div>

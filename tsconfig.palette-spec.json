@@ -1,5 +1,11 @@
 {
   "extends": "./tsconfig.spec.json",
   "compilerOptions": { "types": ["node", "jasmine", "hammerjs"] },
-  "include": ["src/app/component/palette-browser/palette-browser.component.spec.ts", "src/**/*.d.ts"]
+  "include": [
+    "src/app/component/palette-browser/palette-browser.component.spec.ts",
+    "src/app/component/popup-window/popup-window.component.spec.ts",
+    "src/app/component/popup-chat/popup-chat.component.spec.ts",
+    "src/app/service/popup-bridge.service.spec.ts",
+    "src/**/*.d.ts"
+  ]
 }

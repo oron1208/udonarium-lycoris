@@ -6,6 +6,7 @@
           <input name="chat-tab" type="radio" value="{{chatTab.identifier}}" ng-control="options" [(ngModel)]="chatTabidentifier">
           <div>{{chatTab.name}}<badge *ngIf="chatTab.hasUnread" class="badge" [count]="chatTab.unreadLength"></badge></div>
         </label>
+        <button type="button" class="tab-setting small-font palette-window-btn" (click)="openPaletteWindow()" title="チャパレを別ウィンドウで開く（メインのパネルは最小化します）">⧉<i class="material-icons small-font">open_in_new</i></button>
       </div>
     </form><!---->
     <chat-input class="is-caret" 

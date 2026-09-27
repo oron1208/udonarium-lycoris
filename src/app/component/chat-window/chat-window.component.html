@@ -16,6 +16,7 @@
         <input name="chat-tab" type="radio" value="{{chatTab.identifier}}" ng-control="options" [(ngModel)]="chatTabidentifier">
         <div>{{chatTab.name}}<badge *ngIf="chatTab.hasUnread" class="badge" [count]="chatTab.unreadLength"></badge></div>
       </label>
+      <button class="tab-setting small-font" (click)="openChatWindowPopup()" title="チャットを別ウィンドウで開く（マルチモニター向け・メイン画面は開いたまま）">⧉<i class="material-icons small-font">open_in_new</i></button>
       <button class="tab-setting small-font" (click)="showTabSetting()"><i class="material-icons small-font">settings</i>タブ設定</button>
       <button class="tab-setting small-font" (click)="showDiceTableSetting()"><i class="material-icons small-font">settings</i>ダイス表設定</button>
       <button class="tab-setting small-font" (click)="showVoteMenu()"><i class="material-icons small-font">group</i>点呼</button>
