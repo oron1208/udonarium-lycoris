@@ -2,6 +2,7 @@ import { Component, NgZone, OnDestroy, OnInit } from '@angular/core';
 import { EventSystem } from '@udonarium/core/system';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { GameCharacter } from '@udonarium/game-character';
+import { DataElement } from '@udonarium/data-element';
 import { GameTable } from '@udonarium/game-table';
 import { AudioStorage } from '@udonarium/core/file-storage/audio-storage';
 import { AudioFile } from '@udonarium/core/file-storage/audio-file';
@@ -28,9 +29,14 @@ export class InitiativePanelComponent implements OnInit, OnDestroy {
   showDiceRoller: boolean = false;
   showAddList: boolean = false;
 
+  isAddingField: boolean = false;
+  fieldFilter: string = '';
+
   constructor(
     private initiativeService: InitiativeService,
     private panelService: PanelService,
+    private contextMenuService: ContextMenuService,
+    private pointerDeviceService: PointerDeviceService,
     private gmModeService: GmModeService,
     private ngZone: NgZone,
     private audioLibraryService: AudioLibraryService
@@ -43,9 +49,12 @@ export class InitiativePanelComponent implements OnInit, OnDestroy {
       })
       .on('UPDATE_GAME_OBJECT', event => {
         const object = ObjectStore.instance.get(event.data.identifier);
-        if (object instanceof GameTable) {
+        if (object instanceof GameTable || object instanceof GameCharacter || object instanceof DataElement) {
           this.ngZone.run(() => {});
         }
+      })
+      .on('DELETE_GAME_OBJECT', event => {
+        if (['data', 'character'].includes(event.data.aliasName)) this.ngZone.run(() => {});
       })
       .on('CLOSE_INITIATIVE_PANEL', event => {
         this.ngZone.run(() => { this.panelService.close(); });
@@ -121,6 +130,19 @@ export class InitiativePanelComponent implements OnInit, OnDestroy {
     const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected);
     if (table) {
       table.combatAutoBuffDecay = value;
+      table.update();
+    }
+  }
+
+  get plEditTracker(): boolean {
+    const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected);
+    return table?.plEditTracker ?? false;
+  }
+
+  set plEditTracker(value: boolean) {
+    const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected);
+    if (table) {
+      table.plEditTracker = value;
       table.update();
     }
   }
@@ -265,6 +287,149 @@ export class InitiativePanelComponent implements OnInit, OnDestroy {
   addEntry(identifier: string) {
     this.initiativeService.addToCombat(identifier);
   }
+
+  // ── 戦闘管理 カスタム項目（好きな項目を追加） ──
+
+  get combatCustomFields(): string[] {
+    const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected);
+    try {
+      const arr = JSON.parse(table?.combatCustomFields || '[]');
+      return Array.isArray(arr) ? [...new Set(arr.filter(f => typeof f === 'string' && f.trim()))] : [];
+    } catch (_) { return []; }
+  }
+
+  setCustomFields(fields: string[]) {
+    if (!this.isGm) return;
+    const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected);
+    if (table) {
+      table.combatCustomFields = JSON.stringify(fields);
+      table.update();
+    }
+  }
+
+  startAddField() {
+    this.isAddingField = true;
+    this.fieldFilter = '';
+    setTimeout(() => { const el = document.querySelector('.field-filter-input') as HTMLInputElement; if (el) el.focus(); }, 0);
+  }
+
+  /** 全参戦キャラのデータ項目名の候補（和集合） */
+  getFieldCandidates(): string[] {
+    const names = new Set<string>();
+    for (const entry of this.getVisibleEntries()) {
+      const char = ObjectStore.instance.get<GameCharacter>(entry.identifier);
+      if (!char) continue;
+      const walk = (el: GameCharacter | DataElement) => {
+        for (const child of el.children) {
+          if (!(child instanceof DataElement)) continue;
+          if (child.children && child.children.length > 0) walk(child);
+          else if (child.name && child.type !== 'image') names.add(child.name);
+        }
+      };
+      walk(char);
+    }
+    for (const n of ['name', 'initiative']) names.delete(n);
+    return Array.from(names).sort();
+  }
+
+  filteredFieldCandidates(): string[] {
+    const q = (this.fieldFilter || '').trim().toLowerCase();
+    const list = this.getFieldCandidates();
+    if (!q) return list;
+    return list.filter(n => n.toLowerCase().includes(q));
+  }
+
+  confirmAddField(name?: string) {
+    const value = (name ?? this.fieldFilter ?? '').trim();
+    if (!value) { this.isAddingField = false; return; }
+    const fields = this.combatCustomFields;
+    if (!fields.includes(value)) this.setCustomFields([...fields, value]);
+    this.isAddingField = false;
+    this.fieldFilter = '';
+  }
+
+  cancelAddField() {
+    this.isAddingField = false;
+    this.fieldFilter = '';
+  }
+
+  /** 表示列のみ削除。キャラクター本体のステータスは残す。 */
+  removeCustomField(name: string) {
+    this.setCustomFields(this.combatCustomFields.filter(f => f !== name));
+  }
+
+  onFieldContextMenu(e: Event, name: string) {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!this.isGm) return;
+    this.contextMenuService.open(this.pointerDeviceService.pointers[0], [
+      { name: `「${name}」の表示を削除（コマの値は残す）`, action: () => this.removeCustomField(name) }
+    ]);
+  }
+
+  /** キャラのデータ要素を項目名で探す */
+  findFieldElement(char: GameCharacter, name: string): DataElement | null {
+    const find = (node: GameCharacter | DataElement): DataElement | null => {
+      for (const child of node.children) {
+        if (!(child instanceof DataElement)) continue;
+        if (child.name === name && child.children.length === 0 && child.type !== 'image') return child;
+        const match = find(child);
+        if (match) return match;
+      }
+      return null;
+    };
+    // 盤面のステータスと同じ詳細データを優先。旧XMLの直下・入れ子データにも対応。
+    return (char.detailDataElement && find(char.detailDataElement)) || find(char);
+  }
+
+  hasField(identifier: string, name: string): boolean {
+    const char = ObjectStore.instance.get<GameCharacter>(identifier);
+    return !!char && !!this.findFieldElement(char, name);
+  }
+
+  /** リソースは現在値、それ以外は通常値。空欄もそのまま盤面に合わせる。 */
+  getFieldValue(identifier: string, name: string): string {
+    const char = ObjectStore.instance.get<GameCharacter>(identifier);
+    if (!char) return '';
+    const el = this.findFieldElement(char, name);
+    if (!el) return '';
+    return String((el.isNumberResource ? el.currentValue : el.value) ?? '');
+  }
+
+  /** 最大値（バー表示用） */
+  getFieldMax(identifier: string, name: string): number | null {
+    const char = ObjectStore.instance.get<GameCharacter>(identifier);
+    if (!char) return null;
+    const el = this.findFieldElement(char, name);
+    if (!el || !el.isNumberResource) return null;
+    const max = Number(el.value);
+    if (!Number.isFinite(max) || max <= 0) return null;
+    return max;
+  }
+
+  getBarPercent(identifier: string, name: string): number {
+    const max = this.getFieldMax(identifier, name);
+    if (max == null) return 0;
+    const cur = Number(this.getFieldValue(identifier, name));
+    if (!Number.isFinite(cur)) return 0;
+    return Math.max(0, Math.min(100, (cur / max) * 100));
+  }
+
+  /** 盤面と同じDataElementを更新。SyncVarのsetterで同期する。 */
+  setFieldValue(identifier: string, name: string, value: string) {
+    const char = ObjectStore.instance.get<GameCharacter>(identifier);
+    if (!char) return;
+    const el = this.findFieldElement(char, name);
+    if (!el) return;
+    if (el.isNumberResource) {
+      const num = Number(value);
+      el.currentValue = value.trim() !== '' && Number.isFinite(num) ? num : value;
+    } else {
+      el.value = value;
+    }
+  }
+
+  trackByField(index: number, field: string): string { return field; }
 
   trackByCharId(index: number, char: GameCharacter): string {
     return char.identifier;

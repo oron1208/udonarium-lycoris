@@ -19,7 +19,7 @@
         <div class="flat-character-initial" *ngIf="imageFile.url.length <= 0">{{simpleInitial}}</div>
         <div class="flat-target-crosshair" *ngIf="gameCharacter.targeted"><span></span></div>
         <div class="flat-character-name" *ngIf="0 < name.length && showSideNameLabel">
-          <span class="flat-character-name-text">{{name}}</span>
+          <span class="flat-character-name-text">{{name}}</span><span class="memo-mark" *ngIf="memo" title="メモあり">📝</span>
           <button *ngIf="canUseVnStageButton" type="button" class="vn-stage-select-button flat-vn-button" title="VNでこのコマを選択"
             (mousedown)="selectForVnStage($event)" (click)="selectForVnStage($event)">VN</button>
         </div>
@@ -30,7 +30,7 @@
       <div class="simple-character-token is-pointer-events-auto" [class.is-locked]="isLock" [class.is-secret]="isSecretDetailsHidden">
         <button type="button" class="simple-full-button" title="このコマだけ通常表示" (mousedown)="forceFullView($event)" (click)="forceFullView($event)">通常</button>
         <div class="simple-character-initial">{{simpleInitial}}</div>
-        <div class="simple-character-name" *ngIf="0 < name.length && showSideNameLabel">{{name}}</div>
+        <div class="simple-character-name" *ngIf="0 < name.length && showSideNameLabel">{{name}}<span class="memo-mark" *ngIf="memo" title="メモあり">📝</span></div>
       </div>
     </ng-container>
     </ng-template>
@@ -127,7 +127,7 @@
               <div *ngIf="0 < name.length && showSideNameLabel" class="name-tag is-nowrap is-black-background is-3d will-change backface-off"
                 [ngStyle]="{'transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px)'
                 , 'background-color': 'rgba(255,255,255, 0.6)' , 'color' : '#333' ,  'border': 'solid 1px #555' }">
-                <div class="has-length-limit is-3d" >{{name}}
+                <div class="has-length-limit is-3d" >{{name}}<span class="memo-mark" *ngIf="memo" title="メモあり">📝</span>
                   <ng-container *ngIf="isLock">
                     <i class="material-icons lock-icon" style="display: inline;">lock</i>
                   </ng-container>
@@ -136,7 +136,7 @@
               <div *ngIf="0 < name.length && showSideNameLabel" class="name-tag is-nowrap is-black-background is-3d will-change backface-off"
                 [ngStyle]="{'transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px) rotateY(180deg)'
                 , 'background-color': 'rgba(255,255,255, 0.6)' , 'color' : '#333' ,  'border': 'solid 1px #555' }">
-                <div class="has-length-limit is-3d" >{{name}}
+                <div class="has-length-limit is-3d" >{{name}}<span class="memo-mark" *ngIf="memo" title="メモあり">📝</span>
                   <ng-container *ngIf="isLock">
                     <i class="material-icons lock-icon" style="display: inline;">lock</i>
                   </ng-container>
@@ -146,7 +146,7 @@
             <ng-container *ngIf="!this.gameCharacter.nonTalkFlag">
               <div *ngIf="0 < name.length && showSideNameLabel" class="name-tag is-nowrap is-black-background is-3d will-change backface-off"
                 [ngStyle]="{'transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px)'}">
-                <div class="has-length-limit is-3d">{{name}}
+                <div class="has-length-limit is-3d">{{name}}<span class="memo-mark" *ngIf="memo" title="メモあり">📝</span>
                   <button *ngIf="canUseVnStageButton" type="button" class="vn-stage-select-button" title="VNでこのコマを選択"
                     (mousedown)="selectForVnStage($event)" (click)="selectForVnStage($event)">VN</button>
                   <ng-container *ngIf="isLock">

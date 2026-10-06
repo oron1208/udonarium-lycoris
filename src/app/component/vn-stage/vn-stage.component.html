@@ -183,7 +183,7 @@
     </div>
 
     <div class="vn-send-row">
-      <textarea class="vn-input is-caret" name="vnText" [(ngModel)]="inputText" (input)="onInputChange()" (keydown)="onInputKeydown($event)" placeholder="Enterで送信 / Shift+Enterで改行"></textarea>
+      <textarea class="vn-input is-caret" name="vnText" [(ngModel)]="inputText" (input)="onInputChange()" (keydown)="onInputKeydown($event)" (dragover)="onVnDragOver($event)" (dragleave)="onVnDragLeave()" (drop)="onVnDrop($event)" [class.vn-image-drag-over]="vnImageDragOver" placeholder="Enterで送信 / Shift+Enterで改行 画像ドロップ可"></textarea>
       <div class="vn-send-actions">
         <button type="submit" class="vn-send" [disabled]="!hasInputText || !selectedCharacterId">送信</button>
         <button type="button" class="vn-secret-toggle" [class.on]="secretMode"
@@ -296,16 +296,38 @@
         [class.pinned]="chatLogPinned"
         (mousedown)="toggleChatLogPin(); $event.preventDefault()"
         title="ログ表示固定">📌</button>
+      <button type="button" class="vn-log-pin" (click)="vnSearchOpen = !vnSearchOpen" title="ログを検索">🔍</button>
+    </div>
+    <div class="vn-log-search" *ngIf="vnSearchOpen">
+      <input class="vn-log-search-input" [(ngModel)]="vnSearchQuery" placeholder="ログを検索（本文・発言者・画像タイトル）" />
+      <button type="button" class="vn-log-search-close" (click)="vnSearchOpen = false">✕</button>
+      <div class="vn-log-search-results">
+        <div *ngFor="let r of vnSearchResults" class="vn-log-search-item" (click)="vnJumpToMessage(r.identifier)">
+          <span class="vls-name">{{r.name}}：</span><span class="vls-text">{{r.hasImage ? '🖼 ' : ''}}{{r.text}}</span>
+        </div>
+        <div *ngIf="vnSearchQuery.trim() && vnSearchResults.length === 0" class="vn-log-search-empty">見つかりません</div>
+      </div>
     </div>
     <div class="vn-log-messages" #logScroll>
-      <div *ngFor="let msg of chatLogMessages" class="vn-log-msg" [class.system]="msg.isSystem" [class.is-secret]="msg.isSecret">
-        <span class="vn-log-name" *ngIf="msg.name">{{ msg.name }}：</span>
-        <ng-container *ngIf="msg.isSecret && !isSecretRevealed(msg)">
-          <span class="vn-log-text vn-log-secret-hidden">🔒秘匿メッセージ</span>
-          <button type="button" class="vn-log-reveal-btn" *ngIf="canRevealSecret(msg)" (click)="revealSecret(msg); $event.preventDefault(); $event.stopPropagation()">内容公開</button>
-        </ng-container>
-        <span class="vn-log-text" *ngIf="!msg.isSecret || isSecretRevealed(msg)">{{ msg.text }}</span>
+      <div *ngFor="let msg of chatLogMessages" class="vn-log-msg" [attr.data-vn-msg-id]="msg.identifier"
+        [class.system]="msg.isSystem" [class.is-secret]="msg.isSecret"
+        [class.mine]="vnIsMine(msg)" [class.other]="!msg.isSystem && !vnIsMine(msg)">
+        <img *ngIf="!msg.isSystem && vnAvatarId(msg)" class="vn-log-avatar" [src]="vnImageUrl(vnAvatarId(msg)) | safe: 'resourceUrl'" [title]="msg.name" />
+        <div class="vn-log-bubble">
+          <span class="vn-log-name" *ngIf="msg.name && !msg.isSystem && !vnIsMine(msg)">{{ msg.name }}</span>
+          <ng-container *ngIf="msg.isSecret && !isSecretRevealed(msg)">
+            <span class="vn-log-text vn-log-secret-hidden">🔒秘匿メッセージ</span>
+            <button type="button" class="vn-log-reveal-btn" *ngIf="canRevealSecret(msg)" (click)="revealSecret(msg); $event.preventDefault(); $event.stopPropagation()">内容公開</button>
+          </ng-container>
+          <span class="vn-log-text" *ngIf="!msg.isSecret || isSecretRevealed(msg)">{{ msg.text }}</span>
+          <img *ngIf="(!msg.isSecret || isSecretRevealed(msg)) && vnMessageImageId(msg)" class="vn-log-image"
+               [src]="vnImageUrl(vnMessageImageId(msg)) | safe: 'resourceUrl'"
+               (dblclick)="vnZoomIdentifier = vnMessageImageId(msg)" title="ダブルクリックで拡大" />
+        </div>
       </div>
+    </div>
+    <div class="vn-image-zoom-overlay" *ngIf="vnZoomIdentifier" (click)="vnZoomIdentifier = ''" title="クリックで閉じる">
+      <img [src]="vnImageUrl(vnZoomIdentifier) | safe: 'resourceUrl'" />
     </div>
   </div>
 

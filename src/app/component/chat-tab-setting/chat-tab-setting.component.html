@@ -6,6 +6,7 @@
     <select style="width: 10em;" size="10" (change)="onChangeSelectTab($event.target.value)" [ngModel]="selectedTab?.identifier">
       <option *ngFor="let chatTab of chatTabs" value="{{chatTab.identifier}}">{{chatTab.name}}</option>
     </select>
+    <button *ngIf="selectedTab" (click)="toggleSound()" title="このタブで誰かが発言したら音と点滅で通知">🔊 発言通知: {{soundEnabled ? 'ON' : 'OFF'}}</button>
     <div style="font-size: 12px;">
       <button (click)="onChangeSystemTab()">システム表示先指定</button>
     </div>

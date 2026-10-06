@@ -18,6 +18,9 @@ import { TableSelecter } from '@udonarium/table-selecter';
 import { RangeArea } from '@udonarium/range';
 import { Terrain } from '@udonarium/terrain';
 import { TextNote } from '@udonarium/text-note';
+import { StickyNote } from '@udonarium/sticky-note';
+import { StickyNoteService } from 'service/sticky-note.service';
+import { DictionaryService } from 'service/dictionary.service';
 
 import { GameTableSettingComponent } from 'component/game-table-setting/game-table-setting.component';
 import { ContextMenuAction, ContextMenuSeparator, ContextMenuService } from 'service/context-menu.service';
@@ -239,6 +242,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   get ranges(): RangeArea[] { return this.tabletopService.ranges; }
   get terrains(): Terrain[] { return this.tabletopService.terrains; }
   get textNotes(): TextNote[] { return this.tabletopService.textNotes; }
+  get stickyNotes(): StickyNote[] { return this.stickyNoteService.stickyNotes.filter(o => o.isVisibleOnTable); }
   get diceSymbols(): DiceSymbol[] { return this.tabletopService.diceSymbols; }
   get peerCursors(): PeerCursor[] { return this.tabletopService.peerCursors; }
   get isSideNameLabelMode(): boolean {
@@ -264,7 +268,34 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     private tabletopUndoService: TabletopUndoService,
     private tabletopSelectionService: TabletopSelectionService,
     private gmModeService: GmModeService,
+    private stickyNoteService: StickyNoteService,
+    private dictionaryService: DictionaryService,
   ) { }
+
+  onDictDragOver(e: DragEvent) {
+    if (e.dataTransfer && Array.from(e.dataTransfer.types).includes('text/lycoris-dict-character')) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    }
+  }
+
+  onDictDrop(e: DragEvent) {
+    const types = e.dataTransfer ? Array.from(e.dataTransfer.types) : [];
+    if (!types.includes('text/lycoris-dict-character')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const id = e.dataTransfer?.getData('text/lycoris-dict-character');
+    const entry = id ? this.dictionaryService.getCharacter(id) : null;
+    if (!entry) return;
+    let position: { x: number, y: number, z: number } | undefined;
+    try {
+      position = this.coordinateService.calcTabletopLocalCoordinate({ x: e.clientX, y: e.clientY, z: 0 }, e.target as HTMLElement);
+    } catch (err) {
+      position = undefined;
+    }
+    const character = this.dictionaryService.spawnCharacter(entry, position);
+    if (character) this.changeDetector.markForCheck();
+  }
 
   ngOnInit() {
     EventSystem.register(this)
@@ -281,6 +312,18 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
         this.redrawDrawingCanvas();
         this.invalidateWallGrid();
         this.invalidateLighting();
+      })
+      .on('DICTIONARY_OBJECT_SPAWNED', () => {
+        this.ngZone.run(() => {
+          this.changeDetector.detectChanges();
+          this.changeDetector.markForCheck();
+        });
+      })
+      .on('UPDATE_STICKY_NOTES', event => {
+        this.ngZone.run(() => {
+          this.changeDetector.detectChanges();
+          this.changeDetector.markForCheck();
+        });
       })
       .on('DELETE_GAME_OBJECT', event => {
         // 削除済みオブジェクトはidentifierから引けないのでaliasNameで判定する
@@ -622,6 +665,16 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     if (rotateX != 0 || rotateY != 0 || rotateZ != 0) this.emitTableViewRotate();
 
     this.applyTableTransform();
+  }
+
+  /** 画面付箋（セッションメモ）を追加。既存付箋と重ならないようカスケードオフセット付き */
+  addScreenSticky() {
+    const n = this.stickyNoteService.stickyNotes.length;
+    const offset = (n % 8) * 24;
+    const x = Math.max(10, Math.min(window.innerWidth - 170, Math.round(window.innerWidth / 2 - 75) + offset));
+    const y = Math.max(10, Math.min(window.innerHeight - 170, Math.round(window.innerHeight / 2 - 75) + offset));
+    this.stickyNoteService.add({ x, y });
+    SoundEffect.play(PresetSound.cardPut);
   }
 
   toggleFlatMode() {
@@ -1561,7 +1614,8 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     for (const light of allSources) {
       const r = Math.max(10, light.r) * 0.7;
-      const alpha = light.intensity * 0.3;
+      // GMモードは暗幕が無いためグローを濃く描くと卓全体が白くモヤがかる。位置の目安程度に抑える。
+      const alpha = light.intensity * 0.08;
       const hex = Math.round(alpha * 255).toString(16).padStart(2, '0');
       this.drawColoredLightFill(ctx, { ...light, r }, hex);
     }

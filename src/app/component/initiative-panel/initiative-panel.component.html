@@ -60,6 +60,15 @@
     </label>
   </div>
 
+  <!-- ラウンドトラッカーのPL操作許可（GM限定） -->
+  <div class="combat-start-settings" *ngIf="isGm">
+    <div class="combat-start-title">ラウンドトラッカー</div>
+    <label class="combat-start-option">
+      <input type="checkbox" [(ngModel)]="plEditTracker">
+      <span>PLもトラッカーを操作できるようにする</span>
+    </label>
+  </div>
+
   <!-- システムメッセージ送信先 -->
   <div class="combat-start-settings" *ngIf="isGm">
     <div class="combat-start-title">システムメッセージ送信先</div>
@@ -77,11 +86,29 @@
     <button class="turn-btn" (click)="nextRound()" title="次のラウンド">次R ▶▶</button>
   </div>
 
+  <div class="field-tools" *ngIf="isCombatActive && isGm">
+    <span>表示項目</span>
+      <span class="col-field-add" *ngIf="isGm">
+        <button type="button" class="field-add-btn" *ngIf="!isAddingField" (click)="startAddField()" title="コマのデータから項目を追加">＋項目</button>
+        <span class="field-add-panel" *ngIf="isAddingField">
+          <input type="text" class="field-filter-input" [(ngModel)]="fieldFilter" placeholder="項目名（選択 or 入力→Enter）" (keyup.enter)="confirmAddField()" (keyup.escape)="cancelAddField()">
+          <div class="field-candidates">
+            <button type="button" class="field-candidate" *ngFor="let c of filteredFieldCandidates()" (click)="confirmAddField(c)">{{c}}</button>
+            <div class="field-empty" *ngIf="filteredFieldCandidates().length === 0">候補なし（Enterで追加）</div>
+          </div>
+        </span>
+      </span>
+  </div>
+
   <!-- イニシアチブ表 -->
   <div class="initiative-list" *ngIf="isCombatActive">
     <div class="list-header">
       <span class="col-portrait">コマ</span>
       <span class="col-name">名前</span>
+      <span class="col-field" *ngFor="let f of combatCustomFields; trackBy: trackByField" (contextmenu)="onFieldContextMenu($event, f)">
+        <span class="field-heading" [title]="f">{{f}}</span>
+        <button type="button" class="field-remove-btn" *ngIf="isGm" (pointerdown)="$event.stopPropagation()" (click)="removeCustomField(f)" [attr.aria-label]="f + 'の表示を削除'" title="表示項目を削除（コマの値は残します）">×</button>
+      </span>
       <span class="col-init">Init</span>
       <span class="col-action"></span>
     </div>
@@ -106,6 +133,15 @@
       <div class="col-name">
         <span class="name-text">{{ entry.name }}</span>
         <span class="gm-tag" *ngIf="entry.isHidden && isGm"> (GM)</span>
+      </div>
+      <div class="col-field" *ngFor="let f of combatCustomFields; trackBy: trackByField">
+        <span class="field-tag" [class.has-bar]="getFieldMax(entry.identifier, f) !== null">
+          <span class="field-name">{{f}}</span>
+          <input class="field-value" type="text" [value]="getFieldValue(entry.identifier, f)" (change)="setFieldValue(entry.identifier, f, $event.target.value)" [disabled]="!hasField(entry.identifier, f)" [placeholder]="hasField(entry.identifier, f) ? '' : '—'" [attr.aria-label]="entry.name + 'の' + f" [title]="hasField(entry.identifier, f) ? f + '（盤面のステータスと連動）' : 'このコマには項目がありません'">
+          <span class="field-bar" *ngIf="getFieldMax(entry.identifier, f) !== null">
+            <span class="field-bar-fill" [style.width.%]="getBarPercent(entry.identifier, f)"></span>
+          </span>
+        </span>
       </div>
       <div class="col-init">
         <input

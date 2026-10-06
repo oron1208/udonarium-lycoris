@@ -1,7 +1,10 @@
-<div class="initiative-tracker" *ngIf="isCombatActive">
+<div class="initiative-tracker" *ngIf="isCombatActive" [ngStyle]="trackerPosStyle">
   <div class="tracker-bar" [class.collapsed]="isCollapsed">
     <!-- ヘッダー -->
-    <div class="tracker-header">
+    <div class="tracker-header"
+      (pointerdown)="onTrackerDragStart($event)" (pointermove)="onTrackerDragMove($event)"
+      (pointerup)="onTrackerDragEnd($event)" (pointercancel)="onTrackerDragEnd($event)"
+      (dblclick)="resetTrackerPos()" title="ドラッグで移動・ダブルクリックで初期位置に戻す">
       <div class="round-display">
         <span class="round-icon">⚔️</span>
         <span class="round-num">R{{ currentRound }}</span>
@@ -25,7 +28,7 @@
         [class.hidden]="entry.isHidden"
         [class.dragging]="dragIndex === i"
         [class.drag-over]="dragOverIndex === i"
-        [draggable]="isGm"
+        [draggable]="canEdit"
         (dragstart)="onDragStart($event, i)"
         (dragover)="onDragOver($event, i)"
         (dragleave)="onDragLeave($event)"
@@ -49,7 +52,7 @@
     </div>
 
     <!-- コントロール -->
-    <div class="tracker-controls" *ngIf="!isCollapsed && isGm">
+    <div class="tracker-controls" *ngIf="!isCollapsed && canEdit">
       <button class="ctrl-btn prev" (click)="prevTurn()" title="前のターン">◀</button>
       <button class="ctrl-btn next" (click)="nextTurn()" title="次のターン">▶</button>
     </div>

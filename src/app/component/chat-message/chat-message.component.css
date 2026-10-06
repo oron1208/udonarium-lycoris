@@ -65,26 +65,26 @@
 
 .message .title {
   vertical-align: top;
-  font-size: 14px;
+  font-size: var(--lycoris-chat-font-size, 14px);
   padding-left: 12px;
 }
 
 .message-small .title {
   vertical-align: top;
-  font-size: 14px;
+  font-size: var(--lycoris-chat-font-size, 14px);
   padding-left: 12px;
 }
 
 .message .text {
   vertical-align: top;
   padding: 2px 12px 0 12px;
-  font-size: 14px;
+  font-size: var(--lycoris-chat-font-size, 14px);
 }
 
 .message-small .text {
   vertical-align: top;
   padding: 2px 12px 0 12px;
-  font-size: 14px;
+  font-size: var(--lycoris-chat-font-size, 14px);
 }
 
 .message .tip {
@@ -126,5 +126,25 @@
 .container:hover .fix {
   display:inline-block;
   opacity: 1;
+}
+
+.message .image img { cursor: zoom-in; }
+
+/* ===== 画像拡大オーバーレイ（ダブルクリックで開く・クリックで閉じる） ===== */
+.image-zoom-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10500;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-out;
+}
+.image-zoom-overlay img {
+  max-width: 92vw;
+  max-height: 92vh;
+  object-fit: contain;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
 }
 

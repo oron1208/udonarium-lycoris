@@ -48,6 +48,7 @@ import { GameCharacterGeneratorComponent } from 'component/game-character-genera
 import { GameCharacterSheetComponent } from 'component/game-character-sheet/game-character-sheet.component';
 import { GameObjectInventoryComponent } from 'component/game-object-inventory/game-object-inventory.component';
 import { GameTableSettingComponent } from 'component/game-table-setting/game-table-setting.component';
+import { DictionaryPanelComponent } from 'component/dictionary-panel/dictionary-panel.component';
 import { JukeboxComponent } from 'component/jukebox/jukebox.component';
 import { DataImportMenuComponent } from 'component/data-import-menu/data-import-menu.component';
 import { OptionsPanelComponent } from 'component/options-panel/options-panel.component';
@@ -1046,7 +1047,11 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         break;
       case 'GameTableSettingComponent':
         component = GameTableSettingComponent;
-        option = { width: 1200, height: 550, left: 10, top: 20 };
+        option = { width: 1000, height: 550, left: 10, top: 20 };
+        break;
+      case 'DictionaryComponent':
+        component = DictionaryPanelComponent;
+        option = { width: 780, height: 620, left: 120 };
         break;
       case 'FileStorageComponent':
         component = FileStorageComponent;
@@ -1084,7 +1089,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       option.top = (this.openPanelCount % 10 + 1) * 20;
       option.left = 100 + (this.openPanelCount % 20 + 1) * 5;
       if (componentName === 'GameTableSettingComponent') {
-        option.width = Math.max(320, Math.min(1200, window.innerWidth - 20));
+        option.width = Math.max(320, Math.min(1000, window.innerWidth - 20));
         option.height = Math.max(320, Math.min(550, window.innerHeight - 40));
         option.left = 10;
         option.top = 20;

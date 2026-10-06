@@ -158,6 +158,21 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
     this.chatMessageService.sendSystemMessage(sysTab, text, '#006633');
   }
 
+  get isGmMaskPeek(): boolean {
+    const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected) ||
+      ObjectStore.instance.getObjects<GameTable>(GameTable)[0];
+    return table?.gmMaskPeek ?? false;
+  }
+
+  toggleGmMaskPeek() {
+    const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected) ||
+      ObjectStore.instance.getObjects<GameTable>(GameTable)[0];
+    if (table) {
+      table.gmMaskPeek = !table.gmMaskPeek;
+      table.update();
+    }
+  }
+
   toggleDiceCutin() {
     const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected) ||
       ObjectStore.instance.getObjects<GameTable>(GameTable)[0];

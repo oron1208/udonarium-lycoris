@@ -82,8 +82,9 @@
 <!-- ここまで-->
     <div>
       <form>
-        <textarea class="chat-input is-caret" placeholder="Enter:送信 Shift+Enter:改行 Ctrl+上下:履歴 Ctrl+左右:タブ切替" [(ngModel)]="text"
-          [ngModelOptions]="{standalone: true}" (input)="onInput()" (keydown.enter)="sendChat($event)"
+        <textarea class="chat-input is-caret" placeholder="Enter:送信 Shift+Enter:改行 Ctrl+上下:履歴 Ctrl+左右:タブ切替 画像は貼付/ドロップ可" [(ngModel)]="text"
+          [ngModelOptions]="{standalone: true}" (input)="onInput()" (keydown.enter)="sendChat($event)" (paste)="onPaste($event)"
+          (dragover)="onDragOver($event)" (dragleave)="onDragLeave()" (drop)="onDrop($event)" [class.image-drag-over]="imageDragOver"
           (keydown.control.arrowup)="moveHistory($event, -1)" (keydown.control.arrowdown)="moveHistory($event, 1)"
           (keydown.arrowup)="selectAutoComplete($event, -1)"  (keydown.arrowdown)="selectAutoComplete($event, 1)"
           (keydown.control.arrowleft)="tabSwitchAction($event, -1)" (keydown.control.arrowright)="tabSwitchAction($event, 1)"

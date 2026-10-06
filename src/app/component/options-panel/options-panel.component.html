@@ -115,6 +115,13 @@
         {{ isGmMode ? 'GM中' : 'PL' }}
       </button>
     </div>
+    <div class="option-row" *ngIf="isGmMode">
+      <span class="option-label">GMでもマスクを半透明で覗く</span>
+      <button type="button" class="option-toggle" [class.on]="isGmMaskPeek" (click)="toggleGmMaskPeek()">
+        {{ isGmMaskPeek ? 'ON' : 'OFF' }}
+      </button>
+    </div>
+    <div class="option-hint" *ngIf="isGmMode">OFFの時、GMでもマスクをPLと同じ不透明で表示します（マスクの中は見えません）</div>
   </section>
 
   <section class="options-section" *ngIf="isAdvancedRoom">
@@ -204,6 +211,6 @@
     <button type="button" class="option-button" (click)="downloadAllMedia()" [disabled]="isBundleLoading">
         {{ isBundleLoading ? ('⏳ ' + bundleProgressText) : '📦 画像・音声を一括ダウンロード' }}
     </button>
-    <div style="font-size: 0.75em; color: #888; text-align: right; padding: 4px 8px;">v1.70</div>
+    <div style="font-size: 0.75em; color: #888; text-align: right; padding: 4px 8px;">v1.9</div>
   </section>
 </div>

@@ -2,7 +2,8 @@
   <div class="virtual-scroll-container" [style.marginBottom.px]="bottomSpace" #messageContainer>
     <ng-container *ngIf="0 < chatMessages.length">
       <ng-container *ngFor="let chatMessage of chatMessages; trackBy: trackByChatMessage">
-        <chat-message *ngIf="chatMessage.isDisplayable" [chatMessage]="chatMessage" 
+        <chat-message *ngIf="chatMessage.isDisplayable" [chatMessage]="chatMessage"
+        [attr.data-message-id]="chatMessage.identifier"
         [simpleDispFlagTime]="chatTabList.simpleDispFlagTime"
         [simpleDispFlagUserId]="chatTabList.simpleDispFlagUserId"
         [chatSimpleDispFlag]="chatTab.chatSimpleDispFlag"

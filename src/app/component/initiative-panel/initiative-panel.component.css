@@ -120,7 +120,21 @@
 /* リスト */
 .initiative-list {
   margin-bottom: 8px;
+  overflow-x: auto;
 }
+
+.initiative-list .list-header,
+.initiative-list .list-row {
+  min-width: max-content;
+}
+
+.initiative-list .col-name {
+  flex: 0 0 64px;
+  width: 64px;
+  min-width: 0;
+}
+
+.initiative-list .col-action { flex: 0 0 20px; }
 
 .list-header {
   display: flex;
@@ -209,7 +223,186 @@
 .col-init {
   width: 50px;
   margin: 0 4px;
+  flex-shrink: 0;
 }
+
+/* ── 戦闘管理 カスタム項目 ── */
+.col-field {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-right: 4px;
+  flex-shrink: 0;
+  width: 76px;
+  box-sizing: border-box;
+}
+.field-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 4px;
+  font-size: 11px;
+  color: #666;
+}
+.field-heading {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.field-remove-btn {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid rgba(139, 69, 19, 0.25);
+  border-radius: 4px;
+  background: transparent;
+  color: #8b4513;
+  cursor: pointer;
+}
+.field-remove-btn:hover,
+.field-remove-btn:focus-visible {
+  background: #fbe1df;
+  color: #a02020;
+}
+.list-header .col-field {
+  color: #6b5a00;
+  font-weight: 700;
+  cursor: context-menu;
+}
+.col-field-add {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 50;
+}
+.list-header {
+  position: relative;
+  z-index: 45;
+}
+.field-add-btn {
+  border: none;
+  background: transparent;
+  color: #7c4dff;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  padding: 0 2px;
+}
+.field-add-btn:hover {
+  text-decoration: underline;
+}
+.field-add-panel {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.field-filter-input {
+  width: 170px;
+  font-size: 10px;
+  padding: 1px 4px;
+  border: 1px solid #7c4dff;
+  border-radius: 3px;
+  outline: none;
+}
+.field-add-panel {
+  position: relative;
+  z-index: 350;
+}
+.field-candidates {
+  position: absolute;
+  bottom: 100%;
+  top: auto;
+  left: 0;
+  margin-bottom: 4px;
+  z-index: 400;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  max-height: 180px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 130px;
+}
+.field-candidate {
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-size: 11px;
+  padding: 3px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.field-candidate:hover {
+  background: rgba(124, 77, 255, 0.12);
+}
+.field-empty {
+  font-size: 10px;
+  color: #999;
+  padding: 4px 8px;
+}
+.field-tag {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+}
+.field-tag.has-bar {
+  padding-bottom: 6px;
+}
+.field-bar {
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  bottom: 2px;
+  height: 3px;
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.field-bar-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #66bb6a, #43a047);
+  border-radius: 2px;
+  transition: width 0.2s;
+}
+.field-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #ffe973;
+  border-radius: 10px;
+  padding: 1px 7px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.field-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b5a00;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.field-value {
+  width: 32px;
+  border: none;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 700;
+  color: #333;
+  padding: 0;
+  text-align: right;
+  outline: none;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.field-value:focus-visible {
+  outline: 1px solid #8b4513;
+  border-radius: 2px;
+}
+.field-value:disabled { cursor: not-allowed; }
 
 .init-input {
   width: 100%;

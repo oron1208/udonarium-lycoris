@@ -136,7 +136,7 @@ export class ChatMessageService {
   }
 
 
-  sendMessage(chatTab: ChatTab, text: string, gameSystem: GameSystemClass | null, sendFrom: string, sendTo?: string, tachieNum?: number, color?: string, messageTargetContext?: ChatMessageTargetContext[], isSecret: boolean = false): ChatMessage {
+  sendMessage(chatTab: ChatTab, text: string, gameSystem: GameSystemClass | null, sendFrom: string, sendTo?: string, tachieNum?: number, color?: string, messageTargetContext?: ChatMessageTargetContext[], isSecret: boolean = false, imageIdentifier?: string): ChatMessage {
 
     let img;
     let imgIndex;
@@ -171,7 +171,7 @@ export class ChatMessageService {
       from: Network.peerContext.userId,
       to: this.findId(sendTo),
       name: this.makeMessageName(sendFrom, sendTo),
-      imageIdentifier: this.findImageIdentifier(sendFrom, imgIndex), // Lycoris
+      imageIdentifier: imageIdentifier || this.findImageIdentifier(sendFrom, imgIndex), // Lycoris
       timestamp: this.calcTimeStamp(chatTab),
       tag: chatMessageTag,
       text: text,

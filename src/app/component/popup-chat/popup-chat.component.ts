@@ -21,6 +21,7 @@ export class PopupChatComponent implements OnChanges, AfterViewChecked {
   @ViewChild('logContainer', { static: false }) logContainer: ElementRef;
 
   draft = '';
+  zoomUrl = '';
   private scrollPending = false;
 
   ngOnChanges() { this.scrollPending = true; }

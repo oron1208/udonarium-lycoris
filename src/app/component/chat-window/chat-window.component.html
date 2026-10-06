@@ -14,12 +14,42 @@
     <div class="chat-tab">
       <label *ngFor="let chatTab of chatMessageService.chatTabs; trackBy: trackByChatTab">
         <input name="chat-tab" type="radio" value="{{chatTab.identifier}}" ng-control="options" [(ngModel)]="chatTabidentifier">
-        <div>{{chatTab.name}}<badge *ngIf="chatTab.hasUnread" class="badge" [count]="chatTab.unreadLength"></badge></div>
+        <div [class.notify-tab]="notifyTabs[chatTab.identifier]">{{chatTab.name}}<span *ngIf="isSoundEnabled(chatTab.identifier)" class="sound-on-mark" title="発言通知ON">🔊</span><badge *ngIf="chatTab.hasUnread" class="badge" [count]="chatTab.unreadLength"></badge></div>
       </label>
       <button class="tab-setting small-font" (click)="openChatWindowPopup()" title="チャットを別ウィンドウで開く（マルチモニター向け・メイン画面は開いたまま）">⧉<i class="material-icons small-font">open_in_new</i></button>
       <button class="tab-setting small-font" (click)="showTabSetting()"><i class="material-icons small-font">settings</i>タブ設定</button>
       <button class="tab-setting small-font" (click)="showDiceTableSetting()"><i class="material-icons small-font">settings</i>ダイス表設定</button>
       <button class="tab-setting small-font" (click)="showVoteMenu()"><i class="material-icons small-font">group</i>点呼</button>
+      <button class="tab-setting small-font" (click)="showAppearance = !showAppearance" title="文字サイズ・背景色（自分だけに適用）"><i class="material-icons small-font">format_size</i>表示</button>
+      <div class="appearance-popover" *ngIf="showAppearance">
+        <div class="appearance-row">
+          <span>文字サイズ</span>
+          <button type="button" (click)="changeFontSize(-2)">小</button>
+          <span class="appearance-value">{{chatFontSize}}px</span>
+          <button type="button" (click)="changeFontSize(2)">大</button>
+        </div>
+        <div class="appearance-row">
+          <span>背景色</span>
+          <input type="color" [ngModel]="chatBgColor || '#f0dabd'" (ngModelChange)="chatBgColor = $event; applyAppearance()" />
+          <button type="button" (click)="resetAppearance()">リセット</button>
+        </div>
+        <div class="appearance-note">※自分のブラウザだけに適用されます</div>
+      </div>
+      <button class="tab-setting small-font" (click)="searchOpen = !searchOpen" title="全タブのチャットログを検索"><i class="material-icons small-font">search</i>検索</button>
+      <div class="chat-search" *ngIf="searchOpen">
+        <div class="chat-search-bar">
+          <input class="chat-search-input is-caret" [(ngModel)]="searchQuery" [ngModelOptions]="{standalone: true}" placeholder="全タブのログを検索（本文・発言者・画像タイトル）" />
+          <span class="chat-search-count">{{searchResults.length}}件</span>
+          <button type="button" class="chat-search-close" (click)="searchOpen = false">✕</button>
+        </div>
+        <div class="chat-search-results">
+          <div *ngFor="let r of searchResults" class="chat-search-item" (click)="jumpToTab(r.tabIdentifier)" (dblclick)="jumpToMessage(r.tabIdentifier, r.msgIdentifier)" title="ダブルクリックでその発言へ移動">
+            <span class="cs-tab">{{r.tabName}}</span>
+            <span class="cs-name">{{r.name}}：</span><span class="cs-text">{{r.hasImage ? '🖼 ' : ''}}{{r.text}}</span>
+          </div>
+          <div *ngIf="searchQuery.trim() && searchResults.length === 0" class="chat-search-empty">該当するログがありません</div>
+        </div>
+      </div>
       <button class="tab-setting small-font" (click)="showAlarmMenu()"><i class="material-icons small-font">alarm</i></button>
     </div>
   </form>

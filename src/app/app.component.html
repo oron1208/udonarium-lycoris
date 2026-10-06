@@ -52,6 +52,12 @@
           <div>テーブル設定</div>
         </a>
       </li>
+      <li (click)="open('DictionaryComponent')">
+        <a routerLink="/" routerLinkActive="active">
+          <div><i class="material-icons icon-size">auto_stories</i></div>
+          <div>辞書</div>
+        </a>
+      </li>
       <li (click)="open('FileStorageComponent')">
         <a routerLink="/" routerLinkActive="active">
           <div><i class="material-icons icon-size">photo_library</i></div>
@@ -114,6 +120,7 @@
 <initiative-tracker *ngIf="isAdvancedRoom"></initiative-tracker>
 <div #modalLayer></div>
 <macro-hotbar></macro-hotbar>
+<app-mini-player></app-mini-player>
 <network-indicator class="networkIndicator"></network-indicator>
 </ng-container>
 

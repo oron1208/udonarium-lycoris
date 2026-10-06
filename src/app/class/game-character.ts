@@ -28,6 +28,7 @@ export class GameCharacter extends TabletopObject {
   @SyncVar() visibility: string = 'public';
   @SyncVar() secretDetails: boolean = false;
   @SyncVar() nonTalkFlag: boolean = false;
+  @SyncVar() memo: string = '';
   @SyncVar() overViewWidth: number = 270;
   @SyncVar() overViewMaxHeight: number = 250;
 
@@ -144,6 +145,7 @@ export class GameCharacter extends TabletopObject {
   set size(value: number) { this.setCommonValue('size', value); }
   set initiative(value: number) { this.setCommonValue('initiative', value); }
   set initiativeFormula(value: string) { this.setCommonValue('initiativeFormula', value); }
+
 
   TestExec() {
     Logger.debug('TestExec');

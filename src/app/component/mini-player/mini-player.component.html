@@ -1,0 +1,31 @@
+<div class="mini-player" *ngIf="visible" [ngStyle]="playerStyle"
+    (pointerdown)="onPointerDown($event)" (pointermove)="onPointerMove($event)"
+    (pointerup)="onPointerUp()" (pointercancel)="onPointerUp()"
+    (dblclick)="resetPosition()"
+    title="ドラッグで移動・ダブルクリックで右上に戻す">
+  <div class="mp-art" [class.playing]="isPlaying"><i class="material-icons">music_note</i></div>
+  <div class="mp-info" title="クリックで曲を選択">
+    <div class="mp-title">{{ nowPlayingName }}</div>
+    <div class="mp-sub">{{ sourceLabel }}</div>
+  </div>
+  <div class="mp-controls">
+    <button type="button" class="mp-btn" (click)="togglePlayPause()" [title]="isPlaying ? '一時停止' : '再生'">
+      <i class="material-icons">{{ isPlaying ? 'pause' : 'play_arrow' }}</i>
+    </button>
+    <button type="button" class="mp-btn" (click)="masterStop()" title="BGMをすべて停止">
+      <i class="material-icons">stop</i>
+    </button>
+    <input class="mp-volume" type="range" min="0" max="1" step="0.01" [ngModel]="volume" (ngModelChange)="volume = $event" title="BGM音量" />
+    <button type="button" class="mp-btn mp-close" (click)="close()" title="ミニプレイヤーを閉じる">
+      <i class="material-icons">close</i>
+    </button>
+  </div>
+  <div class="mp-track-list" *ngIf="trackListOpen">
+    <div class="mp-track-note" *ngIf="listNote">{{ listNote }}</div>
+    <div *ngFor="let t of trackList" class="mp-track-item" [class.active]="t.playing" [class.unready]="!t.ready" (click)="selectTrack(t.identifier)">
+      <i class="material-icons">{{ t.playing ? 'graphic_eq' : 'music_note' }}</i>
+      <span>{{ t.name }}</span>
+    </div>
+    <div *ngIf="trackList.length === 0" class="mp-track-empty">曲がありません<br>（音楽パネルで追加してください）</div>
+  </div>
+</div>

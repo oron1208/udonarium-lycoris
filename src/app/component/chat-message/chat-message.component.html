@@ -5,7 +5,7 @@
     'system-message':chatMessage.isSystem, 'dicebot-message': chatMessage.isDicebot}"
     >
       <div class="image">
-      <img *ngIf="0 < imageFile?.url?.length" [src]="imageFile?.url | safe: 'resourceUrl'" />
+      <img *ngIf="0 < imageFile?.url?.length" [src]="imageFile?.url | safe: 'resourceUrl'" (dblclick)="showZoom = true" title="ダブルクリックで拡大" />
       </div>
       <div class="body" [ngStyle]="{'color': chatMessage.messColor }">
         <div class="title">
@@ -49,3 +49,8 @@
 <ng-template #secret>
   <span>（シークレットダイス）</span>
 </ng-template>
+
+<!-- 画像拡大表示（ダブルクリックで開く・クリックで閉じる） -->
+<div class="image-zoom-overlay" *ngIf="showZoom" (click)="showZoom = false" title="クリックで閉じる">
+  <img [src]="imageFile?.url | safe: 'resourceUrl'" />
+</div>

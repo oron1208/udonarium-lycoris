@@ -144,3 +144,10 @@ button.color:hover {
 .is-caret {
   caret-color: rgba(0,0,0,0.95);
 }
+
+/* ドラッグ中のハイライト */
+.chat-input.image-drag-over {
+  outline: 2px dashed #4a90d9;
+  outline-offset: -2px;
+  background-color: rgba(74, 144, 217, 0.08);
+}

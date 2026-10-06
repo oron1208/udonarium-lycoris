@@ -46,6 +46,26 @@ export class ChatTabSettingComponent implements OnInit, OnDestroy {
   get isDeleted(): boolean { return this.selectedTab ? ObjectStore.instance.get(this.selectedTab.identifier) == null : false; }
   get isEditable(): boolean { return !this.isEmpty && !this.isDeleted; }
 
+  /** 選択タブの発言通知（音＋点滅）設定 */
+  get soundEnabled(): boolean {
+    try {
+      const map = JSON.parse(localStorage.getItem('lycoris.chat-sound.v1') || '{}');
+      return !!map[this.selectedTab?.identifier];
+    } catch { return false; }
+  }
+
+  toggleSound() {
+    const tab = this.selectedTab;
+    if (!tab) return;
+    try {
+      const key = 'lycoris.chat-sound.v1';
+      const map = JSON.parse(localStorage.getItem(key) || '{}');
+      if (map[tab.identifier]) delete map[tab.identifier]; else map[tab.identifier] = true;
+      localStorage.setItem(key, JSON.stringify(map));
+    } catch { }
+    EventSystem.trigger('CHAT_SOUND_CHANGED', {});
+  }
+
 
   isSaveing = false;
   progresPercent = 0;

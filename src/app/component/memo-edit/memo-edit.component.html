@@ -1,0 +1,7 @@
+<div class="memo-edit">
+  <textarea class="memo-area is-caret" [(ngModel)]="memo" placeholder="メモを入力" [ngModelOptions]="{standalone: true}"></textarea>
+  <div class="memo-actions">
+    <button type="button" class="memo-cancel" (click)="cancel()">キャンセル</button>
+    <button type="button" class="memo-save" (click)="save()">保存</button>
+  </div>
+</div>

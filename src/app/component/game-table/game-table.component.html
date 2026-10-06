@@ -1,7 +1,7 @@
 <div *ngIf="layerVisibility.background" class="background-image is-pointer-events-none" [ngClass]="[(backgroundFilterType ? 'is-filter' : ''), backgroundFilterType, isLightingActive ? 'is-night' : '']" 
 [style.background-image]="'url(' + backgroundImage.url + ')' | safe: 'style'"
 [style.--bg-darkness]="isLightingActive && !isGmMode ? currentTable.lightingIntensity : 0"></div>
-<div class="component is-fill is-perspective" [ngClass]="{'is-grabbing': isPointerDragging, 'is-flat-mode': isFlatMode}" #root>
+<div class="component is-fill is-perspective" [ngClass]="{'is-grabbing': isPointerDragging, 'is-flat-mode': isFlatMode}" #root (dragover)="onDictDragOver($event)" (drop)="onDictDrop($event)">
   <div class="component-content is-fill is-3d-2" #gameTable>
     <div id="app-game-table" class="game-table table-image is-3d-2" [style.background-image]="layerVisibility.tableImage ? ('url(' + tableImage.url + ')' | safe: 'style') : 'none'" #gameObjects>
       <canvas class="grid-canvas is-fill is-pointer-events-none" #gridCanvas [style.opacity]="layerVisibility.grid ? 1 : 0"></canvas>
@@ -68,6 +68,7 @@
     <button type="button" (click)="clearRangeSelection()">選択解除</button>
   </div>
   <div class="table-top-toolbar">
+    <button type="button" class="toolbar-toggle" (click)="addScreenSticky()" title="画面に付箋（セッションメモ）を追加">付箋</button>
     <div class="target-status-toolbar" *ngIf="targetedCharacterCount > 0">
       <span>{{targetedCharacterCount}}体ターゲット中</span>
       <button type="button" (click)="clearAllTargets()">解除</button>
@@ -119,5 +120,8 @@
       <button type="button" (click)="clearDrawing()">全消し</button>
       </ng-container>
     </div>
+  </div>
+  <div class="screen-notes-layer" *ngIf="stickyNotes.length > 0">
+    <sticky-note *ngFor="let note of stickyNotes; trackBy: trackByGameObject" [stickyNote]="note"></sticky-note>
   </div>
 </div>

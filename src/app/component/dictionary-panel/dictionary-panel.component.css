@@ -1,0 +1,369 @@
+:host {
+  display: block;
+}
+
+.component {
+  font-size: 13px;
+}
+
+.dict-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.dict-counts {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.flex-spacer {
+  flex: 1;
+}
+
+.dict-message {
+  margin: 0 0 6px;
+  padding: 3px 8px;
+  font-size: 12px;
+  background: rgba(120, 160, 210, 0.25);
+  border-radius: 4px;
+}
+
+.dict-select {
+  max-width: 16em;
+  font-size: 12px;
+  padding: 1px 4px;
+}
+
+.dict-create {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  border: 1px solid #999;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.25);
+  font-size: 12px;
+}
+
+.dict-create input[name="dictName"] {
+  width: 14em;
+}
+
+.type-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.dict-body {
+  border-top: 1px solid #999;
+  padding-top: 8px;
+}
+
+.dict-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.hint {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.empty {
+  padding: 12px 4px;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+label.file-label {
+  position: relative;
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid #888;
+  border-radius: 4px;
+  background: linear-gradient(#fff, #ddd);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+label.file-label input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+label.file-label.is-busy {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+button.tiny {
+  padding: 0 4px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+button.danger {
+  background: #e53935;
+  color: #000;
+}
+
+/* ── コマ ── */
+.char-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.char-card {
+  width: 148px;
+  padding: 4px;
+  border: 1px solid rgba(80, 80, 80, 0.4);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.35);
+  cursor: grab;
+}
+
+.char-card:active {
+  cursor: grabbing;
+}
+
+.char-thumb-box {
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 3px;
+}
+
+.char-thumb {
+  max-width: 100%;
+  max-height: 96px;
+  object-fit: contain;
+}
+
+.char-thumb-empty {
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.char-name {
+  margin-top: 3px;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.char-tags {
+  font-size: 10px;
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.char-actions {
+  display: flex;
+  gap: 3px;
+  margin-top: 3px;
+}
+
+.char-actions button {
+  flex: 1;
+  font-size: 11px;
+  padding: 1px 2px;
+}
+
+.char-edit {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dotted #999;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+}
+
+.char-edit input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ── 資料・チャパレ共通レイアウト ── */
+.material-layout,
+.palette-layout {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.material-sections,
+.palette-list {
+  width: 200px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.list-head {
+  font-size: 11px;
+  font-weight: bold;
+  opacity: 0.7;
+}
+
+.section-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 4px;
+  border: 1px solid rgba(80, 80, 80, 0.3);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+}
+
+.section-row.selected {
+  background: rgba(80, 120, 180, 0.28);
+}
+
+.section-row[draggable="true"] {
+  cursor: grab;
+}
+
+.section-title {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+}
+
+.material-pages,
+.palette-edit {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.material-empty,
+.palette-empty {
+  flex: 1;
+}
+
+.page-toolbar,
+.palette-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.section-name {
+  width: 14em;
+}
+
+.page-card {
+  border: 1px solid rgba(80, 80, 80, 0.35);
+  border-radius: 4px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.page-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 3px;
+}
+
+.page-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.page-card textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+.page-image-box {
+  text-align: center;
+}
+
+.page-image-box img {
+  max-width: 100%;
+  max-height: 160px;
+  cursor: zoom-in;
+}
+
+.page-image-box img.zoom {
+  max-height: none;
+  cursor: zoom-out;
+}
+
+/* ── チャパレ ── */
+.palette-head label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.palette-head input {
+  width: 14em;
+}
+
+.palette-text {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: monospace;
+  font-size: 12px;
+  resize: vertical;
+}
+
+.apply-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.apply-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.apply-row select {
+  max-width: 16em;
+}
+
+.dict-search {
+  margin: 4px 8px 0;
+}
+
+.dict-search input {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 12px;
+}

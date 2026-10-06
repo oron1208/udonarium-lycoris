@@ -39,6 +39,9 @@ import { ChatMessageFixComponent } from 'component/chat-message-fix/chat-message
 export class ChatMessageComponent implements OnInit, AfterViewInit {
   @Input() chatMessage!: ChatMessage;
 
+  /** 画像ダブルクリック拡大表示 */
+  showZoom = false;
+
   @Input() simpleDispFlagTime: boolean = false;
   @Input() simpleDispFlagUserId: boolean = false;
   @Input() chatSimpleDispFlag: boolean = false;

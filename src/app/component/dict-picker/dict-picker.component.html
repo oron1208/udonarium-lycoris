@@ -1,0 +1,15 @@
+<div class="dict-picker">
+  <div class="picker-list">
+    <label class="picker-row" *ngFor="let d of dicts">
+      <input type="radio" name="dictPickerRadio" [value]="d.id" [(ngModel)]="selectedId" [ngModelOptions]="{standalone: true}">
+      <span class="picker-name">{{d.name}}</span>
+      <span class="picker-count">{{countOf(d)}}件</span>
+    </label>
+  </div>
+  <div class="picker-empty" *ngIf="dicts.length < 1">コマ辞書が無いよ。先に辞書パネルで作ってね。</div>
+  <div class="picker-message" *ngIf="message">{{message}}</div>
+  <div class="picker-actions">
+    <button type="button" (click)="cancel()">キャンセル</button>
+    <button type="button" class="picker-ok" [attr.disabled]="!selectedId || busy ? '' : null" (click)="register()">登録</button>
+  </div>
+</div>

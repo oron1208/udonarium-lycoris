@@ -68,7 +68,7 @@ export class ChatInputComponent implements OnInit, OnDestroy {
   get text(): string { return this._text };
   set text(text: string) { this._text = text; this.textChange.emit(text); }
 
-  @Output() chat = new EventEmitter<{ text: string, gameSystem: GameSystemClass, sendFrom: string, sendTo: string ,tachieNum: number ,messColor: string}>();
+  @Output() chat = new EventEmitter<{ text: string, gameSystem: GameSystemClass, sendFrom: string, sendTo: string ,tachieNum: number ,messColor: string, imageIdentifier?: string}>();
 
   @Output() tabSwitch = new EventEmitter<number>();
 
@@ -423,6 +423,64 @@ export class ChatInputComponent implements OnInit, OnDestroy {
     this.text = '';
     this.previousWritingLength = this.text.length;
     this.kickCalcFitHeight();
+  }
+
+  /** クリップボードの画像をタイトル付きでチャットに送る（タイトルでログ検索にヒットする） */
+  onPaste(event: ClipboardEvent) {
+    const items = event.clipboardData ? event.clipboardData.items : null;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.kind !== 'file' || !item.type.startsWith('image/')) continue;
+      const file = item.getAsFile();
+      if (!file) continue;
+      event.preventDefault();
+      this.sendImageFile(file);
+      return;
+    }
+  }
+
+  /** ドラッグ＆ドロップでも画像を貼れる */
+  imageDragOver = false;
+
+  onDragOver(event: DragEvent) {
+    if (!event.dataTransfer) return;
+    if (!Array.from(event.dataTransfer.types).includes('Files')) return;
+    event.preventDefault();
+    this.imageDragOver = true;
+  }
+
+  onDragLeave() { this.imageDragOver = false; }
+
+  onDrop(event: DragEvent) {
+    this.imageDragOver = false;
+    const files = event.dataTransfer ? event.dataTransfer.files : null;
+    if (!files || files.length < 1) return;
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (!file.type.startsWith('image/')) continue;
+      event.preventDefault();
+      this.sendImageFile(file);
+      return;
+    }
+  }
+
+  private sendImageFile(file: File) {
+    const title = window.prompt('画像のタイトル（検索でヒットします）', '');
+    if (title === null) return;
+    if (!this.sendFrom.length) this.sendFrom = PeerCursor.myCursor.identifier;
+    const sendFrom = this.sendFrom;
+    const sendTo = this.sendTo;
+    const messColor = this.selectChatColor;
+    ImageStorage.instance.addAsync(file).then(imageFile => {
+      DiceBot.loadGameSystemAsync(this.gameType).then((gameSystem) => {
+        this.chat.emit({
+          text: title.trim() || '画像', gameSystem: gameSystem, sendFrom: sendFrom,
+          sendTo: sendTo, tachieNum: 0, messColor: messColor,
+          imageIdentifier: imageFile.identifier,
+        });
+      });
+    }).catch(e => Logger.warn('画像の貼り付けに失敗しました', e));
   }
 
   kickCalcFitHeight() {

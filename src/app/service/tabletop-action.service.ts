@@ -15,6 +15,8 @@ import { TableSelecter } from '@udonarium/table-selecter';
 import { RangeArea } from '@udonarium/range';
 import { Terrain } from '@udonarium/terrain';
 import { TextNote } from '@udonarium/text-note';
+import { StickyNote } from '@udonarium/sticky-note';
+import { StickyNoteService } from './sticky-note.service';
 import { Logger } from '../class/core/system/util/logger';
 
 import { ImageTag } from '@udonarium/image-tag'; 
@@ -29,7 +31,7 @@ import { PointerCoordinate } from './pointer-device.service';
 })
 export class TabletopActionService {
 
-  constructor() { }
+  constructor(private stickyNoteService: StickyNoteService) { }
 
   createGameCharacter(position: PointerCoordinate): GameCharacter {
     let character = GameCharacter.create('新しいキャラクター', 1, '');
@@ -130,6 +132,11 @@ export class TabletopActionService {
     textNote.location.y = position.y;
     textNote.posZ = position.z;
     return textNote;
+  }
+
+  createStickyNote(position: PointerCoordinate): StickyNote {
+    // 付箋はローカル限定（同期しない）のためServiceで管理
+    return this.stickyNoteService.add(position);
   }
 
   createDiceSymbol(position: PointerCoordinate, name: string, diceType: DiceType, imagePathPrefix: string): DiceSymbol {
@@ -550,6 +557,7 @@ export class TabletopActionService {
       this.getCreateLightMaskMenu(position),
       this.getCreateTerrainMenu(position),
       this.getCreateTextNoteMenu(position),
+      this.getCreateStickyNoteMenu(position),
       this.getCreateTrumpMenu(position),
       this.getCreateDiceSymbolMenu(position),
       this.getCreateRangeMenu(position),
@@ -617,6 +625,15 @@ export class TabletopActionService {
       name: '地形を作成', action: () => {
         this.createTerrain(position);
         SoundEffect.play(PresetSound.blockPut);
+      }
+    }
+  }
+
+  private getCreateStickyNoteMenu(position: PointerCoordinate): ContextMenuAction {
+    return {
+      name: '付箋を作成', action: () => {
+        this.createStickyNote(position);
+        SoundEffect.play(PresetSound.cardPut);
       }
     }
   }

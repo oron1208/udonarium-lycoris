@@ -39,7 +39,7 @@
 }
 
 .table-list {
-  width: 14em;
+  width: 13em;
   height: 15em;
   overflow: auto;
   border: 1px solid #999;
@@ -70,22 +70,43 @@
 }
 
 .table-detail-area {
-  min-width: 58em;
+  min-width: 45em;
+  flex-shrink: 1; /* 環境音レイヤー等の最長一行幅に引き上げられるのを防ぐ */
 }
 
 .table-setting-grid {
   display: grid;
-  grid-template-columns: minmax(22em, 0.9fr) minmax(34em, 1.1fr);
-  gap: 16px;
+  grid-template-columns: minmax(24em, 1.05fr) minmax(21em, 0.95fr);
+  gap: 12px;
   align-items: start;
 }
 
+.table-setting-grid.param-first {
+  grid-template-columns: minmax(21em, 0.95fr) minmax(24em, 1.05fr);
+}
+
+.table-setting-grid.param-first .table-param-column {
+  order: -1;
+}
+
+.column-order-toggle {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 4px;
+}
+
+.column-order-toggle button {
+  font-size: 11px;
+  padding: 1px 6px;
+  opacity: 0.8;
+}
+
 .table-param-column {
-  min-width: 22em;
+  min-width: 21em;
 }
 
 .table-preview-column {
-  min-width: 34em;
+  min-width: 24em;
 }
 
 .table-name-row {
@@ -94,7 +115,8 @@
 }
 
 .table-name-row input {
-  width: 24em;
+  width: 20em;
+  max-width: 100%;
 }
 
 .small-note {
@@ -138,7 +160,12 @@
 }
 
 .table-audio-layer-body select:first-child {
-  width: 18em;
+  width: 12em;
+}
+
+.table-audio-layer-body input[type="range"] {
+  flex: 1 1 8em;
+  min-width: 6em;
 }
 
 .layer-name {
@@ -147,6 +174,7 @@
 
 .images-select {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: flex-start;
 }

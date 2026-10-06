@@ -31,6 +31,9 @@ import { InputHandler } from 'directive/input-handler';
 import { MovableOption } from 'directive/movable.directive';
 import { RotableOption } from 'directive/rotable.directive';
 import { ContextMenuAction, ContextMenuSeparator, ContextMenuService } from 'service/context-menu.service';
+import { ModalService } from 'service/modal.service';
+import { MemoEditComponent } from 'component/memo-edit/memo-edit.component';
+import { DictPickerComponent } from 'component/dict-picker/dict-picker.component';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { InitiativeDiceRollerComponent } from 'component/initiative-dice-roller/initiative-dice-roller.component';
 import { BatchDiceRollerComponent } from 'component/batch-dice-roller/batch-dice-roller.component';
@@ -45,6 +48,7 @@ import { TabletopUndoService } from 'service/tabletop-undo.service';
 import { TabletopSelectionService } from 'service/tabletop-selection.service';
 import { InitiativeService } from 'service/initiative.service';
 import { ChatMessageService } from 'service/chat-message.service';
+import { DictionaryService } from 'service/dictionary.service';
 
 @Component({
   selector: 'game-character',
@@ -269,6 +273,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
   constructor(
     private ngZone: NgZone,
     private contextMenuService: ContextMenuService,
+    private modalService: ModalService,
     private elementRef: ElementRef<HTMLElement>,
     private panelService: PanelService,
     private changeDetector: ChangeDetectorRef,
@@ -279,7 +284,31 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
     private tabletopSelectionService: TabletopSelectionService,
     private initiativeService: InitiativeService,
     private chatMessageService: ChatMessageService,
+    private dictionaryService: DictionaryService,
   ) { }
+
+  @HostListener('dragover', ['$event'])
+  onDictPaletteDragOver(e: DragEvent) {
+    if (e.dataTransfer && Array.from(e.dataTransfer.types).includes('text/lycoris-dict-palette')) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    }
+  }
+
+  @HostListener('drop', ['$event'])
+  onDictPaletteDrop(e: DragEvent) {
+    const types = e.dataTransfer ? Array.from(e.dataTransfer.types) : [];
+    if (!types.includes('text/lycoris-dict-palette')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const id = e.dataTransfer?.getData('text/lycoris-dict-palette');
+    const entry = id ? this.dictionaryService.getPalette(id) : null;
+    if (!entry || !this.gameCharacter) return;
+    // ドロップでの適用は「追記」。置換は辞書パネルのボタンで行う
+    this.dictionaryService.applyPaletteToCharacter(entry, this.gameCharacter, 'append');
+    SoundEffect.play(PresetSound.sweep);
+    this.changeDetector.markForCheck();
+  }
 
   ngOnChanges() {
     this.movableOption = {
@@ -463,6 +492,25 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
     }
   }
 
+  get memo(): string { return this.gameCharacter ? (this.gameCharacter.memo || '') : ''; }
+
+  editMemo() {
+    const character = this.gameCharacter;
+    this.modalService.open(MemoEditComponent, { title: `${character.name} のメモ`, width: 420, memo: character.memo })
+      .then(value => {
+        if (value == null) return;
+        character.memo = String(value);
+        character.update();
+      });
+  }
+
+  /** 右クリック「辞書に登録」: 登録先コマ辞書を選んで登録する（行き先が分かるように） */
+  async openDictRegister() {
+    const dicts = this.dictionaryService.collectionsOfType('characters');
+    if (!dicts.length) return;
+    await this.modalService.open(DictPickerComponent, { title: '辞書に登録', width: 420, character: this.gameCharacter });
+  }
+
   @HostListener('contextmenu', ['$event'])
   onContextMenu(e: Event) {
     e.stopPropagation();
@@ -478,6 +526,9 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
     }
 
     this.contextMenuService.open(position, [
+      { name: 'メモを編集', action: () => this.editMemo() },
+      { name: '辞書に登録', action: () => this.openDictRegister() },
+      ContextMenuSeparator,
       ...(this.isAdvancedRoom ? [
         (this.isMyPiece
           ? { name: '☑ 自分のコマ', action: () => this.toggleMyPiece(false) }

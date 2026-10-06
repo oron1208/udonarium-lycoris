@@ -1,0 +1,129 @@
+:host {
+  pointer-events: none;
+}
+.sticky-wrap {
+  position: fixed;
+  left: 0;
+  top: 0;
+  pointer-events: auto;
+  will-change: transform;
+}
+.sticky-body {
+  width: 150px;
+  min-height: 150px;
+  box-sizing: border-box;
+  padding: 0;
+  box-shadow: 2px 3px 10px rgba(0, 0, 0, 0.35);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.sticky-body.is-collapsed {
+  min-height: 0;
+}
+.sticky-body.is-glass {
+  box-shadow: 2px 3px 12px rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.sticky-body.is-lock .sticky-handle {
+  cursor: not-allowed;
+}
+.sticky-handle {
+  height: 20px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  cursor: grab;
+  background: rgba(0, 0, 0, 0.06);
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.15);
+  user-select: none;
+  -webkit-user-select: none;
+}
+.color-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 14px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 2px;
+}
+.color-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+.collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 14px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 2px;
+  font-size: 9px;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.5);
+}
+.collapse-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+.title-input {
+  flex: 1;
+  min-width: 0;
+  height: 16px;
+  padding: 0 2px;
+  border: none;
+  background: transparent;
+  outline: none;
+  font: inherit;
+  font-size: 11px;
+  line-height: 16px;
+  color: rgba(0, 0, 0, 0.75);
+}
+.title-input::placeholder {
+  color: rgba(0, 0, 0, 0.3);
+}
+.color-chip {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+.sticky-body.is-glass .sticky-handle {
+  background: rgba(255, 255, 255, 0.25);
+}
+.sticky-handle .handle-icon {
+  font-size: 14px;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  margin-left: auto;
+}
+.sticky-handle .lock-icon {
+  font-size: 10px;
+  line-height: 1;
+}
+.sticky-text {
+  display: block;
+  width: 100%;
+  min-height: 128px;
+  background: transparent;
+  border: none;
+  resize: none;
+  outline: none;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #333;
+  box-sizing: border-box;
+  padding: 6px 8px 8px;
+}

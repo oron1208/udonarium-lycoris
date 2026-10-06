@@ -7,11 +7,18 @@
   <div #logContainer class="log" [class.empty]="messages.length === 0">
     <p *ngIf="messages.length === 0" class="empty-note">まだメッセージはありません</p>
     <div *ngFor="let entry of messages; trackBy: trackByMessage" class="entry"
-      [class.system]="entry.isSystem" [class.dicebot]="entry.isDicebot" [class.mine]="entry.isMine">
-      <div class="name" *ngIf="entry.name"
-        [style.color]="entry.messColor || null">{{ entry.name }}<span class="badge" *ngIf="entry.isDicebot">ダイス</span><span class="badge" *ngIf="entry.isSecret && entry.secretVisible">シークレット</span></div>
-      <div class="text" *ngIf="!entry.isSecret || entry.secretVisible">{{ entry.text }}</div>
-      <div class="text secret-hidden" *ngIf="entry.isSecret && !entry.secretVisible">{{ secretLabel(entry) }}</div>
+      [class.system]="entry.isSystem" [class.dicebot]="entry.isDicebot"
+      [class.mine]="entry.isMine" [class.other]="!entry.isSystem && !entry.isMine" [class.is-secret]="entry.isSecret">
+      <img *ngIf="vn && entry.avatarUrl" class="pc-avatar" [src]="entry.avatarUrl | safe: 'resourceUrl'" [title]="entry.name" />
+      <img *ngIf="!vn && entry.imageUrl && (!entry.isSecret || entry.secretVisible)" class="pc-image pc-image-lead"
+        [src]="entry.imageUrl | safe: 'resourceUrl'" (dblclick)="zoomUrl = entry.imageUrl" title="ダブルクリックで拡大" />
+      <div class="pc-bubble">
+        <div class="name" *ngIf="entry.name && !(vn && entry.isMine)"
+          [style.color]="entry.messColor || null">{{ entry.name }}<span class="badge" *ngIf="entry.isDicebot">ダイス</span><span class="badge" *ngIf="entry.isSecret && entry.secretVisible">シークレット</span></div>
+        <div class="text" *ngIf="!entry.isSecret || entry.secretVisible">{{ entry.text }}</div>
+        <div class="text secret-hidden" *ngIf="entry.isSecret && !entry.secretVisible">{{ secretLabel(entry) }}</div>
+        <img *ngIf="vn && entry.imageUrl && (!entry.isSecret || entry.secretVisible)" class="pc-image" [src]="entry.imageUrl | safe: 'resourceUrl'" (dblclick)="zoomUrl = entry.imageUrl" title="ダブルクリックで拡大" />
+      </div>
     </div>
   </div>
   <div class="composer">
@@ -34,4 +41,5 @@
       <button type="button" class="send" (click)="submit()" [disabled]="!connected || !draft.trim()">送信</button>
     </div>
   </div>
+  <div class="pc-zoom-overlay" *ngIf="zoomUrl" (click)="zoomUrl = ''" title="クリックで閉じる"><img [src]="zoomUrl | safe: 'resourceUrl'" /></div>
 </div>

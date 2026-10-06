@@ -14,7 +14,70 @@
   </div>
   <div class="flex-item table-detail-area">
     <ng-container *ngIf="!isEmpty || selectedTable">
-      <div class="table-setting-grid">
+      <div class="column-order-toggle">
+        <button type="button" (click)="toggleColumnOrder()" title="列の表示順を切り替える（設定はこの端末ごとに保存されます）">⇄ 列の順序を切替</button>
+      </div>
+      <div class="table-setting-grid" [class.param-first]="!previewFirst">
+        <div class="table-preview-column">
+          <div class="images-select">
+            <div>
+              画像
+              <div (click)="openBgImageModal()">
+                <img height="120" [src]="tableBackgroundImage.url | safe: 'resourceUrl'">
+              </div>
+            </div>
+            <div>
+              背景
+              <div *ngIf="!tableDistanceviewImage.url">
+                <button (click)="openDistanceViewImageModal()" style="height: 120px;">背景画像を追加</button>
+              </div>
+              <div *ngIf="tableDistanceviewImage.url" (click)="openDistanceViewImageModal()">
+                <img height="120" [src]="tableDistanceviewImage.url | safe: 'resourceUrl'">
+              </div>
+            </div>
+          </div>
+          <div class="table-name-row">Name :
+            <input class="is-caret" [(ngModel)]="tableName" placeholder="Name" [attr.disabled]="!isEditable ? '' : null" />
+          </div>
+          <div class="table-audio-settings">
+            <div class="table-audio-header">
+              <b>テーブルBGM/環境音</b>
+              <span class="small-note">切替時に自動再生</span>
+            </div>
+            <div class="table-audio-actions">
+              <button type="button" (click)="addTableAudioLayer('loop')" [attr.disabled]="!isEditable ? '' : null">ループ追加</button>
+              <button type="button" (click)="addTableAudioLayer('once')" [attr.disabled]="!isEditable ? '' : null">1回再生追加</button>
+              <button type="button" (click)="playSelectedTableAudioNow()" [attr.disabled]="!isEditable ? '' : null">今すぐ再生</button>
+              <button type="button" (click)="stopTableAudioNow()">停止</button>
+            </div>
+            <div *ngIf="audios.length < 1" class="small-note">音楽ファイルはジュークボックスから追加してね。</div>
+            <div *ngFor="let layer of tableAudioLayers; let i = index" class="table-audio-layer">
+              <div class="table-audio-layer-title">
+                <label><input type="checkbox" [(ngModel)]="layer.enabled" (ngModelChange)="saveTableAudioLayers()" [attr.disabled]="!isEditable ? '' : null"> 有効</label>
+                <input class="is-caret layer-name" [(ngModel)]="layer.name" (ngModelChange)="saveTableAudioLayers()" [attr.disabled]="!isEditable ? '' : null" placeholder="名前">
+                <button type="button" (click)="moveTableAudioLayer(i, -1)" [attr.disabled]="i <= 0 ? '' : null">▲</button>
+                <button type="button" (click)="moveTableAudioLayer(i, 1)" [attr.disabled]="tableAudioLayers.length <= i + 1 ? '' : null">▼</button>
+                <button type="button" class="danger" (click)="removeTableAudioLayer(i)" [attr.disabled]="!isEditable ? '' : null">×</button>
+              </div>
+              <div class="table-audio-layer-body">
+                <select [(ngModel)]="layer.audioIdentifier" (ngModelChange)="saveTableAudioLayers()" [attr.disabled]="!isEditable ? '' : null">
+                  <option value="">音声なし</option>
+                  <optgroup label="アップロード" *ngIf="audios.length > 0">
+                    <option *ngFor="let audio of audios" [value]="audio.identifier">{{audio.name}}</option>
+                  </optgroup>
+                  <optgroup label="ライブラリ" *ngIf="libraryTracks.length > 0">
+                    <option *ngFor="let track of libraryTracks" [value]="'server:' + track.id">{{track.name}}</option>
+                  </optgroup>
+                </select>
+                <select [(ngModel)]="layer.mode" (ngModelChange)="saveTableAudioLayers()" [attr.disabled]="!isEditable ? '' : null">
+                  <option value="loop">ループ</option>
+                  <option value="once">1回だけ</option>
+                </select>
+                音量 <input [(ngModel)]="layer.volume" (ngModelChange)="saveTableAudioLayers()" type="range" min="0" max="1" step="0.01" [attr.disabled]="!isEditable ? '' : null">
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="table-param-column">
           <div>
             <input [(ngModel)]="tableWidth" type="range" min="{{minSize}}" max="{{maxSize}}" name="tableWidth" [attr.disabled]="!isEditable ? '' : null"
@@ -78,66 +141,6 @@
             <ng-container *ngIf="isDeleted">
               <button (click)="restore()">元に戻す</button>
             </ng-container>
-          </div>
-        </div>
-        <div class="table-preview-column">
-          <div class="images-select">
-            <div>
-              画像
-              <div (click)="openBgImageModal()">
-                <img height="120" [src]="tableBackgroundImage.url | safe: 'resourceUrl'">
-              </div>
-            </div>
-            <div>
-              背景
-              <div *ngIf="!tableDistanceviewImage.url">
-                <button (click)="openDistanceViewImageModal()" style="height: 120px;">背景画像を追加</button>
-              </div>
-              <div *ngIf="tableDistanceviewImage.url" (click)="openDistanceViewImageModal()">
-                <img height="120" [src]="tableDistanceviewImage.url | safe: 'resourceUrl'">
-              </div>
-            </div>
-          </div>
-          <div class="table-name-row">Name :
-            <input class="is-caret" [(ngModel)]="tableName" placeholder="Name" [attr.disabled]="!isEditable ? '' : null" />
-          </div>
-          <div class="table-audio-settings">
-            <div class="table-audio-header">
-              <b>テーブルBGM/環境音</b>
-              <span class="small-note">切替時に自動再生</span>
-            </div>
-            <div class="table-audio-actions">
-              <button type="button" (click)="addTableAudioLayer('loop')" [attr.disabled]="!isEditable ? '' : null">ループ追加</button>
-              <button type="button" (click)="addTableAudioLayer('once')" [attr.disabled]="!isEditable ? '' : null">1回再生追加</button>
-              <button type="button" (click)="playSelectedTableAudioNow()" [attr.disabled]="!isEditable ? '' : null">今すぐ再生</button>
-              <button type="button" (click)="stopTableAudioNow()">停止</button>
-            </div>
-            <div *ngIf="audios.length < 1" class="small-note">音楽ファイルはジュークボックスから追加してね。</div>
-            <div *ngFor="let layer of tableAudioLayers; let i = index" class="table-audio-layer">
-              <div class="table-audio-layer-title">
-                <label><input type="checkbox" [(ngModel)]="layer.enabled" (ngModelChange)="saveTableAudioLayers()" [attr.disabled]="!isEditable ? '' : null"> 有効</label>
-                <input class="is-caret layer-name" [(ngModel)]="layer.name" (ngModelChange)="saveTableAudioLayers()" [attr.disabled]="!isEditable ? '' : null" placeholder="名前">
-                <button type="button" (click)="moveTableAudioLayer(i, -1)" [attr.disabled]="i <= 0 ? '' : null">▲</button>
-                <button type="button" (click)="moveTableAudioLayer(i, 1)" [attr.disabled]="tableAudioLayers.length <= i + 1 ? '' : null">▼</button>
-                <button type="button" class="danger" (click)="removeTableAudioLayer(i)" [attr.disabled]="!isEditable ? '' : null">×</button>
-              </div>
-              <div class="table-audio-layer-body">
-                <select [(ngModel)]="layer.audioIdentifier" (ngModelChange)="saveTableAudioLayers()" [attr.disabled]="!isEditable ? '' : null">
-                  <option value="">音声なし</option>
-                  <optgroup label="アップロード" *ngIf="audios.length > 0">
-                    <option *ngFor="let audio of audios" [value]="audio.identifier">{{audio.name}}</option>
-                  </optgroup>
-                  <optgroup label="ライブラリ" *ngIf="libraryTracks.length > 0">
-                    <option *ngFor="let track of libraryTracks" [value]="'server:' + track.id">{{track.name}}</option>
-                  </optgroup>
-                </select>
-                <select [(ngModel)]="layer.mode" (ngModelChange)="saveTableAudioLayers()" [attr.disabled]="!isEditable ? '' : null">
-                  <option value="loop">ループ</option>
-                  <option value="once">1回だけ</option>
-                </select>
-                音量 <input [(ngModel)]="layer.volume" (ngModelChange)="saveTableAudioLayers()" type="range" min="0" max="1" step="0.01" [attr.disabled]="!isEditable ? '' : null">
-              </div>
-            </div>
           </div>
         </div>
       </div>

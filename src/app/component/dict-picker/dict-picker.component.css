@@ -1,0 +1,64 @@
+.dict-picker {
+  min-width: 260px;
+}
+
+.picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.picker-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border: 1px solid rgba(80, 80, 80, 0.35);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.picker-row input {
+  margin: 0;
+}
+
+.picker-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.picker-count {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.picker-empty {
+  font-size: 12px;
+  opacity: 0.7;
+  padding: 8px 2px;
+}
+
+.picker-message {
+  margin-top: 6px;
+  padding: 3px 8px;
+  font-size: 12px;
+  background: rgba(120, 160, 210, 0.25);
+  border-radius: 4px;
+}
+
+.picker-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.picker-ok {
+  font-weight: bold;
+}

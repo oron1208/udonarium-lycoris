@@ -25,6 +25,10 @@ export class InitiativeTrackerComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+    try {
+      const raw = localStorage.getItem('lycoris.tracker.pos.v1');
+      if (raw) this.trackerPos = JSON.parse(raw);
+    } catch { }
     EventSystem.register(this)
       .on('COMBAT_STATE_CHANGED', () => {
         this.ngZone.run(() => {});
@@ -67,6 +71,55 @@ export class InitiativeTrackerComponent implements OnInit, OnDestroy {
 
   get isGm(): boolean {
     return this.gmModeService.isGm;
+  }
+
+  /** 編集権限: GM、またはGMがPL操作を許可している場合 */
+  get canEdit(): boolean {
+    if (this.isGm) return true;
+    const tables = ObjectStore.instance.getObjects<GameTable>(GameTable);
+    const table = tables.find(t => t.combatActive) || tables.find(t => t.selected) || tables[0];
+    return !!(table && table.plEditTracker);
+  }
+
+  // ===== 位置移動 =====
+  trackerPos: { x: number, y: number } | null = null;
+  private trackerDragging = false;
+  private trackerDragStart: { x: number, y: number, px: number, py: number } | null = null;
+
+  get trackerPosStyle(): { [k: string]: string } | null {
+    if (!this.trackerPos) return null;
+    return { left: this.trackerPos.x + 'px', top: this.trackerPos.y + 'px', right: 'auto', transform: 'none' };
+  }
+
+  onTrackerDragStart(e: PointerEvent) {
+    if ((e.target as HTMLElement).closest('button')) return;
+    const bar = (e.currentTarget as HTMLElement).closest('.tracker-bar') as HTMLElement;
+    if (!bar) return;
+    const rect = bar.getBoundingClientRect();
+    this.trackerDragging = true;
+    this.trackerDragStart = { x: e.clientX, y: e.clientY, px: rect.left, py: rect.top };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    e.preventDefault();
+  }
+
+  onTrackerDragMove(e: PointerEvent) {
+    if (!this.trackerDragging || !this.trackerDragStart) return;
+    const nx = Math.max(0, Math.min(window.innerWidth - 120, this.trackerDragStart.px + (e.clientX - this.trackerDragStart.x)));
+    const ny = Math.max(0, Math.min(window.innerHeight - 60, this.trackerDragStart.py + (e.clientY - this.trackerDragStart.y)));
+    this.trackerPos = { x: nx, y: ny };
+  }
+
+  onTrackerDragEnd() {
+    if (!this.trackerDragging) return;
+    this.trackerDragging = false;
+    if (this.trackerPos) {
+      try { localStorage.setItem('lycoris.tracker.pos.v1', JSON.stringify(this.trackerPos)); } catch { }
+    }
+  }
+
+  resetTrackerPos() {
+    this.trackerPos = null;
+    try { localStorage.removeItem('lycoris.tracker.pos.v1'); } catch { }
   }
 
   get entries(): CombatEntry[] {
@@ -128,14 +181,14 @@ export class InitiativeTrackerComponent implements OnInit, OnDestroy {
   }
 
   onDragStart(event: DragEvent, index: number) {
-    if (!this.isGm) { event.preventDefault(); return; }
+    if (!this.canEdit) { event.preventDefault(); return; }
     this.dragIndex = index;
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData('text/plain', String(index));
   }
 
   onDragOver(event: DragEvent, index: number) {
-    if (!this.isGm) return;
+    if (!this.canEdit) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
     this.dragOverIndex = index;
@@ -147,7 +200,7 @@ export class InitiativeTrackerComponent implements OnInit, OnDestroy {
 
   onDrop(event: DragEvent, index: number) {
     event.preventDefault();
-    if (!this.isGm || this.dragIndex < 0 || this.dragIndex === index) {
+    if (!this.canEdit || this.dragIndex < 0 || this.dragIndex === index) {
       this.dragIndex = -1;
       this.dragOverIndex = -1;
       return;

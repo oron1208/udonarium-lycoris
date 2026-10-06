@@ -1,0 +1,135 @@
+/* ===== ミニプレイヤー（半透明グラス・右上固定） ===== */
+.mini-player {
+  position: fixed;
+  top: 12px;
+  right: 14px;
+  z-index: 9600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(22, 22, 24, 0.55);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.4);
+  color: #f5f5f7;
+  font-size: 12px;
+  user-select: none;
+  max-width: 380px;
+  cursor: move;
+  touch-action: none;
+}
+
+/* ===== 曲選択リスト ===== */
+.mp-track-list {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 230px;
+  max-height: 240px;
+  overflow-y: auto;
+  background: rgba(28, 28, 30, 0.78);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  padding: 4px;
+  cursor: default;
+}
+.mp-track-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #f5f5f7;
+}
+.mp-track-item.unready { opacity: 0.45; }
+.mp-track-note { padding: 4px 8px; font-size: 10px; color: #ffb340; white-space: nowrap; }
+.mp-track-item:hover { background: rgba(255, 255, 255, 0.12); }
+.mp-track-item.active { color: #ff9f0a; }
+.mp-track-item i { font-size: 14px; }
+.mp-track-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+.mp-track-empty {
+  padding: 10px;
+  font-size: 11px;
+  color: rgba(245, 245, 247, 0.6);
+  text-align: center;
+}
+.mp-info { cursor: pointer; }
+
+.mp-art {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #fa5f6d, #ff8a00);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 10px rgba(250, 95, 109, 0.4);
+}
+.mp-art i { font-size: 18px; color: #fff; }
+.mp-art.playing { animation: mpPulse 2s ease-in-out infinite; }
+
+@keyframes mpPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+.mp-info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.mp-title {
+  font-weight: 600;
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mp-sub {
+  font-size: 10px;
+  color: rgba(245, 245, 247, 0.6);
+}
+
+.mp-controls {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mp-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #f5f5f7;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.mp-btn:hover { background: rgba(255, 255, 255, 0.24); }
+.mp-btn:active { transform: scale(0.92); }
+.mp-btn i { font-size: 16px; }
+.mp-close { background: transparent; }
+
+.mp-volume {
+  width: 68px;
+  accent-color: #ff8a00;
+  cursor: pointer;
+}

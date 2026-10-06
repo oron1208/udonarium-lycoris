@@ -1,0 +1,143 @@
+<div class="component">
+  <div class="dict-toolbar">
+    <b>辞書</b>
+    <select class="dict-select" *ngIf="dictionary.collections.length > 0" [ngModel]="selectedDictId" (ngModelChange)="selectDict($event)" [ngModelOptions]="{standalone: true}">
+      <option *ngFor="let col of dictionary.collections" [value]="col.id">{{typeLabel(col.type)}} {{col.name}} ({{countOf(col)}})</option>
+    </select>
+    <button type="button" (click)="openCreate()">＋作成</button>
+    <button type="button" [attr.disabled]="!activeDict ? '' : null" (click)="renameDict()">名前変更</button>
+    <button type="button" class="danger" [attr.disabled]="!activeDict ? '' : null" (click)="removeDict()">削除</button>
+    <span class="flex-spacer"></span>
+    <ng-container *ngIf="activeDict">
+      <label class="file-label" [class.is-busy]="busy">読み込み
+        <input type="file" accept=".json,.zip" (change)="onImportFile($event)">
+      </label>
+      <button type="button" (click)="exportFile('json')">書き出し(JSON)</button>
+      <button type="button" (click)="exportFile('zip')">書き出し(ZIP)</button>
+    </ng-container>
+  </div>
+  <div class="dict-message" *ngIf="message">{{message}}</div>
+  <div class="dict-search" *ngIf="activeDict"><input type="text" [(ngModel)]="searchText" [ngModelOptions]="{standalone: true}" placeholder="🔍 名前・タグ・内容で検索"></div>
+
+  <form class="dict-create" *ngIf="creating">
+    <b>新しい辞書</b>
+    <input name="dictName" [(ngModel)]="newName" [ngModelOptions]="{standalone: true}" placeholder="辞書の名前" (keyup.enter)="createDict()">
+    <label class="type-choice"><input type="radio" name="newDictType" value="characters" [(ngModel)]="newType" [ngModelOptions]="{standalone: true}"><div>コマ辞書</div></label>
+    <label class="type-choice"><input type="radio" name="newDictType" value="materials" [(ngModel)]="newType" [ngModelOptions]="{standalone: true}"><div>資料辞書</div></label>
+    <label class="type-choice"><input type="radio" name="newDictType" value="palettes" [(ngModel)]="newType" [ngModelOptions]="{standalone: true}"><div>チャパレ辞書</div></label>
+    <button type="button" (click)="createDict()">作成</button>
+    <button type="button" (click)="creating = false">キャンセル</button>
+  </form>
+
+  <ng-container *ngIf="activeDict">
+  <!-- ═══ コマ辞書 ═══ -->
+  <div *ngIf="activeDict.type === 'characters'" class="dict-body">
+    <div class="dict-actions">
+      <label class="file-label">XML/ZIPを読み込み
+        <input type="file" accept=".xml,.zip,text/xml" multiple (change)="onImportCharacterXml($event)">
+      </label>
+      <span class="hint">キャラコマサイトのXMLなど。カードは卓へドラッグ＆ドロップ、またはダブルクリックで出せるよ(名前は(1)(2)と連番)</span>
+    </div>
+    <div class="char-grid" *ngIf="chars.length > 0">
+      <div class="char-card" *ngFor="let c of chars" draggable="true" (dragstart)="onCharacterDragStart($event, c)">
+        <div class="char-thumb-box" (dblclick)="spawn(c)">
+          <img class="char-thumb" *ngIf="c.images.length > 0" [src]="c.images[0].url | safe: 'resourceUrl'" draggable="false">
+          <div class="char-thumb-empty" *ngIf="c.images.length < 1">画像なし</div>
+        </div>
+        <div class="char-name" (dblclick)="spawn(c)" [title]="c.name">{{c.name}}</div>
+        <div class="char-tags" *ngIf="c.tags.length > 0">{{c.tags.join(' / ')}}</div>
+        <div class="char-actions">
+          <button type="button" (click)="spawn(c)">盤面へ</button>
+          <button type="button" (click)="editCharId = editCharId === c.id ? '' : c.id">編集</button>
+          <button type="button" class="danger" (click)="removeCharacter(c)">削除</button>
+        </div>
+        <div class="char-edit" *ngIf="editCharId === c.id">
+          <label>名前 <input [(ngModel)]="c.name" [ngModelOptions]="{standalone: true}"></label>
+          <label>タグ <input [ngModel]="c.tags.join(',')" (ngModelChange)="setCharTags(c, $event)" [ngModelOptions]="{standalone: true}" placeholder="カンマ区切り"></label>
+          <button type="button" (click)="saveCharacter(c)">保存</button>
+        </div>
+      </div>
+    </div>
+    <div class="empty" *ngIf="chars.length < 1 && !searchText.trim()">まだコマが無いよ。XMLを読み込んでね。</div>
+    <div class="empty" *ngIf="chars.length < 1 && searchText.trim()">検索に一致するコマは無いよ</div>
+  </div>
+
+  <!-- ═══ 資料辞書 ═══ -->
+  <div *ngIf="activeDict.type === 'materials'" class="dict-body material-layout">
+    <div class="material-sections">
+      <div class="list-head">セクション</div>
+      <div class="section-row" *ngFor="let m of mats" (click)="selectedMaterialId = m.id" [class.selected]="selectedMaterialId === m.id">
+        <span class="section-title" [title]="m.title">{{m.title}} ({{m.pages.length}})</span>
+        <button type="button" class="tiny" (click)="moveMaterial(m, -1); $event.stopPropagation()">▲</button>
+        <button type="button" class="tiny" (click)="moveMaterial(m, 1); $event.stopPropagation()">▼</button>
+        <button type="button" class="tiny danger" (click)="removeMaterial(m); $event.stopPropagation()">×</button>
+      </div>
+      <button type="button" (click)="addMaterial()">＋セクション追加</button>
+    </div>
+    <div class="material-pages" *ngIf="selectedMaterial">
+      <div class="page-toolbar">
+        <label>セクション名 <input class="section-name" [(ngModel)]="selectedMaterial.title" (ngModelChange)="saveSoon(selectedMaterial)" [ngModelOptions]="{standalone: true}"></label>
+        <button type="button" (click)="addTextPage(selectedMaterial)">＋テキスト</button>
+        <label class="file-label">＋画像
+          <input type="file" accept="image/*" multiple (change)="onAddImagePages($event, selectedMaterial)">
+        </label>
+      </div>
+      <div class="page-card" *ngFor="let p of selectedMaterial.pages; let i = index">
+        <div class="page-head">
+          <span class="page-type">{{p.type === 'image' ? '🖼' : '📝'}}</span>
+          <input class="page-title" [(ngModel)]="p.title" (ngModelChange)="saveSoon(selectedMaterial)" [ngModelOptions]="{standalone: true}" placeholder="ページ名">
+          <button type="button" class="tiny" (click)="movePage(selectedMaterial, i, -1)">▲</button>
+          <button type="button" class="tiny" (click)="movePage(selectedMaterial, i, 1)">▼</button>
+          <button type="button" class="tiny danger" (click)="removePage(selectedMaterial, i)">×</button>
+        </div>
+        <textarea *ngIf="p.type === 'text'" rows="4" [(ngModel)]="p.text" (ngModelChange)="saveSoon(selectedMaterial)" [ngModelOptions]="{standalone: true}" placeholder="資料の内容"></textarea>
+        <div *ngIf="p.type === 'image'" class="page-image-box">
+          <img [src]="p.imageUrl | safe: 'resourceUrl'" (click)="p.isZoom = !p.isZoom" [class.zoom]="p.isZoom" draggable="false">
+        </div>
+      </div>
+      <div class="empty" *ngIf="selectedMaterial.pages.length < 1">ページが無いよ。＋テキスト／＋画像で追加してね。</div>
+    </div>
+    <div class="empty material-empty" *ngIf="!selectedMaterial">セクションを選択 or 追加してね。</div>
+  </div>
+
+  <!-- ═══ チャパレ辞書 ═══ -->
+  <div *ngIf="activeDict.type === 'palettes'" class="dict-body palette-layout">
+    <div class="palette-list">
+      <div class="list-head">チャパレ一覧</div>
+      <div class="section-row" *ngFor="let p of pals" draggable="true" (dragstart)="onPaletteDragStart($event, p)" (click)="selectedPaletteId = p.id" [class.selected]="selectedPaletteId === p.id">
+        <span class="section-title" [title]="p.name">{{p.name}}</span>
+        <button type="button" class="tiny" (click)="movePalette(p, -1); $event.stopPropagation()">▲</button>
+        <button type="button" class="tiny" (click)="movePalette(p, 1); $event.stopPropagation()">▼</button>
+        <button type="button" class="tiny danger" (click)="removePalette(p); $event.stopPropagation()">×</button>
+      </div>
+      <button type="button" (click)="addPalette()">＋チャパレ追加</button>
+      <div class="hint">行をドラッグして卓のコマにドロップでも適用できるよ</div>
+    </div>
+    <div class="palette-edit" *ngIf="selectedPalette">
+      <div class="palette-head">
+        <label>名前 <input [(ngModel)]="selectedPalette.name" (ngModelChange)="saveSoon(selectedPalette)" [ngModelOptions]="{standalone: true}"></label>
+        <label>ダイスボット
+          <select [(ngModel)]="selectedPalette.dicebot" (ngModelChange)="saveSoon(selectedPalette)" [ngModelOptions]="{standalone: true}">
+            <option *ngFor="let diceBotInfo of diceBotInfos" [value]="diceBotInfo.id">{{diceBotInfo.name}}</option>
+          </select>
+        </label>
+        <button type="button" (click)="duplicatePalette(selectedPalette)">複製</button>
+      </div>
+      <textarea class="palette-text" rows="14" [(ngModel)]="selectedPalette.text" (ngModelChange)="saveSoon(selectedPalette)" [ngModelOptions]="{standalone: true}" placeholder="チャットパレットの内容"></textarea>
+      <div class="apply-row">
+        <label>適用先コマ
+          <select [(ngModel)]="applyTargetId" [ngModelOptions]="{standalone: true}">
+            <option value="">（選択してください）</option>
+            <option *ngFor="let character of gameCharacters" [value]="character.identifier">{{character.name}}</option>
+          </select>
+        </label>
+        <button type="button" (click)="applyPalette('replace')" [attr.disabled]="!applyTargetId ? '' : null">置換適用</button>
+        <button type="button" (click)="applyPalette('append')" [attr.disabled]="!applyTargetId ? '' : null">追記</button>
+      </div>
+    </div>
+    <div class="empty palette-empty" *ngIf="!selectedPalette">チャパレを選択 or 追加してね。</div>
+  </div>
+  </ng-container>
+
+  <div class="empty" *ngIf="!activeDict">辞書が無いよ。＋作成してね。</div>
+</div>

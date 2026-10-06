@@ -863,6 +863,74 @@ export class VnStageComponent implements OnInit, OnDestroy {
     return (tab.chatMessages || []).filter(m => this.canShowChatLogMessage(m)).slice(-80);
   }
 
+  // ===== VNチャットログ検索 =====
+  vnSearchOpen = false;
+  vnSearchQuery = '';
+
+  get vnSearchResults(): { identifier: string, name: string, text: string, hasImage: boolean }[] {
+    const query = this.vnSearchQuery.trim().toLowerCase();
+    if (!query) return [];
+    const out: { identifier: string, name: string, text: string, hasImage: boolean }[] = [];
+    for (const m of this.chatLogMessages) {
+      if (m.isSecret && !m.isSendFromSelf) continue;
+      const text = (m.text || '').toLowerCase();
+      const name = (m.name || '').toLowerCase();
+      if (text.includes(query) || name.includes(query)) {
+        out.push({ identifier: m.identifier, name: m.name, text: m.text, hasImage: !!(m.imageIdentifier && 0 < m.imageIdentifier.length) });
+      }
+    }
+    return out.slice(-50).reverse();
+  }
+
+  vnJumpToMessage(identifier: string) {
+    this.vnSearchOpen = false;
+    setTimeout(() => {
+      const el = document.querySelector(`vn-stage .vn-log-msg[data-vn-msg-id="${identifier}"]`) as HTMLElement;
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.style.transition = 'background-color 0.4s';
+      el.style.backgroundColor = 'rgba(255, 214, 79, 0.35)';
+      setTimeout(() => { el.style.backgroundColor = ''; }, 2400);
+    }, 150);
+  }
+
+  // ===== VNログ画像の拡大表示 =====
+  vnZoomIdentifier = '';
+
+  vnImageUrl(identifier: string): string {
+    const image = ImageStorage.instance.get(identifier);
+    return image ? image.url : '';
+  }
+
+  /** 送信者の立ち絵ID（メッセージのimageIdentifierが送信キャラの立ち絵なら丸アイコンとして表示） */
+  vnAvatarId(msg: ChatMessage): string {
+    if (!msg.imageIdentifier || msg.isSystem) return '';
+    const character = ObjectStore.instance.get<GameCharacter>(msg.sendFrom);
+    if (!(character instanceof GameCharacter) || !character.imageDataElement) return '';
+    const children = character.imageDataElement.children || [];
+    for (let i = 0; i < children.length; i++) {
+      const id = String((children[i] as any)?.value || '');
+      if (id && id === msg.imageIdentifier) {
+        this.ensureImageLoaded(id);
+        return id;
+      }
+    }
+    return '';
+  }
+
+  /** メッセージ本文に表示する画像（送信者の立ち絵でないもの＝貼り付け画像） */
+  vnMessageImageId(msg: ChatMessage): string {
+    if (!msg.imageIdentifier || msg.isSystem) return '';
+    return this.vnAvatarId(msg) ? '' : msg.imageIdentifier;
+  }
+
+  /** 自分の発言か（右側吹き出し）。プレイヤー発言のみtrue、キャラ発言はキャラ側（左）で表示 */
+  vnIsMine(msg: ChatMessage): boolean {
+    if (msg.isSystem || !msg.isSendFromSelf) return false;
+    const character = ObjectStore.instance.get<GameCharacter>(msg.sendFrom);
+    return !(character instanceof GameCharacter);
+  }
+
   get diceBotInfos() { return DiceBot.diceBotInfos || []; }
 
   isSectionHeader(line: string): boolean {
@@ -1468,7 +1536,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
     return { text: evaluated, messageTargetContext: [{ text: evaluated, object: null }] };
   }
 
-  sendVnChat() {
+  sendVnChat(imageIdentifier?: string) {
     let text = this.inputText.trim();
     if (!text) return;
     const secretText = this.applySecretMode(text);
@@ -1578,14 +1646,44 @@ export class VnStageComponent implements OnInit, OnDestroy {
 
     if (gameType && gameType !== 'DiceBot') {
       DiceBot.loadGameSystemAsync(gameType).then(gs => {
-        this.chatMessageService.sendMessage(chatTab, evaluatedText, gs, this.selectedCharacterId, null, tachieNum, messageColor, messageTargetContext, isSecret);
+        this.chatMessageService.sendMessage(chatTab, evaluatedText, gs, this.selectedCharacterId, null, tachieNum, messageColor, messageTargetContext, isSecret, imageIdentifier);
       });
     } else {
-      this.chatMessageService.sendMessage(chatTab, evaluatedText, null, this.selectedCharacterId, null, tachieNum, messageColor, messageTargetContext, isSecret);
+      this.chatMessageService.sendMessage(chatTab, evaluatedText, null, this.selectedCharacterId, null, tachieNum, messageColor, messageTargetContext, isSecret, imageIdentifier);
     }
     this.inputText = '';
     this.diceCounters.clear();
     this.diceBuffer = '';
+  }
+
+  /** VNチャット入力欄へも画像ドラッグ＆ドロップで貼れる */
+  vnImageDragOver = false;
+
+  onVnDragOver(event: DragEvent) {
+    if (!event.dataTransfer) return;
+    if (!Array.from(event.dataTransfer.types).includes('Files')) return;
+    event.preventDefault();
+    this.vnImageDragOver = true;
+  }
+
+  onVnDragLeave() { this.vnImageDragOver = false; }
+
+  onVnDrop(event: DragEvent) {
+    this.vnImageDragOver = false;
+    const files = event.dataTransfer ? event.dataTransfer.files : null;
+    if (!files || files.length < 1) return;
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (!file.type.startsWith('image/')) continue;
+      event.preventDefault();
+      const title = window.prompt('画像のタイトル（検索でヒットします）', '');
+      if (title === null) return;
+      ImageStorage.instance.addAsync(file).then(imageFile => {
+        this.inputText = title.trim() || '画像';
+        this.sendVnChat(imageFile.identifier);
+      }).catch(e => Logger.warn('VN画像の貼り付けに失敗しました', e));
+      return;
+    }
   }
 
   toggleSecretMode() {
@@ -1800,6 +1898,22 @@ export class VnStageComponent implements OnInit, OnDestroy {
   private isVnChatServing(): boolean { return this.popupBridge.isServing(VnStageComponent.VN_CHAT_OWNER, this.vnChatToken); }
 
   static serializeChatEntry(m: ChatMessage) {
+    const character = ObjectStore.instance.get<GameCharacter>(m.sendFrom);
+    const isCharacterMessage = character instanceof GameCharacter;
+    let avatarUrl = '';
+    let imageUrl = '';
+    if (m.imageIdentifier) {
+      const image = ImageStorage.instance.get(m.imageIdentifier);
+      const url = image && image.url ? image.url : '';
+      const isTachie = isCharacterMessage && (() => {
+        const children = character.imageDataElement ? (character.imageDataElement.children || []) : [];
+        for (let i = 0; i < children.length; i++) {
+          if (String((children[i] as any)?.value || '') === m.imageIdentifier) return true;
+        }
+        return false;
+      })();
+      if (isTachie) avatarUrl = url; else imageUrl = url;
+    }
     return {
       name: m.name || '',
       text: String(m.text ?? ''),
@@ -1809,7 +1923,9 @@ export class VnStageComponent implements OnInit, OnDestroy {
       isDicebot: !!m.isDicebot,
       isSecret: !!m.isSecret,
       secretVisible: !m.isDirect || m.isRelatedToMe,
-      isMine: !!m.isSendFromSelf
+      isMine: !m.isSystem && !!m.isSendFromSelf && !isCharacterMessage, // キャラ発言は左側で表示
+      avatarUrl,
+      imageUrl
     };
   }
 

@@ -25,11 +25,14 @@
         <input class="is-caret" [(ngModel)]="editingFolderName" placeholder="フォルダ名" style="width:8em;">
         <button (click)="addFolder()">追加</button>
       </div>
+      <label style="font-size:12px; margin-left:auto; white-space:nowrap;">
+        <input type="checkbox" [ngModel]="newestFirst" (ngModelChange)="toggleNewestFirst()"> 新着順
+      </label>
     </div>
     <div class="folder-tabs">
       <button *ngFor="let folder of getFolders()" [class.active]="selectedFolder === folder || (!selectedFolder && folder === 'すべて')"
         (click)="selectedFolder = folder === 'すべて' ? '' : folder">{{folder}}</button>
-      <button *ngIf="selectedFolder && selectedFolder !== 'すべて'" class="danger" (click)="removeFolder(selectedFolder)">削除</button>
+      <button *ngIf="selectedFolder && selectedFolder !== 'すべて' && selectedFolder !== '未設定'" class="danger" (click)="removeFolder(selectedFolder)">削除</button>
     </div>
   </div>
 
@@ -58,9 +61,10 @@
         <select [ngModel]="getAudioFolder(audio.identifier)" (ngModelChange)="setAudioFolder(audio.identifier, $event)">
           <option value="">--</option>
           <ng-container *ngFor="let f of getFolders()">
-            <option *ngIf="f !== 'すべて'" [value]="f">{{f}}</option>
+            <option *ngIf="f !== 'すべて' && f !== '未設定'" [value]="f">{{f}}</option>
           </ng-container>
         </select>
+        <button (click)="deleteAudio(audio)" title="この音楽を削除" style="font-size:11px;">🗑</button>
       </div>
     </div>
     <div *ngIf="audios.length < 1">アップロードされた音楽ファイルはここに表示されます。</div>
@@ -87,7 +91,7 @@
         <select [ngModel]="getLibraryTrackFolder(track.id)" (ngModelChange)="setLibraryTrackFolder(track.id, $event)">
           <option value="">--</option>
           <ng-container *ngFor="let f of getFolders()">
-            <option *ngIf="f !== 'すべて'" [value]="f">{{f}}</option>
+            <option *ngIf="f !== 'すべて' && f !== '未設定'" [value]="f">{{f}}</option>
           </ng-container>
         </select>
         <button (click)="togglePin(track)" title="選択解除" style="font-size:11px;">✕</button>
@@ -99,6 +103,7 @@
 
   <button (click)="openCutInList()">カットイン編集</button>
   <button (click)="stopAllBgm()" title="戦闘BGM・テーブルBGM・ジュークボックスBGMをすべて停止">■ BGM停止</button>
+  <button (click)="openMiniPlayer()" title="右上にミニプレイヤーを表示">🎧 ミニプレイヤー</button>
 
   <label>
     <div class="drop-zone">

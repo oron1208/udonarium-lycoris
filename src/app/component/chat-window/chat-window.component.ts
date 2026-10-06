@@ -38,6 +38,7 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
   set chatTabidentifier(chatTabidentifier: string) {
     let hasChanged: boolean = this._chatTabidentifier !== chatTabidentifier;
     this._chatTabidentifier = chatTabidentifier;
+    if (hasChanged) delete this.notifyTabs[chatTabidentifier];
     this.updatePanelTitle();
     if (hasChanged) {
       this.scrollToBottom(true);
@@ -82,11 +83,13 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnInit() {
     this.sendFrom = PeerCursor.myCursor.identifier;
+    this.loadAppearance();
     this._chatTabidentifier = 0 < this.chatMessageService.chatTabs.length ? this.chatMessageService.chatTabs[0].identifier : '';
 
     EventSystem.register(this)
       .on('MESSAGE_ADDED', event => {
         this.maybePushPopupAppend(event.data.tabIdentifier, event.data.messageIdentifier);
+        this.handleNotify(event.data.tabIdentifier, event.data.messageIdentifier);
         if (event.data.tabIdentifier !== this.chatTabidentifier) return;
         let message = ObjectStore.instance.get<ChatMessage>(event.data.messageIdentifier);
         if (message && message.isSendFromSelf) {
@@ -105,6 +108,138 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngAfterViewInit() {
     queueMicrotask(() => this.scrollToBottom(true));
+  }
+
+  // ===== 発言通知（タブ単位・デフォルトOFF） =====
+  private static readonly SOUND_KEY = 'lycoris.chat-sound.v1';
+  private audioCtx: AudioContext | null = null;
+  notifyTabs: { [tabId: string]: boolean } = {};
+
+  isSoundEnabled(tabId: string): boolean {
+    try {
+      const map = JSON.parse(localStorage.getItem(ChatWindowComponent.SOUND_KEY) || '{}');
+      return !!map[tabId];
+    } catch { return false; }
+  }
+
+  private ensureAudioContext(): AudioContext {
+    if (!this.audioCtx) this.audioCtx = new AudioContext();
+    if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+    return this.audioCtx;
+  }
+
+  private playNotifySound() {
+    try {
+      const ctx = this.ensureAudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.22, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.4);
+    } catch { }
+  }
+
+  private handleNotify(tabIdentifier: string, messageIdentifier: string) {
+    if (!this.isSoundEnabled(tabIdentifier)) return;
+    const message = ObjectStore.instance.get<ChatMessage>(messageIdentifier);
+    if (!message || message.isSystem || message.isSendFromSelf) return;
+    this.playNotifySound();
+    this.notifyTabs[tabIdentifier] = true;
+  }
+
+  // ===== チャットログ検索 =====
+  searchOpen = false;
+  searchQuery = '';
+
+  get searchResults(): { msgIdentifier: string, tabIdentifier: string, tabName: string, name: string, text: string, timestamp: number, hasImage: boolean }[] {
+    const query = this.searchQuery.trim().toLowerCase();
+    if (!query) return [];
+    const results: { msgIdentifier: string, tabIdentifier: string, tabName: string, name: string, text: string, timestamp: number, hasImage: boolean }[] = [];
+    for (const tab of this.chatMessageService.chatTabs) {
+      for (const msg of tab.chatMessages) {
+        if (msg.isSecret && !msg.isSendFromSelf) continue; // 他人のシークレットは検索結果に出さない
+        const text = (msg.text || '').toLowerCase();
+        const name = (msg.name || '').toLowerCase();
+        if (text.includes(query) || name.includes(query)) {
+          results.push({
+            msgIdentifier: msg.identifier,
+            tabIdentifier: tab.identifier,
+            tabName: tab.name,
+            name: msg.name,
+            text: msg.text,
+            timestamp: msg.timestamp,
+            hasImage: !!(msg.imageIdentifier && 0 < msg.imageIdentifier.length),
+          });
+        }
+      }
+    }
+    results.sort((a, b) => b.timestamp - a.timestamp);
+    return results.slice(0, 50);
+  }
+
+  jumpToTab(tabIdentifier: string) {
+    this.chatTabidentifier = tabIdentifier;
+    this.searchOpen = false;
+  }
+
+  /** 検索ヒットをダブルクリックした時：そのタブへ移動してメッセージの場所までスクロールする */
+  jumpToMessage(tabIdentifier: string, msgIdentifier: string) {
+    this.chatTabidentifier = tabIdentifier;
+    setTimeout(() => {
+      const el = document.querySelector(`chat-message[data-message-id="${msgIdentifier}"]`) as HTMLElement;
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.style.transition = 'background-color 0.4s';
+      el.style.backgroundColor = 'rgba(255, 214, 79, 0.5)';
+      setTimeout(() => { el.style.backgroundColor = ''; }, 2400);
+    }, 150);
+  }
+
+  // ===== 外観設定（自分のブラウザだけに適用） =====
+  static readonly FONT_KEY = 'lycoris.chat-font-size.v1';
+  static readonly BG_KEY = 'lycoris.chat-bg.v1';
+  chatFontSize = 14;
+  chatBgColor = '';
+  showAppearance = false;
+
+  loadAppearance() {
+    try {
+      const size = Number(localStorage.getItem(ChatWindowComponent.FONT_KEY));
+      if (size >= 10 && size <= 22) this.chatFontSize = size;
+      this.chatBgColor = localStorage.getItem(ChatWindowComponent.BG_KEY) || '';
+    } catch { }
+    this.applyAppearance(false);
+  }
+
+  applyAppearance(save: boolean = true) {
+    const root = document.documentElement;
+    root.style.setProperty('--lycoris-chat-font-size', this.chatFontSize + 'px');
+    if (this.chatBgColor) root.style.setProperty('--lycoris-chat-bg', this.chatBgColor);
+    else root.style.removeProperty('--lycoris-chat-bg');
+    if (save) {
+      try {
+        localStorage.setItem(ChatWindowComponent.FONT_KEY, String(this.chatFontSize));
+        localStorage.setItem(ChatWindowComponent.BG_KEY, this.chatBgColor);
+      } catch { }
+    }
+  }
+
+  changeFontSize(delta: number) {
+    this.chatFontSize = Math.min(22, Math.max(10, this.chatFontSize + delta));
+    this.applyAppearance();
+  }
+
+  resetAppearance() {
+    this.chatFontSize = 14;
+    this.chatBgColor = '';
+    this.applyAppearance();
   }
 
   ngOnDestroy() {
@@ -189,6 +324,7 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private serializeEntry(m: ChatMessage) {
+    const image = m.imageIdentifier ? ImageStorage.instance.get(m.imageIdentifier) : null;
     return {
       name: m.name || '',
       text: String(m.text ?? ''),
@@ -198,7 +334,8 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
       isDicebot: !!m.isDicebot,
       isSecret: !!m.isSecret,
       secretVisible: !m.isDirect || m.isRelatedToMe,
-      isMine: !!m.isSendFromSelf
+      isMine: !!m.isSendFromSelf,
+      imageUrl: image && image.url ? image.url : ''
     };
   }
 
@@ -338,7 +475,7 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
     return objects;
   }
 
-  sendChat(value: { text: string, gameSystem: GameSystemClass, sendFrom: string, sendTo: string ,tachieNum: number , messColor:string }) {
+  sendChat(value: { text: string, gameSystem: GameSystemClass, sendFrom: string, sendTo: string ,tachieNum: number , messColor:string, imageIdentifier?: string }) {
     if (this.chatTab) {
       let outtext = '';
       let objects: GameCharacter[] = [];
@@ -385,7 +522,7 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
         targetContext.object = null;
         messageTargetContext.push( targetContext);
       }
-      this.chatMessageService.sendMessage(this.chatTab, outtext, value.gameSystem, value.sendFrom, value.sendTo, value.tachieNum, value.messColor, messageTargetContext);
+      this.chatMessageService.sendMessage(this.chatTab, outtext, value.gameSystem, value.sendFrom, value.sendTo, value.tachieNum, value.messColor, messageTargetContext, false, value.imageIdentifier);
     }
   }
 

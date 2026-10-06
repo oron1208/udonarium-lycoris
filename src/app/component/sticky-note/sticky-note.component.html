@@ -1,0 +1,15 @@
+<div class="sticky-wrap" [ngStyle]="{'transform': 'translate(' + posX + 'px,' + posY + 'px)', 'z-index': zIndex}">
+  <div class="sticky-body" [class.is-glass]="isGlass" [class.is-lock]="isLock" [class.is-collapsed]="collapsed"
+    [style.background]="bodyColor" (contextmenu)="onContextMenu($event)">
+    <div class="sticky-handle" (pointerdown)="onGrabPointerDown($event)">
+      <button type="button" class="collapse-btn" (pointerdown)="onBtnPointerDown($event)" (click)="toggleCollapse($event)" [title]="collapsed ? '展開する' : '折りたたむ'">{{collapsed ? '▶' : '▼'}}</button>
+      <button type="button" class="color-btn" (pointerdown)="onBtnPointerDown($event)" (click)="cycleColor($event)" title="色を変える">
+        <span class="color-chip" [style.background]="nextColor"></span>
+      </button>
+      <input type="text" class="title-input" [(ngModel)]="title" (ngModelChange)="onTextChanged()" placeholder="タイトル" (pointerdown)="onBtnPointerDown($event)">
+      <span class="handle-icon">≡</span>
+      <span class="lock-icon" *ngIf="isLock">🔒</span>
+    </div>
+    <textarea class="sticky-text" *ngIf="!collapsed" [(ngModel)]="text" (ngModelChange)="onTextChanged()" placeholder="セッションメモ"></textarea>
+  </div>
+</div>

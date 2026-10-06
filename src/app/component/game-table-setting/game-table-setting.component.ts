@@ -133,6 +133,14 @@ export class GameTableSettingComponent implements OnInit, OnDestroy, AfterViewIn
   isSaveing: boolean = false;
   progresPercent: number = 0;
 
+  /** 列順（falseで旧順: 設定列が左） */
+  previewFirst: boolean = true;
+
+  toggleColumnOrder() {
+    this.previewFirst = !this.previewFirst;
+    try { localStorage.setItem('lycoris.table-setting.preview-first.v1', this.previewFirst ? '1' : '0'); } catch (e) { /* ignore */ }
+  }
+
   constructor(
     private modalService: ModalService,
     private saveDataService: SaveDataService,
@@ -144,6 +152,7 @@ export class GameTableSettingComponent implements OnInit, OnDestroy, AfterViewIn
 
   ngOnInit() {
     Promise.resolve().then(() => this.modalService.title = this.panelService.title = 'テーブル設定');
+    try { this.previewFirst = localStorage.getItem('lycoris.table-setting.preview-first.v1') !== '0'; } catch (e) { /* ignore */ }
     this.ensureTableOrders();
     this.selectedTable = this.tableSelecter.viewTable;
     this.loadTableAudioLayers();

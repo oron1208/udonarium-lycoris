@@ -397,3 +397,7 @@
   height: 100%;
   background: rgba(0, 0, 0, var(--bg-darkness, 0));
 }
+
+.screen-notes-layer {
+  pointer-events: none;
+}

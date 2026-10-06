@@ -185,14 +185,45 @@ export class JukeboxComponent implements OnInit, OnDestroy {
 
   getFolders(): string[] {
     const custom = this.jukebox.getCustomFolderNames();
-    return ['すべて', ...custom];
+    return ['すべて', '未設定', ...custom];
   }
 
   getFilteredAudios(): AudioFile[] {
-    const all = this.audios;
+    const all = this.getSortedAudios(this.audios);
     if (!this.selectedFolder || this.selectedFolder === 'すべて') return all;
     const folderMap = this.jukebox.getAudioFolderMap();
+    if (this.selectedFolder === '未設定') return all.filter(a => !folderMap[a.identifier]);
     return all.filter(a => folderMap[a.identifier] === this.selectedFolder);
+  }
+
+  /** 新着順（後から追加した曲を上に）。自分のブラウザ設定 */
+  newestFirst: boolean = (() => {
+    try { return localStorage.getItem('lycoris.jukebox-newest-first.v1') === '1'; } catch { return false; }
+  })();
+
+  toggleNewestFirst() {
+    this.newestFirst = !this.newestFirst;
+    try { localStorage.setItem('lycoris.jukebox-newest-first.v1', this.newestFirst ? '1' : '0'); } catch { }
+  }
+
+  private getSortedAudios(list: AudioFile[]): AudioFile[] {
+    return this.newestFirst ? [...list].reverse() : list;
+  }
+
+  /** アップロード済み音楽をリストから削除する */
+  deleteAudio(audio: AudioFile) {
+    if (!window.confirm(`「${audio.name}」を削除しますか？`)) return;
+    const j = this.jukebox;
+    if (j && j.audioIdentifier === audio.identifier) j.stop();
+    if (this.auditionPlayer?.audio === audio) this.auditionPlayer.stop();
+    if (this.sePlayer?.audio === audio) this.sePlayer.stop();
+    if (this.ambientPlayer?.audio === audio) this.ambientPlayer.stop();
+    this.setAudioFolder(audio.identifier, '');
+    AudioStorage.instance.delete(audio.identifier);
+  }
+
+  openMiniPlayer() {
+    EventSystem.trigger('MINI_PLAYER_OPEN', {});
   }
 
   getAudioFolder(audioIdentifier: string): string {
@@ -426,6 +457,7 @@ export class JukeboxComponent implements OnInit, OnDestroy {
   getFilteredPinnedLibraryTracks(): ServerAudioTrack[] {
     const all = this.pinnedLibraryTracks;
     if (!this.selectedFolder || this.selectedFolder === 'すべて') return all;
+    if (this.selectedFolder === '未設定') return all.filter(t => !this.getLibraryTrackFolder(t.id));
     return all.filter(t => this.getLibraryTrackFolder(t.id) === this.selectedFolder);
   }
 

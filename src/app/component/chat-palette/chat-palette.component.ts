@@ -323,7 +323,7 @@ export class ChatPaletteComponent implements OnInit, OnDestroy {
     return objects;
   }
 
-  sendChat(value: { text: string, gameSystem: GameSystemClass, sendFrom: string, sendTo: string , tachieNum: number, messColor: string}) {
+  sendChat(value: { text: string, gameSystem: GameSystemClass, sendFrom: string, sendTo: string , tachieNum: number, messColor: string, imageIdentifier?: string}) {
     if (this.chatTab) {
       let outtext = '';
       let objects: GameCharacter[] = [];
@@ -369,7 +369,7 @@ export class ChatPaletteComponent implements OnInit, OnDestroy {
         targetContext.object = null;
         messageTargetContext.push( targetContext);
       }
-      this.chatMessageService.sendMessage(this.chatTab, outtext, value.gameSystem, value.sendFrom, value.sendTo, value.tachieNum, value.messColor, messageTargetContext);
+      this.chatMessageService.sendMessage(this.chatTab, outtext, value.gameSystem, value.sendFrom, value.sendTo, value.tachieNum, value.messColor, messageTargetContext, false, value.imageIdentifier);
       // this.chatMessageService.sendMessage(this.chatTab, text, value.gameType, value.sendFrom, value.sendTo);
     }
   }

@@ -260,3 +260,7 @@
 .tracker-entry.drag-over {
   border-top: 2px solid #ffd700 !important;
 }
+
+/* ヘッダードラッグで位置移動 */
+.tracker-header { cursor: move; touch-action: none; }
+.tracker-header button { cursor: pointer; }

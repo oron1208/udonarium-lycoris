@@ -21,6 +21,7 @@ import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { EventSystem, Network } from '@udonarium/core/system';
 
 import { GameCharacter } from '@udonarium/game-character';
+import { GameTable } from '@udonarium/game-table';
 import { GameTableMask } from '@udonarium/game-table-mask';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
 import { GameCharacterSheetComponent } from 'component/game-character-sheet/game-character-sheet.component';
@@ -195,17 +196,23 @@ export class GameTableMaskComponent implements OnChanges, OnDestroy, AfterViewIn
     }
 
     if (this.isLightReactiveMask) {
-      const roleRate = this.gmModeService.isGm ? 0.35 : 1;
+      const roleRate = this.maskPeekRoleRate;
       const ret = this.opacity * ((this.gameTableMask.isMine) ? 0.6 : 1) * roleRate;
       return (ret < 0.4 && this.isScratching) ? 0.4 : ret;
     }
 
-    // GM mode: GM sees masks semi-transparent so they can peek through.
-    // PL/non-GM always sees masks as solid black/opaque.
-    // Per-mask gmOnly/plOnly labels are kept for compatibility, but GM mode wins here.
-    const roleRate = this.gmModeService.isGm ? 0.35 : 1;
+    // GM sees masks opaque like the PL view by default.
+    // When the table setting gmMaskPeek is ON, GM sees them semi-transparent to peek through.
+    const roleRate = this.maskPeekRoleRate;
     const ret = this.opacity * ((this.gameTableMask.isMine) ? 0.6 : 1) * roleRate;
     return (ret < 0.4 && this.isScratching) ? 0.4 : ret;
+  }
+
+  /** GM覗き見: テーブル設定 gmMaskPeek がONのときだけGMのマスクを半透明にする（既定はPLと同じ不透明） */
+  private get maskPeekRoleRate(): number {
+    if (!this.gmModeService.isGm) return 1;
+    const table = ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected);
+    return table?.gmMaskPeek ? 0.35 : 1;
   }
 
   get altitude(): number { return this.gameTableMask.altitude; }
@@ -318,6 +325,9 @@ export class GameTableMaskComponent implements OnChanges, OnDestroy, AfterViewIn
         if (this.isLightReactiveMask || this.isLightAreaMask) {
           this.followAttachedCharacter();
           this.scheduleCanvasRender();
+          this.changeDetector.markForCheck();
+        } else if (event.data.aliasName === 'game-table') {
+          // テーブル設定（gmMaskPeek等）の更新でマスクの透明度を再評価する
           this.changeDetector.markForCheck();
         }
       })
