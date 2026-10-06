@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, OnDestroy, OnInit } from '@angular/core';
+import { AfterViewInit, Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import GameSystemClass from 'bcdice/lib/game_system';
 import { ChatMessage, ChatMessageTargetContext} from '@udonarium/chat-message';
 import { ChatTab } from '@udonarium/chat-tab';
@@ -8,6 +8,7 @@ import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { EventSystem } from '@udonarium/core/system';
 import { PeerCursor } from '@udonarium/peer-cursor';
 import { ChatTabSettingComponent } from 'component/chat-tab-setting/chat-tab-setting.component';
+import { ChatTabComponent } from 'component/chat-tab/chat-tab.component';
 import { ChatMessageService } from 'service/chat-message.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
@@ -155,6 +156,7 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   // ===== チャットログ検索 =====
+  @ViewChild(ChatTabComponent) chatTabComponent?: ChatTabComponent;
   searchOpen = false;
   searchQuery = '';
 
@@ -164,6 +166,7 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
     const results: { msgIdentifier: string, tabIdentifier: string, tabName: string, name: string, text: string, timestamp: number, hasImage: boolean }[] = [];
     for (const tab of this.chatMessageService.chatTabs) {
       for (const msg of tab.chatMessages) {
+        if (!msg.isDisplayable) continue; // 表示されないメッセージ（Whisper等）はDOMに無いので検索結果に出さない
         if (msg.isSecret && !msg.isSendFromSelf) continue; // 他人のシークレットは検索結果に出さない
         const text = (msg.text || '').toLowerCase();
         const name = (msg.name || '').toLowerCase();
@@ -185,21 +188,29 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   jumpToTab(tabIdentifier: string) {
+    // シングルクリック: タブだけ切り替える（検索パネルは開いたまま）
     this.chatTabidentifier = tabIdentifier;
-    this.searchOpen = false;
   }
 
   /** 検索ヒットをダブルクリックした時：そのタブへ移動してメッセージの場所までスクロールする */
   jumpToMessage(tabIdentifier: string, msgIdentifier: string) {
     this.chatTabidentifier = tabIdentifier;
-    setTimeout(() => {
+    this.searchOpen = false; // ジャンプしたらパネルを閉じてチャットを見せる
+    const tryScroll = (remain: number) => {
+      // 仮想スクロール: 対象メッセージを含む範囲を描画してから要素を探す
+      if (this.chatTabComponent) this.chatTabComponent.jumpToMessageByIdentifier(msgIdentifier);
       const el = document.querySelector(`chat-message[data-message-id="${msgIdentifier}"]`) as HTMLElement;
-      if (!el) return;
+      if (!el) {
+        // タブ切替直後のレンダリング待ち。要素が見つかるまで少しリトライする
+        if (0 < remain) setTimeout(() => tryScroll(remain - 1), 120);
+        return;
+      }
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       el.style.transition = 'background-color 0.4s';
       el.style.backgroundColor = 'rgba(255, 214, 79, 0.5)';
       setTimeout(() => { el.style.backgroundColor = ''; }, 2400);
-    }, 150);
+    };
+    setTimeout(() => tryScroll(8), 150);
   }
 
   // ===== 外観設定（自分のブラウザだけに適用） =====

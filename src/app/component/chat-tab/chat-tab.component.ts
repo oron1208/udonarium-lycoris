@@ -241,6 +241,20 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
     return message.identifier;
   }
 
+  /** 検索ジャンプ用: 指定メッセージが含まれる範囲を仮想スクロールの描画範囲にする */
+  jumpToMessageByIdentifier(msgIdentifier: string): boolean {
+    if (!this.chatTab) return false;
+    const messages = this.chatTab.chatMessages;
+    const index = messages.findIndex(m => m.identifier === msgIdentifier);
+    if (index < 0) return false;
+    const displayCount = Math.max(3, Math.floor(this.panelService.scrollablePanel.clientHeight / this.minMessageHeight) + 1);
+    this.topIndex = Math.max(0, index - Math.floor(displayCount / 2));
+    this.bottomIndex = Math.min(messages.length - 1, this.topIndex + displayCount - 1);
+    this.needUpdate = true;
+    this.changeDetector.markForCheck();
+    return true;
+  }
+
   private adjustIndex() {
     let chatMessages = this.chatTab ? this.chatTab.chatMessages : [];
     let lastIndex = 0 < chatMessages.length ? chatMessages.length - 1 : 0;
