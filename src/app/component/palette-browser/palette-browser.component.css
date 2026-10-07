@@ -78,3 +78,58 @@ h4 { margin: 8px 0 4px; padding: 3px; border-bottom: 1px solid var(--palette-bor
 .wrap-option { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
 .wrap-option input { width: auto; margin: 0; }
 .no-wrap .line, .no-wrap .fold { white-space: nowrap; overflow-wrap: normal; overflow: hidden; text-overflow: ellipsis; }
+
+/* ─── 全文テキスト編集の大型エディタ（画面右側・半透明） ─── */
+/* body直下へ移設されるため、CSS変数に依存しない直接指定にする。 */
+.palette-source-editor {
+  position: fixed;
+  top: 64px;
+  right: 14px;
+  bottom: 14px;
+  width: min(720px, calc(100vw - 28px));
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px 12px;
+  box-sizing: border-box;
+  background: rgba(26, 22, 18, .82);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 220, 170, .35);
+  border-radius: 10px;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, .45);
+  color: #f3ead9;
+  animation: pse-in .16s ease-out;
+}
+@keyframes pse-in { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+.palette-source-editor strong { font-size: 14px; }
+.pse-header { display: flex; align-items: center; gap: 8px; }
+.pse-stats { flex: 1; text-align: right; font-size: 11px; opacity: .85; }
+.pse-tools { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.pse-font { min-width: 42px; text-align: center; font-variant-numeric: tabular-nums; }
+.palette-source-editor button { color: #f3ead9; background: rgba(255, 244, 232, .1); border: 1px solid rgba(255, 220, 170, .35); }
+.palette-source-editor button:hover { background: rgba(255, 220, 170, .22); }
+.palette-source-editor button.pse-save { background: rgba(211, 171, 113, .45); border-color: rgba(255, 220, 170, .6); font-weight: bold; }
+.palette-source-editor button.pse-save:hover { background: rgba(211, 171, 113, .65); }
+.palette-source-editor small { color: rgba(243, 234, 217, .75); padding: 0; }
+.palette-source-editor [role='alert'] { color: #ffb3a7; }
+.pse-textarea {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  resize: none;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  line-height: 1.55;
+  font-family: Consolas, Menlo, 'Courier New', monospace;
+  background: rgba(0, 0, 0, .38);
+  color: #f7f1e3;
+  border: 1px solid rgba(255, 220, 170, .3);
+  border-radius: 6px;
+  white-space: pre-wrap;
+  tab-size: 4;
+}
+.pse-textarea.no-wrap { white-space: pre; overflow-x: auto; }
+.pse-actions { display: flex; gap: 8px; }
+.pse-actions button { min-width: 88px; }
