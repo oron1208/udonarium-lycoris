@@ -64,7 +64,7 @@ interface VnActor {
 })
 export class VnStageComponent implements OnInit, OnDestroy {
   @HostBinding('class.vn-has-front-pinned') get hasFrontPinnedSubPanel(): boolean { return this.paletteFrontPinned || this.logFrontPinned; }
-  @ViewChild('logScroll', { static: false }) logScrollEl!: ElementRef;
+  @ViewChild('logScroll', { static: false }) logScrollEl!: ElementRef<HTMLDivElement>;
   @ViewChild('paletteScroll', { static: false }) paletteScrollEl!: ElementRef;
   @ViewChild('vnPaletteBrowser') vnPaletteBrowser: PaletteBrowserComponent;
 
@@ -857,10 +857,12 @@ export class VnStageComponent implements OnInit, OnDestroy {
     return this.chatTabs.find(t => t.identifier === this.selectedTabIdentifier) || this.chatTabs[0];
   }
 
+  private vnLogMessageLimit = 80;
+
   get chatLogMessages(): ChatMessage[] {
     const tab = this.selectedTab;
     if (!tab) return [];
-    return (tab.chatMessages || []).filter(m => this.canShowChatLogMessage(m)).slice(-80);
+    return (tab.chatMessages || []).filter(m => this.canShowChatLogMessage(m)).slice(-this.vnLogMessageLimit);
   }
 
   // ===== VNチャットログ検索 =====
@@ -871,7 +873,9 @@ export class VnStageComponent implements OnInit, OnDestroy {
     const query = this.vnSearchQuery.trim().toLowerCase();
     if (!query) return [];
     const out: { identifier: string, name: string, text: string, hasImage: boolean }[] = [];
-    for (const m of this.chatLogMessages) {
+    // 描画は直近80件でも、検索は選択中タブの表示可能な全履歴を対象にする。
+    for (const m of this.selectedTab?.chatMessages || []) {
+      if (!this.canShowChatLogMessage(m)) continue;
       if (m.isSecret && !m.isSendFromSelf) continue;
       const text = (m.text || '').toLowerCase();
       const name = (m.name || '').toLowerCase();
@@ -882,12 +886,23 @@ export class VnStageComponent implements OnInit, OnDestroy {
     return out.slice(-50).reverse();
   }
 
+  trackByVnSearchResult(_index: number, result: { identifier: string }): string {
+    return result.identifier;
+  }
+
   vnJumpToMessage(identifier: string) {
+    const messages = (this.selectedTab?.chatMessages || []).filter(m => this.canShowChatLogMessage(m));
+    const index = messages.findIndex(m => m.identifier === identifier);
+    if (index < 0) return;
+    this.vnLogMessageLimit = Math.max(80, messages.length - index + 10);
     this.vnSearchOpen = false;
     setTimeout(() => {
-      const el = document.querySelector(`vn-stage .vn-log-msg[data-vn-msg-id="${identifier}"]`) as HTMLElement;
-      if (!el) return;
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const scroller = this.logScrollEl?.nativeElement;
+      const el = scroller?.querySelector<HTMLElement>(`.vn-log-msg[data-vn-msg-id="${identifier}"]`);
+      if (!el || !scroller) return;
+      const viewport = scroller.getBoundingClientRect();
+      const rect = el.getBoundingClientRect();
+      scroller.scrollTop += rect.top - viewport.top - Math.max(0, (scroller.clientHeight - rect.height) / 2);
       el.style.transition = 'background-color 0.4s';
       el.style.backgroundColor = 'rgba(255, 214, 79, 0.35)';
       setTimeout(() => { el.style.backgroundColor = ''; }, 2400);
@@ -1827,6 +1842,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
   }
 
   selectTab(tabId: string) {
+    this.vnLogMessageLimit = 80;
     this.selectedTabIdentifier = tabId;
   }
 

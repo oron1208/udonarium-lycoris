@@ -247,11 +247,32 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
     const messages = this.chatTab.chatMessages;
     const index = messages.findIndex(m => m.identifier === msgIdentifier);
     if (index < 0) return false;
-    const displayCount = Math.max(3, Math.floor(this.panelService.scrollablePanel.clientHeight / this.minMessageHeight) + 1);
-    this.topIndex = Math.max(0, index - Math.floor(displayCount / 2));
-    this.bottomIndex = Math.min(messages.length - 1, this.topIndex + displayCount - 1);
+    const scroller = this.panelService.scrollablePanel;
+    const displayCount = Math.ceil((scroller.clientHeight + 1200) / this.minMessageHeight);
+    this.scrollEventShortTimer?.stop();
+    this.scrollEventLongTimer?.stop();
+    this.topElm = this.bottomElm = null;
+    this.topIndex = Math.max(0, index - displayCount);
+    this.bottomIndex = Math.min(messages.length - 1, index + displayCount);
     this.needUpdate = true;
-    this.changeDetector.markForCheck();
+    // markForCheck だけだと描画待ちの間に旧位置から仮想範囲が再計算されてしまう。
+    this.changeDetector.detectChanges();
+    const el = this.messageContainerRef.nativeElement.querySelector<HTMLElement>(`chat-message[data-message-id="${msgIdentifier}"]`);
+    if (!el) return false;
+    const tab = this.chatTab;
+    const align = () => {
+      if (this.chatTab !== tab || !el.isConnected) return;
+      const viewport = scroller.getBoundingClientRect();
+      const sticky = scroller.querySelector<HTMLElement>('.sticky-bottom')?.getBoundingClientRect();
+      const visibleBottom = sticky ? Math.min(viewport.bottom, sticky.top) : viewport.bottom;
+      const rect = el.getBoundingClientRect();
+      scroller.scrollTop += rect.top - viewport.top - Math.max(0, (visibleBottom - viewport.top - rect.height) / 2);
+      this.preScrollTop = scroller.scrollTop;
+      this.scrollSpeed = 0;
+    };
+    align();
+    // 仮想範囲の周辺行追加・アンカー補正（33/66ms）が終わった位置で再整列する。
+    setTimeout(align, 120);
     return true;
   }
 

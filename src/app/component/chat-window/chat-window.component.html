@@ -43,7 +43,7 @@
           <button type="button" class="chat-search-close" (click)="searchOpen = false">✕</button>
         </div>
         <div class="chat-search-results">
-          <div *ngFor="let r of searchResults" class="chat-search-item" (click)="jumpToTab(r.tabIdentifier)" (dblclick)="jumpToMessage(r.tabIdentifier, r.msgIdentifier)" title="ダブルクリックでその発言へ移動">
+          <div *ngFor="let r of searchResults; trackBy: trackBySearchResult" class="chat-search-item" (click)="jumpToTab(r.tabIdentifier)" (dblclick)="jumpToMessage(r.tabIdentifier, r.msgIdentifier)" title="ダブルクリックでその発言へ移動">
             <span class="cs-tab">{{r.tabName}}</span>
             <span class="cs-name">{{r.name}}：</span><span class="cs-text">{{r.hasImage ? '🖼 ' : ''}}{{r.text}}</span>
           </div>

@@ -187,6 +187,12 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
     return results.slice(0, 50);
   }
 
+  // getter は毎回新しい結果オブジェクトを返す。IDでDOMを保持しないと
+  // mousedown の変更検知で行が消え、実マウスの click / dblclick が届かない。
+  trackBySearchResult(_index: number, result: { msgIdentifier: string }): string {
+    return result.msgIdentifier;
+  }
+
   jumpToTab(tabIdentifier: string) {
     // シングルクリック: タブだけ切り替える（検索パネルは開いたまま）
     this.chatTabidentifier = tabIdentifier;
@@ -196,16 +202,19 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
   jumpToMessage(tabIdentifier: string, msgIdentifier: string) {
     this.chatTabidentifier = tabIdentifier;
     this.searchOpen = false; // ジャンプしたらパネルを閉じてチャットを見せる
+    // タブ切替や描画された発言の init 通知による末尾追従と競合させない。
+    this.isAutoScroll = false;
+    if (this.scrollToBottomTimer != null) clearTimeout(this.scrollToBottomTimer);
+    this.scrollToBottomTimer = null;
     const tryScroll = (remain: number) => {
-      // 仮想スクロール: 対象メッセージを含む範囲を描画してから要素を探す
-      if (this.chatTabComponent) this.chatTabComponent.jumpToMessageByIdentifier(msgIdentifier);
-      const el = document.querySelector(`chat-message[data-message-id="${msgIdentifier}"]`) as HTMLElement;
+      // 仮想範囲の描画と位置決めは子側で一度に行う（smooth移動中の範囲再計算を避ける）。
+      const jumped = this.chatTabComponent?.jumpToMessageByIdentifier(msgIdentifier);
+      const el = jumped && this.panelService.scrollablePanel.querySelector(`chat-message[data-message-id="${msgIdentifier}"]`) as HTMLElement;
       if (!el) {
         // タブ切替直後のレンダリング待ち。要素が見つかるまで少しリトライする
         if (0 < remain) setTimeout(() => tryScroll(remain - 1), 120);
         return;
       }
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       el.style.transition = 'background-color 0.4s';
       el.style.backgroundColor = 'rgba(255, 214, 79, 0.5)';
       setTimeout(() => { el.style.backgroundColor = ''; }, 2400);

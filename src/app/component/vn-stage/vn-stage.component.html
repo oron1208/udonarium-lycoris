@@ -302,7 +302,7 @@
       <input class="vn-log-search-input" [(ngModel)]="vnSearchQuery" placeholder="ログを検索（本文・発言者・画像タイトル）" />
       <button type="button" class="vn-log-search-close" (click)="vnSearchOpen = false">✕</button>
       <div class="vn-log-search-results">
-        <div *ngFor="let r of vnSearchResults" class="vn-log-search-item" (click)="vnJumpToMessage(r.identifier)">
+        <div *ngFor="let r of vnSearchResults; trackBy: trackByVnSearchResult" class="vn-log-search-item" (dblclick)="vnJumpToMessage(r.identifier)" title="ダブルクリックでその発言へ移動">
           <span class="vls-name">{{r.name}}：</span><span class="vls-text">{{r.hasImage ? '🖼 ' : ''}}{{r.text}}</span>
         </div>
         <div *ngIf="vnSearchQuery.trim() && vnSearchResults.length === 0" class="vn-log-search-empty">見つかりません</div>
