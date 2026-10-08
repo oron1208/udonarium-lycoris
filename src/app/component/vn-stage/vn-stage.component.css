@@ -77,8 +77,9 @@
 .vn-portrait-stack {
   position: relative;
   z-index: 1;
+  flex-shrink: 0;
   max-width: 100%;
-  max-height: 100%;
+  max-height: calc(100% * var(--vn-scale, 1));
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -116,8 +117,8 @@
 }
 
 .vn-actor.autofit .vn-portrait-stack {
-  height: 100%;
-  max-height: 100%;
+  height: calc(100% * var(--vn-scale, 1));
+  max-height: calc(100% * var(--vn-scale, 1));
 }
 
 .vn-actor.autofit .vn-portrait {
@@ -145,12 +146,11 @@
   border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
-/* ═══════ bubble — side-aware ═══════ */
+/* ═══════ bubble — side-aware（立ち絵の上端に少し被せて追従） ═══════ */
 .vn-bubble {
-  position: absolute;
+  position: relative;
   z-index: 50;
-  top: 0;
-  left: 50%;
+  flex: 0 0 auto;
   width: min(380px, 32vw);
   min-height: 72px;
   box-sizing: border-box;
@@ -161,17 +161,15 @@
   border: 1px solid rgba(255, 255, 255, 0.32);
   box-shadow: 0 12px 34px rgba(0, 0, 0, 0.48), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   pointer-events: auto;
-  transform: translateX(-50%);
+  margin-bottom: -14px;
   animation: vn-bubble-life 280ms ease-out both, vn-bubble-float 1.2s ease-in-out infinite;
 }
 
 .vn-bubble.bubble-right {
-  left: 50%;
-  transform: translateX(10%);
+  align-self: flex-end;
 }
 .vn-bubble.bubble-left {
-  left: 50%;
-  transform: translateX(-110%);
+  align-self: flex-start;
 }
 
 .vn-bubble::after {
@@ -1037,8 +1035,8 @@
 }
 
 @keyframes vn-bubble-float {
-  0%, 100% { margin-bottom: 0; }
-  50%      { margin-bottom: 5px; }
+  0%, 100% { margin-top: 0; }
+  50%      { margin-top: -5px; }
 }
 
 /* ═══════════ sub-panel floating ═══════════ */

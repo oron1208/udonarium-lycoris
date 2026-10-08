@@ -2466,7 +2466,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
   }
 
   private loadNumber(key: string, fb: number): number {
-    try { const v = Number(localStorage.getItem(key)); return Number.isFinite(v) ? v : fb; } catch (_) { return fb; }
+    try { const raw = localStorage.getItem(key); if (raw === null) return fb; const v = Number(raw); return Number.isFinite(v) ? v : fb; } catch (_) { return fb; }
   }
 
   private loadSelectedCharacterId(): string {

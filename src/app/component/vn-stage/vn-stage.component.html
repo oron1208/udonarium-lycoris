@@ -11,7 +11,8 @@
       [class.stage-selected]="isStageSelected(actor)"
       [style.left]="actorLeft(i)"
       [style.transform]="'translateX(calc(-50% + ' + (actor.customOffsetX || 0) + 'vw)) translateY(calc(' + verticalOffset + 'px + ' + (actor.customOffsetY || 0) + 'vh))'"
-      [style.z-index]="actorZIndex(i, actor)">
+      [style.z-index]="actorZIndex(i, actor)"
+      [style.--vn-scale]="actorScale(i, actor)">
 
       <div class="vn-bubble"
         *ngIf="showBubble(actor)"
@@ -25,9 +26,8 @@
       <div *ngIf="actorHasPortrait(actor)" class="vn-portrait-stack"
         [class.fading]="actor.isPortraitFading"
         [class.is-selected]="isStageSelected(actor)"
-        [style.width.vw]="actor.portraitWidth > 0 ? actor.portraitWidth : null"
-        [style.height.vh]="actor.portraitHeight > 0 ? actor.portraitHeight : null"
-        [style.transform]="'scale(' + actorScale(i, actor) + ')'"
+        [style.width.vw]="actor.portraitWidth > 0 ? actor.portraitWidth * actorScale(i, actor) : null"
+        [style.height.vh]="actor.portraitHeight > 0 ? actor.portraitHeight * actorScale(i, actor) : null"
         (pointerdown)="onPortraitDragStart(actor, $event)"
         (dragstart)="$event.preventDefault()">
         <img *ngIf="actor.previousImageIdentifier" class="vn-portrait vn-portrait-prev" [src]="actorPreviousImage(actor).url | safe: 'resourceUrl'" [alt]="actor.name">
