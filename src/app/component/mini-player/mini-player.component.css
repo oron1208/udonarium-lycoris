@@ -17,7 +17,8 @@
   color: #f5f5f7;
   font-size: 12px;
   user-select: none;
-  max-width: 380px;
+  width: min(440px, calc(100vw - 28px));
+  box-sizing: border-box;
   cursor: move;
   touch-action: none;
 }
@@ -27,9 +28,11 @@
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  min-width: 230px;
-  max-height: 240px;
+  width: 100%;
+  box-sizing: border-box;
+  max-height: min(240px, calc(100vh - 90px));
   overflow-y: auto;
+  overflow-x: hidden;
   background: rgba(28, 28, 30, 0.78);
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
@@ -38,8 +41,19 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
   padding: 4px;
   cursor: default;
+  touch-action: pan-y;
 }
+.mp-track-list.above { top: auto; bottom: calc(100% + 8px); }
+.mp-track-heading { display: flex; justify-content: space-between; gap: 8px; padding: 8px; border-bottom: 1px solid rgba(255,255,255,.12); margin-bottom: 4px; }
+.mp-track-heading span { font-size: 10px; color: rgba(245,245,247,.6); }
 .mp-track-item {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -48,8 +62,9 @@
   cursor: pointer;
   color: #f5f5f7;
 }
-.mp-track-item.unready { opacity: 0.45; }
-.mp-track-note { padding: 4px 8px; font-size: 10px; color: #ffb340; white-space: nowrap; }
+.mp-track-item:disabled { opacity: 0.5; cursor: not-allowed; }
+.mp-track-item small { margin-left: auto; flex: 0 0 auto; }
+.mp-track-note { padding: 4px 8px; font-size: 11px; color: #ffb340; }
 .mp-track-item:hover { background: rgba(255, 255, 255, 0.12); }
 .mp-track-item.active { color: #ff9f0a; }
 .mp-track-item i { font-size: 14px; }
@@ -57,7 +72,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 200px;
+  min-width: 0;
 }
 .mp-track-empty {
   padding: 10px;
@@ -89,8 +104,16 @@
 .mp-info {
   flex: 1 1 auto;
   min-width: 0;
+  border: 0;
+  border-radius: 5px;
+  padding: 3px 0;
+  text-align: left;
+  background: transparent;
+  color: inherit;
+  font: inherit;
 }
 .mp-title {
+  display: block;
   font-weight: 600;
   max-width: 170px;
   overflow: hidden;
@@ -98,6 +121,7 @@
   white-space: nowrap;
 }
 .mp-sub {
+  display: block;
   font-size: 10px;
   color: rgba(245, 245, 247, 0.6);
 }
@@ -125,6 +149,8 @@
 }
 .mp-btn:hover { background: rgba(255, 255, 255, 0.24); }
 .mp-btn:active { transform: scale(0.92); }
+.mp-btn:disabled { opacity: .4; cursor: default; transform: none; }
+.mini-player button:focus-visible { outline: 2px solid #ff9f0a; outline-offset: 2px; }
 .mp-btn i { font-size: 16px; }
 .mp-close { background: transparent; }
 
@@ -132,4 +158,8 @@
   width: 68px;
   accent-color: #ff8a00;
   cursor: pointer;
+}
+@media (max-width: 480px) {
+  .mini-player { gap: 7px; padding: 8px; }
+  .mp-volume { display: none; }
 }

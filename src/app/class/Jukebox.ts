@@ -184,6 +184,7 @@ export class Jukebox extends GameObject {
   }
 
   stop() {
+    this._jukeboxLayerOverrideActive = false;
     this.audioIdentifier = '';
     this.isPlaying = false;
     this._tableBgmManualOverride = true; // 明示停止
