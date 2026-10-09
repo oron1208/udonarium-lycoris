@@ -1,4 +1,4 @@
-import { Component, DoCheck, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, DoCheck, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 
 import { AudioPlayer } from '@udonarium/core/file-storage/audio-player';
 import { AudioStorage } from '@udonarium/core/file-storage/audio-storage';
@@ -30,6 +30,8 @@ export class MiniPlayerComponent implements OnInit, OnDestroy, DoCheck {
   pos: { x: number, y: number } | null = null;
   private dragging = false;
   private dragMoved = false;
+  private pressedOnInfo = false;
+  private lastToggleAt = 0;
   private dragStart: { x: number, y: number, px: number, py: number } = null;
 
   // ===== 曲リスト =====
@@ -45,6 +47,7 @@ export class MiniPlayerComponent implements OnInit, OnDestroy, DoCheck {
       const raw = localStorage.getItem('lycoris.mini-player-pos.v1');
       if (raw) this.pos = JSON.parse(raw);
     } catch { }
+    this.clampPosToViewport(); // 前回終了時より画面が小さいと画面外から始まるため補正
     EventSystem.register(this).on('MINI_PLAYER_OPEN', () => this.open());
     this.audioLibraryService.fetchTracks().then(tracks => {
       for (const track of tracks) this.libraryNames[track.id] = track.name;
@@ -65,7 +68,7 @@ export class MiniPlayerComponent implements OnInit, OnDestroy, DoCheck {
     if (selection) this.lastSelection = selection;
   }
 
-  open() { this.visible = true; this.save(); }
+  open() { this.visible = true; this.save(); this.clampPosToViewport(); }
   close() { this.visible = false; this.trackListOpen = false; this.save(); }
   private save() {
     try { localStorage.setItem('lycoris.mini-player.v1', this.visible ? '1' : '0'); } catch { }
@@ -79,11 +82,13 @@ export class MiniPlayerComponent implements OnInit, OnDestroy, DoCheck {
 
   onPointerDown(e: PointerEvent) {
     const target = e.target as HTMLElement;
-    if (e.button !== 0 || target.closest('button, input, .mp-track-list')) return;
+    // 音量・コントロールボタンは通常クリックに任せ、背景・アイコン・曲名を掴んだときだけドラッグ開始。
+    if (e.button !== 0 || target.closest('input, .mp-track-list, .mp-btn')) return;
     const el = e.currentTarget as HTMLElement;
     const rect = el.getBoundingClientRect();
     this.dragging = true;
     this.dragMoved = false;
+    this.pressedOnInfo = !!target.closest('.mp-info');
     this.dragStart = { x: e.clientX, y: e.clientY, px: rect.left, py: rect.top };
     // 操作ボタンはキャプチャせず、背景・アイコンだけをドラッグハンドルにする。
     el.setPointerCapture(e.pointerId);
@@ -108,6 +113,10 @@ export class MiniPlayerComponent implements OnInit, OnDestroy, DoCheck {
     this.dragging = false;
     if (this.dragMoved) {
       try { localStorage.setItem('lycoris.mini-player-pos.v1', JSON.stringify(this.pos)); } catch { }
+      this.clampPosToViewport();
+    } else if (this.pressedOnInfo) {
+      // 曲名を押してすぐ離した＝曲一覧の開閉。clickはpointer captureで親へ向かうため自前処理。
+      this.toggleTrackList();
     }
   }
 
@@ -125,6 +134,10 @@ export class MiniPlayerComponent implements OnInit, OnDestroy, DoCheck {
 
   // ===== 曲リスト =====
   toggleTrackList() {
+    // pointerup経路とclick経路の二重発火をガード（物理的な連打は150ms以上空く）。
+    const now = Date.now();
+    if (now - this.lastToggleAt < 150) return;
+    this.lastToggleAt = now;
     this.trackListOpen = !this.trackListOpen;
     if (this.trackListOpen) {
       const rect = this.player?.nativeElement.getBoundingClientRect();
@@ -272,5 +285,23 @@ export class MiniPlayerComponent implements OnInit, OnDestroy, DoCheck {
     if (selection) this.lastSelection = selection;
     j.stop();
     j.stopTableAudio();
+  }
+
+  @HostListener('window:resize')
+  onWindowResize() {
+    this.clampPosToViewport();
+  }
+
+  // ウィンドウサイズ変更で保存位置が画面外に残ると消えて見えるため、ビューポート内へ補正する。
+  private clampPosToViewport() {
+    if (!this.pos) return;
+    const el = this.player?.nativeElement;
+    const w = el?.offsetWidth || 380;
+    const h = el?.offsetHeight || 48;
+    const x = Math.max(0, Math.min(this.pos.x, window.innerWidth - w));
+    const y = Math.max(0, Math.min(this.pos.y, window.innerHeight - h));
+    if (x === this.pos.x && y === this.pos.y) return;
+    this.pos = { x, y };
+    try { localStorage.setItem('lycoris.mini-player-pos.v1', JSON.stringify(this.pos)); } catch { }
   }
 }

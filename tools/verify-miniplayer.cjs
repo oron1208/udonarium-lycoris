@@ -106,6 +106,28 @@ const pause = ms => new Promise(r => setTimeout(r, ms));
     await call('Input.dispatchMouseEvent', {type:'mouseReleased', x:point.x, y:point.y, button:'left', buttons:0, clickCount:1});
     await pause(200);
   };
+  const dragPlayer = async (toX, toY) => {
+    const from = await js(`(()=>{
+      const el = document.querySelector('.mp-art');
+      const player = document.querySelector('.mini-player');
+      window.__pevents = [];
+      for (const type of ['pointerdown','pointermove','pointerup','pointercancel']) {
+        player.addEventListener(type, e => { if (window.__pevents.length < 40) window.__pevents.push({type, tgt: String(e.target.className||'').slice(0,20), bs: e.buttons}); }, true);
+      }
+      const r = el.getBoundingClientRect();
+      return {x:r.x+r.width/2,y:r.y+r.height/2};
+    })()`);
+    await call('Input.dispatchMouseEvent',{type:'mouseMoved',...from});
+    await call('Input.dispatchMouseEvent',{type:'mousePressed',...from,button:'left',buttons:1,clickCount:1});
+    await pause(80);
+    for (let i = 1; i <= 8; i++) {
+      await call('Input.dispatchMouseEvent',{type:'mouseMoved',x:Math.round(from.x+(toX-from.x)*i/8),y:Math.round(from.y+(toY-from.y)*i/8),button:'left',buttons:1});
+      await pause(25);
+    }
+    await call('Input.dispatchMouseEvent',{type:'mouseReleased',x:toX,y:toY,button:'left',buttons:0,clickCount:1});
+    await pause(200);
+    return await js(`(()=>{const el=document.querySelector('app-mini-player');const c=el&&window.ng.getComponent(el);return {events:window.__pevents, dragging:c?c.dragging:null, pressedOnInfo:c?c.pressedOnInfo:null, pos:c?c.pos:null}})()`);
+  };
   const msvc = expr => js(`(() => { const el = document.querySelector('app-mini-player'); const c = el && window.ng.getComponent(el); return c ? (${expr}) : null; })()`);
   const setFileInput = async (selector, filePaths, waitForExpr) => {
     const doc = await call('DOM.getDocument');
@@ -323,6 +345,28 @@ const pause = ms => new Promise(r => setTimeout(r, ms));
     }
     await pause(200);
     ok('アイコンの実ダブルクリックで位置と一覧方向をリセット', await js(`(()=>{const p=document.querySelector('.mini-player').getBoundingClientRect(),l=document.querySelector('.mp-track-list').getBoundingClientRect();return p.top<30 && l.top>p.bottom && l.top<100})()`));
+
+    // ── ウィンドウの最大化・縮小でも表示が維持される ──
+    await call('Emulation.setDeviceMetricsOverride', {width:1400,height:1000,deviceScaleFactor:1,mobile:false});
+    await pause(300);
+    const dragInfo = await dragPlayer(1150, 880);
+    const inVp = (w, h) => js(`(()=>{const r=document.querySelector('.mini-player').getBoundingClientRect();return {left:Math.round(r.left),top:Math.round(r.top),right:Math.round(r.right),bottom:Math.round(r.bottom),ok:r.width>0 && r.left>=0 && r.top>=0 && r.right<=${w} && r.bottom<=${h}}})()`);
+    const big = await inVp(1400, 1000);
+    ok('大きい画面で下段へ配置・保存', big.ok && big.top > 600, { big, drag: dragInfo });
+    ok('配置位置がlocalStorageに保存される', await js(`(()=>{try{const p=JSON.parse(localStorage.getItem('lycoris.mini-player-pos.v1')||'null');return !!p && p.x>700 && p.y>500}catch{return false}})()`));
+    await call('Emulation.setDeviceMetricsOverride', {width:800,height:600,deviceScaleFactor:1,mobile:false});
+    await pause(300);
+    const mid = await inVp(800, 600);
+    ok('ウィンドウ縮小でもミニプレイヤーが画面内', mid.ok, mid);
+    await call('Emulation.setDeviceMetricsOverride', {width:480,height:380,deviceScaleFactor:1,mobile:false});
+    await pause(300);
+    const small = await inVp(480, 380);
+    ok('さらに縮小しても消えない', small.ok, small);
+    await call('Emulation.setDeviceMetricsOverride', {width:1400,height:1000,deviceScaleFactor:1,mobile:false});
+    await pause(300);
+    const back = await inVp(1400, 1000);
+    ok('最大化で戻しても表示が維持', back.ok, back);
+    await click('.mp-stop');
 
     const real = consoleErrors.filter(e => !/skyWay onFatalError|Failed to load resource.*404|SkyWay|skyway/.test(e));
     ok('ページエラー0件（SkyWay接続系を除く）', real.length === 0, { total: consoleErrors.length, real: real.length, sample: real.slice(0, 3) });

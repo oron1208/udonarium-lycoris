@@ -4,7 +4,7 @@
     (dblclick)="onDoubleClick($event)"
     (keydown.escape)="trackListOpen = false">
   <div class="mp-art" [class.playing]="isPlaying" title="ドラッグで移動・ダブルクリックで右上に戻す"><i class="material-icons">music_note</i></div>
-  <button type="button" class="mp-info" (click)="toggleTrackList()" [title]="nowPlayingName + '（クリックで曲を選択）'" [attr.aria-expanded]="trackListOpen" aria-controls="mini-player-tracks">
+  <button type="button" class="mp-info" (click)="toggleTrackList()" [title]="nowPlayingName + '（クリックで曲選択・ドラッグで移動）'" [attr.aria-expanded]="trackListOpen" aria-controls="mini-player-tracks">
     <span class="mp-title">{{ nowPlayingName }}</span>
     <span class="mp-sub">{{ sourceLabel }}</span>
   </button>
