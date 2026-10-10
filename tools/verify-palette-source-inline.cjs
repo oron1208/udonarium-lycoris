@@ -137,6 +137,14 @@ const pause = ms => new Promise(r => setTimeout(r, ms));
     ok('大型エディタ（.palette-source-editor）は存在しない', st1.bigEditorGone === true, {});
     ok('全文編集のtextareaは8行（ちょびっと拡大）', st1.rows === '8', { rows: st1.rows });
     ok('フォーム表示中は旧仕様どおり一覧を隠す（has-form）', await js(`!!document.querySelector('palette-browser .browser.has-form')`));
+    ok('編集枠が下の空きスペースを埋める', await js(`(function(){
+      const form=document.querySelector('palette-browser form.editor');
+      const ta=form.querySelector('textarea[name="body"]');
+      const btn=[...form.querySelectorAll('button')].find(e=>e.textContent.trim()==='保存');
+      if(!ta||!btn) return false;
+      const tb=ta.getBoundingClientRect(), bb=btn.getBoundingClientRect();
+      return tb.height>200 && (bb.top - tb.bottom) < 40;
+    })()`), {});
     await shot('inline-open');
 
     // 入力→保存

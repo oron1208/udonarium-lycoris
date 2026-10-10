@@ -60,7 +60,10 @@ h4 { margin: 8px 0 4px; padding: 3px; border-bottom: 1px solid var(--palette-bor
 .danger { color: var(--palette-danger); }
 [role=alert] { color: var(--palette-danger); }
 .has-form > :not(.editor) { display: none; }
-.has-form .editor { flex: 1; max-height: none; min-height: 0; }
+.has-form .editor { flex: 1; max-height: none; min-height: 0; display: flex; flex-direction: column; }
+.has-form .editor label { display: flex; flex-direction: column; }
+.has-form .editor label:has(textarea[name="body"]) { flex: 1; min-height: 0; }
+.has-form .editor textarea[name="body"] { flex: 1; min-height: 8em; }
 
 .node-row { display: flex; align-items: stretch; position: relative; }
 .node-row > .line, .node-row > .fold { flex: 1; min-width: 0; }
