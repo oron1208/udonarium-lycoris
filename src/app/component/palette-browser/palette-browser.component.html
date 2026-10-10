@@ -28,7 +28,7 @@
   <form class="editor" *ngIf="form" (ngSubmit)="save()">
     <strong>{{formTitle}}</strong>
     <label *ngIf="needsName">名前<input class="is-caret" name="name" [(ngModel)]="name" required autocomplete="off"></label>
-    <label *ngIf="needsBody">本文（1行ごとに選択・送信できます）<textarea class="is-caret" name="body" [(ngModel)]="body" rows="6"></textarea></label>
+    <label *ngIf="needsBody">本文（1行ごとに選択・送信できます）<textarea class="is-caret" name="body" [(ngModel)]="body" [attr.rows]="form === 'source' ? 8 : 6"></textarea></label>
     <p *ngIf="form === 'delete-tab' || form === 'delete-node'">中身も削除します。残したい場合はキャンセルし、「区切り解除」を使ってください。</p>
     <label class="insert-option" *ngIf="(form === 'add-fold' || form === 'add-lines') && canInsertInside"><input type="checkbox" name="insertInside" [(ngModel)]="insertInside">選択した折りたたみの中に追加</label>
     <small *ngIf="form === 'add-fold' || form === 'add-lines'">追加先：{{insertionLabel}}</small>
