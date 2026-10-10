@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
+<title>自分のサーバーへの設置ガイド（セルフホスト） - ユドナリウムリコリス</title>
+<meta name="description" content="ユドナリウムリコリスを自分のサーバーに設置する手順を解説。SkyWayなどのバックエンド（通信方式）の違い、websocket-relayの使い方、SkyWayの設定方法、Dockerでの起動、トラブルシューティングまで。">
+<link rel="canonical" href="https://udonarium-lycoris.ddns.net/docs/guide/self-host.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+
+<div class="bg-fixed">
+  <div class="bg-layer bg-layer-1"></div>
+  <div class="bg-layer bg-layer-2"></div>
+</div>
+
+<canvas id="particles"></canvas>
+
+<nav class="nav scrolled">
+  <div class="nav-inner">
+    <a href="../" class="nav-logo"><span class="logo-icon">◈</span> ユドナリウムリコリス</a>
+    <div class="nav-links">
+      <a href="../#about">概要</a>
+      <a href="../#connect">接続先</a>
+      <a href="../#guide">操作説明</a>
+      <a href="../#updates">更新履歴</a>
+      <a href="https://github.com/oron1208/udonarium-lycoris" target="_blank" class="nav-link-github">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<aside class="guide-toc fade-up" id="toc">
+  <details open>
+    <summary>📑 目次</summary>
+    <ol>
+      <li><a href="#overview">はじめに：何ができる？</a></li>
+      <li><a href="#how-it-works">仕組みを知ろう</a></li>
+      <li><a href="#modes">3つの通信モード</a></li>
+      <li><a href="#choose">どれを選べばいい？</a></li>
+      <li><a href="#quick-start">かんたん設置（ZIPで起動）</a></li>
+      <li><a href="#docker">Docker で設置</a></li>
+      <li><a href="#skyway">SkyWay を使って公開</a></li>
+      <li><a href="#build">ソースからビルド（開発者向け）</a></li>
+      <li><a href="#trouble">トラブルシューティング</a></li>
+      <li><a href="#glossary">用語ミニ集</a></li>
+    </ol>
+  </details>
+</aside>
+
+<article class="section guide-article" style="padding-top: 100px;">
+  <div class="container">
+
+    <div class="guide-page-header fade-up">
+      <span class="section-tag">GUIDE</span>
+      <h2 class="section-title">🚀 自分のサーバーへの設置ガイド</h2>
+      <p class="section-sub">ユドナリウムリコリスを自分のサーバー（自宅PC・VPS）で動かす方法を、バックエンド（通信方式）の基礎から解説します。</p>
+    </div>
+
+    <!-- 01 はじめに -->
+    <section id="overview" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">01</span>
+        <h3>はじめに：何ができる？</h3>
+      </div>
+      <p>ユドナリウムリコリスは公式サーバーで誰でも使えますが、<b>自分のサーバーで動かす（セルフホスト）</b>ことにもメリットがあります。</p>
+      <ul class="guide-feature-list">
+        <li><span class="guide-feature-icon">🕐</span>部屋のデータが自分の手元に残る（公式サーバーは24時間で自動削除）</li>
+        <li><span class="guide-feature-icon">🔒</span>セッション内容を自分だけで管理できる（プライベートな卓）</li>
+        <li><span class="guide-feature-icon">⚡</span>仲間内だけの専用サーバーとして常時運用できる</li>
+        <li><span class="guide-feature-icon">📚</span>音楽ライブラリや画像を好きなだけ置ける</li>
+      </ul>
+      <p class="guide-note">面倒なことはしたくない場合は、公式サーバー（<a href="https://udonarium-lycoris.ddns.net/">https://udonarium-lycoris.ddns.net/</a>）の利用がおすすめです。セルフホストは「常時使いたい」「データを自分で管理したい」人向けです。</p>
+    </section>
+
+    <!-- 02 仕組み -->
+    <section id="how-it-works" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">02</span>
+        <h3>仕組みを知ろう</h3>
+      </div>
+      <p>リコリスの通信は、大きく分けて <b>3つの部品</b> で成り立っています。</p>
+      <div class="guide-flow-diagram">
+        <div class="flow-node">🌐 <b>プレイヤーのブラウザ</b><small>卓の画面そのもの（distフォルダの中身）</small></div>
+        <div class="flow-arrow">⇅ 接続</div>
+        <div class="flow-node flow-node-main">🖥️ <b>unified-server（あなたのサーバー）</b><small>画面の配信 ＋ 部屋データの保存 ＋ プレイヤー同士の仲介</small></div>
+        <div class="flow-arrow">⇅ 方式によって利用</div>
+        <div class="flow-node">☁️ <b>SkyWay（NTTコミュニケーションズのサービス）</b><small>プレイヤー同士を直接つなぐ「仲介役」。使わない方式もあります</small></div>
+      </div>
+      <p>ポイントは、<b>unified-server 1本ですべてが完結する</b>こと。Webページの配信、部屋データの保存、プレイヤー同士のメッセージ中継、そしてSkyWayの認証トークンの発行まで、この1つのプログラムが全部やってくれます。あなたはこれを起動するだけです。</p>
+      <p>では「SkyWayって何？なぜ選べるようになっているの？」という話を見ていきましょう。</p>
+    </section>
+
+    <!-- 03 通信モード -->
+    <section id="modes" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">03</span>
+        <h3>3つの通信モード</h3>
+      </div>
+      <p>リコリスは、プレイヤー同士が「どうやって会話（データ）をやり取りするか」を3つの方式から選べます。設定は <code>dist/udonarium-lycoris/assets/config.yaml</code> の <code>mode:</code> 1行で切り替えます。</p>
+
+      <h4>🔶 websocket-relay（リレー方式）— 登録不要でいちばん簡単</h4>
+      <p>プレイヤー間の<b>すべての通信を、あなたのサーバーが中継</b>します。SkyWayなどの外部サービスに登録する必要はありません。サーバーを立てたら、それだけで動きます。</p>
+      <p class="guide-note">「relay（リレー）」＝駅伝の「中継」。全員のメッセージをサーバーが受け取って、全員に配るイメージです。</p>
+
+      <h4>🔶 websocket-signaling（P2P方式）— サーバーは呼び出し役だけ</h4>
+      <p>サーバーは「誰がどこにいるか」の連絡（シグナリング）だけを担当し、実際のゲームデータは<b>プレイヤー同士が直接やり取り</b>します。サーバーの負荷は最も軽いですが、通信環境によってはプレイヤー同士が直接つながれず、接続に失敗することがあります。</p>
+
+      <h4>🔶 skyway2023（SkyWay方式）— インターネット越しの本命</h4>
+      <p>NTTコミュニケーションズが提供するWebRTCサービス「<b>SkyWay</b>」を利用する方式です。SkyWayがプレイヤー同士の直接接続を確立してくれるので、<b>インターネット越しでも安定して通信</b>できます。公式サーバーもこの方式で動いています。</p>
+      <div class="guide-callout callout-warning">
+        <div class="callout-icon">⚠️</div>
+        <div class="callout-body">
+          <p>SkyWayを使うには<b>無料のアカウント登録</b>と、サーバーへの「アプリケーションID・シークレットキー」の設定が必要です。ここがつまずきやすいポイントですが、このガイドの手順07で順番に解説します。</p>
+        </div>
+      </div>
+
+      <h4>比較表</h4>
+      <table class="guide-table">
+        <thead>
+          <tr><th></th><th>websocket-relay</th><th>websocket-signaling</th><th>skyway2023</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>追加の登録</td><td>不要</td><td>不要</td><td>SkyWayアカウント（無料）</td></tr>
+          <tr><td>設定の手間</td><td><b>ほぼゼロ</b></td><td>少ない</td><td>ややある</td></tr>
+          <tr><td>インターネット越し</td><td>◎ 安定</td><td>△ 環境により不可</td><td>◎ 快適</td></tr>
+          <tr><td>サーバーの通信量</td><td>多め（中継するため）</td><td>少ない</td><td>少ない</td></tr>
+          <tr><td>向いている場面</td><td>初めて／LAN内／小規模</td><td>上級者</td><td>常用・公開サーバー</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 04 選び方 -->
+    <section id="choose" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">04</span>
+        <h3>どれを選べばいい？</h3>
+      </div>
+      <p>迷ったら、次の順番で考えればOKです。</p>
+      <ul class="guide-feature-list">
+        <li><span class="guide-feature-icon">🏠</span><b>まず動かしてみたい（自宅のPC、家族・同じWi-Fi内で遊ぶ）</b><br>→ <b>websocket-relay</b>。このあとの手順05で5分で起動できます。</li>
+        <li><span class="guide-feature-icon">🌍</span><b>遠くの友達とインターネット越しに遊びたい</b><br>→ まずは <b>websocket-relay</b> でも動きます（サーバーの回線が通信量を引き受けます）。卓の規模が大きくなってきたら <b>skyway2023</b> へ切り替えましょう。</li>
+        <li><span class="guide-feature-icon">🏛️</span><b>常時公開のサーバーを運用したい</b><br>→ <b>skyway2023</b> 推奨。サーバー負荷が軽く、接続も安定します。</li>
+      </ul>
+      <p class="guide-note">設定は config.yaml の1行を書き換えるだけ。後からいつでも切り替えられます。まずは relay で始めて、必要になったら SkyWay に乗り換えるのがおすすめです。</p>
+    </section>
+
+    <!-- 05 かんたん設置 -->
+    <section id="quick-start" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">05</span>
+        <h3>かんたん設置（ZIPで起動）</h3>
+      </div>
+      <p>必要なファイルすべて入り のパッケージを用意しています。ダウンロードして、手順どおりに進めるだけです。</p>
+
+      <div class="guide-callout callout-tip">
+        <div class="callout-icon">📦</div>
+        <div class="callout-body">
+          <p><b>📥 セルフホストパッケージのダウンロード</b><br>
+          <a href="../downloads/udonarium-lycoris-v1.91-selfhost.zip" download>udonarium-lycoris-v1.91-selfhost.zip</a>（約12MB）<br>
+          内容：ブラウザアプリ（dist）・サーバー本体・Dockerfile・導入手順書（SETUP.md）</p>
+        </div>
+      </div>
+
+      <h4>前提：Node.js のインストール</h4>
+      <p>サーバーを動かすPCに <a href="https://nodejs.org/ja" target="_blank" rel="noopener">Node.js</a>（<b>22以上を推奨</b>）が入っていなければ、公式サイトからインストールしておきます。</p>
+
+      <h4>手順1：展開と依存のインストール</h4>
+      <p>ZIPを展開し、そのフォルダでターミナル（WindowsならPowerShell）を開いて実行します。</p>
+      <pre class="guide-code">npm install --omit=dev --no-save lzbase62@^2.0.0 archiver@^5.3.0
+cd signaling-server
+npm ci --omit=dev
+cd ..</pre>
+
+      <h4>手順2：通信モードを relay に変更</h4>
+      <p><code>dist/udonarium-lycoris/assets/config.yaml</code> をテキストエディタで開き、<code>mode:</code> の行を書き換えます。</p>
+      <pre class="guide-code">backend:
+  mode: websocket-relay   # skyway2023 → websocket-relay に変更</pre>
+
+      <h4>手順3：起動</h4>
+      <pre class="guide-code">node unified-server.js</pre>
+      <p>「Udonarium Lycoris self-hosted server」と表示されれば起動完了です。停止は <code>Ctrl+C</code>。</p>
+
+      <h4>手順4：アクセス</h4>
+      <p>プレイヤー全員がブラウザで <code>https://&lt;サーバーのIP&gt;:12081/</code> を開きます。サーバーと同じPCなら <code>https://localhost:12081/</code>。</p>
+      <div class="guide-callout callout-info">
+        <div class="callout-icon">🔒</div>
+        <div class="callout-body">
+          <p><b>証明書の警告について</b>：リコリスは初回起動時に自動で自己署名証明書を作ります。そのため初回アクセス時に「安全ではありません」という警告が出ますが、これは自分用の証明書だから正常な挙動です。Chromeなら「詳細設定」→「…にアクセスする」で先へ進めます。</p>
+        </div>
+      </div>
+      <p class="guide-note">仲間のPCからアクセスするには、サーバーPCのIPアドレスが必要です（Windowsなら <code>ipconfig</code>、Linux/macOS なら <code>ip addr</code> / <code>ifconfig</code> で確認。192.168.x.x のような値です）。ファイアウォールでポート 12081 を許可してください。</p>
+
+      <h4>更新・データについて</h4>
+      <ul class="guide-feature-list">
+        <li><span class="guide-feature-icon">💾</span>部屋データ・画像・音声はすべて <code>data/</code> フォルダに保存されます。<b>バックアップはこのフォルダだけでOK</b></li>
+        <li><span class="guide-feature-icon">⬆️</span>バージョンアップは新しいZIPを同じ場所に展開し、<code>data/</code> を残したまま再起動するだけ</li>
+      </ul>
+    </section>
+
+    <!-- 06 Docker -->
+    <section id="docker" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">06</span>
+        <h3>Docker で設置</h3>
+      </div>
+      <p>Dockerを使える環境なら、コマンド2つで起動できます。パッケージZIPに <code>Dockerfile</code> を同梱しています。</p>
+      <pre class="guide-code">docker build -t udonarium-lycoris .
+
+docker run -d --name udonarium-lycoris \
+  -p 12081:12081 \
+  -v udonarium-data:/app/data \
+  udonarium-lycoris</pre>
+      <p class="guide-note">SkyWayを使う場合は、<code>.env</code> ファイルを作成してから <code>--env-file .env</code> を <code>docker run</code> に追加します（内容は手順07参照）。データは <code>udonarium-data</code> ボリュームに永続化されます。</p>
+    </section>
+
+    <!-- 07 SkyWay -->
+    <section id="skyway" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">07</span>
+        <h3>SkyWay を使って公開する</h3>
+      </div>
+      <p>インターネット越しに安定して遊びたい場合は、SkyWay方式（<code>skyway2023</code>）がおすすめです。「Webサーバーを置いただけでは動かない」と言われる原因の多くが、この設定です。順番にやっていけば大丈夫。</p>
+
+      <h4>Step 1：SkyWay のアカウント登録</h4>
+      <p><a href="https://webrtc.ecl.ntt.com/" target="_blank" rel="noopener">SkyWay公式サイト</a>で無料のアカウントを作成します。開発者登録後、ダッシュボードから<b>新しいアプリケーションを作成</b>してください。</p>
+
+      <h4>Step 2：キーの取得</h4>
+      <p>作成したアプリケーションの詳細画面に、次の2つが表示されます。</p>
+      <ul class="guide-feature-list">
+        <li><span class="guide-feature-icon">🔑</span><b>アプリケーションID</b> — 公開してよいID</li>
+        <li><span class="guide-feature-icon">🗝️</span><b>シークレットキー</b> — 絶対に他人に見せてはいけないキー</li>
+      </ul>
+
+      <h4>Step 3：サーバーに設定</h4>
+      <p>サーバーを起動するフォルダに <code>.env</code> という名前のファイルを作り、次の2行を書きます。</p>
+      <pre class="guide-code">SKYWAY_APP_ID=ここにアプリケーションID
+SKYWAY_SECRET_KEY=ここにシークレットキー</pre>
+      <p class="guide-note">このキーはサーバーだけが使います。リコリスのサーバーは、このキーでプレイヤー1人1人に「入室許可証（トークン）」を発行する仕組みです。だからこそ「SkyWayの認証トークンを発行するサーバが必要」というエラー表示になるのです。</p>
+
+      <h4>Step 4：通信モードの確認</h4>
+      <p><code>dist/udonarium-lycoris/assets/config.yaml</code> の <code>mode:</code> を <code>skyway2023</code> にします（初期状態でそうなっています）。変更していた場合は戻してください。</p>
+
+      <h4>Step 5：動作確認</h4>
+      <p>サーバーを起動し、次のコマンドでトークンが発行されれば成功です。</p>
+      <pre class="guide-code">curl -k -X POST https://localhost:12081/v1/skyway2023/token \
+  -H "Content-Type: application/json" \
+  -d '{"formatVersion":1,"channelName":"test","peerId":"test"}'</pre>
+      <p><code>{"token":"eyJhbGciOi…"}</code> のような長い文字列が返ってくればOK。エラーが出る場合は <code>.env</code> のスペルやファイルの位置（unified-server.js と同じフォルダ）を確認してください。</p>
+      <p class="guide-note">SkyWayの管理画面でも、アクセスを許可するドメインやIPの設定が必要です。SkyWayのドキュメント「認証・ドメイン設定」をご確認ください。</p>
+    </section>
+
+    <!-- 08 ビルド -->
+    <section id="build" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">08</span>
+        <h3>ソースからビルドする（開発者向け）</h3>
+      </div>
+      <p>自分でカスタマイズしたい場合は、GitHubからソースを取得してビルドできます。ビルドには <b>Node.js 16系</b>（Angular 13を使用のため）が無難です。</p>
+      <pre class="guide-code">git clone https://github.com/oron1208/udonarium-lycoris.git
+cd udonarium-lycoris
+npm install
+npx ng build --configuration production</pre>
+      <p>ビルド成果物は <code>dist/udonarium-lycoris/</code> に出力されます。このフォルダを、パッケージZIPの <code>dist/udonarium-lycoris/</code> と入れ替えれば手順05と同じように起動できます。</p>
+      <div class="guide-callout callout-info">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <p>送受信まわりのカスタマイズは <code>src/app/class/core/system/network/</code> 配下、サーバー本体は <code>unified-server.js</code> にあります。改善やバグ報告は GitHub の Issue・Pull Request で歓迎します。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 09 トラブルシューティング -->
+    <section id="trouble" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">09</span>
+        <h3>トラブルシューティング</h3>
+      </div>
+      <table class="guide-table">
+        <thead>
+          <tr><th>症状</th><th>原因</th><th>対処</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>「APIバックエンド＜URL＞にアクセスできませんでした。SkyWayの認証トークンを発行するサーバが必要です」</td>
+            <td>モードが <code>skyway2023</code> なのに、SkyWayのキー設定がされていない</td>
+            <td>手順07の <code>.env</code> 設定を行う。または <code>mode:</code> を <code>websocket-relay</code> に変更</td>
+          </tr>
+          <tr>
+            <td>自分は入室できるが、他の人が部屋に入れない・相手の卓が見えない</td>
+            <td>ポート12081が開いていない／IPが違う</td>
+            <td>ファイアウォールで12081を許可。アクセスURLのIPを再確認（サーバーPCのIP）</td>
+          </tr>
+          <tr>
+            <td>「安全ではありません」という警告が出て進めない</td>
+            <td>自己署名証明書による正常な警告</td>
+            <td>「詳細設定」→「…にアクセスする」で進める。常用するなら正式な証明書（Let's Encrypt等）を取得</td>
+          </tr>
+          <tr>
+            <td>置いた画像・音声が消える</td>
+            <td><code>data/</code> フォルダの削除・サーバー再構成</td>
+            <td><code>data/</code> は消さずに保管。Dockerなら <code>-v</code> でボリュームマウントする</td>
+          </tr>
+          <tr>
+            <td>新しいバージョンに更新したら画面が古いまま</td>
+            <td>ブラウザのキャッシュ</td>
+            <td>Ctrl＋Shift＋R で強制再読み込み</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 10 用語集 -->
+    <section id="glossary" class="guide-section fade-up">
+      <div class="guide-section-header">
+        <span class="guide-section-num">10</span>
+        <h3>用語ミニ集</h3>
+      </div>
+      <ul class="guide-feature-list">
+        <li><span class="guide-feature-icon">📡</span><b>シグナリング（signaling）</b> — 通信を始める前の「名寄せ」。誰がどのアドレスにいるかを教え合う事務連絡のこと</li>
+        <li><span class="guide-feature-icon">🤝</span><b>P2P（ピアツーピア）</b> — サーバーを経由せず、プレイヤー同士が直接データをやり取りする方式。速いが、環境によっては直接つながらない</li>
+        <li><span class="guide-feature-icon">🌉</span><b>TURN</b> — 直接つながらない環境のために、指定のサーバーを経由させて通信を成立させる仕組み。SkyWayはこれを自動提供</li>
+        <li><span class="guide-feature-icon">🔐</span><b>HTTPS（セキュアコンテキスト）</b> — 暗号化された通信。SkyWay（WebRTC）を使うには必須のため、リコリスはhttpsで起動します</li>
+        <li><span class="guide-feature-icon">🎟️</span><b>トークン</b> — SkyWayへの「入室許可証」。サーバーがシークレットキーで署名して発行するため、キーをブラウザ側に置かずに済みます</li>
+      </ul>
+      <p class="guide-note">わからないことがあれば、GitHubの Issue やコミュニティで気軽にどうぞ。</p>
+    </section>
+
+  </div>
+</article>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand"><span class="logo-icon">◈</span> ユドナリウムリコリス</div>
+      <div class="footer-links">
+        <a href="https://cylinder-lily.com" target="_blank">リリィ</a>
+        <a href="https://github.com/TK11235/udonarium" target="_blank">オリジナル版</a>
+        <a href="https://github.com/oron1208/udonarium-lycoris" target="_blank">GitHub</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 Udonarium Lycoris.</div>
+    </div>
+  </div>
+</footer>
+
+<script src="../main.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) entry.target.classList.add('visible');
+    });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+});
+</script>
+</body>
+</html>

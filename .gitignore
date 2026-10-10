@@ -67,3 +67,6 @@ VPSサーバー設定/
 data/
 backups/*.pem.bak
 検証ファイル/
+
+# セルフホスト配布ZIPは公式サイト（VPS）からのみ配信
+/docs-site/downloads/
