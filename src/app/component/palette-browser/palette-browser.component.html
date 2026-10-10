@@ -1,4 +1,4 @@
-  <div class="browser" *ngIf="palette" [class.has-form]="!!form && form !== 'source'" [class.no-wrap]="!wrapLines">
+<div class="browser" *ngIf="palette" [class.has-form]="!!form" [class.no-wrap]="!wrapLines">
   <div class="tabs" role="group" aria-label="チャットパレットの分類">
     <button type="button" [class.active]="active === -2" [attr.aria-pressed]="active === -2" [disabled]="!!form" (click)="selectTab(-2)">すべて</button>
     <button type="button" *ngFor="let tab of tabs" [class.active]="active === tab.start" [attr.aria-pressed]="active === tab.start" [disabled]="!!form" (click)="selectTab(tab.start)" (dragover)="dragOverTab($event, tab)" (dragleave)="leaveDrop($event)" (drop)="receiveDrop($event, 'tab:' + tab.start)" [class.drop-tab]="dropHint?.key === 'tab:' + tab.start" title="クリックで切替／ドロップでこのタブの末尾へ">{{tab.name}}</button>
@@ -25,7 +25,7 @@
     <button type="button" class="danger" [disabled]="!selectedNode" (click)="begin('delete-node')">選択項目を削除…</button>
     <button type="button" class="danger" [disabled]="!activeTab || activeTab.start < 0" (click)="begin('delete-tab')">タブごと削除…</button>
   </fieldset>
-  <form class="editor" *ngIf="form && form !== 'source'" (ngSubmit)="save()">
+  <form class="editor" *ngIf="form" (ngSubmit)="save()">
     <strong>{{formTitle}}</strong>
     <label *ngIf="needsName">名前<input class="is-caret" name="name" [(ngModel)]="name" required autocomplete="off"></label>
     <label *ngIf="needsBody">本文（1行ごとに選択・送信できます）<textarea class="is-caret" name="body" [(ngModel)]="body" rows="6"></textarea></label>
@@ -73,24 +73,3 @@
     </div>
   </ng-container>
 </ng-template>
-<div #sourceEditor class="palette-source-editor" *ngIf="form === 'source'" role="dialog" aria-label="全文テキストを編集">
-  <div class="pse-header">
-    <strong>全文テキストを編集</strong>
-    <span class="pse-stats">{{sourceLineCount}} 行・{{body.length}} 文字</span>
-    <button type="button" class="pse-close" (click)="cancel()" title="閉じる（変更は破棄されます）">✕</button>
-  </div>
-  <div class="pse-tools">
-    <span>文字サイズ</span>
-    <button type="button" (click)="changeSourceFont(-1)" aria-label="文字を小さく">−</button>
-    <span class="pse-font">{{sourceFontSize}}px</span>
-    <button type="button" (click)="changeSourceFont(1)" aria-label="文字を大きく">＋</button>
-    <label class="wrap-option" title="OFFで1行表示"><input type="checkbox" name="pse-wrap" [(ngModel)]="wrapLines" [ngModelOptions]="{standalone: true}">折り返し</label>
-  </div>
-  <textarea class="pse-textarea is-caret" name="body" [(ngModel)]="body" [ngModelOptions]="{standalone: true}" [style.font-size.px]="sourceFontSize" [class.no-wrap]="!wrapLines" (keydown)="onSourceKeydown($event)" spellcheck="false"></textarea>
-  <small>区切りは // &#64;tab 名前、// &#64;fold 名前、// &#64;end。Ctrl+Enterで保存・Escでキャンセル。</small>
-  <p role="alert" *ngIf="error">{{error}}</p>
-  <div class="pse-actions">
-    <button type="button" class="pse-save" (click)="save()">保存</button>
-    <button type="button" (click)="cancel()">キャンセル</button>
-  </div>
-</div>

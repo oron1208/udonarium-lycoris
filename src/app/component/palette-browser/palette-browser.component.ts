@@ -1,4 +1,4 @@
-import { AfterViewChecked, Component, DoCheck, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output, ViewChild } from '@angular/core';
+import { Component, DoCheck, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output } from '@angular/core';
 import { ChatPalette } from '@udonarium/chat-palette';
 import { flattenPalette, isPaletteCommand, isPaletteDragItem, movePaletteItem, PaletteNode, PaletteSection, parsePaletteDocument } from '@udonarium/palette-document';
 
@@ -7,7 +7,7 @@ import { flattenPalette, isPaletteCommand, isPaletteDragItem, movePaletteItem, P
   templateUrl: './palette-browser.component.html',
   styleUrls: ['./palette-browser.component.css']
 })
-export class PaletteBrowserComponent implements OnChanges, DoCheck, AfterViewChecked, OnDestroy {
+export class PaletteBrowserComponent implements OnChanges, DoCheck, OnDestroy {
   @Input() palette: ChatPalette;
   @Output() chooseLine = new EventEmitter<string>();
   @Output() sendLine = new EventEmitter<string>();
@@ -46,41 +46,7 @@ export class PaletteBrowserComponent implements OnChanges, DoCheck, AfterViewChe
   private stateKey = '';
 
   constructor(private host: ElementRef<HTMLElement>) {}
-  @ViewChild('sourceEditor') sourceEditorRef?: ElementRef<HTMLElement>;
-  private static readonly SOURCE_FONT_KEY = 'lycoris-palette-source-font-v1';
-  private _sourceFontSize: number = null;
-  get sourceFontSize(): number {
-    if (this._sourceFontSize === null) {
-      let size = 15;
-      try { const stored = Number(localStorage.getItem(PaletteBrowserComponent.SOURCE_FONT_KEY)); if (12 <= stored && stored <= 28) size = stored; } catch (_) { }
-      this._sourceFontSize = size;
-    }
-    return this._sourceFontSize;
-  }
-  set sourceFontSize(value: number) { this._sourceFontSize = value; }
-  changeSourceFont(delta: number) {
-    this.sourceFontSize = Math.max(12, Math.min(28, this.sourceFontSize + delta));
-    try { localStorage.setItem(PaletteBrowserComponent.SOURCE_FONT_KEY, String(this._sourceFontSize)); } catch (_) { }
-  }
-  get sourceLineCount(): number { return this.body ? this.body.split(/\r?\n/).length : 0; }
-  onSourceKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape') { event.preventDefault(); this.cancel(); }
-    else if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); this.save(); }
-  }
-  // 大型エディタは movable パネル（transform付き祖先）の中だと position:fixed がビューポート基準にならないため、
-  // document の body 直下へ移して画面右側に固定する（CDK overlay と同型の手法）。
-  ngAfterViewChecked() { this.mountSourceEditor(); }
-  private mountSourceEditor() {
-    const el = this.sourceEditorRef?.nativeElement;
-    if (!el) return;
-    const body = el.ownerDocument.body;
-    if (el.parentElement !== body) body.appendChild(el);
-  }
-  ngOnDestroy() {
-    if (PaletteBrowserComponent.drag?.owner === this) PaletteBrowserComponent.drag = null;
-    const el = this.sourceEditorRef?.nativeElement;
-    if (el && el.isConnected && el.parentElement === el.ownerDocument.body) el.remove();
-  }
+  ngOnDestroy() { if (PaletteBrowserComponent.drag?.owner === this) PaletteBrowserComponent.drag = null; }
   ngDoCheck() {
     if (this.cachedSource !== null && this.cachedSource !== this.source) {
       // Line numbers are not stable after someone else edits the shared text.
