@@ -53,7 +53,7 @@
       <div class="guide-header-icon">🎲</div>
       <h1 class="guide-header-title">拡張ダイスボット</h1>
       <p class="guide-header-desc">
-        チャットパレットで使える便利な関数と数式計算。<br>
+        通常チャット・チャットパレット・VNチャットで使える関数と数式計算。<br>
         アドバンスモードのオプションから有効にできます。
       </p>
     </div>
@@ -89,7 +89,7 @@
         </div>
 
         <p style="margin-top: 16px; color: var(--text-dim); line-height: 1.8;">
-          拡張ダイスボットがONのとき、チャットパレットで以下の<strong style="color: var(--text);">関数</strong>と<strong style="color: var(--text);">数式計算</strong>が使えるようになります。
+          拡張ダイスボットがONのとき、通常チャット・チャットパレット・VNチャットで以下の<strong style="color: var(--text);">関数</strong>と<strong style="color: var(--text);">数式計算</strong>が使えます。通常チャットの変数は、発言者に選んだキャラクターのパレット・データタグを参照します。プレイヤー名での発言でも数値の関数は使えます。
         </p>
       </div>
     </div>
@@ -242,13 +242,14 @@
           <h3>⚔️ D&D 5版 — 修正値に計算を使う <span class="badge">D&D</span></h3>
           <p>キャラクターのデータタグと組み合わせて使えます。</p>
           <pre>AR+({STR}-5)>=15   ← STRが14の場合 → <span class="result">AR+9>=15</span>
-AT+(1-5)            → <span class="result">AT+-4</span></pre>
+AT+(1-5)            → <span class="result">AT-4</span></pre>
         </div>
 
         <div class="practice-card">
           <h3>❤️ HPの範囲制限 <span class="badge">汎用</span></h3>
-          <p>ダメージ計算でHPが0未満にならないように制限。</p>
-          <pre>HP={clamp({HP}-1d6, 0, 999)}</pre>
+          <p>確定済みのダメージが6なら、計算結果が0未満にならないように制限できます（HPの値を書き換える操作ではありません）。</p>
+          <pre>残りHP={clamp({HP}-6, 0, 999)}</pre>
+          <p>関数の引数内でのダイスロール（1d6など）は未対応です。先にダイスを振り、確定した値を使ってください。未対応の式・未定義の変数・ゼロ除算は空欄や一部の数字にせず、未評価の式を残します。</p>
         </div>
 
         <div class="practice-card">
@@ -290,8 +291,8 @@ AT+(1-5)            → <span class="result">AT+-4</span></pre>
           </div>
 
           <div class="note-card">
-            <h3>📦 ネスト制限</h3>
-            <p><code>{max({abs(-3)}, {abs(-7)})}</code> のように、関数の中に関数を入れることはできません。段階的に計算してください。</p>
+            <h3>📦 関数の入れ子</h3>
+            <p><code>{max({abs(-3)}, {abs(-7)})}</code> → <code>7</code> のように、それぞれの関数を波括弧で囲むと内側から計算できます。引数には <code>{ceil({Lv}/2)}</code> のような変数と四則演算・丸括弧を使えます。</p>
           </div>
 
           <div class="note-card">

@@ -5,6 +5,7 @@ import { StringUtil } from './core/system/util/string-util';
 import { DataElement } from './data-element';
 import { GameCharacter } from './game-character';
 import { Logger } from './core/system/util/logger';
+import { evaluateArithmetic } from './core/system/util/arithmetic';
 
 export interface PaletteLine {
   palette: string;
@@ -182,24 +183,21 @@ export class ChatPalette extends ObjectNode {
     const args = argsStr.split(',').map(a => StringUtil.toHalfWidth(a.trim()));
     const values: number[] = [];
     for (const arg of args) {
-      // 数値リテラルかチェック
-      const literalNum = parseFloat(arg);
-      if (!isNaN(literalNum) && arg.match(/^[-\d.]+$/)) {
-        values.push(literalNum);
-        continue;
-      }
-      // タグ名として検索
-      const val = this.resolveVariableValue(arg, extendVariables, target);
-      const num = parseFloat(val);
-      if (!isNaN(num)) values.push(num);
+      // 裸のタグ名も従来どおり解決。式は全体を解析し、部分的な数値を採用しない。
+      const useMax = arg.endsWith('^');
+      const val = this.resolveVariableValue(useMax ? arg.slice(0, -1) : arg, extendVariables, target, useMax);
+      const num = evaluateArithmetic(val !== '' ? StringUtil.toHalfWidth(val) : arg);
+      if (num === null) return null;
+      values.push(num);
     }
-    if (values.length === 0) return '';
+    if (values.length === 0) return null;
     // 複数値関数
     if (funcName === 'max') return Math.max(...values) + '';
     if (funcName === 'min') return Math.min(...values) + '';
     if (funcName === 'sum') return values.reduce((a, b) => a + b, 0) + '';
     if (funcName === 'avg') return (values.reduce((a, b) => a + b, 0) / values.length) + '';
-    // 単一値関数（最初の値を使用）
+    // 単一値関数は1引数。過不足を黙って無視しない。
+    if (['abs', 'ceil', 'floor', 'round'].includes(funcName) && values.length !== 1) return null;
     const v = values[0];
     if (funcName === 'abs') return Math.abs(v) + '';
     if (funcName === 'ceil') return Math.ceil(v) + '';
@@ -209,12 +207,12 @@ export class ChatPalette extends ObjectNode {
     if (funcName === 'clamp' && values.length === 3) {
       return Math.min(Math.max(values[0], values[1]), values[2]) + '';
     }
-    return '';
+    return null;
   }
 
-  evaluate(line: PaletteLine, extendVariables?: DataElement, target?: GameCharacter, enableExtendedDiceBot?: boolean): string
-  evaluate(line: string, extendVariables?: DataElement, target?: GameCharacter, enableExtendedDiceBot?: boolean): string
-  evaluate(line: any, extendVariables?: DataElement, target?: GameCharacter, enableExtendedDiceBot?: boolean): string {
+  evaluate(line: PaletteLine, extendVariables?: DataElement, target?: GameCharacter, enableExtendedDiceBot?: boolean, preserveUnknown?: boolean): string
+  evaluate(line: string, extendVariables?: DataElement, target?: GameCharacter, enableExtendedDiceBot?: boolean, preserveUnknown?: boolean): string
+  evaluate(line: any, extendVariables?: DataElement, target?: GameCharacter, enableExtendedDiceBot?: boolean, preserveUnknown = false): string {
     let evaluate: string = '';
     if (typeof line === 'string') {
       evaluate = line;
@@ -223,22 +221,27 @@ export class ChatPalette extends ObjectNode {
     }
 
     Logger.debug(evaluate);
+    // 未評価の関数やコマンド引数は後段の括弧計算からも保護する。
+    const protectedTexts: string[] = [];
+    let marker = '\uE000';
+    while (evaluate.includes(marker)) marker += '\uE000';
+    const protect = (text: string) => marker + (protectedTexts.push(text) - 1) + '\uE001';
     let limit = 128;
     let loop = 0;
     let isContinue = true;
     while (isContinue) {
       loop++;
       isContinue = false;
-      evaluate = evaluate.replace(/[tTｔＴ]?[{｛]\s*([^{}｛｝]+)\s*[}｝]/g, (match, name) => {
+      evaluate = evaluate.replace(/[tTｔＴ]?[{｛]\s*([^{}｛｝]+)\s*[}｝]/g, (match, name, offset, source) => {
 
-        name = StringUtil.toHalfWidth(name);
+        name = StringUtil.toHalfWidth(name).trim();
 
         // max()/min() 関数の処理（拡張ダイスボット有効時のみ）
-        let funcMatch = enableExtendedDiceBot ? name.match(/^(max|min|sum|avg|abs|ceil|floor|round|clamp)\((.+)\)$/i) : null;
+        let funcMatch = enableExtendedDiceBot ? name.match(/^(max|min|sum|avg|abs|ceil|floor|round|clamp)\((.*)\)$/i) : null;
         if (funcMatch) {
-          const result = this.evaluateFunction(funcMatch[1].toLowerCase(), funcMatch[2], extendVariables, target);
+          const result = this.evaluateFunction(funcMatch[1].toLowerCase(), funcMatch[2], extendVariables, /^[tTｔＴ]/.test(match) ? target : undefined);
           isContinue = true;
-          return result;
+          return result !== null && Number.isFinite(Number(result)) ? result : protect(match);
         }
 
         let useMax = false;
@@ -250,7 +253,7 @@ export class ChatPalette extends ObjectNode {
         isContinue = true;
 
         if (match.match(/^[tTｔＴ].*/)) {
-          for (let variable of target.chatPalette.paletteVariables) {
+          for (let variable of target?.chatPalette?.paletteVariables || []) {
             if (variable.name == name) return variable.value.replace(/[{｛]/g,'t{');;
           }
           if (target) {
@@ -281,21 +284,36 @@ export class ChatPalette extends ObjectNode {
             }
           }
         }
-        return '';
+        // 関数内の未定義値は消さない（例: {abs({missing}-3)} を3にしない）。
+        const before = source.slice(0, offset);
+        const insideFunction = enableExtendedDiceBot && /[｛{](?:max|min|sum|avg|abs|ceil|floor|round|clamp)\([^｝}]*$/i.test(before);
+        return preserveUnknown || insideFunction ? protect(match) : '';
       });
       if (limit < loop) isContinue = false;
     }
 
     // 拡張ダイスボット: (数式) を計算して置換
-    // 例: AR+(1-5) → AR-4, AR(1-5) → AR-4, AR(5-1) → AR+4, 2d6+(3*2) → 2d6+6
+    // 例: AR+(1-5) → AR-4, 2d6+(3*2) → 2d6+6。英字直後はBCDiceに委譲。
     if (enableExtendedDiceBot) {
+      // K(式) 等、英字直後の括弧はBCDice自身の構文。入れ子も丸ごと保持する。
+      for (let i = 1; i < evaluate.length; i++) {
+        if (evaluate[i] !== '(' || !/[a-zA-Z]/.test(evaluate[i - 1])) continue;
+        let depth = 1;
+        let end = i + 1;
+        while (end < evaluate.length && depth > 0) {
+          if (evaluate[end] === '(') depth++;
+          if (evaluate[end] === ')') depth--;
+          end++;
+        }
+        if (depth === 0) evaluate = evaluate.slice(0, i) + protect(evaluate.slice(i, end)) + evaluate.slice(end);
+      }
       let prev = '';
       while (prev !== evaluate) {
         prev = evaluate;
         evaluate = evaluate.replace(/([+-]?)\(([-+\d*/.\s]+)\)/g, (match, prefix, expr) => {
           try {
             if (/^[-+\d*/.\s]+$/.test(expr)) {
-              const result = new Function('return (' + expr + ')')();
+              const result = evaluateArithmetic(expr);
               if (typeof result === 'number' && isFinite(result)) {
                 const absResult = Math.abs(result);
                 if (prefix === '+') {
@@ -316,6 +334,10 @@ export class ChatPalette extends ObjectNode {
       }
     }
 
+    // 外側の保護文字列が内側を参照するので、登録の逆順に復元する。
+    for (let i = protectedTexts.length - 1; i >= 0; i--) {
+      evaluate = evaluate.split(marker + i + '\uE001').join(protectedTexts[i]);
+    }
     return evaluate;
   }
 

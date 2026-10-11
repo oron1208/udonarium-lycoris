@@ -346,7 +346,8 @@ export class ChatPaletteComponent implements OnInit, OnDestroy {
             str2 = DiceBot.deleteMyselfResourceBuff(str);
           }
 
-          outtext += this.palette.evaluate(str2, this.character.rootDataElement, object, this.isExtendedDiceBotEnabled);
+          const evaluated = this.palette.evaluate(str2, this.character.rootDataElement, object, this.isExtendedDiceBotEnabled);
+          outtext += evaluated;
           outtext += ' ['+object.name + ']';
           first = false;
 
@@ -354,7 +355,7 @@ export class ChatPaletteComponent implements OnInit, OnDestroy {
             text: '',
             object: null
           };
-          targetContext.text = this.palette.evaluate(str2, this.character.rootDataElement, object, this.isExtendedDiceBotEnabled);
+          targetContext.text = evaluated;
           targetContext.object = object;
           messageTargetContext.push( targetContext);
         }

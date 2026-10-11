@@ -139,7 +139,7 @@
         {{ isExtendedDiceBotEnabled ? 'ON' : 'OFF' }}
       </button>
     </div>
-    <div class="option-hint">チャットパレットで &#123;max(...)&#125;, &#123;min(...)&#125; 関数が使えるようになります</div>
+    <div class="option-hint">通常チャット・チャットパレット・VNチャットで &#123;max(...)&#125; などの関数と数式計算が使えます</div>
   </section>
 
   <section class="options-section">
@@ -211,6 +211,6 @@
     <button type="button" class="option-button" (click)="downloadAllMedia()" [disabled]="isBundleLoading">
         {{ isBundleLoading ? ('⏳ ' + bundleProgressText) : '📦 画像・音声を一括ダウンロード' }}
     </button>
-    <div style="font-size: 0.75em; color: #888; text-align: right; padding: 4px 8px;">v1.92</div>
+    <div style="font-size: 0.75em; color: #888; text-align: right; padding: 4px 8px;">v1.93</div>
   </section>
 </div>

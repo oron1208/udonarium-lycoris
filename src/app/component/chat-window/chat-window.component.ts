@@ -13,6 +13,8 @@ import { ChatMessageService } from 'service/chat-message.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
 import { Logger } from '../../class/core/system/util/logger';
+import { ChatPalette } from '@udonarium/chat-palette';
+import { TabletopService } from 'service/tabletop.service';
 
 import { DiceTableSettingComponent } from 'component/dice-table-setting/dice-table-setting.component';
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
@@ -79,7 +81,8 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
     public chatMessageService: ChatMessageService,
     private panelService: PanelService,
     private pointerDeviceService: PointerDeviceService,
-    private popupBridge: PopupBridgeService
+    private popupBridge: PopupBridgeService,
+    private tabletopService: TabletopService
   ) { }
 
   ngOnInit() {
@@ -497,6 +500,14 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
 
   sendChat(value: { text: string, gameSystem: GameSystemClass, sendFrom: string, sendTo: string ,tachieNum: number , messColor:string, imageIdentifier?: string }) {
     if (this.chatTab) {
+      const sender = ObjectStore.instance.get(value.sendFrom);
+      const character = sender instanceof GameCharacter ? sender : null;
+      const enabled = this.tabletopService.currentTable?.extendedDiceBotEnabled ?? false;
+      const palette = enabled ? (character?.chatPalette || new ChatPalette()) : null;
+      if (palette && !character?.chatPalette) palette.setPalette('');
+      const evaluate = (text: string, target?: GameCharacter) => enabled
+        ? palette.evaluate(text, character?.rootDataElement, target, true, true)
+        : text;
       let outtext = '';
       let objects: GameCharacter[] = [];
       let messageTargetContext: ChatMessageTargetContext[] = [];
@@ -520,6 +531,7 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
             str2 = DiceBot.deleteMyselfResourceBuff(str);
           }
 
+          str2 = evaluate(str2, object);
           outtext += str2;
           outtext += ' ['+object.name + ']';
           first = false;
@@ -533,12 +545,12 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
           messageTargetContext.push( targetContext);
         }
       }else{
-        outtext = value.text;
+        outtext = evaluate(value.text);
         let targetContext: ChatMessageTargetContext = {
           text: '',
           object: null
         };
-        targetContext.text = value.text;
+        targetContext.text = outtext;
         targetContext.object = null;
         messageTargetContext.push( targetContext);
       }
