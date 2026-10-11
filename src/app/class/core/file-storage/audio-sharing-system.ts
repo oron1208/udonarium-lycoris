@@ -5,6 +5,7 @@ import { BufferSharingTask } from './buffer-sharing-task';
 import { FileReaderUtil } from './file-reader-util';
 import { ServerMediaStorage } from './server-media-storage';
 import { MediaLoadPriority } from './media-load-priority';
+import { MediaCache } from './media-cache';
 import { Logger } from '../system/util/logger';
 
 export class AudioSharingSystem {
@@ -86,7 +87,7 @@ export class AudioSharingSystem {
           const results = await Promise.all(
             batch.map(async item => {
               try {
-                const result = await ServerMediaStorage.fetchAudio(item.identifier, priority);
+                const result = await MediaCache.fetchAudioWithCache(item.identifier, priority);
                 return { item, result };
               } catch (e) {
                 return { item, result: { status: 'unreachable' as const } };
@@ -312,7 +313,7 @@ export class AudioSharingSystem {
           const local: AudioFile = AudioStorage.instance.get(identifier, false);
           if (local && AudioState.COMPLETE <= local.state && local.state < AudioState.URL) return;
           try {
-            const result = await ServerMediaStorage.fetchAudio(identifier);
+            const result = await MediaCache.fetchAudioWithCache(identifier);
             if (result.status === 'ok') {
               AudioStorage.instance.add(result.file);
               Logger.debug(`[AudioSharingSystem] replenished: ${identifier.slice(0, 12)}`);

@@ -1,3 +1,4 @@
+import { MediaCache } from './media-cache';
 import { EventSystem } from '../system';
 import { ResettableTimeout } from '../system/util/resettable-timeout';
 import { ImageContext, ImageFile, ImageState } from './image-file';
@@ -99,10 +100,14 @@ export class ImageStorage {
     if (ImageState.COMPLETE <= image.state) {
       this.lazySynchronize(100);
       ServerMediaStorage.uploadImage(image);
+      void MediaCache.cacheImage(image);
     }
     if (this.update(image)) {
       let stored = this.imageHash[image.identifier];
-      if (ImageState.COMPLETE <= stored.state) ServerMediaStorage.uploadImage(stored);
+      if (ImageState.COMPLETE <= stored.state) {
+        ServerMediaStorage.uploadImage(stored);
+        void MediaCache.cacheImage(stored);
+      }
       return stored;
     }
     this.imageHash[image.identifier] = image;
@@ -145,9 +150,9 @@ export class ImageStorage {
       image = ImageFile.createEmpty(identifier);
       this.imageHash[identifier] = image;
       if (autoFetch) {
-        ServerMediaStorage.fetchImageOrNull(identifier).then(fetched => {
-          if (fetched) this.add(fetched);
-        });
+        MediaCache.fetchImageWithCache(identifier).then(fetched => {
+          if (fetched.status === 'ok') this.add(fetched.file);
+        }).catch(() => { });
       }
       return image;
     }

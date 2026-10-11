@@ -1,3 +1,4 @@
+import { MediaCache } from './media-cache';
 import { EventSystem } from '../system';
 import { ResettableTimeout } from '../system/util/resettable-timeout';
 import { AudioFile, AudioFileContext, AudioState } from './audio-file';
@@ -71,10 +72,14 @@ export class AudioStorage {
     if (AudioState.COMPLETE <= audio.state) {
       this.lazySynchronize(100);
       ServerMediaStorage.uploadAudio(audio);
+      void MediaCache.cacheAudio(audio);
     }
     if (this.update(audio)) {
       let stored = this.hash[audio.identifier];
-      if (AudioState.COMPLETE <= stored.state) ServerMediaStorage.uploadAudio(stored);
+      if (AudioState.COMPLETE <= stored.state) {
+        ServerMediaStorage.uploadAudio(stored);
+        void MediaCache.cacheAudio(stored);
+      }
       return stored;
     }
     this.hash[audio.identifier] = audio;
@@ -116,9 +121,9 @@ export class AudioStorage {
       audio = AudioFile.createEmpty(identifier);
       this.hash[identifier] = audio;
       if (autoFetch) {
-        ServerMediaStorage.fetchAudioOrNull(identifier).then(fetched => {
-          if (fetched) this.add(fetched);
-        });
+        MediaCache.fetchAudioWithCache(identifier).then(fetched => {
+          if (fetched.status === 'ok') this.add(fetched.file);
+        }).catch(() => { });
       }
       return audio;
     }

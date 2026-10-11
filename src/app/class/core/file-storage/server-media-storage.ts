@@ -274,13 +274,13 @@ export class ServerMediaStorage {
   }
 
   /** blob が取得できた場合のみファイル化。在/不在/障害の区別なし(従来互換のキャッシュミス埋め用)。 */
-  static async fetchImageOrNull(identifier: string): Promise<ImageFile | null> {
-    const result = await this.fetchImage(identifier);
+  static async fetchImageOrNull(identifier: string, priority: MediaPriority = 'auto'): Promise<ImageFile | null> {
+    const result = await this.fetchImage(identifier, priority);
     return result.status === 'ok' ? result.file : null;
   }
 
-  static async fetchAudioOrNull(identifier: string): Promise<AudioFile | null> {
-    const result = await this.fetchAudio(identifier);
+  static async fetchAudioOrNull(identifier: string, priority: MediaPriority = 'auto'): Promise<AudioFile | null> {
+    const result = await this.fetchAudio(identifier, priority);
     return result.status === 'ok' ? result.file : null;
   }
 

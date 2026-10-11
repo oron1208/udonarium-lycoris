@@ -6,6 +6,7 @@ import { ImageContext, ImageFile, ImageState } from './image-file';
 import { CatalogItem, ImageStorage } from './image-storage';
 import { MimeType } from './mime-type';
 import { MediaLoadPriority } from './media-load-priority';
+import { MediaCache } from './media-cache';
 import { ServerMediaStorage } from './server-media-storage';
 import { Logger } from '../system/util/logger';
 
@@ -93,7 +94,7 @@ export class ImageSharingSystem {
           const results = await Promise.all(
             batch.map(async item => {
               try {
-                const result = await ServerMediaStorage.fetchImage(item.identifier, priority);
+                const result = await MediaCache.fetchImageWithCache(item.identifier, priority);
                 return { item, result };
               } catch (e) {
                 return { item, result: { status: 'unreachable' as const } };
@@ -296,7 +297,7 @@ export class ImageSharingSystem {
           const local: ImageFile = ImageStorage.instance.get(identifier, false);
           if (local && ImageState.COMPLETE <= local.state && local.state < ImageState.URL) return;
           try {
-            const result = await ServerMediaStorage.fetchImage(identifier);
+            const result = await MediaCache.fetchImageWithCache(identifier);
             if (result.status === 'ok') {
               ImageStorage.instance.add(result.file);
               Logger.debug(`[ImageSharingSystem] replenished: ${identifier.slice(0, 12)}`);
