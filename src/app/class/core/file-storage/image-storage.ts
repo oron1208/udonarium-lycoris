@@ -33,9 +33,22 @@ export class ImageStorage {
       .on('SERVER_MEDIA_MISSING', event => {
         if (event.data?.kind === 'image' && event.data?.identifier) {
           this.missingOnServer.add(event.data.identifier);
+          this.applyMissingFlag(event.data.identifier);
           Logger.debug(`[ImageStorage] marked missing on server: ${event.data.identifier}`);
         }
+      })
+      .on('MEDIA_REPLENISHED', event => {
+        if (event.data?.kind === 'audio') return;
+        if (event.data?.identifier && this.missingOnServer.delete(event.data.identifier)) {
+          this.applyMissingFlag(event.data.identifier);
+        }
       });
+  }
+
+  /** missingOnServerの状態を該当ImageFileのmissingフラグへ反映（MISSINGプレースホルダー表示用） */
+  private applyMissingFlag(identifier: string) {
+    const image = this.imageHash[identifier];
+    if (image) image.missing = this.missingOnServer.has(identifier);
   }
 
   private destroy() {
@@ -93,6 +106,7 @@ export class ImageStorage {
       return stored;
     }
     this.imageHash[image.identifier] = image;
+    this.applyMissingFlag(image.identifier);
     Logger.debug('add Image: ' + image.identifier);
     return image;
   }

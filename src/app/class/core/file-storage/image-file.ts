@@ -39,10 +39,17 @@ export class ImageFile {
     }
   };
 
+  /** サーバー404確定かつblob未所持のMISSING状態（プレースホルダー表示用。contextには保存されない） */
+  missing: boolean = false;
+  static readonly MISSING_PLACEHOLDER_URL = './assets/images/media-missing.svg';
+
   get identifier(): string { return this.context.identifier };
   get name(): string { return this.context.name };
   get blob(): Blob { return this.context.blob ? this.context.blob : this.context.thumbnail.blob; };
-  get url(): string { return this.context.url ? this.context.url : this.context.thumbnail.url; };
+  get url(): string {
+    if (this.missing) return ImageFile.MISSING_PLACEHOLDER_URL;
+    return this.context.url ? this.context.url : this.context.thumbnail.url;
+  };
   get thumbnail(): ThumbnailContext { return this.context.thumbnail };
 
   get state(): ImageState {

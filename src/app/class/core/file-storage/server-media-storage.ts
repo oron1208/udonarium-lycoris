@@ -76,6 +76,15 @@ export class ServerMediaStorage {
     return this.knownOnServer.has(identifier);
   }
 
+  /** 補充用の音声再アップロード。knownOnServer キャッシュを無視してサーバー実在確認(HEAD)のみを信頼する。 */
+  static async replenishUploadAudio(identifier: string, blob: Blob, name?: string): Promise<boolean> {
+    if (!/^[a-f0-9]{64}$/.test(String(identifier || '')) || !blob) return false;
+    const key = `audio:${identifier}`;
+    if (this.uploading.has(key)) return false;
+    await this.upload('audio', identifier, blob, name, true);
+    return this.knownOnServer.has(identifier);
+  }
+
   /** 画像を取得。戻り値で「成功/不在/サーバー障害」を区別する。in-flight なら同じ Promise を待つ。 */
   static async fetchImage(identifier: string, priority: MediaPriority = 'auto'): Promise<FetchResult<ImageFile>> {
     const raw = await this.fetchBlob('image', identifier, priority);
@@ -475,10 +484,13 @@ export class ServerMediaStorage {
    */
   private static async notifyRecovered(kind: 'image' | 'audio', identifier: string) {
     try {
-      if (kind !== 'image') return;
       const { ImageStorage } = await import('./image-storage');
-      if (ImageStorage.instance.missingOnServer.delete(identifier)) {
-        EventSystem.trigger('MEDIA_REPLENISHED', { identifier });
+      const { AudioStorage } = await import('./audio-storage');
+      const latched = kind === 'image'
+        ? ImageStorage.instance.missingOnServer.delete(identifier)
+        : AudioStorage.instance.missingOnServer.delete(identifier);
+      if (latched) {
+        EventSystem.trigger('MEDIA_REPLENISHED', { identifier, kind });
       }
     } catch (error) {
       Logger.warn('media recovery notify failed', error);

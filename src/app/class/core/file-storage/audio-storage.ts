@@ -15,6 +15,8 @@ export class AudioStorage {
 
   private lazyTimer!: ResettableTimeout;
   private hash: { [identifier: string]: AudioFile } = {};
+  /** サーバーに存在しないことが確定した音声identifier */
+  readonly missingOnServer: Set<string> = new Set();
 
   get audios(): AudioFile[] {
     let audios: AudioFile[] = [];
@@ -26,6 +28,13 @@ export class AudioStorage {
 
   private constructor() {
     Logger.debug('AudioStorage ready...');
+    EventSystem.register(this)
+      .on('SERVER_MEDIA_MISSING', event => {
+        if (event.data?.kind === 'audio' && event.data?.identifier) {
+          this.missingOnServer.add(event.data.identifier);
+          Logger.debug(`[AudioStorage] marked missing on server: ${event.data.identifier}`);
+        }
+      });
   }
 
   private destroy() {

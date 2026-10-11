@@ -18,6 +18,10 @@ export class AudioSharingSystem {
   private receiveTaskMap: Map<string, BufferSharingTask<AudioFileContext>> = new Map();
   private maxSendTask: number = 6;
   private maxReceiveTask: number = 12;
+  /** 直近に補充announceを出したidentifier（スパム防止） */
+  private replenishAnnouncedAt: Map<string, number> = new Map();
+  /** 補充待ち再取得の重複実行防止 */
+  private replenishRetrying: Set<string> = new Set();
 
 
   private constructor() { }
@@ -92,6 +96,11 @@ export class AudioSharingSystem {
           for (const { item, result } of results) {
             if (result.status === 'ok') {
               AudioStorage.instance.add(result.file);
+            } else if (result.status === 'missing') {
+              // サーバーに存在しない音声はplaceholderを削除し、所持者が再アップロードして自己修復する
+              AudioStorage.instance.delete(item.identifier);
+              this.requestReplenish(item.identifier);
+              Logger.debug(`[AudioSharingSystem] removed missing placeholder: ${item.identifier}`);
             } else {
               request.push(item);
             }
@@ -159,6 +168,21 @@ export class AudioSharingSystem {
         } else {
           this.startReceiveTask(identifier);
         }
+      })
+      .on('REQUEST_MEDIA_REPLENISH', event => {
+        if (event.isSendFromSelf) return;
+        const identifier: string = event.data?.identifier;
+        if (!identifier || event.data?.kind !== 'audio' || !/^[a-f0-9]{64}$/i.test(identifier)) return;
+        const audio: AudioFile = AudioStorage.instance.get(identifier, false);
+        // blob を完全所持しているピアだけが補充候補になる
+        if (!audio || audio.state < AudioState.COMPLETE || audio.state >= AudioState.URL || !audio.blob) return;
+        const blob: Blob = audio.blob;
+        const name: string = audio.name;
+        const waitMs = Math.floor(Math.random() * 1500);
+        Logger.debug(`[AudioSharingSystem] replenish candidate ${identifier.slice(0, 12)} in ${waitMs}ms`);
+        setTimeout(() => {
+          void ServerMediaStorage.replenishUploadAudio(identifier, blob, name);
+        }, waitMs);
       });
   }
 
@@ -254,6 +278,53 @@ export class AudioSharingSystem {
     let peerIds = Network.peerIds;
     peerIds.splice(peerIds.indexOf(Network.peerId), 1);
     EventSystem.call('REQUEST_AUDIO_RESOURE', { identifiers: request, receiver: Network.peerId, candidatePeers: peerIds }, peerId);
+  }
+
+  /** サーバー404を観測した音声の補充を部屋に依頼し、自分も後刻再取得を試みる */
+  private requestReplenish(identifier: string) {
+    if (!/^[a-f0-9]{64}$/i.test(identifier)) return;
+    const now = Date.now();
+    const last = this.replenishAnnouncedAt.get(identifier) ?? 0;
+    if (now - last < 30000) return;
+    this.replenishAnnouncedAt.set(identifier, now);
+    Logger.debug(`[AudioSharingSystem] replenish announce: ${identifier.slice(0, 12)}`);
+    // 自分がblob完全所持なら自分で再PUTする（1人部屋では他ピアに依頼できないため自己修復）
+    const self = AudioStorage.instance.get(identifier, false);
+    if (self && AudioState.COMPLETE <= self.state && self.state < AudioState.URL && self.blob) {
+      const blob = self.blob;
+      const name = self.name;
+      const waitMs = Math.floor(Math.random() * 1500);
+      setTimeout(() => { void ServerMediaStorage.replenishUploadAudio(identifier, blob, name); }, waitMs);
+    }
+    EventSystem.call('REQUEST_MEDIA_REPLENISH', { identifier, requester: Network.peerId, kind: 'audio' });
+    this.scheduleReplenishRetry(identifier);
+  }
+
+  /** 補充を待って再取得（2.5/5/8秒後の最大3回）。取得できたらAudioStorageへ戻す */
+  private scheduleReplenishRetry(identifier: string) {
+    if (this.replenishRetrying.has(identifier)) return;
+    this.replenishRetrying.add(identifier);
+    void (async () => {
+      try {
+        const attempts = [2500, 5000, 8000];
+        for (const delayMs of attempts) {
+          await new Promise<void>(resolve => setTimeout(resolve, delayMs));
+          const local: AudioFile = AudioStorage.instance.get(identifier, false);
+          if (local && AudioState.COMPLETE <= local.state && local.state < AudioState.URL) return;
+          try {
+            const result = await ServerMediaStorage.fetchAudio(identifier);
+            if (result.status === 'ok') {
+              AudioStorage.instance.add(result.file);
+              Logger.debug(`[AudioSharingSystem] replenished: ${identifier.slice(0, 12)}`);
+              return;
+            }
+            if (result.status === 'unreachable') return;
+          } catch { return; }
+        }
+      } finally {
+        this.replenishRetrying.delete(identifier);
+      }
+    })();
   }
 
   private sleep(ms: number): Promise<void> {

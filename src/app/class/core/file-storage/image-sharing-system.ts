@@ -159,7 +159,7 @@ export class ImageSharingSystem {
       .on('REQUEST_MEDIA_REPLENISH', event => {
         if (event.isSendFromSelf) return;
         const identifier: string = event.data?.identifier;
-        if (!identifier || !/^[a-f0-9]{64}$/i.test(identifier)) return;
+        if (!identifier || event.data?.kind === 'audio' || !/^[a-f0-9]{64}$/i.test(identifier)) return;
         const image: ImageFile = ImageStorage.instance.get(identifier, false);
         // blob を完全所持しているピアだけが補充候補になる
         if (!image || image.state < ImageState.COMPLETE || image.state >= ImageState.URL || !image.blob) return;
