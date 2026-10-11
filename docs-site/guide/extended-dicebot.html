@@ -67,6 +67,7 @@
         <li><a href="#expression">数式の自動計算</a></li>
         <li><a href="#examples">実践例</a></li>
         <li><a href="#notes">注意事項</a></li>
+        <li><a href="#faq">よくある質問</a></li>
         <li><a href="#changelog">アップデート履歴</a></li>
       </ol>
     </div>
@@ -303,9 +304,47 @@ AT+(1-5)            → <span class="result">AT-4</span></pre>
       </div>
     </div>
 
-    <!-- 6. アップデート履歴 -->
-    <div class="guide-step" id="changelog">
+    <!-- 6. よくある質問 -->
+    <div class="guide-step" id="faq">
       <div class="step-number">6</div>
+      <div class="step-body">
+        <div class="section-heading">
+          <div class="section-icon">❓</div>
+          <h2>よくある質問</h2>
+        </div>
+
+        <div class="callout callout-info">
+          <div class="callout-icon">❓</div>
+          <div class="callout-body">
+            <p><strong>Q. {clamp(★, 1, 10)} の ★ の部分には何が書けますか？</strong></p>
+            <p>整数・キャラクターシートのタグやパレット変数（<code>{HP}</code> など）・四則演算の計算式が使えます。括弧を重ねた式（<code>(5+3)*2</code>）もOKです。</p>
+            <p>例: <code>{clamp({HP}+5, 1, 10)}</code>、<code>{clamp({Lv}*2+1, 0, 20)}</code>、<code>{clamp((5+3)*2, 1, 10)}</code> → <code>10</code></p>
+            <p><strong>ダイス（1d6 など）は使えません。</strong>引数にダイスを含めると、その式は変換されずに<strong>そのまま送信されます</strong>（空欄にはなりません）。ダイスを絡めたい場合は先にダイスを振り、出た値で計算してください。</p>
+          </div>
+        </div>
+
+        <div class="callout callout-info">
+          <div class="callout-icon">❓</div>
+          <div class="callout-body">
+            <p><strong>Q. 半角の ( ) と全角の（ ）で挙動は違いますか？</strong></p>
+            <p>同じです。全角の（ ）・，も自動的に半角へ変換して処理します。波括弧も { } ｛ ｝ どちらも動きます（混在もOK）。</p>
+            <p>例: <code>{clamp（15，1，10）}</code> → <code>10</code>。ただし解説や例と見比べやすいため、入力は半角推奨です。</p>
+          </div>
+        </div>
+
+        <div class="callout callout-warning">
+          <div class="callout-icon">⚠️</div>
+          <div class="callout-body">
+            <p><strong>補足: 波括弧の中に数式だけ書くと空になります。</strong></p>
+            <p><code>{(5+3)}</code> は変数として扱われ空欄になります。数式は波括弧の外に書き、<code>2d6+(3*2)</code> や <code>AR+(1-5)</code> のようにダイス式にくっつけて使ってください。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. アップデート履歴 -->
+    <div class="guide-step" id="changelog">
+      <div class="step-number">7</div>
       <div class="step-body">
         <div class="section-heading">
           <div class="section-icon">📋</div>
