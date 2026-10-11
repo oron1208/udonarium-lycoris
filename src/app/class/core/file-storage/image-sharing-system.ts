@@ -272,6 +272,14 @@ export class ImageSharingSystem {
     if (now - last < 30000) return;
     this.replenishAnnouncedAt.set(identifier, now);
     Logger.debug(`[ImageSharingSystem] replenish announce: ${identifier.slice(0, 12)}`);
+    // 自分がblob完全所持なら自分で再PUTする（1人部屋では他ピアに依頼できないため自己修復）
+    const self = ImageStorage.instance.get(identifier, false);
+    if (self && ImageState.COMPLETE <= self.state && self.state < ImageState.URL && self.blob) {
+      const blob = self.blob;
+      const name = self.name;
+      const waitMs = Math.floor(Math.random() * 1500);
+      setTimeout(() => { void ServerMediaStorage.replenishUploadImage(identifier, blob, name); }, waitMs);
+    }
     EventSystem.call('REQUEST_MEDIA_REPLENISH', { identifier, requester: Network.peerId });
     this.scheduleReplenishRetry(identifier);
   }
