@@ -64,6 +64,18 @@ export class ServerMediaStorage {
     await this.upload('audio', context.identifier, context.blob, context.name);
   }
 
+  /**
+   * 補充用の再アップロード。knownOnServer キャッシュを無視してサーバー実在確認(HEAD)のみを信頼する。
+   * 呼び出し後にサーバーへ存在する（他者補充済みスキップを含む）場合 true を返す。
+   */
+  static async replenishUploadImage(identifier: string, blob: Blob, name?: string): Promise<boolean> {
+    if (!/^[a-f0-9]{64}$/.test(String(identifier || '')) || !blob) return false;
+    const key = `image:${identifier}`;
+    if (this.uploading.has(key)) return false;
+    await this.upload('image', identifier, blob, name, true);
+    return this.knownOnServer.has(identifier);
+  }
+
   /** 画像を取得。戻り値で「成功/不在/サーバー障害」を区別する。in-flight なら同じ Promise を待つ。 */
   static async fetchImage(identifier: string, priority: MediaPriority = 'auto'): Promise<FetchResult<ImageFile>> {
     const raw = await this.fetchBlob('image', identifier, priority);
@@ -325,13 +337,13 @@ export class ServerMediaStorage {
     };
   }
 
-  private static async upload(kind: 'image' | 'audio', identifier: string, blob: Blob, name?: string): Promise<void> {
+  private static async upload(kind: 'image' | 'audio', identifier: string, blob: Blob, name?: string, skipKnownCache: boolean = false): Promise<void> {
     const key = `${kind}:${identifier}`;
     if (this.uploading.has(key)) return;
     this.uploading.add(key);
     try {
-      // キャッシュ済みならスキップ
-      if (this.knownOnServer.has(identifier)) {
+      // キャッシュ済みならスキップ（補充時は404実績があるためキャッシュを信頼しない）
+      if (!skipKnownCache && this.knownOnServer.has(identifier)) {
         Logger.debug(`[media] skip upload ${kind}:${identifier} (cached)`);
         return;
       }
@@ -392,6 +404,8 @@ export class ServerMediaStorage {
           return { status: 'ok', blob: await response.blob(), name };
         }
         if (response.status === 404) {
+          // 「サーバーにあるはず」キャッシュを自己矯正（サーバー側消失に追従する）
+          this.knownOnServer.delete(identifier);
           this.notifyMissing(kind, identifier);
           return { status: 'missing' };
         }

@@ -20,6 +20,10 @@ export class ImageSharingSystem {
   private receiveTaskMap: Map<string, BufferSharingTask<ImageContext[]>> = new Map();
   private maxSendTask: number = 6;
   private maxReceiveTask: number = 12;
+  /** 直近に補充announceを出したidentifier（スパム防止） */
+  private replenishAnnouncedAt: Map<string, number> = new Map();
+  /** 補充待ち再取得の重複実行防止 */
+  private replenishRetrying: Set<string> = new Set();
 
   private constructor() {
     Logger.debug('FileSharingSystem ready...');
@@ -102,6 +106,8 @@ export class ImageSharingSystem {
             } else if (result.status === 'missing') {
               // サーバーに存在しない画像はplaceholderを削除して永久ぐるぐるを防止
               ImageStorage.instance.delete(item.identifier);
+              // 所持者がいればサーバーへ再アップロードしてもらい自己修復する
+              this.requestReplenish(item.identifier);
               Logger.debug(`[ImageSharingSystem] removed missing placeholder: ${item.identifier}`);
             } else {
               request.push(item);
@@ -149,6 +155,21 @@ export class ImageSharingSystem {
           }
           Logger.debug('REQUEST_FILE_RESOURE ImageStorageService あぶれた...' + event.data.receiver, randomRequest.length);
         }
+      })
+      .on('REQUEST_MEDIA_REPLENISH', event => {
+        if (event.isSendFromSelf) return;
+        const identifier: string = event.data?.identifier;
+        if (!identifier || !/^[a-f0-9]{64}$/i.test(identifier)) return;
+        const image: ImageFile = ImageStorage.instance.get(identifier, false);
+        // blob を完全所持しているピアだけが補充候補になる
+        if (!image || image.state < ImageState.COMPLETE || image.state >= ImageState.URL || !image.blob) return;
+        const blob: Blob = image.blob;
+        const name: string = image.name;
+        const waitMs = Math.floor(Math.random() * 1500);
+        Logger.debug(`[ImageSharingSystem] replenish candidate ${identifier.slice(0, 12)} in ${waitMs}ms`);
+        setTimeout(() => {
+          void ServerMediaStorage.replenishUploadImage(identifier, blob, name);
+        }, waitMs);
       })
       .on('UPDATE_FILE_RESOURE', 1000, event => {
         let updateImages: ImageContext[] = event.data.updateImages;
@@ -241,6 +262,47 @@ export class ImageSharingSystem {
     this.receiveTaskMap.delete(identifier);
 
     Logger.debug('stopReceiveTask => ', this.receiveTaskMap.size);
+  }
+
+  /** サーバー404を観測した画像の補充を部屋に依頼し、自分も後刻再取得を試みる */
+  private requestReplenish(identifier: string) {
+    if (!/^[a-f0-9]{64}$/i.test(identifier)) return;
+    const now = Date.now();
+    const last = this.replenishAnnouncedAt.get(identifier) ?? 0;
+    if (now - last < 30000) return;
+    this.replenishAnnouncedAt.set(identifier, now);
+    Logger.debug(`[ImageSharingSystem] replenish announce: ${identifier.slice(0, 12)}`);
+    EventSystem.call('REQUEST_MEDIA_REPLENISH', { identifier, requester: Network.peerId });
+    this.scheduleReplenishRetry(identifier);
+  }
+
+  /** 補充を待って再取得（2.5/5/8秒後の最大3回）。取得できたらImageStorageへ戻す */
+  private scheduleReplenishRetry(identifier: string) {
+    if (this.replenishRetrying.has(identifier)) return;
+    this.replenishRetrying.add(identifier);
+    void (async () => {
+      try {
+        const attempts = [2500, 5000, 8000];
+        for (const delayMs of attempts) {
+          await new Promise<void>(resolve => setTimeout(resolve, delayMs));
+          const local: ImageFile = ImageStorage.instance.get(identifier, false);
+          if (local && ImageState.COMPLETE <= local.state && local.state < ImageState.URL) return;
+          try {
+            const result = await ServerMediaStorage.fetchImage(identifier);
+            if (result.status === 'ok') {
+              ImageStorage.instance.add(result.file);
+              Logger.debug(`[ImageSharingSystem] replenished: ${identifier.slice(0, 12)}`);
+              return;
+            }
+            if (result.status === 'unreachable') return;
+          } catch {
+            return;
+          }
+        }
+      } finally {
+        this.replenishRetrying.delete(identifier);
+      }
+    })();
   }
 
   private request(request: CatalogItem[], peerId: string) {
