@@ -48,6 +48,7 @@ import { LinkyModule } from 'ngx-linky';
 import { ModalComponent } from 'component/modal/modal.component';
 import { NetworkIndicatorComponent } from 'component/network-indicator/network-indicator.component';
 import { ServerStatusComponent } from 'component/server-status/server-status.component';
+import { MediaIntegrityBadgeComponent } from 'component/media-integrity-badge/media-integrity-badge.component';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { OverviewPanelComponent } from 'component/overview-panel/overview-panel.component';
 import { PasswordCheckComponent } from 'component/password-check/password-check.component';
@@ -226,6 +227,7 @@ import { AppComponent } from './app.component';
     RotableDirective,
     NetworkIndicatorComponent,
     ServerStatusComponent,
+    MediaIntegrityBadgeComponent,
     DiceSymbolComponent,
     TooltipDirective,
     DraggableDirective,

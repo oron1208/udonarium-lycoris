@@ -292,6 +292,7 @@ export class ImageSharingSystem {
             if (result.status === 'ok') {
               ImageStorage.instance.add(result.file);
               Logger.debug(`[ImageSharingSystem] replenished: ${identifier.slice(0, 12)}`);
+              EventSystem.trigger('MEDIA_REPLENISHED', { identifier });
               return;
             }
             if (result.status === 'unreachable') return;

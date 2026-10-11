@@ -400,6 +400,7 @@ export class ServerMediaStorage {
         );
         if (response.ok) {
           this.knownOnServer.add(identifier);
+          void this.notifyRecovered(kind, identifier);
           const name = this.extractFileName(response);
           return { status: 'ok', blob: await response.blob(), name };
         }
@@ -465,5 +466,22 @@ export class ServerMediaStorage {
     if (this.missingNotified.has(key)) return;
     this.missingNotified.add(key);
     EventSystem.trigger('SERVER_MEDIA_MISSING', { kind, identifier });
+  }
+
+  /**
+   * 取得成功（200）時に「サーバーに存在しない」ラッチを解除する。
+   * ラッチが実際に張っていた場合のみ通知する（通常fetchのたびのイベント爆発を避ける）。
+   * ImageStorage との循環importを避けるため動的importを使う（fetchBundleと同じパターン）。
+   */
+  private static async notifyRecovered(kind: 'image' | 'audio', identifier: string) {
+    try {
+      if (kind !== 'image') return;
+      const { ImageStorage } = await import('./image-storage');
+      if (ImageStorage.instance.missingOnServer.delete(identifier)) {
+        EventSystem.trigger('MEDIA_REPLENISHED', { identifier });
+      }
+    } catch (error) {
+      Logger.warn('media recovery notify failed', error);
+    }
   }
 }
