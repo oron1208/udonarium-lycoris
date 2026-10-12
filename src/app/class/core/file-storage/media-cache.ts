@@ -57,13 +57,16 @@ export class MediaCache {
       if (MediaCache.savedIdentifiers.has(identifier)) return;
       if (!/^[a-f0-9]{64}$/i.test(identifier)) return;
       if (file.state >= ImageState.URL) return;
-      if (!file.blob) return;
+      const blob = file.context.blob;
+      if (!blob || blob.size === 0) return;
+      // サムネイルは空blobをnullに正規化（Safari/iOSのIndexedDBクラッシュ時に空blobが混入する事故への防御）
+      const thumbBlob = file.context.thumbnail.blob && file.context.thumbnail.blob.size > 0 ? file.context.thumbnail.blob : null;
       const entry: CachedImage = {
         identifier,
         name: file.name,
         type: file.context.type,
-        blob: file.context.blob,
-        thumbBlob: file.context.thumbnail.blob,
+        blob,
+        thumbBlob,
         thumbType: file.context.thumbnail.type,
         savedAt: Date.now(),
       };
@@ -82,7 +85,7 @@ export class MediaCache {
       if (MediaCache.savedIdentifiers.has(identifier)) return;
       if (!/^[a-f0-9]{64}$/i.test(identifier)) return;
       if (file.state >= AudioState.URL) return;
-      if (!file.blob) return;
+      if (!file.blob || file.blob.size === 0) return;
       const entry: CachedAudio = {
         identifier,
         name: file.name,
@@ -104,14 +107,20 @@ export class MediaCache {
     const promise = (async () => {
       try {
         const entry = await MediaCache.imageDb.get(identifier);
-        if (!entry || !entry.blob) return null;
+        if (!entry) return null;
+        if (!entry.blob || entry.blob.size === 0) {
+          // クラッシュ等で空のまま保存された破損キャッシュを削除し、サーバー再取得にフォールバックする（自己修復）
+          await MediaCache.imageDb.delete(identifier).catch(() => undefined);
+          Logger.warn(`[MediaCache] purged broken image cache ${identifier.slice(0, 12)} (empty blob)`);
+          return null;
+        }
         const image = ImageFile.create({
           identifier: entry.identifier,
           name: entry.name,
           type: entry.type,
           blob: entry.blob,
           url: '',
-          thumbnail: { blob: entry.thumbBlob, type: entry.thumbType, url: '' },
+          thumbnail: { blob: entry.thumbBlob && entry.thumbBlob.size > 0 ? entry.thumbBlob : null, type: entry.thumbType, url: '' },
         });
         Logger.debug(`[MediaCache] restored image ${identifier.slice(0, 12)}`);
         return image;
@@ -132,7 +141,12 @@ export class MediaCache {
     const promise = (async () => {
       try {
         const entry = await MediaCache.audioDb.get(identifier);
-        if (!entry || !entry.blob) return null;
+        if (!entry) return null;
+        if (!entry.blob || entry.blob.size === 0) {
+          await MediaCache.audioDb.delete(identifier).catch(() => undefined);
+          Logger.warn(`[MediaCache] purged broken audio cache ${identifier.slice(0, 12)} (empty blob)`);
+          return null;
+        }
         const audio = AudioFile.create({
           identifier: entry.identifier,
           name: entry.name,
