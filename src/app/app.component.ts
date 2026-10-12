@@ -50,6 +50,7 @@ import { GameObjectInventoryComponent } from 'component/game-object-inventory/ga
 import { GameTableSettingComponent } from 'component/game-table-setting/game-table-setting.component';
 import { DictionaryPanelComponent } from 'component/dictionary-panel/dictionary-panel.component';
 import { JukeboxComponent } from 'component/jukebox/jukebox.component';
+import { AutoReconnect } from '@udonarium/core/system/network/auto-reconnect';
 import { DataImportMenuComponent } from 'component/data-import-menu/data-import-menu.component';
 import { OptionsPanelComponent } from 'component/options-panel/options-panel.component';
 import { InitiativePanelComponent } from 'component/initiative-panel/initiative-panel.component';
@@ -196,6 +197,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     private audioLibraryService: AudioLibraryService,
     private hostElement: ElementRef<HTMLElement>
   ) {
+    AutoReconnect.instance.initialize();
 
     // AudioLibraryServiceをJukeboxに注入
     Jukebox.setAudioLibraryService(this.audioLibraryService);
