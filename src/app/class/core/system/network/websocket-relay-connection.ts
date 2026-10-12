@@ -277,99 +277,105 @@ export class WebSocketRelayConnection implements Connection {
 
   /**
    * 入室時にルームの全メディアをZIPで一括ダウンロードする。
-   * サーバーの /api/room/:roomKey/bundle から全画像・音声を1つのZIPで受け取り、
-   * 展開して ImageStorage / AudioStorage に登録する。
+   * /api/media/bundle に識別子リストを指定して取得し、1バッチあたりのZIPサイズを
+   * 小さく保つことで低メモリ端末（iOS Safariなど）でも展開できるようにしている。
    */
-  private async downloadMediaBundle(objects: ObjectContext[], roomKey: string): Promise<void> {
+  private async downloadMediaBundle(objects: ObjectContext[], _roomKey: string): Promise<void> {
     const operationId = `relay-room-media-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     let total = 0;
     try {
-      const resp = await fetch(`/api/room/${encodeURIComponent(roomKey)}/bundle`, { method: 'HEAD' });
-      const len = parseInt(resp.headers.get('content-length') || '0', 10);
-      // HEADで存在確認（0件の場合はmanifest JSONが返る）
-      if (!resp.ok) return;
-    } catch (e) {
-      Logger.warn('[bundle] HEAD check failed, skipping', e);
-      return;
-    }
-
-    Logger.info('[bundle] downloading media bundle ZIP...');
-    EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'downloading', total: 0, done: 0 });
-
-    try {
       const { ServerMediaStorage } = await import('../../file-storage/server-media-storage');
-      const { ImageStorage } = await import('../../file-storage/image-storage');
-      const { AudioStorage } = await import('../../file-storage/audio-storage');
-      const JSZip = (await import('jszip')).default;
-
-      const resp = await fetch(`/api/room/${encodeURIComponent(roomKey)}/bundle`);
-      if (!resp.ok) {
-        Logger.warn('[bundle] fetch failed', resp.status);
-        EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'done', total: 0, done: 0 });
+      const { MediaLoadPriority } = await import('../../file-storage/media-load-priority');
+      const { images, audios } = this.collectRoomMediaIdentifiers(objects);
+      const unheld = await this.filterUnheldMediaIdentifiers(images, audios);
+      total = unheld.images.length + unheld.audios.length;
+      if (total < 1) {
+        Logger.info('[bundle] all media already held locally');
         return;
       }
 
-      const arrayBuffer = await resp.arrayBuffer();
-      EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'extracting', total: 0, done: 0 });
-      const zip = await JSZip.loadAsync(arrayBuffer);
+      // 優先度順に並べてからバッチ化する（卓上アセットが最初のバッチに来る）
+      const orderedImages = MediaLoadPriority.sortByScore(unheld.images.map(identifier => ({ identifier })), MediaLoadPriority.getImageScoreMap()).map(item => item.identifier);
+      const orderedAudios = MediaLoadPriority.sortByScore(unheld.audios.map(identifier => ({ identifier })), MediaLoadPriority.getAudioScoreMap()).map(item => item.identifier);
 
-      // manifestから件数取得
-      const manifestFile = zip.file('_manifest.json');
-      let manifest: Array<{ kind: string; hash: string; name: string; type: string }> = [];
-      if (manifestFile) {
-        manifest = JSON.parse(await manifestFile.async('text'));
-      }
-      total = manifest.length;
-      if (total === 0) {
-        EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'done', total: 0, done: 0 });
-        return;
-      }
+      // 1バッチのZIPを数MB〜十数MB程度に保つ。大きいZIPの一括展開は
+      // iOS Safariのタブメモリ上限を超えてタブごと落ちる（170MBで再現）。
+      const BATCH_ITEMS = 24;
+      const batches: Array<{ images: string[]; audios: string[] }> = [];
+      for (let i = 0; i < orderedImages.length; i += BATCH_ITEMS) batches.push({ images: orderedImages.slice(i, i + BATCH_ITEMS), audios: [] });
+      for (let i = 0; i < orderedAudios.length; i += BATCH_ITEMS) batches.push({ images: [], audios: orderedAudios.slice(i, i + BATCH_ITEMS) });
 
-      Logger.info(`[bundle] ZIP contains ${total} media files, extracting...`);
+      Logger.info(`[bundle] batched download: ${orderedImages.length} images, ${orderedAudios.length} audios, ${batches.length} batches`);
+      EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'downloading', total, done: 0 });
 
       let done = 0;
-      EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'extracting', total, done });
-      // ファイルを順次展開してStorageに登録
-      for (const entry of manifest) {
-        const zipEntry = zip.file(`${entry.kind}/${entry.hash}`);
-        if (!zipEntry) {
-          done++;
-          EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'extracting', total, done });
-          continue;
-        }
-
+      let loaded = 0;
+      for (const batch of batches) {
+        const batchTotal = batch.images.length + batch.audios.length;
         try {
-          const blob = await zipEntry.async('blob');
-          if (entry.kind === 'image') {
-            const file = entry.name && entry.name !== entry.hash
-              ? await (await import('../../file-storage/image-file')).ImageFile.createAsync(blob, entry.name)
-              : await (await import('../../file-storage/image-file')).ImageFile.createAsync(blob);
-            ImageStorage.instance.add(file);
-          } else if (entry.kind === 'audio') {
-            const file = entry.name && entry.name !== entry.hash
-              ? await (await import('../../file-storage/audio-file')).AudioFile.createAsync(blob, entry.name)
-              : await (await import('../../file-storage/audio-file')).AudioFile.createAsync(blob);
-            AudioStorage.instance.add(file);
-          }
-        } catch (e) {
-          Logger.warn(`[bundle] failed to extract ${entry.kind}/${entry.hash}`, e);
+          const result = await ServerMediaStorage.fetchBundle(batch.images, batch.audios, progress => {
+            EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'extracting', total, done: done + progress.done });
+          });
+          loaded += result.loaded;
+        } catch (error) {
+          Logger.warn('[bundle] batch failed', error);
         }
-
-        done++;
+        done += batchTotal;
         EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'extracting', total, done });
-      }
-
-      // サーバーに存在をマーク（個別fetchをスキップさせる）
-      for (const entry of manifest) {
-        (ServerMediaStorage as any).knownOnServer?.add?.(entry.hash);
+        // バッチ間でUIに譲る（メモリ解放とペイントの機会）
+        await new Promise<void>(resolve => setTimeout(resolve, 50));
       }
 
       EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'done', total, done });
-      Logger.info(`[bundle] extraction complete: ${done}/${total}`);
+      Logger.info(`[bundle] batched download complete: ${loaded}/${total}`);
     } catch (e) {
       Logger.warn('[bundle] download failed', e);
       EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'done', total, done: 0 });
     }
+  }
+
+  /** 部屋オブジェクトから参照されているメディア（SHA-256識別子）を収集する */
+  private collectRoomMediaIdentifiers(objects: ObjectContext[]): { images: string[]; audios: string[] } {
+    const images = new Set<string>();
+    const audios = new Set<string>();
+    const hashPattern = /^[a-f0-9]{64}$/i;
+    const visit = (value: any, depth: number): void => {
+      if (value == null || depth > 8) return;
+      if (Array.isArray(value)) {
+        for (const item of value) visit(item, depth + 1);
+        return;
+      }
+      if (typeof value !== 'object') return;
+      const imageId = (value as any).imageIdentifier;
+      if (typeof imageId === 'string' && hashPattern.test(imageId)) images.add(imageId);
+      const audioId = (value as any).audioIdentifier;
+      if (typeof audioId === 'string' && hashPattern.test(audioId)) audios.add(audioId);
+      for (const key in value) {
+        try {
+          visit((value as any)[key], depth + 1);
+        } catch { /* 循環参照などは無視 */ }
+      }
+    };
+    for (const object of objects) visit(object, 0);
+    return { images: Array.from(images), audios: Array.from(audios) };
+  }
+
+  /** ローカルにblob完全所持のメディアは取得対象から除外する（再入室時の無駄転送防止） */
+  private async filterUnheldMediaIdentifiers(images: string[], audios: string[]): Promise<{ images: string[]; audios: string[] }> {
+    const [{ ImageStorage }, { AudioStorage }, { ImageState }] = await Promise.all([
+      import('../../file-storage/image-storage'),
+      import('../../file-storage/audio-storage'),
+      import('../../file-storage/image-file'),
+    ]);
+    const heldImages = new Set<string>();
+    for (const image of ImageStorage.instance.images) {
+      if (image?.identifier && image.blob && ImageState.COMPLETE <= image.state && image.state < ImageState.URL) heldImages.add(image.identifier);
+    }
+    const heldAudios = new Set<string>();
+    for (const audio of AudioStorage.instance.audios) {
+      if (audio?.identifier && audio.blob) heldAudios.add(audio.identifier);
+    }
+    return { images: images.filter(identifier => !heldImages.has(identifier)), audios: audios.filter(identifier => !heldAudios.has(identifier)) };
   }
 
   private async applyObjectSnapshot(objects: ObjectContext[], sendFrom: string) {

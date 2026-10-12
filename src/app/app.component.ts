@@ -648,36 +648,56 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       total: images.length + audios.length,
       done: 0,
     });
+    const missingEntries: any[] = [];
+    const failedEntries: any[] = [];
+    let loadedTotal = 0;
     try {
-      const result = await ServerMediaStorage.fetchBundle(images, audios, progress => {
-        EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', {
-          operationId,
-          status: 'extracting',
-          total: progress.total,
-          done: progress.done,
-        });
-      });
-      if (result.missing.length || result.failed.length) {
-        Logger.warn(`[media-bundle] loaded=${result.loaded} missing=${result.missing.length} failed=${result.failed.length}`);
+      // 1バッチのZIPを数MB〜十数MB程度に保つ。大きいZIPの一括展開は
+      // iOS Safariのタブメモリ上限を超えてタブごと落ちる（170MB一括で再現）。
+      const { MediaLoadPriority } = await import('@udonarium/core/file-storage/media-load-priority');
+      const orderedImages = MediaLoadPriority.sortByScore(images.map(identifier => ({ identifier })), MediaLoadPriority.getImageScoreMap()).map(item => item.identifier);
+      const orderedAudios = MediaLoadPriority.sortByScore(audios.map(identifier => ({ identifier })), MediaLoadPriority.getAudioScoreMap()).map(item => item.identifier);
+
+      const BATCH_ITEMS = 24;
+      const batches: Array<{ images: string[]; audios: string[] }> = [];
+      for (let i = 0; i < orderedImages.length; i += BATCH_ITEMS) batches.push({ images: orderedImages.slice(i, i + BATCH_ITEMS), audios: [] });
+      for (let i = 0; i < orderedAudios.length; i += BATCH_ITEMS) batches.push({ images: [], audios: orderedAudios.slice(i, i + BATCH_ITEMS) });
+
+      const total = orderedImages.length + orderedAudios.length;
+      let done = 0;
+      for (const batch of batches) {
+        const batchTotal = batch.images.length + batch.audios.length;
+        try {
+          const result = await ServerMediaStorage.fetchBundle(batch.images, batch.audios, progress => {
+            EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', {
+              operationId,
+              status: 'extracting',
+              total,
+              done: done + progress.done,
+            });
+          });
+          loadedTotal += result.loaded;
+          missingEntries.push(...result.missing);
+          failedEntries.push(...result.failed);
+        } catch (error) {
+          Logger.warn('[media-bundle] batch failed; continuing with remaining batches', error);
+        }
+        done += batchTotal;
+        EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'extracting', total, done });
+        // バッチ間でUIに譲る（メモリ解放とペイントの機会）
+        await new Promise<void>(resolve => setTimeout(resolve, 50));
+      }
+
+      if (missingEntries.length || failedEntries.length) {
+        Logger.warn(`[media-bundle] loaded=${loadedTotal} missing=${missingEntries.length} failed=${failedEntries.length}`);
         // サーバーに存在しない/破損画像のplaceholderを削除して、永久ぐるぐるを防止
         const { ImageStorage } = await import('@udonarium/core/file-storage/image-storage');
         const { AudioStorage } = await import('@udonarium/core/file-storage/audio-storage');
-        for (const entry of result.missing) {
+        for (const entry of [...missingEntries, ...failedEntries]) {
           if (entry.kind === 'image') {
             ImageStorage.instance.delete(entry.hash);
-            Logger.debug(`[media-bundle] removed missing image placeholder: ${entry.hash}`);
           } else if (entry.kind === 'audio') {
             AudioStorage.instance.delete(entry.hash);
-            Logger.debug(`[media-bundle] removed missing audio placeholder: ${entry.hash}`);
-          }
-        }
-        for (const entry of result.failed) {
-          if (entry.kind === 'image') {
-            ImageStorage.instance.delete(entry.hash);
-            Logger.debug(`[media-bundle] removed failed image placeholder: ${entry.hash}`);
-          } else if (entry.kind === 'audio') {
-            AudioStorage.instance.delete(entry.hash);
-            Logger.debug(`[media-bundle] removed failed audio placeholder: ${entry.hash}`);
           }
         }
       }
