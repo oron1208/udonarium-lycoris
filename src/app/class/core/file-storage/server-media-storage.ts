@@ -79,7 +79,13 @@ export class ServerMediaStorage {
     const key = `image:${identifier}`;
     if (this.uploading.has(key)) return false;
     await this.upload('image', identifier, blob, name, true);
-    return this.knownOnServer.has(identifier);
+    if (this.knownOnServer.has(identifier)) {
+      // 自己補充完了を全体へ通知：PUTした端末は?ラッチを解除して表示を復活させる
+      //（blob所持端末はLOCAL_ONLYバッジのまま、未所持端末は以後の取得で自己修復）
+      void this.notifyRecovered('image', identifier);
+      return true;
+    }
+    return false;
   }
 
   /** 補充用の音声再アップロード。knownOnServer キャッシュを無視してサーバー実在確認(HEAD)のみを信頼する。 */
@@ -92,7 +98,11 @@ export class ServerMediaStorage {
     const key = `audio:${identifier}`;
     if (this.uploading.has(key)) return false;
     await this.upload('audio', identifier, blob, name, true);
-    return this.knownOnServer.has(identifier);
+    if (this.knownOnServer.has(identifier)) {
+      void this.notifyRecovered('audio', identifier);
+      return true;
+    }
+    return false;
   }
 
   /** 画像を取得。戻り値で「成功/不在/サーバー障害」を区別する。in-flight なら同じ Promise を待つ。 */

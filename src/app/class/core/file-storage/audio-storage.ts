@@ -35,6 +35,11 @@ export class AudioStorage {
           this.missingOnServer.add(event.data.identifier);
           Logger.debug(`[AudioStorage] marked missing on server: ${event.data.identifier}`);
         }
+      })
+      .on('MEDIA_REPLENISHED', event => {
+        if (event.data?.kind === 'audio' && event.data?.identifier) {
+          this.missingOnServer.delete(event.data.identifier);
+        }
       });
   }
 
