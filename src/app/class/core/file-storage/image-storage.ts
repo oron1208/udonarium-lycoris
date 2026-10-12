@@ -49,7 +49,13 @@ export class ImageStorage {
   /** missingOnServerの状態を該当ImageFileのmissingフラグへ反映（MISSINGプレースホルダー表示用） */
   private applyMissingFlag(identifier: string) {
     const image = this.imageHash[identifier];
-    if (image) image.missing = this.missingOnServer.has(identifier);
+    if (!image) return;
+    // blob完全所持なら「?」表示にしない（missing表示はblob未所持のときだけ。所持データはLOCAL_ONLY＝再送候補）
+    if (image.blob && ImageState.COMPLETE <= image.state && image.state < ImageState.URL) {
+      image.missing = false;
+      return;
+    }
+    image.missing = this.missingOnServer.has(identifier);
   }
 
   private destroy() {
