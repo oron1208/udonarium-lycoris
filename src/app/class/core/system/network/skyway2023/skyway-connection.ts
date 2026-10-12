@@ -50,6 +50,8 @@ export class SkyWayConnection implements Connection {
 
   private recoveryTimer: ReturnType<typeof setInterval> | null = null;
   private readonly connectingSince = new Map<string, number>();
+  /** reconcile連続自己不在カウンタ（4回=約20秒で接続破綻とみなす） */
+  private selfMissingCount = 0;
 
   configure(config: any) {
     this.skyWay.url = config?.backend?.url ?? '';
@@ -73,6 +75,7 @@ export class SkyWayConnection implements Connection {
       peer = PeerContext.create(args[0], args[1], args[2], args[3]);
     }
     this.trustedPeerIds.clear();
+    this.selfMissingCount = 0;
     this.openSkyWay(peer);
   }
 
@@ -341,6 +344,19 @@ export class SkyWayConnection implements Connection {
   private reconcileRoomMembers() {
     if (!this.skyWay.isOpen || !this.skyWay.room) return;
     const members = new Set(this.skyWay.room.members.map(member => member.name));
+    // 自分自身が部屋メンバーから消えている＝SDKがkeepalive失敗等でローカル退室扱いした状態。
+    // isOpenはtrueのまま固まり既存検知（isOpen=false 8秒）が発火しないため、ここで接続を明示的に壊す。
+    if (!members.has(this.peerId)) {
+      this.selfMissingCount++;
+      Logger.warn(`[SkyWay] self missing from room members (${this.selfMissingCount}/4)`);
+      if (this.selfMissingCount >= 4) {
+        this.selfMissingCount = 0;
+        this.skyWay.markBroken('self dropped from room members');
+        return;
+      }
+    } else {
+      this.selfMissingCount = 0;
+    }
     for (const stream of this.streams) {
       const started = this.connectingSince.get(stream.peer.peerId);
       if (!members.has(stream.peer.peerId) ||

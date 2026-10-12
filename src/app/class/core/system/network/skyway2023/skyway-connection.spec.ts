@@ -98,4 +98,18 @@ describe('SkyWay synchronization recovery', () => {
     expect(removeListener).toHaveBeenCalled();
     expect(stream.peer.isOpen).toBeFalse();
   });
+  it('marks the connection broken when self drops from room members', () => {
+    const markBroken = spyOn(connection.skyWay, 'markBroken');
+    connection.skyWay.room = { members: [] };
+    for (let i = 0; i < 4; i++) connection.reconcileRoomMembers();
+    expect(markBroken).toHaveBeenCalledTimes(1);
+    // 検知したらカウンタはリセットされ、自己が復帰すれば壊れない
+    connection.skyWay.room = { members: [{ name: connection.peerId }] };
+    connection.reconcileRoomMembers();
+    connection.skyWay.room = { members: [] };
+    for (let i = 0; i < 3; i++) connection.reconcileRoomMembers();
+    expect(markBroken).toHaveBeenCalledTimes(1);
+    connection.reconcileRoomMembers();
+    expect(markBroken).toHaveBeenCalledTimes(2);
+  });
 });

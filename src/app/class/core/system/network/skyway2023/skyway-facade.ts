@@ -75,6 +75,20 @@ export class SkyWayFacade {
     }
   }
 
+  /**
+   * 期待しない退室・輸送断線など、SDKが接続を破綻扱いすべき状態になったときに
+   * isOpenを確実にfalseへ倒してonCloseを通知する。
+   * AutoReconnect（isOpen=false 8秒継続）を発火させるための経路。
+   */
+  markBroken(reason: string) {
+    if (this.isDestroyed) return;
+    Logger.warn(`[SkyWay] connection broken: ${reason}`);
+    if (this.isOpen) {
+      this.close();
+      if (this.onClose) this.onClose(this.peer);
+    }
+  }
+
   private async createContext() {
     await this.disposeContext();
     if (this.isDestroyed) return;
@@ -189,7 +203,8 @@ export class SkyWayFacade {
 
     Logger.debug(`lobbyPerson join <${this.lobby.name}>`);
     lobbyPerson.onLeft.add(() => {
-      Logger.debug(`lobbyPerson onClosed`);
+      Logger.debug(`lobbyPerson onLeft`);
+      this.markBroken('lobbyPerson left unexpectedly');
     });
 
     lobbyPerson.onFatalError.add(err => {
@@ -236,6 +251,11 @@ export class SkyWayFacade {
     });
 
     Logger.debug(`roomPerson join <${this.room.name}>`);
+
+    roomPerson.onLeft.add(() => {
+      Logger.warn('roomPerson onLeft (unexpected)');
+      this.markBroken('roomPerson left unexpectedly');
+    });
 
     roomPerson.onFatalError.add(err => {
       Logger.error('roomPerson onFatalError', err);

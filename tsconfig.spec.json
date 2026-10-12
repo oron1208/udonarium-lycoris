@@ -5,7 +5,8 @@
     "outDir": "./out-tsc/spec",
     "types": [
       "node",
-      "jasmine"
+      "jasmine",
+      "hammerjs"
     ]
   },
   "files": [
