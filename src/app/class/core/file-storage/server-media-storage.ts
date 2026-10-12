@@ -1,5 +1,6 @@
 import { EventSystem } from '../system';
 import { AudioFile } from './audio-file';
+import { BlobIntegrity } from './blob-integrity';
 import { ImageFile } from './image-file';
 import { Logger } from '../system/util/logger';
 import { MediaLoadPriority, MediaPriority } from './media-load-priority';
@@ -70,6 +71,11 @@ export class ServerMediaStorage {
    */
   static async replenishUploadImage(identifier: string, blob: Blob, name?: string): Promise<boolean> {
     if (!/^[a-f0-9]{64}$/.test(String(identifier || '')) || !blob) return false;
+    // 補充前検証: 破損blobのアップロードを拒否し、サーバー汚染と破損の無限拡散を防ぐ
+    if (!(await BlobIntegrity.isIntact(identifier, blob))) {
+      Logger.warn(`[ServerMediaStorage] refuse to replenish corrupt image ${identifier.slice(0, 12)} (hash mismatch)`);
+      return false;
+    }
     const key = `image:${identifier}`;
     if (this.uploading.has(key)) return false;
     await this.upload('image', identifier, blob, name, true);
@@ -79,6 +85,10 @@ export class ServerMediaStorage {
   /** 補充用の音声再アップロード。knownOnServer キャッシュを無視してサーバー実在確認(HEAD)のみを信頼する。 */
   static async replenishUploadAudio(identifier: string, blob: Blob, name?: string): Promise<boolean> {
     if (!/^[a-f0-9]{64}$/.test(String(identifier || '')) || !blob) return false;
+    if (!(await BlobIntegrity.isIntact(identifier, blob))) {
+      Logger.warn(`[ServerMediaStorage] refuse to replenish corrupt audio ${identifier.slice(0, 12)} (hash mismatch)`);
+      return false;
+    }
     const key = `audio:${identifier}`;
     if (this.uploading.has(key)) return false;
     await this.upload('audio', identifier, blob, name, true);
@@ -408,10 +418,18 @@ export class ServerMediaStorage {
           init
         );
         if (response.ok) {
+          const blob = await response.blob();
+          // 受信検証: identifierはblobのSHA-256。不一致はサーバー側破損データとしてmissing扱いにする
+          if (!(await BlobIntegrity.isIntact(identifier, blob))) {
+            Logger.warn(`[ServerMediaStorage] server data corrupt ${kind}:${identifier.slice(0, 12)} (hash mismatch, treated as missing)`);
+            this.knownOnServer.delete(identifier);
+            this.notifyMissing(kind, identifier);
+            return { status: 'missing' };
+          }
           this.knownOnServer.add(identifier);
           void this.notifyRecovered(kind, identifier);
           const name = this.extractFileName(response);
-          return { status: 'ok', blob: await response.blob(), name };
+          return { status: 'ok', blob, name };
         }
         if (response.status === 404) {
           // 「サーバーにあるはず」キャッシュを自己矯正（サーバー側消失に追従する）

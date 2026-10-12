@@ -1,6 +1,7 @@
 import { Database } from '../../database/database';
 import { Logger } from '../system/util/logger';
 import { AudioFile, AudioState } from './audio-file';
+import { BlobIntegrity } from './blob-integrity';
 import { ImageFile, ImageState } from './image-file';
 import { MediaPriority } from './media-load-priority';
 import { FetchResult, ServerMediaStorage } from './server-media-storage';
@@ -59,6 +60,11 @@ export class MediaCache {
       if (file.state >= ImageState.URL) return;
       const blob = file.context.blob;
       if (!blob || blob.size === 0) return;
+      // 保存時検証: P2P受信や同期経由で混入した破損blobをキャッシュに永続化しない
+      if (!(await BlobIntegrity.isIntact(identifier, blob))) {
+        Logger.warn(`[MediaCache] refuse to cache corrupt image ${identifier.slice(0, 12)} (hash mismatch)`);
+        return;
+      }
       // サムネイルは空blobをnullに正規化（Safari/iOSのIndexedDBクラッシュ時に空blobが混入する事故への防御）
       const thumbBlob = file.context.thumbnail.blob && file.context.thumbnail.blob.size > 0 ? file.context.thumbnail.blob : null;
       const entry: CachedImage = {
@@ -86,6 +92,11 @@ export class MediaCache {
       if (!/^[a-f0-9]{64}$/i.test(identifier)) return;
       if (file.state >= AudioState.URL) return;
       if (!file.blob || file.blob.size === 0) return;
+      // 保存時検証: 破損blobをキャッシュに永続化しない
+      if (!(await BlobIntegrity.isIntact(identifier, file.blob))) {
+        Logger.warn(`[MediaCache] refuse to cache corrupt audio ${identifier.slice(0, 12)} (hash mismatch)`);
+        return;
+      }
       const entry: CachedAudio = {
         identifier,
         name: file.name,
@@ -101,6 +112,17 @@ export class MediaCache {
     }
   }
 
+  /** 画像blobがデコードできるか検証する（サムネイルなど内容ハッシュを持たないblob用） */
+  private static async isDecodable(blob: Blob): Promise<boolean> {
+    try {
+      const bitmap = await createImageBitmap(blob);
+      bitmap.close();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   private static restoreImage(identifier: string): Promise<ImageFile | null> {
     const inFlight = MediaCache.restoringImage.get(identifier);
     if (inFlight) return inFlight;
@@ -112,6 +134,18 @@ export class MediaCache {
           // クラッシュ等で空のまま保存された破損キャッシュを削除し、サーバー再取得にフォールバックする（自己修復）
           await MediaCache.imageDb.delete(identifier).catch(() => undefined);
           Logger.warn(`[MediaCache] purged broken image cache ${identifier.slice(0, 12)} (empty blob)`);
+          return null;
+        }
+        // 破損検知: identifierはblob内容のSHA-256。再計算して一致しなければ中身が壊れている
+        if (!(await BlobIntegrity.isIntact(identifier, entry.blob))) {
+          await MediaCache.imageDb.delete(identifier).catch(() => undefined);
+          Logger.warn(`[MediaCache] purged corrupt image cache ${identifier.slice(0, 12)} (hash mismatch)`);
+          return null;
+        }
+        // サムネイルは内容ハッシュを持たないためデコード試験で検証する
+        if (entry.thumbBlob && entry.thumbBlob.size > 0 && !(await MediaCache.isDecodable(entry.thumbBlob))) {
+          await MediaCache.imageDb.delete(identifier).catch(() => undefined);
+          Logger.warn(`[MediaCache] purged corrupt image cache ${identifier.slice(0, 12)} (thumbnail decode failed)`);
           return null;
         }
         const image = ImageFile.create({
@@ -145,6 +179,12 @@ export class MediaCache {
         if (!entry.blob || entry.blob.size === 0) {
           await MediaCache.audioDb.delete(identifier).catch(() => undefined);
           Logger.warn(`[MediaCache] purged broken audio cache ${identifier.slice(0, 12)} (empty blob)`);
+          return null;
+        }
+        // 破損検知: identifierはblob内容のSHA-256。再計算して一致しなければ中身が壊れている
+        if (!(await BlobIntegrity.isIntact(identifier, entry.blob))) {
+          await MediaCache.audioDb.delete(identifier).catch(() => undefined);
+          Logger.warn(`[MediaCache] purged corrupt audio cache ${identifier.slice(0, 12)} (hash mismatch)`);
           return null;
         }
         const audio = AudioFile.create({

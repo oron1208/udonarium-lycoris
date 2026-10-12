@@ -1,6 +1,7 @@
 import { EventSystem, Network } from '../system';
 import { UUID } from '../system/util/uuid';
 import { BufferSharingTask } from './buffer-sharing-task';
+import { BlobIntegrity } from './blob-integrity';
 import { FileReaderUtil } from './file-reader-util';
 import { ImageContext, ImageFile, ImageState } from './image-file';
 import { CatalogItem, ImageStorage } from './image-storage';
@@ -169,17 +170,31 @@ export class ImageSharingSystem {
         const waitMs = Math.floor(Math.random() * 1500);
         Logger.debug(`[ImageSharingSystem] replenish candidate ${identifier.slice(0, 12)} in ${waitMs}ms`);
         setTimeout(() => {
-          void ServerMediaStorage.replenishUploadImage(identifier, blob, name);
+          void (async () => {
+            // 補充前検証: 壊れたblobのアップロードを拒否（サーバー汚染と破損の無限拡散を防ぐ）
+            if (!(await BlobIntegrity.isIntact(identifier, blob))) {
+              Logger.warn(`[ImageSharingSystem] refuse to replenish corrupt blob ${identifier.slice(0, 12)} (hash mismatch)`);
+              return;
+            }
+            void ServerMediaStorage.replenishUploadImage(identifier, blob, name);
+          })();
         }, waitMs);
       })
       .on('UPDATE_FILE_RESOURE', 1000, event => {
         let updateImages: ImageContext[] = event.data.updateImages;
         Logger.debug('UPDATE_FILE_RESOURE ImageStorageService ' + event.sendFrom + ' -> ', updateImages);
-        for (let context of updateImages) {
-          if (context.blob) context.blob = new Blob([context.blob], { type: context.type });
-          if (context.thumbnail.blob) context.thumbnail.blob = new Blob([context.thumbnail.blob], { type: context.thumbnail.type });
-          ImageStorage.instance.add(context);
-        }
+        void (async () => {
+          for (let context of updateImages) {
+            // 受信検証: identifierはblob内容のSHA-256。壊れたblobはメモリにも入れない（broken表示と再拡散の遮断）
+            if (context.blob && /^[a-f0-9]{64}$/i.test(context.identifier || '') && !(await BlobIntegrity.isIntact(context.identifier, context.blob))) {
+              Logger.warn(`[ImageSharingSystem] discard corrupt received image ${context.identifier.slice(0, 12)} (hash mismatch)`);
+              continue;
+            }
+            if (context.blob) context.blob = new Blob([context.blob], { type: context.type });
+            if (context.thumbnail.blob) context.thumbnail.blob = new Blob([context.thumbnail.blob], { type: context.thumbnail.type });
+            ImageStorage.instance.add(context);
+          }
+        })();
       })
       .on('START_FILE_TRANSMISSION', event => {
         Logger.debug('START_FILE_TRANSMISSION ' + event.data.taskIdentifier);
