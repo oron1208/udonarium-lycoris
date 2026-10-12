@@ -824,7 +824,9 @@ export class InitialRoomSync {
         throw new Error(`invalid initial room ZIP entry metadata: ${entry.name}`);
       }
       let file = files.find(candidate => candidate.name === entry.name);
-      if (!file || this.declaredUncompressedSize(file) !== entry.bytes) {
+      let actualSize = file ? this.declaredUncompressedSize(file) : null;
+      if (!file || actualSize !== entry.bytes) {
+        Logger.warn(`[IRS-debug] size mismatch: entry=${entry.name} declared=${entry.bytes} actual=${actualSize} fileFound=${!!file} hasData=${!!(file && (file as any)._data)}`);
         throw new Error(`initial room ZIP entry size mismatch: ${entry.name}`);
       }
       if (entry.kind === 'objects') {
