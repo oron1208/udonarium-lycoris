@@ -11,6 +11,7 @@ import { ServerMediaStorage } from '@udonarium/core/file-storage/server-media-st
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { EventSystem, Network } from '@udonarium/core/system';
 import { GameCharacter } from '@udonarium/game-character';
+import { PeerCursor } from '@udonarium/peer-cursor';
 import { DiceBot } from '@udonarium/dice-bot';
 import { Config } from '@udonarium/config';
 import { ChatMessageService } from 'service/chat-message.service';
@@ -919,20 +920,24 @@ export class VnStageComponent implements OnInit, OnDestroy {
     return image ? image.url : '';
   }
 
-  /** 送信者の立ち絵ID（メッセージのimageIdentifierが送信キャラの立ち絵なら丸アイコンとして表示） */
-  vnAvatarId(msg: ChatMessage): string {
+  /** キャラの立ち絵とプレイヤーのアイコンを、貼り付け画像から区別する。 */
+  static chatAvatarIdentifier(msg: ChatMessage): string {
     if (!msg.imageIdentifier || msg.isSystem) return '';
-    const character = ObjectStore.instance.get<GameCharacter>(msg.sendFrom);
-    if (!(character instanceof GameCharacter) || !character.imageDataElement) return '';
-    const children = character.imageDataElement.children || [];
-    for (let i = 0; i < children.length; i++) {
-      const id = String((children[i] as any)?.value || '');
-      if (id && id === msg.imageIdentifier) {
-        this.ensureImageLoaded(id);
-        return id;
-      }
+    const sender = ObjectStore.instance.get(msg.sendFrom);
+    if (sender instanceof PeerCursor) {
+      return sender.imageIdentifier === msg.imageIdentifier ? msg.imageIdentifier : '';
+    }
+    if (sender instanceof GameCharacter && sender.imageDataElement) {
+      return sender.imageDataElement.children.some(child => String(child.value || '') === msg.imageIdentifier)
+        ? msg.imageIdentifier : '';
     }
     return '';
+  }
+
+  vnAvatarId(msg: ChatMessage): string {
+    const id = VnStageComponent.chatAvatarIdentifier(msg);
+    if (id) this.ensureImageLoaded(id);
+    return id;
   }
 
   /** メッセージ本文に表示する画像（送信者の立ち絵でないもの＝貼り付け画像） */
@@ -1923,14 +1928,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
     if (m.imageIdentifier) {
       const image = ImageStorage.instance.get(m.imageIdentifier);
       const url = image && image.url ? image.url : '';
-      const isTachie = isCharacterMessage && (() => {
-        const children = character.imageDataElement ? (character.imageDataElement.children || []) : [];
-        for (let i = 0; i < children.length; i++) {
-          if (String((children[i] as any)?.value || '') === m.imageIdentifier) return true;
-        }
-        return false;
-      })();
-      if (isTachie) avatarUrl = url; else imageUrl = url;
+      if (VnStageComponent.chatAvatarIdentifier(m)) avatarUrl = url; else imageUrl = url;
     }
     return {
       name: m.name || '',

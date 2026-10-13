@@ -381,27 +381,36 @@
           <div class="vn-log-msg" [attr.data-vn-msg-id]="msg.identifier"
             [class.system]="msg.isSystem" [class.is-secret]="msg.isSecret"
             [class.mine]="vnIsMine(msg)" [class.other]="!msg.isSystem && !vnIsMine(msg)">
-            @if (!msg.isSystem && vnAvatarId(msg)) {
-              <img class="vn-log-avatar" [src]="vnImageUrl(vnAvatarId(msg)) | safe: 'resourceUrl'" [title]="msg.name" />
+            @if (!msg.isSystem) {
+              <div class="vn-log-avatar-slot">
+                @if (vnAvatarId(msg)) {
+                  <img class="vn-log-avatar" [src]="vnImageUrl(vnAvatarId(msg)) | safe: 'resourceUrl'" [alt]="msg.name" [title]="msg.name"
+                    (dblclick)="vnZoomIdentifier = vnAvatarId(msg)" />
+                } @else {
+                  <span class="vn-log-avatar vn-log-avatar-placeholder" aria-hidden="true">{{ (msg.name || '?').slice(0, 1) }}</span>
+                }
+              </div>
             }
-            <div class="vn-log-bubble">
+            <div class="vn-log-content">
               @if (msg.name && !msg.isSystem && !vnIsMine(msg)) {
                 <span class="vn-log-name">{{ msg.name }}</span>
               }
-              @if (msg.isSecret && !isSecretRevealed(msg)) {
-                <span class="vn-log-text vn-log-secret-hidden">🔒秘匿メッセージ</span>
-                @if (canRevealSecret(msg)) {
-                  <button type="button" class="vn-log-reveal-btn" (click)="revealSecret(msg); $event.preventDefault(); $event.stopPropagation()">内容公開</button>
+              <div class="vn-log-bubble">
+                @if (msg.isSecret && !isSecretRevealed(msg)) {
+                  <span class="vn-log-text vn-log-secret-hidden">🔒秘匿メッセージ</span>
+                  @if (canRevealSecret(msg)) {
+                    <button type="button" class="vn-log-reveal-btn" (click)="revealSecret(msg); $event.preventDefault(); $event.stopPropagation()">内容公開</button>
+                  }
                 }
-              }
-              @if (!msg.isSecret || isSecretRevealed(msg)) {
-                <span class="vn-log-text">{{ msg.text }}</span>
-              }
-              @if ((!msg.isSecret || isSecretRevealed(msg)) && vnMessageImageId(msg)) {
-                <img class="vn-log-image"
-                  [src]="vnImageUrl(vnMessageImageId(msg)) | safe: 'resourceUrl'"
-                  (dblclick)="vnZoomIdentifier = vnMessageImageId(msg)" title="ダブルクリックで拡大" />
-              }
+                @if (!msg.isSecret || isSecretRevealed(msg)) {
+                  <span class="vn-log-text">{{ msg.text }}</span>
+                }
+                @if ((!msg.isSecret || isSecretRevealed(msg)) && vnMessageImageId(msg)) {
+                  <img class="vn-log-image"
+                    [src]="vnImageUrl(vnMessageImageId(msg)) | safe: 'resourceUrl'"
+                    (dblclick)="vnZoomIdentifier = vnMessageImageId(msg)" title="ダブルクリックで拡大" />
+                }
+              </div>
             </div>
           </div>
         }

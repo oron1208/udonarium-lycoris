@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnDestroy, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { PopupBridgeService, PopupBridgeCharacter } from 'service/popup-bridge.service';
 
 /** palette-browser が必要な最小限の面だけを持つ、サブウィンドウ側のパレット。 */
@@ -43,7 +43,7 @@ export class PopupWindowComponent implements OnInit, OnDestroy {
   private offMessage: () => void = null;
   private readonly sendBye = () => this.channel.post({ type: 'bye' });
 
-  constructor(public bridge: PopupBridgeService) {
+  constructor(public bridge: PopupBridgeService, private changeDetectorRef: ChangeDetectorRef) {
     this.kind = bridge.windowKind;
   }
 
@@ -53,7 +53,11 @@ export class PopupWindowComponent implements OnInit, OnDestroy {
     document.title = this.kind === 'chat' ? 'チャット - ユドナリウムリコリス'
       : this.kind === 'vnchat' ? 'VNチャット - ユドナリウムリコリス'
       : 'チャパレ - ユドナリウムリコリス';
-    this.offMessage = this.bridge.windowChannel().onMessage(message => this.handle(message));
+    this.offMessage = this.bridge.windowChannel().onMessage(message => {
+      this.handle(message);
+      // BroadcastChannel callbacks do not schedule change detection in zoneless mode.
+      this.changeDetectorRef.markForCheck();
+    });
     this.channel.post({ type: 'ready' });
     // 接続が切れたら再送できるよう、常時 ping を送り続ける（ごく軽い）。
     this.pingTimer = setInterval(() => this.channel.post({ type: 'ready' }), 2000);

@@ -29,39 +29,49 @@
 .pc-zoom-overlay img { max-width: 92vw; max-height: 92vh; object-fit: contain; }
 
 /* ===== VNテーマ: LINE/iMessage風吹き出し ===== */
-.chat-pane.vn .entry { display: flex; gap: 6px; margin: 5px 2px; align-items: flex-start; }
+.chat-pane.vn .entry { display: flex; gap: 8px; margin: 12px 0; align-items: flex-start; }
 .chat-pane.vn .entry.mine { flex-direction: row-reverse; }
+.chat-pane.vn .pc-avatar-slot { flex: 0 0 32px; width: 32px; }
 .chat-pane.vn .pc-avatar {
-  width: 20px;
-  height: 20px;
+  display: block;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   object-fit: cover;
-  flex-shrink: 0;
-  margin-top: 3px;
+  object-position: center 20%;
+  background: rgba(255,255,255,0.12);
+  cursor: zoom-in;
 }
+.chat-pane.vn .pc-avatar-placeholder { display: grid; place-items: center; font-size: 13px; cursor: default; }
+.chat-pane.vn .pc-content { min-width: 0; max-width: calc(100% - 40px); }
+.chat-pane.vn .entry.mine .pc-content { display: flex; flex-direction: column; align-items: flex-end; }
 .chat-pane.vn .pc-bubble {
-  max-width: 84%;
-  padding: 4px 10px;
+  box-sizing: border-box;
+  width: fit-content;
+  max-width: 100%;
+  padding: 7px 11px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.13);
-  border-bottom-left-radius: 4px;
+  border-top-left-radius: 4px;
+  overflow-wrap: anywhere;
 }
 .chat-pane.vn .entry.mine .pc-bubble {
   background: rgba(74, 103, 214, 0.38);
-  border-bottom-left-radius: 14px;
-  border-bottom-right-radius: 4px;
+  border-top-left-radius: 14px;
+  border-top-right-radius: 4px;
 }
 .chat-pane.vn .entry.system { justify-content: center; }
+.chat-pane.vn .entry.system .pc-content { max-width: 95%; }
 .chat-pane.vn .entry.system .pc-bubble {
   background: rgba(0, 0, 0, 0.4);
   color: rgba(255, 255, 255, 0.55);
   font-size: 11px;
   border-radius: 10px;
   text-align: center;
-  max-width: 95%;
+  max-width: 100%;
 }
 .chat-pane.vn .entry.is-secret .pc-bubble { border: 1px dashed rgba(255, 255, 255, 0.25); }
-.chat-pane.vn .pc-image { max-width: 150px; max-height: 110px; }
+.chat-pane.vn .pc-image { display: block; max-width: min(150px, 100%); max-height: 110px; object-fit: contain; border-radius: 8px; margin-top: 3px; }
 
 /* 個人設定の文字サイズ（通常テーマのみ） */
 .chat-pane:not(.vn) .log .text { font-size: var(--lycoris-chat-font-size, 14px); }
@@ -74,7 +84,7 @@
 .entry .name { font-weight: bold; font-size: 12px; margin-bottom: 2px; color: #444; }
 .entry .badge { font-size: 10px; font-weight: normal; margin-left: 6px; padding: 1px 6px;
   border-radius: 8px; background: rgba(90, 90, 90, .12); color: #777; }
-.chat-pane.vn .entry .name { color: #ccc; }
+.chat-pane.vn .entry .name { color: #ccc; font-size: 11px; margin: 0 0 3px 2px; overflow-wrap: anywhere; }
 .entry .text { font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; color: #333; }
 .chat-pane.vn .entry .text { color: #e6e6e6; }
 .entry.system .text { color: #8a7c6c; font-size: 12px; }
@@ -131,5 +141,6 @@
   border-radius: 10px;
   padding: 4px 9px;
 }
+.chat-pane:not(.vn) .pc-content { flex: 1 1 auto; min-width: 0; }
 .chat-pane:not(.vn) .pc-image { margin-top: 0; }
 

@@ -16,31 +16,45 @@
       <div class="entry"
         [class.system]="entry.isSystem" [class.dicebot]="entry.isDicebot"
         [class.mine]="entry.isMine" [class.other]="!entry.isSystem && !entry.isMine" [class.is-secret]="entry.isSecret">
-        @if (vn && entry.avatarUrl) {
-          <img class="pc-avatar" [src]="entry.avatarUrl | safe: 'resourceUrl'" [title]="entry.name" />
+        @if (vn && !entry.isSystem) {
+          <div class="pc-avatar-slot">
+            @if (entry.avatarUrl) {
+              <img class="pc-avatar" [src]="entry.avatarUrl | safe: 'resourceUrl'" [alt]="entry.name" [title]="entry.name" (dblclick)="zoomUrl = entry.avatarUrl" />
+            } @else {
+              <span class="pc-avatar pc-avatar-placeholder" aria-hidden="true">{{ (entry.name || '?').slice(0, 1) }}</span>
+            }
+          </div>
         }
         @if (!vn && entry.imageUrl && (!entry.isSecret || entry.secretVisible)) {
           <img class="pc-image pc-image-lead"
             [src]="entry.imageUrl | safe: 'resourceUrl'" (dblclick)="zoomUrl = entry.imageUrl" title="ダブルクリックで拡大" />
         }
-        <div class="pc-bubble">
-          @if (entry.name && !(vn && entry.isMine)) {
-            <div class="name"
-              [style.color]="entry.messColor || null">{{ entry.name }}@if (entry.isDicebot) {
+        <div class="pc-content">
+          @if (vn && entry.name && !entry.isMine) {
+            <div class="name">{{ entry.name }}@if (entry.isDicebot) {
               <span class="badge">ダイス</span>
               }@if (entry.isSecret && entry.secretVisible) {
               <span class="badge">シークレット</span>
             }</div>
           }
-          @if (!entry.isSecret || entry.secretVisible) {
-            <div class="text">{{ entry.text }}</div>
-          }
-          @if (entry.isSecret && !entry.secretVisible) {
-            <div class="text secret-hidden">{{ secretLabel(entry) }}</div>
-          }
-          @if (vn && entry.imageUrl && (!entry.isSecret || entry.secretVisible)) {
-            <img class="pc-image" [src]="entry.imageUrl | safe: 'resourceUrl'" (dblclick)="zoomUrl = entry.imageUrl" title="ダブルクリックで拡大" />
-          }
+          <div class="pc-bubble">
+            @if (!vn && entry.name) {
+              <div class="name" [style.color]="entry.messColor || null">{{ entry.name }}@if (entry.isDicebot) {
+                <span class="badge">ダイス</span>
+              }@if (entry.isSecret && entry.secretVisible) {
+                <span class="badge">シークレット</span>
+              }</div>
+            }
+            @if (!entry.isSecret || entry.secretVisible) {
+              <div class="text">{{ entry.text }}</div>
+            }
+            @if (entry.isSecret && !entry.secretVisible) {
+              <div class="text secret-hidden">{{ secretLabel(entry) }}</div>
+            }
+            @if (vn && entry.imageUrl && (!entry.isSecret || entry.secretVisible)) {
+              <img class="pc-image" [src]="entry.imageUrl | safe: 'resourceUrl'" (dblclick)="zoomUrl = entry.imageUrl" title="ダブルクリックで拡大" />
+            }
+          </div>
         </div>
       </div>
     }
