@@ -18,9 +18,10 @@ import { ChatTabList } from '@udonarium/chat-tab-list';
 import { ChatTachieImageComponent } from 'component/chat-tachie-img/chat-tachie-img.component';
 
 @Component({
-  selector: 'chat-tachie',
-  templateUrl: './chat-tachie.component.html',
-  styleUrls: ['./chat-tachie.component.css']
+    selector: 'chat-tachie',
+    templateUrl: './chat-tachie.component.html',
+    styleUrls: ['./chat-tachie.component.css'],
+    standalone: false
 })
 export class ChatTachieComponent implements OnInit, OnDestroy, AfterViewInit, AfterViewChecked {
 

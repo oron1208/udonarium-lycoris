@@ -16,10 +16,11 @@ import { PanelService } from 'service/panel.service';
 import { ImageTag } from '@udonarium/image-tag';//本家PR #92より
 
 @Component({
-  selector: 'file-selector',
-  templateUrl: './file-selecter.component.html',
-  styleUrls: ['./file-selecter.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'file-selector',
+    templateUrl: './file-selecter.component.html',
+    styleUrls: ['./file-selecter.component.css'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    standalone: false
 })
 export class FileSelecterComponent implements OnInit, OnDestroy, AfterViewInit {
 

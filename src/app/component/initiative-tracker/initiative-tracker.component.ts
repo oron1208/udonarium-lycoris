@@ -8,9 +8,10 @@ import { PanelService } from 'service/panel.service';
 import { GmModeService } from 'service/gm-mode.service';
 
 @Component({
-  selector: 'initiative-tracker',
-  templateUrl: './initiative-tracker.component.html',
-  styleUrls: ['./initiative-tracker.component.css']
+    selector: 'initiative-tracker',
+    templateUrl: './initiative-tracker.component.html',
+    styleUrls: ['./initiative-tracker.component.css'],
+    standalone: false
 })
 export class InitiativeTrackerComponent implements OnInit, OnDestroy {
   isCollapsed = false;

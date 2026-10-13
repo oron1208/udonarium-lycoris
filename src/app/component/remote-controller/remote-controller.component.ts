@@ -35,10 +35,10 @@ class RemoteControllerSelect {
 }
 
 @Component({
-  selector: 'remote-controller',
-  templateUrl: './remote-controller.component.html',
-  styleUrls: ['./remote-controller.component.css']
-
+    selector: 'remote-controller',
+    templateUrl: './remote-controller.component.html',
+    styleUrls: ['./remote-controller.component.css'],
+    standalone: false
 })
 export class RemoteControllerComponent implements OnInit, OnDestroy, AfterViewInit {
 

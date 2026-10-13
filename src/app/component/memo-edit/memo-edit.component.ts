@@ -2,9 +2,10 @@ import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, NgZone, OnDest
 import { ModalService } from 'service/modal.service';
 
 @Component({
-  selector: 'memo-edit',
-  templateUrl: './memo-edit.component.html',
-  styleUrls: ['./memo-edit.component.css']
+    selector: 'memo-edit',
+    templateUrl: './memo-edit.component.html',
+    styleUrls: ['./memo-edit.component.css'],
+    standalone: false
 })
 export class MemoEditComponent implements AfterViewInit, OnDestroy {
   memo = '';

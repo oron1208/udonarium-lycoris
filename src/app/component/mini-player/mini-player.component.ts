@@ -16,9 +16,10 @@ interface TrackSelection {
 }
 
 @Component({
-  selector: 'app-mini-player',
-  templateUrl: './mini-player.component.html',
-  styleUrls: ['./mini-player.component.css']
+    selector: 'app-mini-player',
+    templateUrl: './mini-player.component.html',
+    styleUrls: ['./mini-player.component.css'],
+    standalone: false
 })
 export class MiniPlayerComponent implements OnInit, OnDestroy, DoCheck {
   visible = false;

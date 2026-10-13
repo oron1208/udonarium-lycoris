@@ -18,9 +18,10 @@ import { ChatTabList } from '@udonarium/chat-tab-list';
 import { ChatTab } from '@udonarium/chat-tab';
 
 @Component({
-  selector: 'initiative-panel',
-  templateUrl: './initiative-panel.component.html',
-  styleUrls: ['./initiative-panel.component.css']
+    selector: 'initiative-panel',
+    templateUrl: './initiative-panel.component.html',
+    styleUrls: ['./initiative-panel.component.css'],
+    standalone: false
 })
 export class InitiativePanelComponent implements OnInit, OnDestroy {
   selectedDice: string = 'd6';

@@ -15,9 +15,10 @@ import { PeerCursor } from '@udonarium/peer-cursor';
 
 
 @Component({
-  selector: 'app-chat-tab-setting',
-  templateUrl: './chat-tab-setting.component.html',
-  styleUrls: ['./chat-tab-setting.component.css']
+    selector: 'app-chat-tab-setting',
+    templateUrl: './chat-tab-setting.component.html',
+    styleUrls: ['./chat-tab-setting.component.css'],
+    standalone: false
 })
 export class ChatTabSettingComponent implements OnInit, OnDestroy {
   selectedTab: ChatTab = null;

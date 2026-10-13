@@ -5,9 +5,10 @@ import { AfterViewChecked, Component, ElementRef, Input, OnChanges, Output, Even
  * ログ表示・タブ切替・送信だけを行い、実際の送信はメイン画面のオーナーが行う。
  */
 @Component({
-  selector: 'popup-chat',
-  templateUrl: './popup-chat.component.html',
-  styleUrls: ['./popup-chat.component.css']
+    selector: 'popup-chat',
+    templateUrl: './popup-chat.component.html',
+    styleUrls: ['./popup-chat.component.css'],
+    standalone: false
 })
 export class PopupChatComponent implements OnChanges, AfterViewChecked {
   @Input() state: any = null;

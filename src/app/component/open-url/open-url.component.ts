@@ -4,9 +4,10 @@ import { ModalService } from 'service/modal.service';
 import { PanelService } from 'service/panel.service';
 
 @Component({
-  selector: 'open-url',
-  templateUrl: './open-url.component.html',
-  styleUrls: ['./open-url.component.css']
+    selector: 'open-url',
+    templateUrl: './open-url.component.html',
+    styleUrls: ['./open-url.component.css'],
+    standalone: false
 })
 export class OpenUrlComponent implements OnInit, OnDestroy {
   url: string = '';

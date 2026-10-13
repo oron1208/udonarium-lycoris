@@ -16,10 +16,10 @@ import { PanelOption, PanelService } from 'service/panel.service';
 import { Vote, VoteContext } from '@udonarium/vote';
 
 @Component({
-  selector: 'app-vote-window',
-  templateUrl: './vote-window.component.html',
-  styleUrls: ['./vote-window.component.css']
-
+    selector: 'app-vote-window',
+    templateUrl: './vote-window.component.html',
+    styleUrls: ['./vote-window.component.css'],
+    standalone: false
 })
 export class VoteWindowComponent implements AfterViewInit, OnInit, OnDestroy {
 

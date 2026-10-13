@@ -19,9 +19,10 @@ import { PeerContext, IPeerContext } from '@udonarium/core/system/network/peer-c
 import { Vote, VoteContext } from '@udonarium/vote';
 
 @Component({
-  selector: 'app-vote-menu',
-  templateUrl: './vote-menu.component.html',
-  styleUrls: ['./vote-menu.component.css']
+    selector: 'app-vote-menu',
+    templateUrl: './vote-menu.component.html',
+    styleUrls: ['./vote-menu.component.css'],
+    standalone: false
 })
 export class VoteMenuComponent implements OnInit, OnDestroy, AfterViewInit {
 

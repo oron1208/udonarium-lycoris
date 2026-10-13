@@ -25,9 +25,10 @@ import { ChatColorSettingComponent } from 'component/chat-color-setting/chat-col
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 
 @Component({
-  selector: 'controller-input',
-  templateUrl: './controller-input.component.html',
-  styleUrls: ['./controller-input.component.css']
+    selector: 'controller-input',
+    templateUrl: './controller-input.component.html',
+    styleUrls: ['./controller-input.component.css'],
+    standalone: false
 })
 export class ControllerInputComponent implements OnInit, OnDestroy {
   get gameType(): string { return this._gameType; }

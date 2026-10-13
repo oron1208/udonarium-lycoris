@@ -22,10 +22,11 @@ import { RemoteControllerComponent } from 'component/remote-controller/remote-co
 import { GmModeService } from 'service/gm-mode.service';
 
 @Component({
-  selector: 'game-object-inventory',
-  templateUrl: './game-object-inventory.component.html',
-  styleUrls: ['./game-object-inventory.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'game-object-inventory',
+    templateUrl: './game-object-inventory.component.html',
+    styleUrls: ['./game-object-inventory.component.css'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    standalone: false
 })
 export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDestroy {
   inventoryTypes: string[] = ['table', 'common', 'graveyard'];

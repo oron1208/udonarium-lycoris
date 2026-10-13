@@ -9,10 +9,11 @@ import { StickyNoteService } from 'service/sticky-note.service';
 const NOTE_COLORS = ['#ffe973', '#a8e6a1', '#a1d6e6', '#f4b8d8', '#f4c8a8', 'glass'];
 
 @Component({
-  selector: 'sticky-note',
-  templateUrl: './sticky-note.component.html',
-  styleUrls: ['./sticky-note.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'sticky-note',
+    templateUrl: './sticky-note.component.html',
+    styleUrls: ['./sticky-note.component.css'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    standalone: false
 })
 export class StickyNoteComponent implements OnInit, OnDestroy {
   @Input() stickyNote: StickyNote = null;

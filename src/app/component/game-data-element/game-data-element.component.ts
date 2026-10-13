@@ -29,10 +29,11 @@ import { SafeHtml, DomSanitizer } from '@angular/platform-browser';
 import { GameCharacter } from '@udonarium/game-character';
 
 @Component({
-  selector: 'game-data-element, [game-data-element]',
-  templateUrl: './game-data-element.component.html',
-  styleUrls: ['./game-data-element.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'game-data-element, [game-data-element]',
+    templateUrl: './game-data-element.component.html',
+    styleUrls: ['./game-data-element.component.css'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    standalone: false
 })
 export class GameDataElementComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() gameDataElement: DataElement = null;

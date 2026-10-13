@@ -58,9 +58,10 @@ interface VnActor {
 }
 
 @Component({
-  selector: 'vn-stage',
-  templateUrl: './vn-stage.component.html',
-  styleUrls: ['./vn-stage.component.css']
+    selector: 'vn-stage',
+    templateUrl: './vn-stage.component.html',
+    styleUrls: ['./vn-stage.component.css'],
+    standalone: false
 })
 export class VnStageComponent implements OnInit, OnDestroy {
   @HostBinding('class.vn-has-front-pinned') get hasFrontPinnedSubPanel(): boolean { return this.paletteFrontPinned || this.logFrontPinned; }

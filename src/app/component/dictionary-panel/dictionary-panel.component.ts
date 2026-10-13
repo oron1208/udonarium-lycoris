@@ -6,10 +6,11 @@ import { DiceBot } from '@udonarium/dice-bot';
 import { DictionaryService, DictCharacter, DictMaterial, DictPalette, DictPage, DictCollection, DictType } from 'service/dictionary.service';
 
 @Component({
-  selector: 'dictionary-panel',
-  templateUrl: './dictionary-panel.component.html',
-  styleUrls: ['./dictionary-panel.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'dictionary-panel',
+    templateUrl: './dictionary-panel.component.html',
+    styleUrls: ['./dictionary-panel.component.css'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    standalone: false
 })
 export class DictionaryPanelComponent implements OnDestroy {
   selectedDictId = '';

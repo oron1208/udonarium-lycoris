@@ -11,12 +11,12 @@ import { EventSystem } from '@udonarium/core/system';
 import { DataElement } from '@udonarium/data-element';
 
 @Component({
-  selector: 'game-data-element-buff, [game-data-element-buff]',
-  templateUrl: './game-data-element-buff.component.html',
-  styleUrls: ['./game-data-element-buff.component.css'],
-//  changeDetection: ChangeDetectionStrategy.OnPush
-    changeDetection: ChangeDetectionStrategy.Default
-
+    selector: 'game-data-element-buff, [game-data-element-buff]',
+    templateUrl: './game-data-element-buff.component.html',
+    styleUrls: ['./game-data-element-buff.component.css'],
+    //  changeDetection: ChangeDetectionStrategy.OnPush
+    changeDetection: ChangeDetectionStrategy.Default,
+    standalone: false
 })
 export class GameDataElementBuffComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() gameDataElement: DataElement = null;

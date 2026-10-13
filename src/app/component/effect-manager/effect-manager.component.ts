@@ -37,9 +37,10 @@ interface BuffBar {
 }
 
 @Component({
-  selector: 'effect-manager',
-  templateUrl: './effect-manager.component.html',
-  styleUrls: ['./effect-manager.component.css']
+    selector: 'effect-manager',
+    templateUrl: './effect-manager.component.html',
+    styleUrls: ['./effect-manager.component.css'],
+    standalone: false
 })
 export class EffectManagerComponent implements OnInit, OnDestroy {
   // フィルタ

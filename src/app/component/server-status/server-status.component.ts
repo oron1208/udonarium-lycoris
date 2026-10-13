@@ -36,9 +36,10 @@ interface ServerStatus {
 }
 
 @Component({
-  selector: 'server-status',
-  templateUrl: './server-status.component.html',
-  styleUrls: ['./server-status.component.css']
+    selector: 'server-status',
+    templateUrl: './server-status.component.html',
+    styleUrls: ['./server-status.component.css'],
+    standalone: false
 })
 export class ServerStatusComponent implements OnInit, OnDestroy {
   status: ServerStatus | null = null;

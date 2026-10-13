@@ -30,9 +30,10 @@ interface DiceSummary {
 }
 
 @Component({
-  selector: 'batch-dice-roller',
-  templateUrl: './batch-dice-roller.component.html',
-  styleUrls: ['./batch-dice-roller.component.css']
+    selector: 'batch-dice-roller',
+    templateUrl: './batch-dice-roller.component.html',
+    styleUrls: ['./batch-dice-roller.component.css'],
+    standalone: false
 })
 export class BatchDiceRollerComponent implements OnInit, OnDestroy {
   @Input() characters: GameCharacter[] = [];

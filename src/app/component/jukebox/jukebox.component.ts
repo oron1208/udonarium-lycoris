@@ -19,9 +19,10 @@ import { CutInLauncher } from '@udonarium/cut-in-launcher';
 import { AudioLibraryService, ServerAudioTrack } from 'service/audio-library.service';
 
 @Component({
-  selector: 'app-jukebox',
-  templateUrl: './jukebox.component.html',
-  styleUrls: ['./jukebox.component.css']
+    selector: 'app-jukebox',
+    templateUrl: './jukebox.component.html',
+    styleUrls: ['./jukebox.component.css'],
+    standalone: false
 })
 export class JukeboxComponent implements OnInit, OnDestroy {
 

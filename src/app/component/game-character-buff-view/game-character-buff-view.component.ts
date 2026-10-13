@@ -16,9 +16,10 @@ import { DiceBot } from '@udonarium/dice-bot';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 
 @Component({
-  selector: 'game-character-buff-view',
-  templateUrl: './game-character-buff-view.component.html',
-  styleUrls: ['./game-character-buff-view.component.css']
+    selector: 'game-character-buff-view',
+    templateUrl: './game-character-buff-view.component.html',
+    styleUrls: ['./game-character-buff-view.component.css'],
+    standalone: false
 })
 export class GameCharacterBuffViewComponent implements OnInit {
 

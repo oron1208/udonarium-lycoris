@@ -37,9 +37,10 @@ const PAGE_COUNT = 5;
 const TOTAL_SLOT_COUNT = SLOT_COUNT * PAGE_COUNT;
 
 @Component({
-  selector: 'macro-hotbar',
-  templateUrl: './macro-hotbar.component.html',
-  styleUrls: ['./macro-hotbar.component.css']
+    selector: 'macro-hotbar',
+    templateUrl: './macro-hotbar.component.html',
+    styleUrls: ['./macro-hotbar.component.css'],
+    standalone: false
 })
 export class MacroHotbarComponent {
   @ViewChild('importFileInput') importFileInput!: ElementRef<HTMLInputElement>;

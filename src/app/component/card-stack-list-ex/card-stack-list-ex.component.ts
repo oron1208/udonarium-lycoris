@@ -12,10 +12,11 @@ import { GameCharacterSheetComponent } from 'component/game-character-sheet/game
 import { PanelOption, PanelService } from 'service/panel.service';
 
 @Component({
-  selector: 'card-stack-list-ex',
-  templateUrl: './card-stack-list-ex.component.html',
-  styleUrls: ['./card-stack-list-ex.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'card-stack-list-ex',
+    templateUrl: './card-stack-list-ex.component.html',
+    styleUrls: ['./card-stack-list-ex.component.css'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    standalone: false
 })
 export class CardStackListComponentEx implements OnInit, OnDestroy {
   @Input() cardStack: CardStack = null;

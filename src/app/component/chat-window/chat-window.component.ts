@@ -26,9 +26,10 @@ import { PopupBridgeService } from 'service/popup-bridge.service';
 
 
 @Component({
-  selector: 'chat-window',
-  templateUrl: './chat-window.component.html',
-  styleUrls: ['./chat-window.component.css']
+    selector: 'chat-window',
+    templateUrl: './chat-window.component.html',
+    styleUrls: ['./chat-window.component.css'],
+    standalone: false
 })
 export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
   sendFrom: string = 'Guest';

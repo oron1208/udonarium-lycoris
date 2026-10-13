@@ -14,9 +14,10 @@ import { ModalService } from 'service/modal.service';
 import { PanelService } from 'service/panel.service';
 
 @Component({
-  selector: 'data-import-menu',
-  templateUrl: './data-import-menu.component.html',
-  styleUrls: ['./data-import-menu.component.css']
+    selector: 'data-import-menu',
+    templateUrl: './data-import-menu.component.html',
+    styleUrls: ['./data-import-menu.component.css'],
+    standalone: false
 })
 export class DataImportMenuComponent {
   get reloadCheck(): ReloadCheck { return ObjectStore.instance.get<ReloadCheck>('ReloadCheck'); }

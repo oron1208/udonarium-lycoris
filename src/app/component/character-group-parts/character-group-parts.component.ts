@@ -28,10 +28,11 @@ import { TabletopService } from 'service/tabletop.service';
  * CardStackListComponent と同じパターン(PanelService.open で生成、@Input を後設定)。
  */
 @Component({
-  selector: 'character-group-parts',
-  templateUrl: './character-group-parts.component.html',
-  styleUrls: ['./character-group-parts.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'character-group-parts',
+    templateUrl: './character-group-parts.component.html',
+    styleUrls: ['./character-group-parts.component.css'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    standalone: false
 })
 export class CharacterGroupPartsPanelComponent implements OnInit, OnDestroy {
   @Input() characterGroup: GameCharacterGroup = null;

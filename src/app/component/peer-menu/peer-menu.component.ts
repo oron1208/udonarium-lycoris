@@ -37,9 +37,10 @@ const GM_CURSOR_SHARE_DISABLED_KEY = 'udonarium.gm.cursorShareDisabled';
 
 
 @Component({
-  selector: 'peer-menu',
-  templateUrl: './peer-menu.component.html',
-  styleUrls: ['./peer-menu.component.css']
+    selector: 'peer-menu',
+    templateUrl: './peer-menu.component.html',
+    styleUrls: ['./peer-menu.component.css'],
+    standalone: false
 })
 export class PeerMenuComponent implements OnInit, OnDestroy, AfterViewInit {
 

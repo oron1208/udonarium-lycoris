@@ -26,9 +26,10 @@ import { PeerMenuComponent } from 'component/peer-menu/peer-menu.component';
 
 
 @Component({
-  selector: 'app-cut-in-window',
-  templateUrl: './cut-in-window.component.html',
-  styleUrls: ['./cut-in-window.component.css']
+    selector: 'app-cut-in-window',
+    templateUrl: './cut-in-window.component.html',
+    styleUrls: ['./cut-in-window.component.css'],
+    standalone: false
 })
 export class CutInWindowComponent implements AfterViewInit, OnInit, OnDestroy {
 

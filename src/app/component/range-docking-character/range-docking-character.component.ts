@@ -22,10 +22,11 @@ import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 
 @Component({
-  selector: 'range-docking-character',
-  templateUrl: './range-docking-character.component.html',
-  styleUrls: ['./range-docking-character.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'range-docking-character',
+    templateUrl: './range-docking-character.component.html',
+    styleUrls: ['./range-docking-character.component.css'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    standalone: false
 })
 export class RangeDockingCharacterComponent implements OnInit, OnDestroy, AfterViewInit {
 

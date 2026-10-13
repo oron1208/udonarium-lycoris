@@ -21,9 +21,10 @@ import { Vote, VoteContext } from '@udonarium/vote';
 
 
 @Component({
-  selector: 'app-alarm-menu',
-  templateUrl: './alarm-menu.component.html',
-  styleUrls: ['./alarm-menu.component.css']
+    selector: 'app-alarm-menu',
+    templateUrl: './alarm-menu.component.html',
+    styleUrls: ['./alarm-menu.component.css'],
+    standalone: false
 })
 export class AlarmMenuComponent implements OnInit, OnDestroy, AfterViewInit {
 

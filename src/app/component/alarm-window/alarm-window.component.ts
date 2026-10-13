@@ -15,9 +15,10 @@ import { PanelOption, PanelService } from 'service/panel.service';
 import { Alarm, AlarmContext } from '@udonarium/alarm';
 
 @Component({
-  selector: 'app-alarm-window',
-  templateUrl: './alarm-window.component.html',
-  styleUrls: ['./alarm-window.component.css']
+    selector: 'app-alarm-window',
+    templateUrl: './alarm-window.component.html',
+    styleUrls: ['./alarm-window.component.css'],
+    standalone: false
 })
 export class AlarmWindowComponent implements AfterViewInit, OnInit, OnDestroy {
 

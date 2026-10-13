@@ -18,9 +18,10 @@ import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 import { ChatTabList } from '@udonarium/chat-tab-list';
 
 @Component({
-  selector: 'card-stack-list-img',
-  templateUrl: './card-stack-list-img.component.html',
-  styleUrls: ['./card-stack-list-img.component.css']
+    selector: 'card-stack-list-img',
+    templateUrl: './card-stack-list-img.component.html',
+    styleUrls: ['./card-stack-list-img.component.css'],
+    standalone: false
 })
 export class CardStackListImageComponent implements OnInit, OnDestroy, AfterViewInit, AfterViewChecked {
 

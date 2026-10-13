@@ -17,10 +17,11 @@ import { ChatTabList } from '@udonarium/chat-tab-list';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 
 @Component({
-  selector: 'chat-message-setting',
-  templateUrl: './chat-message-setting.component.html',
-  styleUrls: ['./chat-message-setting.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'chat-message-setting',
+    templateUrl: './chat-message-setting.component.html',
+    styleUrls: ['./chat-message-setting.component.css'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    standalone: false
 })
 export class ChatMessageSettingComponent implements OnInit, OnDestroy, AfterViewInit {
 

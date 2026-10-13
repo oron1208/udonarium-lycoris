@@ -7,9 +7,10 @@ import { Logger } from '../../class/core/system/util/logger';
 import { EventSystem } from '@udonarium/core/system';
 
 @Component({
-  selector: 'context-menu',
-  templateUrl: './context-menu.component.html',
-  styleUrls: ['./context-menu.component.css']
+    selector: 'context-menu',
+    templateUrl: './context-menu.component.html',
+    styleUrls: ['./context-menu.component.css'],
+    standalone: false
 })
 export class ContextMenuComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('root', { static: true }) rootElementRef!: ElementRef<HTMLElement>;

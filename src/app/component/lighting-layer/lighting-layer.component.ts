@@ -16,9 +16,10 @@ interface LightSource {
 }
 
 @Component({
-  selector: 'lighting-layer',
-  templateUrl: './lighting-layer.component.html',
-  styleUrls: ['./lighting-layer.component.css']
+    selector: 'lighting-layer',
+    templateUrl: './lighting-layer.component.html',
+    styleUrls: ['./lighting-layer.component.css'],
+    standalone: false
 })
 export class LightingLayerComponent implements OnInit, OnDestroy {
   @ViewChild('lightCanvas', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;

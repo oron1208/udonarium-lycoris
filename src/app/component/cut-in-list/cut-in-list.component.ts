@@ -31,9 +31,10 @@ import { PeerCursor } from '@udonarium/peer-cursor';
 
 
 @Component({
-  selector: 'app-cut-in-list',
-  templateUrl: './cut-in-list.component.html',
-  styleUrls: ['./cut-in-list.component.css']
+    selector: 'app-cut-in-list',
+    templateUrl: './cut-in-list.component.html',
+    styleUrls: ['./cut-in-list.component.css'],
+    standalone: false
 })
 export class CutInListComponent implements OnInit, OnDestroy {
 

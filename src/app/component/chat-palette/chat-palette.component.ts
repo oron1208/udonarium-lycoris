@@ -23,9 +23,10 @@ import { ChatMessage, ChatMessageContext, ChatMessageTargetContext } from '@udon
 import { PopupBridgeService } from 'service/popup-bridge.service';
 
 @Component({
-  selector: 'chat-palette',
-  templateUrl: './chat-palette.component.html',
-  styleUrls: ['./chat-palette.component.css']
+    selector: 'chat-palette',
+    templateUrl: './chat-palette.component.html',
+    styleUrls: ['./chat-palette.component.css'],
+    standalone: false
 })
 export class ChatPaletteComponent implements OnInit, OnDestroy {
   @ViewChild('root', { static: true }) rootElementRef!: ElementRef<HTMLElement>;

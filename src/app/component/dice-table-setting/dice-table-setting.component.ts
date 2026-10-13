@@ -14,9 +14,10 @@ import { DiceTable } from '@udonarium/dice-table';
 import { DiceTablePalette } from '@udonarium/chat-palette';
 
 @Component({
-  selector: 'dice-table-setting',
-  templateUrl: './dice-table-setting.component.html',
-  styleUrls: ['./dice-table-setting.component.css']
+    selector: 'dice-table-setting',
+    templateUrl: './dice-table-setting.component.html',
+    styleUrls: ['./dice-table-setting.component.css'],
+    standalone: false
 })
 export class DiceTableSettingComponent implements OnInit, OnDestroy, AfterViewInit {
 

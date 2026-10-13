@@ -30,9 +30,10 @@ import { RangeArea } from '@udonarium/range';
 import { GameTableScratchMask } from '@udonarium/game-table-scratch-mask';
 
 @Component({
-  selector: 'game-character-sheet',
-  templateUrl: './game-character-sheet.component.html',
-  styleUrls: ['./game-character-sheet.component.css']
+    selector: 'game-character-sheet',
+    templateUrl: './game-character-sheet.component.html',
+    styleUrls: ['./game-character-sheet.component.css'],
+    standalone: false
 })
 export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterViewInit {
 

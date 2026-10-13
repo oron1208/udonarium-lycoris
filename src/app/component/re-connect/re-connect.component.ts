@@ -23,9 +23,10 @@ import { ModalService } from 'service/modal.service';
 import { PanelService } from 'service/panel.service';
 
 @Component({
-  selector: 're-connect',
-  templateUrl: './re-connect.component.html',
-  styleUrls: ['./re-connect.component.css'],
+    selector: 're-connect',
+    templateUrl: './re-connect.component.html',
+    styleUrls: ['./re-connect.component.css'],
+    standalone: false
 })
 export class ReConnectComponent implements OnInit, OnDestroy {
   rooms: { alias: string, roomName: string, peerContexts: PeerContext[] }[] = [];

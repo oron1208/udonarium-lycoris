@@ -12,9 +12,10 @@ import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
 import { Logger } from '../../class/core/system/util/logger';
 
 @Component({
-  selector: 'initiative-dice-roller',
-  templateUrl: './initiative-dice-roller.component.html',
-  styleUrls: ['./initiative-dice-roller.component.css']
+    selector: 'initiative-dice-roller',
+    templateUrl: './initiative-dice-roller.component.html',
+    styleUrls: ['./initiative-dice-roller.component.css'],
+    standalone: false
 })
 export class InitiativeDiceRollerComponent implements OnInit, OnDestroy {
   diceExpression: string = '';

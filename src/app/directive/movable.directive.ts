@@ -28,7 +28,8 @@ interface GroupMoveTarget {
 }
 
 @Directive({
-  selector: '[appMovable]'
+    selector: '[appMovable]',
+    standalone: false
 })
 export class MovableDirective implements AfterViewInit, OnDestroy {
   private static layerHash: { [layerName: string]: MovableDirective[] } = {};

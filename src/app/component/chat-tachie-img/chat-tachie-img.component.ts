@@ -18,9 +18,10 @@ import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 import { ChatTabList } from '@udonarium/chat-tab-list';
 
 @Component({
-  selector: 'chat-tachie-img',
-  templateUrl: './chat-tachie-img.component.html',
-  styleUrls: ['./chat-tachie-img.component.css']
+    selector: 'chat-tachie-img',
+    templateUrl: './chat-tachie-img.component.html',
+    styleUrls: ['./chat-tachie-img.component.css'],
+    standalone: false
 })
 export class ChatTachieImageComponent implements OnInit, OnDestroy, AfterViewInit, AfterViewChecked {
 

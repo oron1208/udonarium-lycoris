@@ -7,9 +7,10 @@ import { PanelService } from 'service/panel.service';
 import { TabletopService } from 'service/tabletop.service';
 
 @Component({
-  selector: 'lighting-panel',
-  templateUrl: './lighting-panel.component.html',
-  styleUrls: ['./lighting-panel.component.css']
+    selector: 'lighting-panel',
+    templateUrl: './lighting-panel.component.html',
+    styleUrls: ['./lighting-panel.component.css'],
+    standalone: false
 })
 export class LightingPanelComponent implements OnInit {
   state: LightingEffectState = {

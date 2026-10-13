@@ -35,20 +35,21 @@ interface DiceCutinData {
 }
 
 @Component({
-  selector: 'dice-cutin',
-  templateUrl: './dice-cutin.component.html',
-  styleUrls: ['./dice-cutin.component.css'],
-  animations: [
-    trigger('cutinAnimation', [
-      transition(':enter', [
-        style({ opacity: 0 }),
-        animate('0.3s ease-out', style({ opacity: 1 }))
-      ]),
-      transition(':leave', [
-        animate('0.3s ease-in', style({ opacity: 0 }))
-      ])
-    ])
-  ]
+    selector: 'dice-cutin',
+    templateUrl: './dice-cutin.component.html',
+    styleUrls: ['./dice-cutin.component.css'],
+    animations: [
+        trigger('cutinAnimation', [
+            transition(':enter', [
+                style({ opacity: 0 }),
+                animate('0.3s ease-out', style({ opacity: 1 }))
+            ]),
+            transition(':leave', [
+                animate('0.3s ease-in', style({ opacity: 0 }))
+            ])
+        ])
+    ],
+    standalone: false
 })
 export class DiceCutinComponent implements OnInit, OnDestroy {
   active: boolean = false;

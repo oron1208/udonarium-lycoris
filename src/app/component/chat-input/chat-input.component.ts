@@ -22,9 +22,10 @@ import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 import { Config } from '@udonarium/config';
 
 @Component({
-  selector: 'chat-input',
-  templateUrl: './chat-input.component.html',
-  styleUrls: ['./chat-input.component.css']
+    selector: 'chat-input',
+    templateUrl: './chat-input.component.html',
+    styleUrls: ['./chat-input.component.css'],
+    standalone: false
 })
 export class ChatInputComponent implements OnInit, OnDestroy {
   @ViewChild('textArea', { static: true }) textAreaElementRef!: ElementRef;

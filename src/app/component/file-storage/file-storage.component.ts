@@ -11,10 +11,11 @@ import { PanelService } from 'service/panel.service';
 import { ImageTag } from '@udonarium/image-tag';//本家PR #92より
 
 @Component({
-  selector: 'file-storage',
-  templateUrl: './file-storage.component.html',
-  styleUrls: ['./file-storage.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'file-storage',
+    templateUrl: './file-storage.component.html',
+    styleUrls: ['./file-storage.component.css'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    standalone: false
 })
 export class FileStorageComponent implements OnInit, OnDestroy, AfterViewInit {
 

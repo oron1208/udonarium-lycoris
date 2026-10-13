@@ -92,9 +92,10 @@ type WallGrid = {
 };
 
 @Component({
-  selector: 'game-table',
-  templateUrl: './game-table.component.html',
-  styleUrls: ['./game-table.component.css'],
+    selector: 'game-table',
+    templateUrl: './game-table.component.html',
+    styleUrls: ['./game-table.component.css'],
+    standalone: false
 })
 export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   static readonly DEFAULT_LAYER_VISIBILITY: TableLayerVisibility = {

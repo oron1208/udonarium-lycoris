@@ -16,10 +16,11 @@ import { PeerCursor } from '@udonarium/peer-cursor';
 import { Logger } from '../../class/core/system/util/logger';
 
 @Component({
-  selector: 'chat-color-setting',
-  templateUrl: './chat-color-setting.component.html',
-  styleUrls: ['./chat-color-setting.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'chat-color-setting',
+    templateUrl: './chat-color-setting.component.html',
+    styleUrls: ['./chat-color-setting.component.css'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    standalone: false
 })
 export class ChatColorSettingComponent implements OnInit, OnDestroy, AfterViewInit {
 

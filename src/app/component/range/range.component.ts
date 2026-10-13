@@ -36,10 +36,11 @@ import { TableSelecter } from '@udonarium/table-selecter';
 import { FilterType, GameTable, GridType } from '@udonarium/game-table';
 
 @Component({
-  selector: 'range',
-  templateUrl: './range.component.html',
-  styleUrls: ['./range.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'range',
+    templateUrl: './range.component.html',
+    styleUrls: ['./range.component.css'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    standalone: false
 })
 export class RangeComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() range: RangeArea = null;

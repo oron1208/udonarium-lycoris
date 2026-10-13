@@ -19,9 +19,10 @@ export class PopupPalette {
  * 接続・応答の窓口はこのシェルが1つだけ持ち、各ペインはデータとイベントの入出力だけを行う。
  */
 @Component({
-  selector: 'popup-window',
-  templateUrl: './popup-window.component.html',
-  styleUrls: ['./popup-window.component.css']
+    selector: 'popup-window',
+    templateUrl: './popup-window.component.html',
+    styleUrls: ['./popup-window.component.css'],
+    standalone: false
 })
 export class PopupWindowComponent implements OnInit, OnDestroy {
   readonly kind: string;

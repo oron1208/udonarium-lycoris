@@ -22,9 +22,10 @@ import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 import { Config } from '@udonarium/config';
 
 @Component({
-  selector: 'chat-message-fix',
-  templateUrl: './chat-message-fix.component.html',
-  styleUrls: ['./chat-message-fix.component.css']
+    selector: 'chat-message-fix',
+    templateUrl: './chat-message-fix.component.html',
+    styleUrls: ['./chat-message-fix.component.css'],
+    standalone: false
 })
 export class ChatMessageFixComponent implements OnInit, OnDestroy {
   @ViewChild('textArea', { static: true }) textAreaElementRef!: ElementRef;

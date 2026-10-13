@@ -17,9 +17,10 @@ import { PointerDeviceService } from 'service/pointer-device.service';
 import { Logger } from '@udonarium/core/system/util/logger';
 
 @Component({
-  selector: 'options-panel',
-  templateUrl: './options-panel.component.html',
-  styleUrls: ['./options-panel.component.css']
+    selector: 'options-panel',
+    templateUrl: './options-panel.component.html',
+    styleUrls: ['./options-panel.component.css'],
+    standalone: false
 })
 export class OptionsPanelComponent implements OnInit, OnDestroy {
   isMacroHotbarVisible = true;

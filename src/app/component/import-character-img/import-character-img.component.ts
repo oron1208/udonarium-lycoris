@@ -21,10 +21,11 @@ import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 
 @Component({
-  selector: 'import-character-img',
-  templateUrl: './import-character-img.component.html',
-  styleUrls: ['./import-character-img.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'import-character-img',
+    templateUrl: './import-character-img.component.html',
+    styleUrls: ['./import-character-img.component.css'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    standalone: false
 })
 export class ImportCharacterImgComponent implements OnInit, OnDestroy, AfterViewInit {
 

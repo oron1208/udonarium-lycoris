@@ -15,9 +15,10 @@ import { ModalService } from 'service/modal.service';
 import { PanelService } from 'service/panel.service';
 
 @Component({
-  selector: 'game-character-generator',
-  templateUrl: './game-character-generator.component.html',
-  styleUrls: ['./game-character-generator.component.css']
+    selector: 'game-character-generator',
+    templateUrl: './game-character-generator.component.html',
+    styleUrls: ['./game-character-generator.component.css'],
+    standalone: false
 })
 export class GameCharacterGeneratorComponent implements OnInit, OnDestroy, AfterViewInit {
 

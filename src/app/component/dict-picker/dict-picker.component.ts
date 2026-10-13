@@ -5,9 +5,10 @@ import { DictionaryService, DictCollection } from 'service/dictionary.service';
 
 /** 右クリック「辞書に登録」の登録先コマ辞書を選ぶモーダル。登録して結果を表示してから自動で閉じる */
 @Component({
-  selector: 'dict-picker',
-  templateUrl: './dict-picker.component.html',
-  styleUrls: ['./dict-picker.component.css']
+    selector: 'dict-picker',
+    templateUrl: './dict-picker.component.html',
+    styleUrls: ['./dict-picker.component.css'],
+    standalone: false
 })
 export class DictPickerComponent implements AfterViewInit, OnDestroy {
   selectedId = '';

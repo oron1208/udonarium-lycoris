@@ -3,9 +3,10 @@ import { EventSystem } from '@udonarium/core/system';
 import { MediaIntegrity, MediaIntegritySummary } from '@udonarium/core/file-storage/media-integrity';
 
 @Component({
-  selector: 'media-integrity-badge',
-  templateUrl: './media-integrity-badge.component.html',
-  styleUrls: ['./media-integrity-badge.component.css']
+    selector: 'media-integrity-badge',
+    templateUrl: './media-integrity-badge.component.html',
+    styleUrls: ['./media-integrity-badge.component.css'],
+    standalone: false
 })
 export class MediaIntegrityBadgeComponent implements OnInit, OnDestroy {
   summary: MediaIntegritySummary = { total: 0, ok: 0, localOnly: 0, missing: 0, items: [] };

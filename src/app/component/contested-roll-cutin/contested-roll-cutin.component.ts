@@ -39,20 +39,21 @@ interface TargetResult {
 }
 
 @Component({
-  selector: 'contested-roll-cutin',
-  templateUrl: './contested-roll-cutin.component.html',
-  styleUrls: ['./contested-roll-cutin.component.css'],
-  animations: [
-    trigger('cutinAnimation', [
-      transition(':enter', [
-        style({ opacity: 0, transform: 'scale(0.8)' }),
-        animate('0.4s cubic-bezier(0.16, 1, 0.3, 1)', style({ opacity: 1, transform: 'scale(1)' }))
-      ]),
-      transition(':leave', [
-        animate('0.3s ease-in', style({ opacity: 0, transform: 'scale(0.9)' }))
-      ])
-    ])
-  ]
+    selector: 'contested-roll-cutin',
+    templateUrl: './contested-roll-cutin.component.html',
+    styleUrls: ['./contested-roll-cutin.component.css'],
+    animations: [
+        trigger('cutinAnimation', [
+            transition(':enter', [
+                style({ opacity: 0, transform: 'scale(0.8)' }),
+                animate('0.4s cubic-bezier(0.16, 1, 0.3, 1)', style({ opacity: 1, transform: 'scale(1)' }))
+            ]),
+            transition(':leave', [
+                animate('0.3s ease-in', style({ opacity: 0, transform: 'scale(0.9)' }))
+            ])
+        ])
+    ],
+    standalone: false
 })
 export class ContestedRollCutinComponent implements OnInit, OnDestroy {
   active: boolean = false;

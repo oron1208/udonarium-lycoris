@@ -20,9 +20,10 @@ interface TargetResult {
 }
 
 @Component({
-  selector: 'batch-damage-panel',
-  templateUrl: './batch-damage-panel.component.html',
-  styleUrls: ['./batch-damage-panel.component.css']
+    selector: 'batch-damage-panel',
+    templateUrl: './batch-damage-panel.component.html',
+    styleUrls: ['./batch-damage-panel.component.css'],
+    standalone: false
 })
 export class BatchDamagePanelComponent implements OnInit, OnDestroy {
   attacker: GameCharacter = null;

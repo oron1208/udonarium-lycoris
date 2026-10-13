@@ -15,9 +15,10 @@ import { PointerDeviceService } from 'service/pointer-device.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 
 @Component({
-  selector: 'app-cut-in-bgm',
-  templateUrl: './cut-in-bgm.component.html',
-  styleUrls: ['./cut-in-bgm.component.css']
+    selector: 'app-cut-in-bgm',
+    templateUrl: './cut-in-bgm.component.html',
+    styleUrls: ['./cut-in-bgm.component.css'],
+    standalone: false
 })
 export class CutInBgmComponent implements OnInit, OnDestroy {
 
