@@ -4,7 +4,7 @@
   @for (card of cardStack.cards; track trackByCard($index, card)) {
     <ng-container class="box">
       <img class = "card-image"
-        [src]="card?.frontImage?.url | safe: 'resourceUrl'"
+        [src]="$safeNavigationMigration(card?.frontImage?.url) | safe: 'resourceUrl'"
         >
     </ng-container>
   }

@@ -8,7 +8,7 @@
     <div>
       <ng-select class="ud-select is-caret" style="width: 12em;" [(ngModel)]="sendFrom" [clearable]="false">
         @if (!onlyCharacters) {
-          <ng-option [value]="myPeer?.identifier">{{myPeer?.name}}（あなた）</ng-option>
+          <ng-option [value]="$safeNavigationMigration(myPeer?.identifier)">{{myPeer?.name}}（あなた）</ng-option>
         }
         @for (gameCharacter of gameCharacters; track gameCharacter) {
           <ng-option [value]="gameCharacter.identifier">{{gameCharacter.name}}

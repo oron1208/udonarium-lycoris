@@ -8,7 +8,7 @@
       [style.width.px]="width * gridSize">
       <div class="is-3d" [ngClass]="{'is-transition': transition, 'fall': fall}" [ngStyle]="{'transform': 'translateZ(' + (altitude * gridSize) + 'px) rotateY(90deg) rotateZ(' + ((isUpright && !isFlatMode) ? 0 : 90) + 'deg) rotateY(-90deg)'}">
         <div class="upright-transform is-3d is-bg-color is-bg-texture chrome-smooth-image-trick"
-          [style.background-image]="'url(' + imageFile?.url + ')' | safe: 'style'" [style.width.px]="width * gridSize" [style.min-height.px]="height * gridSize" >
+          [style.background-image]="'url(' + $safeNavigationMigration(imageFile?.url) + ')' | safe: 'style'" [style.width.px]="width * gridSize" [style.min-height.px]="height * gridSize" >
           @if (title.length) {
             <div class="title is-black-background is-pointer-events-none">
               {{title}}

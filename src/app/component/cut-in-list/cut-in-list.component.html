@@ -3,7 +3,7 @@
     <div>
       <button (click)="createCutIn()">新しいカットインを作る</button>
     </div>
-    <select style="width: 15em;" size="20" (change)="selectCutIn($event.target.value)" [ngModel]="selectedCutIn?.identifier">
+    <select style="width: 15em;" size="20" (change)="selectCutIn($event.target.value)" [ngModel]="$safeNavigationMigration(selectedCutIn?.identifier)">
       @for (cutIn of getCutIns(); track cutIn) {
         <option value="{{cutIn.identifier}}">{{cutIn.name}}</option>
       }

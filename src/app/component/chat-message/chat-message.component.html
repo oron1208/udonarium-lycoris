@@ -6,7 +6,7 @@
         >
         <div class="image">
           @if (0 < imageFile?.url?.length) {
-            <img [src]="imageFile?.url | safe: 'resourceUrl'" (dblclick)="showZoom = true" title="ダブルクリックで拡大" />
+            <img [src]="$safeNavigationMigration(imageFile?.url) | safe: 'resourceUrl'" (dblclick)="showZoom = true" title="ダブルクリックで拡大" />
           }
         </div>
         <div class="body" [ngStyle]="{'color': chatMessage.messColor }">
@@ -73,6 +73,6 @@
 <!-- 画像拡大表示（ダブルクリックで開く・クリックで閉じる） -->
 @if (showZoom) {
   <div class="image-zoom-overlay" (click)="showZoom = false" title="クリックで閉じる">
-    <img [src]="imageFile?.url | safe: 'resourceUrl'" />
+    <img [src]="$safeNavigationMigration(imageFile?.url) | safe: 'resourceUrl'" />
   </div>
 }

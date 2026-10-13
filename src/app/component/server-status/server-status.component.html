@@ -23,15 +23,15 @@
         </div>
         <div class="stat-row">
           <span class="stat-label">システムメモリ</span>
-          <span class="stat-value">{{ memoryPercent }}%（{{ formatBytes(status.system?.memory.used) }} / {{ formatBytes(status.system?.memory.total) }}）</span>
+          <span class="stat-value">{{ memoryPercent }}%（{{ formatBytes($safeNavigationMigration(status.system?.memory.used)) }} / {{ formatBytes($safeNavigationMigration(status.system?.memory.total)) }}）</span>
         </div>
         <div class="stat-row">
           <span class="stat-label">Node RSS</span>
-          <span class="stat-value">{{ formatBytes(status.system?.memory.rss) }}</span>
+          <span class="stat-value">{{ formatBytes($safeNavigationMigration(status.system?.memory.rss)) }}</span>
         </div>
         <div class="stat-row">
           <span class="stat-label">Node Heap</span>
-          <span class="stat-value">{{ heapPercent }}%（{{ formatBytes(status.system?.memory.heapUsed) }} / {{ formatBytes(status.system?.memory.heapLimit) }}）</span>
+          <span class="stat-value">{{ heapPercent }}%（{{ formatBytes($safeNavigationMigration(status.system?.memory.heapUsed)) }} / {{ formatBytes($safeNavigationMigration(status.system?.memory.heapLimit)) }}）</span>
         </div>
         <div class="stat-row">
           <span class="stat-label">CPU Load 1m</span>

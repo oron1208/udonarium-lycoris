@@ -4,7 +4,7 @@
       <button (click)="createDiceTable()" [attr.disabled]="this.isEdit ? '' : null">新しい表を作る</button>
     </div>
     <select style="width: 100%;" size="15;padding-right:5px" (change)="selectDiceTable($event.target.value)"
-      [ngModel]="selectedTable?.identifier"  [attr.disabled]="this.isEdit ? '' : null">
+      [ngModel]="$safeNavigationMigration(selectedTable?.identifier)"  [attr.disabled]="this.isEdit ? '' : null">
       @for (diceTable of getDiceTables(); track diceTable) {
         <option value="{{diceTable.identifier}}">{{diceTable.name}}</option>
       }

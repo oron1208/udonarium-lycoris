@@ -3,7 +3,7 @@
     <div>
       <button (click)="create()">チャットタブを作る</button>
     </div>
-    <select style="width: 10em;" size="10" (change)="onChangeSelectTab($event.target.value)" [ngModel]="selectedTab?.identifier">
+    <select style="width: 10em;" size="10" (change)="onChangeSelectTab($event.target.value)" [ngModel]="$safeNavigationMigration(selectedTab?.identifier)">
       @for (chatTab of chatTabs; track chatTab) {
         <option value="{{chatTab.identifier}}">{{chatTab.name}}</option>
       }
