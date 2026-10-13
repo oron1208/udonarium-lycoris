@@ -314,12 +314,27 @@
 .vn-log-tabs {
   display: flex;
   overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
   align-items: center;
   gap: 2px;
   padding: 4px 6px;
   border-bottom: 1px solid rgba(255,255,255,0.1);
   flex-shrink: 0;
 }
+.vn-log-tabs::-webkit-scrollbar { display: none; }
+.vn-log-messages, .vn-log-search-results {
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.22) transparent;
+}
+.vn-log-messages::-webkit-scrollbar, .vn-log-search-results::-webkit-scrollbar { width: 5px; }
+.vn-log-messages::-webkit-scrollbar-track, .vn-log-search-results::-webkit-scrollbar-track { background: transparent; }
+.vn-log-messages::-webkit-scrollbar-thumb, .vn-log-search-results::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.22);
+  border-radius: 8px;
+}
+.vn-log-messages::-webkit-scrollbar-button, .vn-log-search-results::-webkit-scrollbar-button { display: none; }
 .vn-log-tab {
   flex-shrink: 0;
   max-width: 120px;
@@ -1245,7 +1260,7 @@
   cursor: zoom-in;
   box-shadow: 0 1px 4px rgba(0,0,0,0.4);
 }
-.vn-log-avatar-placeholder { display: grid; place-items: center; font-size: 13px; cursor: default; }
+.vn-log-avatar-placeholder { display: grid; place-items: center; font-size: 18px; cursor: default; }
 .vn-log-content { min-width: 0; max-width: calc(100% - 40px); }
 .vn-log-msg.mine .vn-log-content { display: flex; flex-direction: column; align-items: flex-end; }
 .vn-log-bubble {

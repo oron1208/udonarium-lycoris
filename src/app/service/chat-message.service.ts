@@ -172,6 +172,7 @@ export class ChatMessageService {
       to: this.findId(sendTo),
       name: this.makeMessageName(sendFrom, sendTo),
       imageIdentifier: imageIdentifier || this.findImageIdentifier(sendFrom, imgIndex), // Lycoris
+      imageKind: imageIdentifier ? 'attachment' : 'portrait',
       timestamp: this.calcTimeStamp(chatTab),
       tag: chatMessageTag,
       text: text,

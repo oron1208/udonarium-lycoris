@@ -387,7 +387,7 @@
                   <img class="vn-log-avatar" [src]="vnImageUrl(vnAvatarId(msg)) | safe: 'resourceUrl'" [alt]="msg.name" [title]="msg.name"
                     (dblclick)="vnZoomIdentifier = vnAvatarId(msg)" />
                 } @else {
-                  <span class="vn-log-avatar vn-log-avatar-placeholder" aria-hidden="true">{{ (msg.name || '?').slice(0, 1) }}</span>
+                  <span class="vn-log-avatar vn-log-avatar-placeholder material-icons" aria-hidden="true">person</span>
                 }
               </div>
             }

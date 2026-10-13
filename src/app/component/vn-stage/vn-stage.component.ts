@@ -920,18 +920,48 @@ export class VnStageComponent implements OnInit, OnDestroy {
     return image ? image.url : '';
   }
 
-  /** キャラの立ち絵とプレイヤーのアイコンを、貼り付け画像から区別する。 */
-  static chatAvatarIdentifier(msg: ChatMessage): string {
-    if (!msg.imageIdentifier || msg.isSystem) return '';
+  /** Imported/older logs can refer to a sender ID that no longer exists. */
+  private static chatSender(msg: ChatMessage): GameCharacter | PeerCursor {
     const sender = ObjectStore.instance.get(msg.sendFrom);
-    if (sender instanceof PeerCursor) {
-      return sender.imageIdentifier === msg.imageIdentifier ? msg.imageIdentifier : '';
+    if (sender instanceof GameCharacter || sender instanceof PeerCursor) return sender;
+    const name = String(msg.name || '').split(' > ')[0];
+    if (!name) return null;
+    const candidates: (GameCharacter | PeerCursor)[] = [
+      ...ObjectStore.instance.getObjects<GameCharacter>(GameCharacter),
+      ...ObjectStore.instance.getObjects<PeerCursor>(PeerCursor)
+    ].filter(candidate => candidate.name === name);
+    if (candidates.length === 1) return candidates[0];
+    const matching = candidates.filter(candidate => this.isSenderPortrait(candidate, msg.imageIdentifier));
+    return matching.length === 1 ? matching[0] : null;
+  }
+
+  private static isSenderPortrait(sender: GameCharacter | PeerCursor, identifier: string): boolean {
+    if (!identifier) return false;
+    if (sender instanceof PeerCursor) return sender.imageIdentifier === identifier;
+    return sender instanceof GameCharacter && !!sender.imageDataElement
+      && sender.imageDataElement.children.some(child => String(child.value || '') === identifier);
+  }
+
+  /** Avatar selection is independent of whether a message contains an attachment. */
+  static chatAvatarIdentifier(msg: ChatMessage): string {
+    if (msg.isSystem) return '';
+    const sender = this.chatSender(msg);
+    if (msg.imageKind !== 'attachment' && msg.imageIdentifier
+      && (msg.imageKind === 'portrait' || this.isSenderPortrait(sender, msg.imageIdentifier))) {
+      return msg.imageIdentifier;
     }
     if (sender instanceof GameCharacter && sender.imageDataElement) {
-      return sender.imageDataElement.children.some(child => String(child.value || '') === msg.imageIdentifier)
-        ? msg.imageIdentifier : '';
+      const selected = sender.imageDataElement.children[sender.selectedTachieNum];
+      return String(selected?.value || sender.imageFile.identifier || '');
     }
-    return '';
+    return sender instanceof PeerCursor ? sender.imageIdentifier : '';
+  }
+
+  static chatAttachmentIdentifier(msg: ChatMessage): string {
+    if (!msg.imageIdentifier || msg.isSystem || msg.imageKind === 'portrait') return '';
+    if (msg.imageKind === 'attachment') return msg.imageIdentifier;
+    // Backwards-compatible inference for logs saved before imageKind existed.
+    return this.isSenderPortrait(this.chatSender(msg), msg.imageIdentifier) ? '' : msg.imageIdentifier;
   }
 
   vnAvatarId(msg: ChatMessage): string {
@@ -940,10 +970,9 @@ export class VnStageComponent implements OnInit, OnDestroy {
     return id;
   }
 
-  /** メッセージ本文に表示する画像（送信者の立ち絵でないもの＝貼り付け画像） */
+  /** 本文には明示的に送った画像だけを表示する。 */
   vnMessageImageId(msg: ChatMessage): string {
-    if (!msg.imageIdentifier || msg.isSystem) return '';
-    return this.vnAvatarId(msg) ? '' : msg.imageIdentifier;
+    return VnStageComponent.chatAttachmentIdentifier(msg);
   }
 
   /** 自分の発言か（右側吹き出し）。プレイヤー発言のみtrue、キャラ発言はキャラ側（左）で表示 */
@@ -1921,15 +1950,12 @@ export class VnStageComponent implements OnInit, OnDestroy {
   private isVnChatServing(): boolean { return this.popupBridge.isServing(VnStageComponent.VN_CHAT_OWNER, this.vnChatToken); }
 
   static serializeChatEntry(m: ChatMessage) {
-    const character = ObjectStore.instance.get<GameCharacter>(m.sendFrom);
+    const character = VnStageComponent.chatSender(m);
     const isCharacterMessage = character instanceof GameCharacter;
-    let avatarUrl = '';
-    let imageUrl = '';
-    if (m.imageIdentifier) {
-      const image = ImageStorage.instance.get(m.imageIdentifier);
-      const url = image && image.url ? image.url : '';
-      if (VnStageComponent.chatAvatarIdentifier(m)) avatarUrl = url; else imageUrl = url;
-    }
+    const avatar = ImageStorage.instance.get(VnStageComponent.chatAvatarIdentifier(m));
+    const attachment = ImageStorage.instance.get(VnStageComponent.chatAttachmentIdentifier(m));
+    const avatarUrl = avatar?.url || '';
+    const imageUrl = attachment?.url || '';
     return {
       name: m.name || '',
       text: String(m.text ?? ''),

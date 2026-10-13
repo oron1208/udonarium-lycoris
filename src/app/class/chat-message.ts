@@ -28,6 +28,7 @@ export interface ChatMessageContext {
   tag?: string;
   dicebot?: string;
   imageIdentifier?: string;
+  imageKind?: string; // portrait / attachment; older logs have no marker
 
   imagePos?: number;
   messColor?: string;
@@ -45,6 +46,7 @@ export class ChatMessage extends ObjectNode implements ChatMessageContext {
   @SyncVar() tag!: string;
   @SyncVar() dicebot!: string;
   @SyncVar() imageIdentifier!: string;
+  @SyncVar() imageKind!: string;
   @SyncVar() imagePos!: number;
   @SyncVar() messColor!: string;
   @SyncVar() sendFrom!: string;
