@@ -1,4 +1,4 @@
-import { Component, NgZone, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, NgZone, OnDestroy, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { EventSystem } from '@udonarium/core/system';
@@ -7,6 +7,8 @@ import { ChatMessage } from '@udonarium/chat-message';
 import { ChatTab } from '@udonarium/chat-tab';
 import { GameCharacter } from '@udonarium/game-character';
 import { GameTable } from '@udonarium/game-table';
+import { PeerCursor } from '@udonarium/peer-cursor';
+import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 
 type DiceShape = 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'd20' | 'd100';
 
@@ -64,7 +66,8 @@ export class DiceCutinComponent implements OnInit, OnDestroy {
 
   constructor(
     private ngZone: NgZone,
-    private sanitizer: DomSanitizer
+    private sanitizer: DomSanitizer,
+    private changeDetectorRef: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -77,7 +80,10 @@ export class DiceCutinComponent implements OnInit, OnDestroy {
         // UPDATE_GAME_OBJECTは古いパスとして残すが、構造化イベントが既に処理済みならスキップ
       })
       .on('DICE_CUT_IN_STRUCTURED', event => {
-        this.ngZone.run(() => { this.tryStructuredCutin(event.data.rollResult); });
+        this.ngZone.run(() => {
+          this.tryStructuredCutin(event.data.rollResult, event.data.messageIdentifier);
+          this.changeDetectorRef.markForCheck();
+        });
       });
   }
 
@@ -208,7 +214,7 @@ export class DiceCutinComponent implements OnInit, OnDestroy {
   }
 
   /** 構造化データを使ったカットイン（DICE_CUT_IN_STRUCTUREDイベント用） */
-  private tryStructuredCutin(rollResult: any) {
+  private tryStructuredCutin(rollResult: any, messageIdentifier?: string) {
     const table = this.table;
     if (!table || table.roomMode !== 'advanced') return;
     if (!table.diceCutinEnabled) return;
@@ -282,29 +288,28 @@ export class DiceCutinComponent implements OnInit, OnDestroy {
       }
     }
 
-    // キャラ画像を探す
-    let characterName = '';
-    let characterImage = '';
-    const tabs = ObjectStore.instance.getObjects<ChatTab>(ChatTab);
-    const activeTab = tabs.length > 0 ? tabs[0] : null;
-    if (activeTab) {
-      const msgs = activeTab.chatMessages;
-      const lastMsg = msgs[msgs.length - 1];
-      if (lastMsg && lastMsg.from === 'System-BCDice') {
-        const senderName = lastMsg.name ? lastMsg.name.replace(/^<BCDice：/, '').replace(/>$/, '') : '';
-        if (senderName) {
-          const chars = ObjectStore.instance.getObjects<GameCharacter>(GameCharacter);
-          const match = chars.find(c => c.name === senderName);
-          if (match) {
-            characterName = match.name;
-            const img = match.imageFile;
-            characterImage = (img && img.url && img.url.length > 0) ? img.url : '';
-          }
-          if (!characterName) characterName = senderName;
-        }
-      }
+    // Resolve the exact originating roll, not the latest message in the first tab.
+    const original = ObjectStore.instance.get<ChatMessage>(messageIdentifier);
+    let sender = original ? ObjectStore.instance.get(original.sendFrom) : null;
+    const senderName = original?.name ? original.name.split(' > ')[0] : '';
+    if (!(sender instanceof GameCharacter) && !(sender instanceof PeerCursor) && senderName) {
+      const matches = ObjectStore.instance.getObjects<GameCharacter>(GameCharacter).filter(c => c.name === senderName);
+      if (matches.length === 1) sender = matches[0];
     }
-    if (!characterName) characterName = '???';
+    const characterName = sender instanceof GameCharacter || sender instanceof PeerCursor
+      ? sender.name : senderName || '???';
+    let characterImage = '';
+    const portraitId = original?.imageIdentifier || '';
+    const isPortrait = original?.imageKind !== 'attachment' && portraitId && (
+      original.imageKind === 'portrait'
+      || sender instanceof GameCharacter && sender.imageDataElement?.children.some(child => String(child.value || '') === portraitId)
+      || sender instanceof PeerCursor && sender.imageIdentifier === portraitId
+    );
+    if (isPortrait) characterImage = ImageStorage.instance.get(portraitId)?.url || '';
+    if (!characterImage) {
+      const image = sender instanceof GameCharacter ? sender.imageFile : sender instanceof PeerCursor ? sender.image : null;
+      characterImage = image?.url || '';
+    }
 
     // 成功/失敗/クリティカル判定
     const isCritical = rollResult.isCritical || /クリティカル|Critical|critical/.test(text);
@@ -552,6 +557,7 @@ export class DiceCutinComponent implements OnInit, OnDestroy {
     this.hideTimer = setTimeout(() => {
       this.active = false;
       this.data = null;
+      this.changeDetectorRef.markForCheck();
     }, 3500);
   }
 

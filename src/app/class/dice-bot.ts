@@ -1203,7 +1203,10 @@ export class DiceBot extends GameObject {
     if (!isSecret) {
       Logger.debug('DiceCutIn: sendResultMessage cutin trigger, contextText=' + originalMessage.text);
       // 構造化データを直接イベント通知（アドバンスモード用）
-      EventSystem.trigger('DICE_CUT_IN_STRUCTURED', { rollResult: rollResult });
+      EventSystem.trigger('DICE_CUT_IN_STRUCTURED', {
+        rollResult,
+        messageIdentifier: originalMessage.identifier
+      });
       // CutInLauncher経由（サイドメニューカットイン用）
       const cutInLauncher = ObjectStore.instance.get<CutInLauncher>('CutInLauncher');
       if (cutInLauncher) {
