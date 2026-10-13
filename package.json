@@ -14,15 +14,15 @@
   },
   "private": true,
   "dependencies": {
-    "@angular/animations": "^18.2.14",
-    "@angular/common": "^18.2.14",
-    "@angular/compiler": "^18.2.14",
-    "@angular/core": "^18.2.14",
-    "@angular/forms": "^18.2.14",
-    "@angular/platform-browser": "^18.2.14",
-    "@angular/platform-browser-dynamic": "^18.2.14",
-    "@angular/router": "^18.2.14",
-    "@angular/youtube-player": "^18.2.14",
+    "@angular/animations": "^19.2.25",
+    "@angular/common": "^19.2.25",
+    "@angular/compiler": "^19.2.25",
+    "@angular/core": "^19.2.25",
+    "@angular/forms": "^19.2.25",
+    "@angular/platform-browser": "^19.2.25",
+    "@angular/platform-browser-dynamic": "^19.2.25",
+    "@angular/router": "^19.2.25",
+    "@angular/youtube-player": "^19.2.19",
     "@ng-select/ng-select": "^8.1.1",
     "@skyway-sdk/core": "^2.5.1",
     "archiver": "^5.3.2",
@@ -41,13 +41,13 @@
     "skyway-js": "^4.4.5",
     "tslib": "^2.3.1",
     "vkbeautify": "^0.99.3",
-    "zone.js": "~0.14.10"
+    "zone.js": "~0.15.1"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "^18.2.21",
-    "@angular/cli": "^18.2.21",
-    "@angular/compiler-cli": "^18.2.14",
-    "@angular/language-service": "^18.2.14",
+    "@angular-devkit/build-angular": "^19.2.27",
+    "@angular/cli": "^19.2.27",
+    "@angular/compiler-cli": "^19.2.25",
+    "@angular/language-service": "^19.2.25",
     "@cypress/schematic": "^1.6.0",
     "@types/crypto-js": "^4.1.1",
     "@types/file-saver": "^2.0.5",
@@ -70,6 +70,6 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~4.0.1",
     "karma-jasmine-html-reporter": "^1.7.0",
-    "typescript": "~5.4.5"
+    "typescript": "~5.8.3"
   }
 }
