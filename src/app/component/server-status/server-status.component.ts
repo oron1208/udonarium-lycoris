@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 
 interface ServerStatus {
   ok: boolean;
@@ -39,6 +39,7 @@ interface ServerStatus {
     selector: 'server-status',
     templateUrl: './server-status.component.html',
     styleUrls: ['./server-status.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class ServerStatusComponent implements OnInit, OnDestroy {

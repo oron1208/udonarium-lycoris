@@ -1,4 +1,4 @@
-import { Component, NgZone, OnDestroy, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, NgZone, OnDestroy, OnInit, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { EventSystem } from '@udonarium/core/system';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { GameCharacter, AutoBuffEntry, AutoBuffOperation, BuffExpireTiming } from '@udonarium/game-character';
@@ -40,6 +40,7 @@ interface BuffBar {
     selector: 'effect-manager',
     templateUrl: './effect-manager.component.html',
     styleUrls: ['./effect-manager.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class EffectManagerComponent implements OnInit, OnDestroy {

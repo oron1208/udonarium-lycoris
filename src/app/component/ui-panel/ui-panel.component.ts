@@ -1,5 +1,5 @@
 import { animate, keyframes, style, transition, trigger } from '@angular/animations';
-import { Component, ElementRef, Input, OnInit, ViewChild, ViewContainerRef } from '@angular/core';
+import { Component, ElementRef, Input, OnInit, ViewChild, ViewContainerRef, ChangeDetectionStrategy } from '@angular/core';
 import { PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
 import { Logger } from '../../class/core/system/util/logger';
@@ -31,6 +31,7 @@ import { CutIn } from '@udonarium/cut-in';
             ])
         ])
     ],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class UIPanelComponent implements OnInit {

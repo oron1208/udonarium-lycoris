@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { EventSystem } from '@udonarium/core/system';
 import { MediaIntegrity, MediaIntegritySummary } from '@udonarium/core/file-storage/media-integrity';
 
@@ -6,6 +6,7 @@ import { MediaIntegrity, MediaIntegritySummary } from '@udonarium/core/file-stor
     selector: 'media-integrity-badge',
     templateUrl: './media-integrity-badge.component.html',
     styleUrls: ['./media-integrity-badge.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class MediaIntegrityBadgeComponent implements OnInit, OnDestroy {

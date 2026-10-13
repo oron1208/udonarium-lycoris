@@ -1,4 +1,4 @@
-import { Component, ElementRef, EventEmitter, Input, NgZone, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, NgZone, OnDestroy, OnInit, Output, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import GameSystemClass from 'bcdice/lib/game_system';
 import { ChatMessage } from '@udonarium/chat-message';
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
@@ -25,6 +25,7 @@ import { Config } from '@udonarium/config';
     selector: 'chat-input',
     templateUrl: './chat-input.component.html',
     styleUrls: ['./chat-input.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class ChatInputComponent implements OnInit, OnDestroy {

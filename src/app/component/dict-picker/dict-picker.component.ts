@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, NgZone, OnDestroy } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, NgZone, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { GameCharacter } from '@udonarium/game-character';
 import { ModalService } from 'service/modal.service';
 import { DictionaryService, DictCollection } from 'service/dictionary.service';
@@ -8,6 +8,7 @@ import { DictionaryService, DictCollection } from 'service/dictionary.service';
     selector: 'dict-picker',
     templateUrl: './dict-picker.component.html',
     styleUrls: ['./dict-picker.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class DictPickerComponent implements AfterViewInit, OnDestroy {

@@ -1,4 +1,4 @@
-import { Component, NgZone, OnDestroy, OnInit } from '@angular/core';
+import { Component, NgZone, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 
 import { AudioFile } from '@udonarium/core/file-storage/audio-file';
 import { AudioPlayer, HttpAudioPlayer, VolumeType } from '@udonarium/core/file-storage/audio-player';
@@ -22,6 +22,7 @@ import { AudioLibraryService, ServerAudioTrack } from 'service/audio-library.ser
     selector: 'app-jukebox',
     templateUrl: './jukebox.component.html',
     styleUrls: ['./jukebox.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class JukeboxComponent implements OnInit, OnDestroy {

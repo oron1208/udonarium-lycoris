@@ -1,4 +1,4 @@
-import { Component, NgZone, OnDestroy, OnInit } from '@angular/core';
+import { Component, NgZone, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { EventSystem } from '@udonarium/core/system';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { GameCharacter } from '@udonarium/game-character';
@@ -15,6 +15,7 @@ import { Logger } from '../../class/core/system/util/logger';
     selector: 'initiative-dice-roller',
     templateUrl: './initiative-dice-roller.component.html',
     styleUrls: ['./initiative-dice-roller.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class InitiativeDiceRollerComponent implements OnInit, OnDestroy {

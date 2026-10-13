@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { EventSystem } from '@udonarium/core/system';
 import { ModalService } from 'service/modal.service';
 import { PanelService } from 'service/panel.service';
@@ -7,6 +7,7 @@ import { PanelService } from 'service/panel.service';
     selector: 'open-url',
     templateUrl: './open-url.component.html',
     styleUrls: ['./open-url.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class OpenUrlComponent implements OnInit, OnDestroy {

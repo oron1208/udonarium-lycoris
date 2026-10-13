@@ -1,4 +1,4 @@
-import { Component, DoCheck, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, DoCheck, ElementRef, HostListener, OnDestroy, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 
 import { AudioPlayer } from '@udonarium/core/file-storage/audio-player';
 import { AudioStorage } from '@udonarium/core/file-storage/audio-storage';
@@ -19,6 +19,7 @@ interface TrackSelection {
     selector: 'app-mini-player',
     templateUrl: './mini-player.component.html',
     styleUrls: ['./mini-player.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class MiniPlayerComponent implements OnInit, OnDestroy, DoCheck {

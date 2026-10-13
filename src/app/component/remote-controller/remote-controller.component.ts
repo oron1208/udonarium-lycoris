@@ -38,6 +38,7 @@ class RemoteControllerSelect {
     selector: 'remote-controller',
     templateUrl: './remote-controller.component.html',
     styleUrls: ['./remote-controller.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class RemoteControllerComponent implements OnInit, OnDestroy, AfterViewInit {

@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 
 import { EventSystem, Network } from '@udonarium/core/system';
 import { PeerContext } from '@udonarium/core/system/network/peer-context';
@@ -10,6 +10,7 @@ import { PanelService } from 'service/panel.service';
     selector: 'password-check',
     templateUrl: './password-check.component.html',
     styleUrls: ['./password-check.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class PasswordCheckComponent implements OnInit, AfterViewInit, OnDestroy {

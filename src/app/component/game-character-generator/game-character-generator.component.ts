@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, OnDestroy, OnInit, ViewContainerRef } from '@angular/core';
+import { AfterViewInit, Component, OnDestroy, OnInit, ViewContainerRef, ChangeDetectionStrategy } from '@angular/core';
 import { Logger } from '../../class/core/system/util/logger';
 
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
@@ -18,6 +18,7 @@ import { PanelService } from 'service/panel.service';
     selector: 'game-character-generator',
     templateUrl: './game-character-generator.component.html',
     styleUrls: ['./game-character-generator.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class GameCharacterGeneratorComponent implements OnInit, OnDestroy, AfterViewInit {

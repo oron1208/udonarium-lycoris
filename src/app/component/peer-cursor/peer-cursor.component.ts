@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, Input, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, Input, NgZone, OnDestroy, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { Logger } from '../../class/core/system/util/logger';
 
 import { EventSystem, Network } from '@udonarium/core/system';
@@ -21,6 +21,7 @@ const GM_CURSOR_SHARE_DISABLED_KEY = 'udonarium.gm.cursorShareDisabled';
     selector: 'peer-cursor, [peer-cursor]',
     templateUrl: './peer-cursor.component.html',
     styleUrls: ['./peer-cursor.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class PeerCursorComponent implements OnInit, AfterViewInit, OnDestroy {

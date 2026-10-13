@@ -1,6 +1,6 @@
 import { PaletteBrowserComponent } from 'component/palette-browser/palette-browser.component';
 import { isPaletteCommand } from '@udonarium/palette-document';
-import { Component, ElementRef, HostBinding, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, HostBinding, NgZone, OnDestroy, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { Logger } from '../../class/core/system/util/logger';
 
 import { ChatMessage, ChatMessageTargetContext } from '@udonarium/chat-message';
@@ -61,6 +61,7 @@ interface VnActor {
     selector: 'vn-stage',
     templateUrl: './vn-stage.component.html',
     styleUrls: ['./vn-stage.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class VnStageComponent implements OnInit, OnDestroy {

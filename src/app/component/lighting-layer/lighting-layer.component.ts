@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, ElementRef, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, NgZone, OnDestroy, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { EventSystem } from '@udonarium/core/system';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { GameTable } from '@udonarium/game-table';
@@ -19,6 +19,7 @@ interface LightSource {
     selector: 'lighting-layer',
     templateUrl: './lighting-layer.component.html',
     styleUrls: ['./lighting-layer.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class LightingLayerComponent implements OnInit, OnDestroy {

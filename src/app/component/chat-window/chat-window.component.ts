@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, OnDestroy, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import GameSystemClass from 'bcdice/lib/game_system';
 import { ChatMessage, ChatMessageTargetContext} from '@udonarium/chat-message';
 import { ChatTab } from '@udonarium/chat-tab';
@@ -29,6 +29,7 @@ import { PopupBridgeService } from 'service/popup-bridge.service';
     selector: 'chat-window',
     templateUrl: './chat-window.component.html',
     styleUrls: ['./chat-window.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {

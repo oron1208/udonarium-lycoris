@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild } from '@angular/core';
+import { Component, ElementRef, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { ChatMessageTargetContext } from '@udonarium/chat-message';
 import { ChatTab } from '@udonarium/chat-tab';
 import { ChatTabList } from '@udonarium/chat-tab-list';
@@ -40,6 +40,7 @@ const TOTAL_SLOT_COUNT = SLOT_COUNT * PAGE_COUNT;
     selector: 'macro-hotbar',
     templateUrl: './macro-hotbar.component.html',
     styleUrls: ['./macro-hotbar.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class MacroHotbarComponent {

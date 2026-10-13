@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, NgZone } from '@angular/core';
+import { Component, OnInit, OnDestroy, NgZone, ChangeDetectionStrategy } from '@angular/core';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { EventSystem } from '@udonarium/core/system';
 import { GameCharacter } from '@udonarium/game-character';
@@ -23,6 +23,7 @@ interface TargetResult {
     selector: 'batch-damage-panel',
     templateUrl: './batch-damage-panel.component.html',
     styleUrls: ['./batch-damage-panel.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class BatchDamagePanelComponent implements OnInit, OnDestroy {

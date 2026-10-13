@@ -33,7 +33,7 @@ import { ChatMessageFixComponent } from 'component/chat-message-fix/chat-message
             ])
         ])
     ],
-    changeDetection: ChangeDetectionStrategy.Default,
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 

@@ -1,4 +1,4 @@
-import { Component, DoCheck, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output } from '@angular/core';
+import { Component, DoCheck, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output, ChangeDetectionStrategy } from '@angular/core';
 import { ChatPalette } from '@udonarium/chat-palette';
 import { flattenPalette, isPaletteCommand, isPaletteDragItem, movePaletteItem, PaletteNode, PaletteSection, parsePaletteDocument } from '@udonarium/palette-document';
 
@@ -6,6 +6,7 @@ import { flattenPalette, isPaletteCommand, isPaletteDragItem, movePaletteItem, P
     selector: 'palette-browser',
     templateUrl: './palette-browser.component.html',
     styleUrls: ['./palette-browser.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class PaletteBrowserComponent implements OnChanges, DoCheck, OnDestroy {

@@ -1,4 +1,4 @@
-import { Component, NgZone, OnInit } from '@angular/core';
+import { Component, NgZone, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { EventSystem } from '@udonarium/core/system';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { GameTable } from '@udonarium/game-table';
@@ -10,6 +10,7 @@ import { TabletopService } from 'service/tabletop.service';
     selector: 'lighting-panel',
     templateUrl: './lighting-panel.component.html',
     styleUrls: ['./lighting-panel.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class LightingPanelComponent implements OnInit {

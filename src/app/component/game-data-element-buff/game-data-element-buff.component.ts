@@ -15,7 +15,7 @@ import { DataElement } from '@udonarium/data-element';
     templateUrl: './game-data-element-buff.component.html',
     styleUrls: ['./game-data-element-buff.component.css'],
     //  changeDetection: ChangeDetectionStrategy.OnPush
-    changeDetection: ChangeDetectionStrategy.Default,
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class GameDataElementBuffComponent implements OnInit, OnDestroy, AfterViewInit {

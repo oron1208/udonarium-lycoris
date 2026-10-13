@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { PopupBridgeService, PopupBridgeCharacter } from 'service/popup-bridge.service';
 
 /** palette-browser が必要な最小限の面だけを持つ、サブウィンドウ側のパレット。 */
@@ -22,6 +22,7 @@ export class PopupPalette {
     selector: 'popup-window',
     templateUrl: './popup-window.component.html',
     styleUrls: ['./popup-window.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class PopupWindowComponent implements OnInit, OnDestroy {

@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectorRef, Component, Input, NgZone, OnDestroy, OnInit } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, Input, NgZone, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { ChatTab } from '@udonarium/chat-tab';
@@ -18,6 +18,7 @@ import { Alarm, AlarmContext } from '@udonarium/alarm';
     selector: 'app-alarm-window',
     templateUrl: './alarm-window.component.html',
     styleUrls: ['./alarm-window.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class AlarmWindowComponent implements AfterViewInit, OnInit, OnDestroy {

@@ -1,6 +1,6 @@
 import { PaletteBrowserComponent } from 'component/palette-browser/palette-browser.component';
 import { isPaletteCommand } from '@udonarium/palette-document';
-import { Component, ElementRef, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, Input, OnDestroy, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import GameSystemClass from 'bcdice/lib/game_system';
 import { ChatPalette , PaletteIndex , PaletteMatch} from '@udonarium/chat-palette';
 import { ChatTab } from '@udonarium/chat-tab';
@@ -26,6 +26,7 @@ import { PopupBridgeService } from 'service/popup-bridge.service';
     selector: 'chat-palette',
     templateUrl: './chat-palette.component.html',
     styleUrls: ['./chat-palette.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class ChatPaletteComponent implements OnInit, OnDestroy {

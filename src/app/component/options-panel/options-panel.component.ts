@@ -1,4 +1,4 @@
-import { Component, NgZone, OnDestroy, OnInit } from '@angular/core';
+import { Component, NgZone, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { EventSystem } from '@udonarium/core/system';
 import { Network } from '@udonarium/core/system';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
@@ -20,6 +20,7 @@ import { Logger } from '@udonarium/core/system/util/logger';
     selector: 'options-panel',
     templateUrl: './options-panel.component.html',
     styleUrls: ['./options-panel.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class OptionsPanelComponent implements OnInit, OnDestroy {

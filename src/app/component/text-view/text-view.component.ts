@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
 import { ModalService } from 'service/modal.service';
@@ -8,6 +8,7 @@ import { PanelService } from 'service/panel.service';
     selector: 'text-view',
     templateUrl: './text-view.component.html',
     styleUrls: ['./text-view.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class TextViewComponent implements OnInit {

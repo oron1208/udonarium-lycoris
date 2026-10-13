@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, EventEmitter, Input, Output, OnDestroy, OnInit } from '@angular/core';
+import { AfterViewInit, Component, EventEmitter, Input, Output, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import GameSystemClass from 'bcdice/lib/game_system';
 import { Logger } from '../../class/core/system/util/logger';
 
@@ -28,6 +28,7 @@ import { AudioLibraryService, ServerAudioTrack } from 'service/audio-library.ser
     selector: 'game-table-setting',
     templateUrl: './game-table-setting.component.html',
     styleUrls: ['./game-table-setting.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class GameTableSettingComponent implements OnInit, OnDestroy, AfterViewInit {

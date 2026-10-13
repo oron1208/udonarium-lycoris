@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { Logger } from '../../class/core/system/util/logger';
 
 import { FileArchiver } from '@udonarium/core/file-storage/file-archiver';
@@ -17,6 +17,7 @@ import { PanelService } from 'service/panel.service';
     selector: 'data-import-menu',
     templateUrl: './data-import-menu.component.html',
     styleUrls: ['./data-import-menu.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class DataImportMenuComponent {

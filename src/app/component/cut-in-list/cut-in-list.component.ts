@@ -1,4 +1,4 @@
-import { Component, NgZone, OnDestroy, OnInit } from '@angular/core';
+import { Component, NgZone, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { AudioFile } from '@udonarium/core/file-storage/audio-file';
 import { AudioPlayer, VolumeType } from '@udonarium/core/file-storage/audio-player';
 import { AudioStorage } from '@udonarium/core/file-storage/audio-storage';
@@ -34,6 +34,7 @@ import { PeerCursor } from '@udonarium/peer-cursor';
     selector: 'app-cut-in-list',
     templateUrl: './cut-in-list.component.html',
     styleUrls: ['./cut-in-list.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class CutInListComponent implements OnInit, OnDestroy {

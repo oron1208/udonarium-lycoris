@@ -1,4 +1,4 @@
-import { AfterViewChecked, Component, ElementRef, Input, OnChanges, Output, EventEmitter, ViewChild } from '@angular/core';
+import { AfterViewChecked, Component, ElementRef, Input, OnChanges, Output, EventEmitter, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 
 /**
  * ポップアウトウィンドウ内のチャットペイン（メインチャット / VNチャット共用）。
@@ -8,6 +8,7 @@ import { AfterViewChecked, Component, ElementRef, Input, OnChanges, Output, Even
     selector: 'popup-chat',
     templateUrl: './popup-chat.component.html',
     styleUrls: ['./popup-chat.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class PopupChatComponent implements OnChanges, AfterViewChecked {

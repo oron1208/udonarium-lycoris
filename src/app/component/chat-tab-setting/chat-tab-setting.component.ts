@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Logger } from '../../class/core/system/util/logger';
 
 import { ChatTab } from '@udonarium/chat-tab';
@@ -18,6 +18,7 @@ import { PeerCursor } from '@udonarium/peer-cursor';
     selector: 'app-chat-tab-setting',
     templateUrl: './chat-tab-setting.component.html',
     styleUrls: ['./chat-tab-setting.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class ChatTabSettingComponent implements OnInit, OnDestroy {

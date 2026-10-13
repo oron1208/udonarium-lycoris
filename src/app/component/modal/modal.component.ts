@@ -1,5 +1,5 @@
 import { animate, keyframes, state, style, transition, trigger } from '@angular/animations';
-import { Component, ViewChild, ViewContainerRef } from '@angular/core';
+import { Component, ViewChild, ViewContainerRef, ChangeDetectionStrategy } from '@angular/core';
 import { ModalService } from 'service/modal.service';
 
 @Component({
@@ -28,6 +28,7 @@ import { ModalService } from 'service/modal.service';
             ])
         ]),
     ],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class ModalComponent {

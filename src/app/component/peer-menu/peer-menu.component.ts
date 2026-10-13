@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Logger } from '../../class/core/system/util/logger';
 
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
@@ -40,6 +40,7 @@ const GM_CURSOR_SHARE_DISABLED_KEY = 'udonarium.gm.cursorShareDisabled';
     selector: 'peer-menu',
     templateUrl: './peer-menu.component.html',
     styleUrls: ['./peer-menu.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class PeerMenuComponent implements OnInit, OnDestroy, AfterViewInit {

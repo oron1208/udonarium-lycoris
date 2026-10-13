@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Logger } from '../../class/core/system/util/logger';
 
 import { PeerContext } from '@udonarium/core/system/network/peer-context';
@@ -14,6 +14,7 @@ import { PanelService } from 'service/panel.service';
     selector: 'room-setting',
     templateUrl: './room-setting.component.html',
     styleUrls: ['./room-setting.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class RoomSettingComponent implements OnInit, OnDestroy {

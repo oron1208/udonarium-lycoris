@@ -1,4 +1,4 @@
-import { Component, NgZone, OnDestroy, OnInit } from '@angular/core';
+import { Component, NgZone, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { EventSystem } from '@udonarium/core/system';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { GameCharacter } from '@udonarium/game-character';
@@ -11,6 +11,7 @@ import { GmModeService } from 'service/gm-mode.service';
     selector: 'initiative-tracker',
     templateUrl: './initiative-tracker.component.html',
     styleUrls: ['./initiative-tracker.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class InitiativeTrackerComponent implements OnInit, OnDestroy {

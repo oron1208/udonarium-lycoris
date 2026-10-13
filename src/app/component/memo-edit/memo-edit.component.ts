@@ -1,10 +1,11 @@
-import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, NgZone, OnDestroy } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, NgZone, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { ModalService } from 'service/modal.service';
 
 @Component({
     selector: 'memo-edit',
     templateUrl: './memo-edit.component.html',
     styleUrls: ['./memo-edit.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class MemoEditComponent implements AfterViewInit, OnDestroy {

@@ -1,4 +1,4 @@
-import { Component, NgZone, OnDestroy, OnInit } from '@angular/core';
+import { Component, NgZone, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { EventSystem } from '@udonarium/core/system';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { GameCharacter } from '@udonarium/game-character';
@@ -21,6 +21,7 @@ import { ChatTab } from '@udonarium/chat-tab';
     selector: 'initiative-panel',
     templateUrl: './initiative-panel.component.html',
     styleUrls: ['./initiative-panel.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class InitiativePanelComponent implements OnInit, OnDestroy {

@@ -1,5 +1,8 @@
-import { Component, ElementRef, ChangeDetectorRef, EventEmitter, Input, NgZone,
-         OnDestroy, OnInit, AfterViewInit, AfterViewChecked, Output, ViewChild } from '@angular/core';
+import {
+  Component, ElementRef, ChangeDetectorRef, EventEmitter, Input, NgZone,
+  OnDestroy, OnInit, AfterViewInit, AfterViewChecked, Output, ViewChild,
+  ChangeDetectionStrategy
+} from '@angular/core';
 import { Logger } from '../../class/core/system/util/logger';
 
 import { ChatMessage } from '@udonarium/chat-message';
@@ -21,6 +24,7 @@ import { ChatTabList } from '@udonarium/chat-tab-list';
     selector: 'chat-tachie-img',
     templateUrl: './chat-tachie-img.component.html',
     styleUrls: ['./chat-tachie-img.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class ChatTachieImageComponent implements OnInit, OnDestroy, AfterViewInit, AfterViewChecked {

@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectorRef, Component, Input, NgZone, OnDestroy, OnInit } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, Input, NgZone, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Logger } from '../../class/core/system/util/logger';
 
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
@@ -19,6 +19,7 @@ import { Vote, VoteContext } from '@udonarium/vote';
     selector: 'app-vote-window',
     templateUrl: './vote-window.component.html',
     styleUrls: ['./vote-window.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class VoteWindowComponent implements AfterViewInit, OnInit, OnDestroy {

@@ -1,4 +1,4 @@
-import { Component, NgZone, OnDestroy, OnInit } from '@angular/core';
+import { Component, NgZone, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { DomSanitizer, SafeHtml, SafeUrl } from '@angular/platform-browser';
 import { GameCharacter } from '@udonarium/game-character';
@@ -53,6 +53,7 @@ interface TargetResult {
             ])
         ])
     ],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class ContestedRollCutinComponent implements OnInit, OnDestroy {

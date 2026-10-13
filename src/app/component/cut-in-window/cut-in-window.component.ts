@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectorRef, Component, ElementRef , Input, NgZone, OnDestroy, OnInit , ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, Input, NgZone, OnDestroy, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { AudioFile } from '@udonarium/core/file-storage/audio-file';
 import { YouTubePlayer } from '@angular/youtube-player';
 import { AudioPlayer, VolumeType } from '@udonarium/core/file-storage/audio-player';
@@ -29,6 +29,7 @@ import { PeerMenuComponent } from 'component/peer-menu/peer-menu.component';
     selector: 'app-cut-in-window',
     templateUrl: './cut-in-window.component.html',
     styleUrls: ['./cut-in-window.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class CutInWindowComponent implements AfterViewInit, OnInit, OnDestroy {

@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Logger } from '../../class/core/system/util/logger';
 
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
@@ -23,6 +23,7 @@ import { PanelService } from 'service/panel.service';
     selector: 'lobby',
     templateUrl: './lobby.component.html',
     styleUrls: ['./lobby.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class LobbyComponent implements OnInit, OnDestroy {

@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, HostListener, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, HostListener, NgZone, OnDestroy, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { Logger } from '../../class/core/system/util/logger';
 
 import { Card } from '@udonarium/card';
@@ -95,6 +95,7 @@ type WallGrid = {
     selector: 'game-table',
     templateUrl: './game-table.component.html',
     styleUrls: ['./game-table.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {

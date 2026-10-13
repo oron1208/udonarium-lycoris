@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, NgZone, OnDestroy, ViewChild, ViewContainerRef } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, NgZone, OnDestroy, ViewChild, ViewContainerRef, ChangeDetectionStrategy } from '@angular/core';
 import { NgSelectConfig } from '@ng-select/ng-select';
 import * as lzbase62 from 'lzbase62';
 import { Logger } from './class/core/system/util/logger';
@@ -86,6 +86,7 @@ interface BundleLoadingState {
     selector: 'app-root',
     templateUrl: './app.component.html',
     styleUrls: ['./app.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class AppComponent implements AfterViewInit, OnDestroy {

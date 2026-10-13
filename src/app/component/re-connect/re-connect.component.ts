@@ -1,4 +1,4 @@
-import { Component, ChangeDetectorRef, OnDestroy, OnInit } from '@angular/core';
+import { Component, ChangeDetectorRef, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Logger } from '../../class/core/system/util/logger';
 
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
@@ -26,6 +26,7 @@ import { PanelService } from 'service/panel.service';
     selector: 're-connect',
     templateUrl: './re-connect.component.html',
     styleUrls: ['./re-connect.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class ReConnectComponent implements OnInit, OnDestroy {
