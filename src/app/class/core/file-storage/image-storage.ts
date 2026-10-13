@@ -40,7 +40,8 @@ export class ImageStorage {
       })
       .on('MEDIA_REPLENISHED', event => {
         if (event.data?.kind === 'audio') return;
-        if (event.data?.identifier && this.missingOnServer.delete(event.data.identifier)) {
+        if (event.data?.identifier) {
+          this.missingOnServer.delete(event.data.identifier);
           this.applyMissingFlag(event.data.identifier);
         }
       });
@@ -50,12 +51,19 @@ export class ImageStorage {
   private applyMissingFlag(identifier: string) {
     const image = this.imageHash[identifier];
     if (!image) return;
+    const previous = image.missing;
     // blob完全所持なら「?」表示にしない（missing表示はblob未所持のときだけ。所持データはLOCAL_ONLY＝再送候補）
     if (image.blob && ImageState.COMPLETE <= image.state && image.state < ImageState.URL) {
       image.missing = false;
-      return;
+    } else {
+      image.missing = this.missingOnServer.has(identifier);
     }
-    image.missing = this.missingOnServer.has(identifier);
+    if (previous !== image.missing) this.notifyImageChanged(identifier);
+  }
+
+  /** Local mutation notification, after the stored ImageFile is ready to render. */
+  private notifyImageChanged(identifier: string) {
+    EventSystem.trigger('IMAGE_FILE_CHANGED', { identifier });
   }
 
   private destroy() {
@@ -95,9 +103,12 @@ export class ImageStorage {
     if (!image) return this.add(context);
 
     image.replace(context);
+    this.applyMissingFlag(context.identifier);
+    this.notifyImageChanged(context.identifier);
     if (ImageState.COMPLETE <= image.state) {
       this.lazySynchronize(100);
       ServerMediaStorage.uploadImage(image);
+      void MediaCache.cacheImage(image);
     }
     return image;
   }
@@ -110,8 +121,6 @@ export class ImageStorage {
     }
     if (this.update(image)) {
       let stored = this.imageHash[image.identifier];
-      // blobが後から届いた場合もmissingフラグを必ず再評価する（?表示のまま残るバグの根治）
-      this.applyMissingFlag(stored.identifier);
       if (ImageState.COMPLETE <= stored.state) {
         ServerMediaStorage.uploadImage(stored);
         void MediaCache.cacheImage(stored);
@@ -120,6 +129,7 @@ export class ImageStorage {
     }
     this.imageHash[image.identifier] = image;
     this.applyMissingFlag(image.identifier);
+    this.notifyImageChanged(image.identifier);
     Logger.debug('add Image: ' + image.identifier);
     return image;
   }
@@ -135,7 +145,10 @@ export class ImageStorage {
     }
     let updatingImage: ImageFile = this.imageHash[image.identifier];
     if (updatingImage) {
-      updatingImage.apply(image);
+      // Use raw context, not presentation getters (url may be the MISSING SVG).
+      updatingImage.apply(context);
+      this.applyMissingFlag(context.identifier);
+      this.notifyImageChanged(context.identifier);
       return true;
     }
     return false;

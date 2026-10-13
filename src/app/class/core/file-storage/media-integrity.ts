@@ -44,6 +44,7 @@ export class MediaIntegrity {
     EventSystem.register(this)
       .on('SERVER_MEDIA_MISSING', () => this.refresh())
       .on('UPDATE_FILE_RESOURE', () => this.refresh())
+      .on('IMAGE_FILE_CHANGED', () => this.refresh())
       .on('SYNCHRONIZE_FILE_LIST', () => this.refresh())
       .on('MEDIA_REPLENISHED', () => this.refresh())
       .on('CONNECT_PEER', () => setTimeout(() => this.refresh(), 3000));

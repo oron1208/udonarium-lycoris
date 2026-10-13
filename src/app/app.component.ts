@@ -421,6 +421,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         }
       })
       .on('SYNCHRONIZE_FILE_LIST', event => { if (event.isSendFromSelf) this.lazyNgZoneUpdate(false); })
+      .on('IMAGE_FILE_CHANGED', () => this.lazyNgZoneUpdate(false))
       .on<AppConfig>('LOAD_CONFIG', event => {
         Logger.debug('LOAD_CONFIG !!!');
         if (this.isPopupWindow) return; // サブウィンドウは自分では部屋に接続しない（メイン画面とBridgeで繋ぐ）

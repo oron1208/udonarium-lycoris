@@ -106,11 +106,11 @@ export class ImageSharingSystem {
             if (result.status === 'ok') {
               ImageStorage.instance.add(result.file);
             } else if (result.status === 'missing') {
-              // サーバーに存在しない画像はplaceholderを削除して永久ぐるぐるを防止
-              ImageStorage.instance.delete(item.identifier);
+              // Keep the shared placeholder: tabletop objects may hold this
+              // instance, and a ZIP import may have filled it during the fetch.
               // 所持者がいればサーバーへ再アップロードしてもらい自己修復する
               this.requestReplenish(item.identifier);
-              Logger.debug(`[ImageSharingSystem] removed missing placeholder: ${item.identifier}`);
+              Logger.debug(`[ImageSharingSystem] awaiting missing image recovery: ${item.identifier}`);
             } else {
               request.push(item);
             }

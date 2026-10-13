@@ -152,6 +152,7 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
           this.changeDetector.markForCheck();
         }
       })
+      .on('IMAGE_FILE_CHANGED', () => this.changeDetector.markForCheck())
       .on('SYNCHRONIZE_FILE_LIST', event => {
         this.changeDetector.markForCheck();
       })

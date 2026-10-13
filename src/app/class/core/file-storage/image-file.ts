@@ -53,13 +53,15 @@ export class ImageFile {
   get thumbnail(): ThumbnailContext { return this.context.thumbnail };
 
   get state(): ImageState {
-    if (!this.url && !this.blob) return ImageState.NULL;
-    if (this.url && !this.blob) return ImageState.URL;
+    // A MISSING placeholder is presentation only, not a usable URL resource.
+    const url = this.context.url || this.context.thumbnail.url;
+    if (!url && !this.blob) return ImageState.NULL;
+    if (url && !this.blob) return ImageState.URL;
     if (this.blob === this.thumbnail.blob) return ImageState.THUMBNAIL;
     return ImageState.COMPLETE;
   }
 
-  get isEmpty(): boolean { return this.state <= ImageState.NULL; }
+  get isEmpty(): boolean { return !this.missing && this.state <= ImageState.NULL; }
 
   private constructor() { }
 

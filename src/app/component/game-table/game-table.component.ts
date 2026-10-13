@@ -299,6 +299,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnInit() {
     EventSystem.register(this)
+      .on('IMAGE_FILE_CHANGED', () => this.changeDetector.markForCheck())
       .on('UPDATE_GAME_OBJECT', event => {
         const updated = ObjectStore.instance.get(event.data.identifier);
         if (updated instanceof GameCharacter || updated instanceof Terrain || updated instanceof GameTableMask) {

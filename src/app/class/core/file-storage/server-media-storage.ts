@@ -382,6 +382,7 @@ export class ServerMediaStorage {
       const headResp = await fetch(checkUrl, { method: 'HEAD' });
       if (headResp.ok) {
         this.knownOnServer.add(identifier);
+        await this.notifyRecovered(kind, identifier);
         Logger.debug(`[media] skip upload ${kind}:${identifier} (already on server)`);
         return;
       }
@@ -396,8 +397,12 @@ export class ServerMediaStorage {
       if (response.status === 405) {
         response = await fetch(uploadUrl, { method: 'POST', headers: uploadHeaders, body: blob });
       }
-      if (!response.ok && response.status !== 409) Logger.warn(`media upload failed ${kind}:${identifier}`, response.status, await response.text().catch(() => ''));
-      else this.knownOnServer.add(identifier);
+      // This server uses 409 for a content-hash mismatch, not a successful PUT.
+      if (!response.ok) Logger.warn(`media upload failed ${kind}:${identifier}`, response.status, await response.text().catch(() => ''));
+      else {
+        this.knownOnServer.add(identifier);
+        await this.notifyRecovered(kind, identifier);
+      }
     } catch (error) {
       Logger.warn(`media upload failed ${kind}:${identifier}`, error);
     } finally {
@@ -514,9 +519,12 @@ export class ServerMediaStorage {
     try {
       const { ImageStorage } = await import('./image-storage');
       const { AudioStorage } = await import('./audio-storage');
+      this.missingNotified.delete(`${kind}:${identifier}`);
+      // The storage listener owns clearing the latch and its display flag.
+      // Deleting here first used to suppress ImageStorage's recovery handler.
       const latched = kind === 'image'
-        ? ImageStorage.instance.missingOnServer.delete(identifier)
-        : AudioStorage.instance.missingOnServer.delete(identifier);
+        ? ImageStorage.instance.missingOnServer.has(identifier)
+        : AudioStorage.instance.missingOnServer.has(identifier);
       if (latched) {
         EventSystem.trigger('MEDIA_REPLENISHED', { identifier, kind });
       }

@@ -172,6 +172,7 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
           this.changeDetector.markForCheck();
         }
       })
+      .on('IMAGE_FILE_CHANGED', () => this.changeDetector.markForCheck())
       .on('SYNCHRONIZE_FILE_LIST', event => {
         this.changeDetector.markForCheck();
       })

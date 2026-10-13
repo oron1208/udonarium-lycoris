@@ -183,6 +183,7 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit{
         }
         this.gridCanvas.nativeElement.style.opacity = opacity + '';
       })
+      .on('IMAGE_FILE_CHANGED', () => this.changeDetector.markForCheck())
       .on('SYNCHRONIZE_FILE_LIST', event => {
         this.changeDetector.markForCheck();
       })

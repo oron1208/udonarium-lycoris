@@ -4,6 +4,7 @@ import { Subject } from './subject';
 export type Callback<T> = (event: Event<T>, listener?: Observer) => void;
 
 export interface EventMap {
+  'IMAGE_FILE_CHANGED': { identifier: string };
   'OPEN_NETWORK': { peerId: string };
   'CLOSE_NETWORK': { peerId: string };
   'NETWORK_ERROR': { peerId: string, errorType: string, errorMessage: string, errorObject: any };

@@ -286,6 +286,7 @@ export class GameTableMaskComponent implements OnChanges, OnDestroy, AfterViewIn
       .on('CHANGE_GM_MODE', event => {
         this.changeDetector.markForCheck();
       })
+      .on('IMAGE_FILE_CHANGED', () => this.changeDetector.markForCheck())
       .on('SYNCHRONIZE_FILE_LIST', event => {
         this.changeDetector.markForCheck();
       })
@@ -336,6 +337,10 @@ export class GameTableMaskComponent implements OnChanges, OnDestroy, AfterViewIn
         this.changeDetector.markForCheck();
       })
       .on('GM_MODE_CHANGED', event => {
+        this.changeDetector.markForCheck();
+      })
+      .on('IMAGE_FILE_CHANGED', () => {
+        this.scheduleCanvasRender();
         this.changeDetector.markForCheck();
       })
       .on('SYNCHRONIZE_FILE_LIST', event => {
