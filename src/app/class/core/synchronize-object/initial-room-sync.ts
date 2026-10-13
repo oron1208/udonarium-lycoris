@@ -694,6 +694,10 @@ export class InitialRoomSync {
     const chatSnapshotContexts: ObjectContext[] = [];
     let objectEntries = manifest.entries.filter(entry => entry.kind === 'objects').sort((a, b) => a.name.localeCompare(b.name));
     this.reportProgress('applying', 0, manifest.objectCount, request.requestId);
+    // Bulk flag: heavy listeners (inventory, etc.) skip per-object refresh
+    // during apply and rebuild once when the flag clears.
+    EventSystem.trigger('ROOM_OBJECT_BULK_APPLY', { active: true, total: manifest.objectCount });
+    try {
 
     for (let entry of objectEntries) {
       let file = zip.file(entry.name);
@@ -726,6 +730,9 @@ export class InitialRoomSync {
     }
     if (applied !== manifest.objectCount) throw new Error('initial room object count mismatch');
     reconcileChatTabsFromSnapshot(chatSnapshotContexts);
+    } finally {
+      EventSystem.trigger('ROOM_OBJECT_BULK_APPLY', { active: false, total: applied });
+    }
     this.reportProgress('applying', applied, manifest.objectCount, request.requestId);
 
     this.assertActiveRequest(request);

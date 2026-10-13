@@ -60,8 +60,21 @@ export class GameObjectInventoryService {
     this.initialize();
   }
 
+  private bulkApplying: boolean = false;
+  private bulkNeedsRebuild: boolean = false;
+
   private initialize() {
     EventSystem.register(this)
+      .on('ROOM_OBJECT_BULK_APPLY', event => {
+        this.bulkApplying = !!event.data?.active;
+        if (!this.bulkApplying && this.bulkNeedsRebuild) {
+          this.bulkNeedsRebuild = false;
+          this.refresh();
+          this.refreshDataElements();
+          this.refreshSort();
+          this.callInventoryUpdate();
+        }
+      })
       .on('OPEN_NETWORK', event => { this.refresh(); })
       .on('CONNECT_PEER', event => { this.refresh(); })
       .on('DISCONNECT_PEER', event => { this.refresh(); })
@@ -73,6 +86,7 @@ export class GameObjectInventoryService {
           let prevLocation = this.locationMap.get(object.identifier);
           if (object.location.name !== prevLocation) {
             this.locationMap.set(object.identifier, object.location.name);
+            if (this.bulkApplying) { this.bulkNeedsRebuild = true; return; }
             this.refresh();
           }
         } else if (object instanceof DataElement) {
@@ -90,6 +104,7 @@ export class GameObjectInventoryService {
             this.refreshDataElements();
             this.refreshSort();
           }
+          if (this.bulkApplying) { this.bulkNeedsRebuild = true; return; }
           this.callInventoryUpdate();
         } else if (object instanceof DataSummarySetting) {
           DataSummarySetting.instance['_sortKeys'] = null; // sortKeys cache clear
