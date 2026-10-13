@@ -1,4 +1,4 @@
-import * as JSZip from 'jszip';
+import JSZip from 'jszip';
 
 import { AudioFile } from '../file-storage/audio-file';
 import { AudioStorage, CatalogItem as AudioCatalogItem } from '../file-storage/audio-storage';

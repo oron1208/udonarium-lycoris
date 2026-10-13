@@ -1,4 +1,4 @@
-import { ComponentFactoryResolver, ComponentRef, Injectable, Injector, ViewContainerRef } from '@angular/core';
+import { ComponentRef, Injectable, Injector, ViewContainerRef } from '@angular/core';
 
 /*
 thanks
@@ -34,9 +34,7 @@ export class ModalService {
   static defaultParentViewContainerRef: ViewContainerRef;
   static ModalComponentClass: { new(...args: any[]): any } = null;
 
-  constructor(
-    private componentFactoryResolver: ComponentFactoryResolver
-  ) { }
+  constructor() { }
 
   get option(): any {
     return this.modalContext ? this.modalContext.option : null;
@@ -69,16 +67,14 @@ export class ModalService {
         }
       };
 
-      const childModalService: ModalService = new ModalService(this.componentFactoryResolver);
+      const childModalService: ModalService = new ModalService();
       childModalService.modalContext = new ModalContext(_resolve, _reject, option);
 
       const parentInjector = parentViewContainerRef.injector;//parentViewContainerRef.parentInjector;
       const injector = Injector.create([{ provide: ModalService, useValue: childModalService }], parentInjector);
 
-      const panelComponentFactory = this.componentFactoryResolver.resolveComponentFactory(ModalService.ModalComponentClass);
-      const bodyComponentFactory = this.componentFactoryResolver.resolveComponentFactory(childComponent);
-      panelComponentRef = parentViewContainerRef.createComponent(panelComponentFactory, parentViewContainerRef.length, injector);
-      panelComponentRef.instance.content.createComponent(bodyComponentFactory);
+      panelComponentRef = parentViewContainerRef.createComponent(ModalService.ModalComponentClass, { index: parentViewContainerRef.length, injector: injector });
+      panelComponentRef.instance.content.createComponent(childComponent);
 
       panelComponentRef.onDestroy(() => {
         this.count--;

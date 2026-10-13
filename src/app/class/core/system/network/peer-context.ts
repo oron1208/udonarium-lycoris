@@ -1,5 +1,5 @@
 import * as lzbase62 from 'lzbase62';
-import * as SHA256 from 'crypto-js/sha256';
+import SHA256 from 'crypto-js/sha256';
 import { Logger } from '../util/logger';
 
 import { base } from '../util/base-x';

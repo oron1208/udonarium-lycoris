@@ -1,5 +1,5 @@
 import { saveAs } from 'file-saver';
-import * as JSZip from 'jszip';
+import JSZip from 'jszip';
 import { Logger } from '../system/util/logger';
 
 import { EventSystem, Network } from '../system';

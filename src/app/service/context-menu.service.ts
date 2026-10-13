@@ -1,4 +1,4 @@
-import { ComponentFactoryResolver, ComponentRef, Injectable, ViewContainerRef } from '@angular/core';
+import { ComponentRef, Injectable, ViewContainerRef } from '@angular/core';
 import { TabletopObject } from '@udonarium/tabletop-object';
 import { Logger } from '../class/core/system/util/logger';
 
@@ -40,9 +40,7 @@ export class ContextMenuService {
   actions: ContextMenuAction[] = [];
   position: ContextMenuPoint = { x: 0, y: 0 };
 
-  constructor(
-    private componentFactoryResolver: ComponentFactoryResolver
-  ) { }
+  constructor() { }
 
   get isShow(): boolean {
     return this.panelComponentRef ? true : false;
@@ -57,9 +55,8 @@ export class ContextMenuService {
     let panelComponentRef: ComponentRef<any>;
 
     const injector = parentViewContainerRef.injector;
-    const panelComponentFactory = this.componentFactoryResolver.resolveComponentFactory(ContextMenuService.ContextMenuComponentClass);
 
-    panelComponentRef = parentViewContainerRef.createComponent(panelComponentFactory, parentViewContainerRef.length, injector);
+    panelComponentRef = parentViewContainerRef.createComponent(ContextMenuService.ContextMenuComponentClass, { index: parentViewContainerRef.length, injector: injector });
 
     const childPanelService: ContextMenuService = panelComponentRef.injector.get(ContextMenuService);
 

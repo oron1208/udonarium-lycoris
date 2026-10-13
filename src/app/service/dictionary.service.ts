@@ -9,7 +9,7 @@ import { ChatPalette } from '@udonarium/chat-palette';
 import { DataElement } from '@udonarium/data-element';
 import { GameCharacter } from '@udonarium/game-character';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
-import * as JSZip from 'jszip';
+import JSZip from 'jszip';
 import { Logger } from '../class/core/system/util/logger';
 
 export interface DictImageRef {

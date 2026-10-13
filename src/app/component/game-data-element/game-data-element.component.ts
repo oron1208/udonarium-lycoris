@@ -125,7 +125,7 @@ export class GameDataElementComponent implements OnInit, OnDestroy, AfterViewIni
     let icon = root.getElementsByName('ICON');
     if(icon){
       icon[0].value = image.children.length - 1;
-      if( icon[0].currentValue > icon[0].value ) icon[0].currentValue = icon[0].value;
+      if( Number(icon[0].currentValue) > icon[0].value ) icon[0].currentValue = icon[0].value;
     }
   }
 

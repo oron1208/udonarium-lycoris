@@ -418,7 +418,7 @@ export class SkyWayDataStream extends EventEmitter implements WebRTCConnection {
       // Wait for bufferedamountlow instead of flooding the browser's SCTP queue.
       if (this.dataChannel.bufferedAmount + data.byteLength > SkyWayDataStream.BUFFER_HIGH) return;
       try {
-        this.dataChannel.send(data);
+        this.dataChannel.send(data as any);
         this.sendQueue.delete(data);
         this.sendFailures = 0;
         sent += data.byteLength;

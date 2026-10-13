@@ -156,7 +156,7 @@ export class WebSocketRelayConnection implements Connection {
   }
 
   private openSocket() {
-    if (this.socket && [WebSocket.OPEN, WebSocket.CONNECTING].includes(this.socket.readyState)) return;
+    if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) return;
     const socket = new WebSocket(this.signalingUrl);
     this.socket = socket;
     socket.addEventListener('open', () => {

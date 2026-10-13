@@ -1,4 +1,4 @@
-import { ComponentFactoryResolver, ComponentRef, Injectable, ViewContainerRef } from '@angular/core';
+import { ComponentRef, Injectable, ViewContainerRef } from '@angular/core';
 import { ChatTab } from '@udonarium/chat-tab';
 import { CardStack } from '@udonarium/card-stack';
 
@@ -39,9 +39,7 @@ export class PanelService {
 
   scrollablePanel: HTMLDivElement = null;
 
-  constructor(
-    private componentFactoryResolver: ComponentFactoryResolver
-  ) { }
+  constructor() { }
 
   get isShow(): boolean {
     return this.panelComponentRef ? true : false;
@@ -55,11 +53,8 @@ export class PanelService {
 
     const injector = parentViewContainerRef.injector;
 
-    const panelComponentFactory = this.componentFactoryResolver.resolveComponentFactory(PanelService.UIPanelComponentClass);
-    const bodyComponentFactory = this.componentFactoryResolver.resolveComponentFactory(childComponent);
-
-    panelComponentRef = parentViewContainerRef.createComponent(panelComponentFactory, parentViewContainerRef.length, injector);
-    let bodyComponentRef: ComponentRef<any> = panelComponentRef.instance.content.createComponent(bodyComponentFactory);
+    panelComponentRef = parentViewContainerRef.createComponent(PanelService.UIPanelComponentClass, { index: parentViewContainerRef.length, injector: injector });
+    let bodyComponentRef: ComponentRef<any> = panelComponentRef.instance.content.createComponent(childComponent);
 
     const childPanelService: PanelService = panelComponentRef.injector.get(PanelService);
 

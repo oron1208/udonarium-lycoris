@@ -8,7 +8,7 @@ import { SkyWayStatsMonitor } from './skyway-stats-monitor';
 import { CandidateType, WebRTCStats } from './webrtc-stats';
 
 // @types/skywayを使用すると@types/webrtcが定義エラーになるので代替定義
-declare module PeerJs {
+declare namespace PeerJs {
   export type Peer = any;
   export type DataConnection = any;
 }

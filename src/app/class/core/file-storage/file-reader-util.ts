@@ -1,5 +1,5 @@
-import * as WordArray from 'crypto-js/lib-typedarrays';
-import * as SHA256 from 'crypto-js/sha256';
+import WordArray from 'crypto-js/lib-typedarrays';
+import SHA256 from 'crypto-js/sha256';
 import { FileProcessingWorker } from './file-processing-worker';
 import { Logger } from '../system/util/logger';
 

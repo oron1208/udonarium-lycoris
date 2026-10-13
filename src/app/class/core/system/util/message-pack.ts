@@ -4,7 +4,7 @@ import { Logger } from './logger';
 export namespace MessagePack {
   export function encode(object: unknown): Uint8Array {
     try {
-      return msgpacklite.encode(object);
+      return new Uint8Array(msgpacklite.encode(object));
     } catch (error) {
       Logger.error(error, object);
     }
