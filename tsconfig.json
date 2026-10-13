@@ -12,7 +12,7 @@
     "resolveJsonModule": true,
     "importHelpers": true,
     "allowSyntheticDefaultImports": true,
-    "target": "es2020",
+    "target": "ES2022",
     "module": "es2020",
     "lib": [
       "es2020",
@@ -35,5 +35,6 @@
         "src/app/service/*"
       ]
     },
+    "useDefineForClassFields": false
   }
 }
