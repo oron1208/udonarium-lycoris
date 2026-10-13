@@ -138,7 +138,8 @@ export class WebSocketRelayConnection implements Connection {
       this.socket.addEventListener('message', handler);
       this.sendSignal({ type: 'list' });
       setTimeout(() => {
-        this.socket.removeEventListener('message', handler);
+        // 入室等でsocketが再接続中(null)にタイムアウトが発火しても落とさない
+        if (this.socket) this.socket.removeEventListener('message', handler);
         resolve([]);
       }, 3000);
     });
