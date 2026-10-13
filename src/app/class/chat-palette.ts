@@ -293,20 +293,12 @@ export class ChatPalette extends ObjectNode {
     }
 
     // 拡張ダイスボット: (数式) を計算して置換
-    // 例: AR+(1-5) → AR-4, 2d6+(3*2) → 2d6+6。英字直後はBCDiceに委譲。
-    if (enableExtendedDiceBot) {
-      // K(式) 等、英字直後の括弧はBCDice自身の構文。入れ子も丸ごと保持する。
-      for (let i = 1; i < evaluate.length; i++) {
-        if (evaluate[i] !== '(' || !/[a-zA-Z]/.test(evaluate[i - 1])) continue;
-        let depth = 1;
-        let end = i + 1;
-        while (end < evaluate.length && depth > 0) {
-          if (evaluate[end] === '(') depth++;
-          if (evaluate[end] === ')') depth--;
-          end++;
-        }
-        if (depth === 0) evaluate = evaluate.slice(0, i) + protect(evaluate.slice(i, end)) + evaluate.slice(end);
-      }
+    // 例: AR+(1-5) → AR-4, 2d6+(3*2) → 2d6+6。
+    // 英字直後の括弧（k(式) 等のBCDiceコマンド構文）を含むメッセージは、括弧内の
+    // 計算・丸めがゲームシステム依存で、こちらの浮動小数点前置換は値を壊す
+    // （例: SW2.5の floor(16/6)*3=6 が 8.0 になる）。置換せず丸ごとBCDiceに委譲する。
+    // 全角括弧・全角英字もBCDiceが正規化するため同様に委譲扱いとする。
+    if (enableExtendedDiceBot && !/[a-zA-Zａ-ｚＡ-Ｚ][(（]/.test(evaluate)) {
       let prev = '';
       while (prev !== evaluate) {
         prev = evaluate;
