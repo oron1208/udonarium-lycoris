@@ -187,6 +187,11 @@ export class GameTableMaskComponent implements OnChanges, OnDestroy, AfterViewIn
     return ret;
   }
 
+  /** テンプレートの @for track 用キー（座標で固定し、状態変化時に要素を再利用して回転アニメを発火させる） */
+  identify(index: number, gridInfo: { x: number, y: number, state: string }): string {
+    return gridInfo.x + ':' + gridInfo.y;
+  }
+
   get operateOpacity(): number {
     if (this.isLightAreaMask) {
       return this.gmModeService.isGm ? 0.25 : 0.12;
