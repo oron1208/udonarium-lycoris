@@ -297,6 +297,21 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     if (character) this.changeDetector.markForCheck();
   }
 
+  private tableUpdateTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** Merge bursts of UPDATE_GAME_OBJECT into one grid/redraw pass (entry sync can apply thousands). */
+  private scheduleTableUpdate() {
+    if (this.tableUpdateTimer !== null) return;
+    this.tableUpdateTimer = setTimeout(() => {
+      this.tableUpdateTimer = null;
+      this.setGameTableGrid(this.currentTable.width, this.currentTable.height, this.currentTable.gridSize, this.currentTable.gridType, this.currentTable.gridColor);
+      this.redrawDrawingCanvas();
+      this.invalidateWallGrid();
+      this.invalidateLighting();
+      this.changeDetector.markForCheck();
+    }, 80);
+  }
+
   ngOnInit() {
     EventSystem.register(this)
       .on('IMAGE_FILE_CHANGED', () => this.changeDetector.markForCheck())
@@ -308,11 +323,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
           if (!(updated instanceof GameCharacter)) this.invalidateWallGrid();
         }
         if (event.data.identifier !== this.currentTable.identifier && event.data.identifier !== this.tableSelecter.identifier) return;
-        Logger.debug('UPDATE_GAME_OBJECT GameTableComponent ' + this.currentTable.identifier);
-        this.setGameTableGrid(this.currentTable.width, this.currentTable.height, this.currentTable.gridSize, this.currentTable.gridType, this.currentTable.gridColor);
-        this.redrawDrawingCanvas();
-        this.invalidateWallGrid();
-        this.invalidateLighting();
+        this.scheduleTableUpdate();
       })
       .on('DICTIONARY_OBJECT_SPAWNED', () => {
         this.ngZone.run(() => {

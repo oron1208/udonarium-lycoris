@@ -83,15 +83,14 @@ export class ImageSharingSystem {
           }
         }
 
-        // 見える範囲（卓背景・卓上コマ・VN立ち絵など）を先に、未参照/控え画像を後で取得する
+        // 見える範囲（卓背景・卓上コマ・VN立ち絵など）を先に取得し、
+        // 未参照/控え素材（スコア0）は描画が落ち着いた後に後景で取得する。
         const priorityScores = MediaLoadPriority.getImageScoreMap();
         const prioritizedFetch = MediaLoadPriority.sortByScore(needFetch, priorityScores);
-        for (let i = 0; i < prioritizedFetch.length;) {
-          const score = MediaLoadPriority.scoreOf(priorityScores, prioritizedFetch[i].identifier);
-          const batchSize = score >= MediaLoadPriority.VISIBLE_IMAGE_SCORE ? BATCH_SIZE : LOW_PRIORITY_BATCH;
-          const priority = MediaLoadPriority.fetchPriority(score, MediaLoadPriority.VISIBLE_IMAGE_SCORE);
-          const batch = prioritizedFetch.slice(i, i + batchSize);
-          i += batch.length;
+        const visibleFetch = prioritizedFetch.filter(item => MediaLoadPriority.scoreOf(priorityScores, item.identifier) > 0);
+        const backgroundFetch = prioritizedFetch.filter(item => MediaLoadPriority.scoreOf(priorityScores, item.identifier) <= 0);
+
+        const fetchBatch = async (batch: CatalogItem[], priority: MediaPriority): Promise<void> => {
           const results = await Promise.all(
             batch.map(async item => {
               try {
@@ -114,6 +113,29 @@ export class ImageSharingSystem {
             } else {
               request.push(item);
             }
+          }
+        };
+
+        for (let i = 0; i < visibleFetch.length;) {
+          const batch = visibleFetch.slice(i, i + BATCH_SIZE);
+          i += batch.length;
+          await fetchBatch(batch, 'high');
+        }
+
+        // 未参照素材は表示が揃ってから、アイドル時・低優先度で少しずつ取得する
+        if (backgroundFetch.length) {
+          const start = () => { void (async () => {
+            for (let i = 0; i < backgroundFetch.length;) {
+              const batch = backgroundFetch.slice(i, i + LOW_PRIORITY_BATCH);
+              i += batch.length;
+              await fetchBatch(batch, 'low');
+              await new Promise(resolve => setTimeout(resolve, 120));
+            }
+          })(); };
+          if (typeof (window as any).requestIdleCallback === 'function') {
+            (window as any).requestIdleCallback(start, { timeout: 4000 });
+          } else {
+            setTimeout(start, 2000);
           }
         }
 
