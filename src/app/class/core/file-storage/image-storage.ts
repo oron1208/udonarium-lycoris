@@ -110,6 +110,8 @@ export class ImageStorage {
     }
     if (this.update(image)) {
       let stored = this.imageHash[image.identifier];
+      // blobが後から届いた場合もmissingフラグを必ず再評価する（?表示のまま残るバグの根治）
+      this.applyMissingFlag(stored.identifier);
       if (ImageState.COMPLETE <= stored.state) {
         ServerMediaStorage.uploadImage(stored);
         void MediaCache.cacheImage(stored);
