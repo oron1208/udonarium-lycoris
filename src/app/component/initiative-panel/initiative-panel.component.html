@@ -6,227 +6,302 @@
       class="combat-toggle"
       [class.active]="isCombatActive"
       (click)="isCombatActive ? endCombat() : startCombat()"
-    >
+      >
       <span class="combat-icon">⚔️</span>
       {{ isCombatActive ? '戦闘終了' : '戦闘開始' }}
     </button>
-    <div class="round-info" *ngIf="isCombatActive">
-      <span class="round-label">Round</span>
-      <span class="round-number">{{ currentRound }}</span>
-    </div>
+    @if (isCombatActive) {
+      <div class="round-info">
+        <span class="round-label">Round</span>
+        <span class="round-number">{{ currentRound }}</span>
+      </div>
+    }
   </div>
 
   <!-- 戦闘BGM設定（GM限定、常時表示） -->
-  <div class="combat-bgm-section" *ngIf="isGm">
-    <label class="bgm-label">⚔️ 戦闘BGM</label>
-    <div class="bgm-controls">
-      <select class="bgm-select" [(ngModel)]="combatBgmIdentifier">
-        <option value="">なし</option>
-        <optgroup label="アップロード" *ngIf="audioFiles.length > 0">
-          <option *ngFor="let a of audioFiles" [value]="a.identifier">{{ a.name }}</option>
-        </optgroup>
-        <optgroup label="ライブラリ" *ngIf="libraryTracks.length > 0">
-          <option *ngFor="let track of libraryTracks" [value]="'server:' + track.id">{{ track.name }}</option>
-        </optgroup>
-      </select>
-      <button class="bgm-preview-btn" (click)="previewCombatBgm()" title="試聴">▶</button>
+  @if (isGm) {
+    <div class="combat-bgm-section">
+      <label class="bgm-label">⚔️ 戦闘BGM</label>
+      <div class="bgm-controls">
+        <select class="bgm-select" [(ngModel)]="combatBgmIdentifier">
+          <option value="">なし</option>
+          @if (audioFiles.length > 0) {
+            <optgroup label="アップロード">
+              @for (a of audioFiles; track a) {
+                <option [value]="a.identifier">{{ a.name }}</option>
+              }
+            </optgroup>
+          }
+          @if (libraryTracks.length > 0) {
+            <optgroup label="ライブラリ">
+              @for (track of libraryTracks; track track) {
+                <option [value]="'server:' + track.id">{{ track.name }}</option>
+              }
+            </optgroup>
+          }
+        </select>
+        <button class="bgm-preview-btn" (click)="previewCombatBgm()" title="試聴">▶</button>
+      </div>
+      @if (!combatBgmIdentifier) {
+        <p class="bgm-hint">戦闘開始時に再生するBGMを設定できます</p>
+      }
     </div>
-    <p class="bgm-hint" *ngIf="!combatBgmIdentifier">戦闘開始時に再生するBGMを設定できます</p>
-  </div>
+  }
 
   <!-- 戦闘開始設定（GM限定） -->
-  <div class="combat-start-settings" *ngIf="!isCombatActive">
-    <div class="combat-start-title">戦闘開始時の参加対象</div>
-    <label class="combat-start-option">
-      <input type="checkbox" [(ngModel)]="combatJoinAllTableCharacters">
-      <span>テーブル上のすべてのキャラ</span>
-    </label>
-    <label class="combat-start-option">
-      <input type="checkbox" [(ngModel)]="combatJoinSelectedCharacters">
-      <span>選択状態のキャラ</span>
-    </label>
-    <label class="combat-start-option">
-      <input type="checkbox" [(ngModel)]="combatIncludeHiddenInventoryCharacters">
-      <span>テーブルインベントリ非表示キャラを含める</span>
-    </label>
-  </div>
+  @if (!isCombatActive) {
+    <div class="combat-start-settings">
+      <div class="combat-start-title">戦闘開始時の参加対象</div>
+      <label class="combat-start-option">
+        <input type="checkbox" [(ngModel)]="combatJoinAllTableCharacters">
+        <span>テーブル上のすべてのキャラ</span>
+      </label>
+      <label class="combat-start-option">
+        <input type="checkbox" [(ngModel)]="combatJoinSelectedCharacters">
+        <span>選択状態のキャラ</span>
+      </label>
+      <label class="combat-start-option">
+        <input type="checkbox" [(ngModel)]="combatIncludeHiddenInventoryCharacters">
+        <span>テーブルインベントリ非表示キャラを含める</span>
+      </label>
+    </div>
+  }
 
   <!-- バフ自動減少設定（アドバンスモード限定・GM限定） -->
-  <div class="combat-start-settings" *ngIf="!isCombatActive && isGm && isAdvancedMode">
-    <div class="combat-start-title">ラウンド進行時の自動処理</div>
-    <label class="combat-start-option">
-      <input type="checkbox" [(ngModel)]="combatAutoBuffDecay">
-      <span>バフR自動減少（0Rで自動削除）</span>
-    </label>
-  </div>
+  @if (!isCombatActive && isGm && isAdvancedMode) {
+    <div class="combat-start-settings">
+      <div class="combat-start-title">ラウンド進行時の自動処理</div>
+      <label class="combat-start-option">
+        <input type="checkbox" [(ngModel)]="combatAutoBuffDecay">
+        <span>バフR自動減少（0Rで自動削除）</span>
+      </label>
+    </div>
+  }
 
   <!-- ラウンドトラッカーのPL操作許可（GM限定） -->
-  <div class="combat-start-settings" *ngIf="isGm">
-    <div class="combat-start-title">ラウンドトラッカー</div>
-    <label class="combat-start-option">
-      <input type="checkbox" [(ngModel)]="plEditTracker">
-      <span>PLもトラッカーを操作できるようにする</span>
-    </label>
-  </div>
+  @if (isGm) {
+    <div class="combat-start-settings">
+      <div class="combat-start-title">ラウンドトラッカー</div>
+      <label class="combat-start-option">
+        <input type="checkbox" [(ngModel)]="plEditTracker">
+        <span>PLもトラッカーを操作できるようにする</span>
+      </label>
+    </div>
+  }
 
   <!-- システムメッセージ送信先 -->
-  <div class="combat-start-settings" *ngIf="isGm">
-    <div class="combat-start-title">システムメッセージ送信先</div>
-    <select [(ngModel)]="combatMessageTabId" style="width:100%;font-size:0.85em;padding:2px 4px;">
-      <option value="">システム</option>
-      <option *ngFor="let tab of chatTabs" [value]="tab.identifier">{{ tab.name }}</option>
-    </select>
-  </div>
+  @if (isGm) {
+    <div class="combat-start-settings">
+      <div class="combat-start-title">システムメッセージ送信先</div>
+      <select [(ngModel)]="combatMessageTabId" style="width:100%;font-size:0.85em;padding:2px 4px;">
+        <option value="">システム</option>
+        @for (tab of chatTabs; track tab) {
+          <option [value]="tab.identifier">{{ tab.name }}</option>
+        }
+      </select>
+    </div>
+  }
 
   <!-- ターン制御（GM限定） -->
-  <div class="turn-controls" *ngIf="isCombatActive && isGm">
-    <button class="turn-btn" (click)="prevRound()" title="前のラウンド">◀◀ 前R</button>
-    <button class="turn-btn" (click)="prevTurn()" title="前のターン">◀ 前T</button>
-    <button class="turn-btn" (click)="nextTurn()" title="次のターン">次T ▶</button>
-    <button class="turn-btn" (click)="nextRound()" title="次のラウンド">次R ▶▶</button>
-  </div>
+  @if (isCombatActive && isGm) {
+    <div class="turn-controls">
+      <button class="turn-btn" (click)="prevRound()" title="前のラウンド">◀◀ 前R</button>
+      <button class="turn-btn" (click)="prevTurn()" title="前のターン">◀ 前T</button>
+      <button class="turn-btn" (click)="nextTurn()" title="次のターン">次T ▶</button>
+      <button class="turn-btn" (click)="nextRound()" title="次のラウンド">次R ▶▶</button>
+    </div>
+  }
 
-  <div class="field-tools" *ngIf="isCombatActive && isGm">
-    <span>表示項目</span>
-      <span class="col-field-add" *ngIf="isGm">
-        <button type="button" class="field-add-btn" *ngIf="!isAddingField" (click)="startAddField()" title="コマのデータから項目を追加">＋項目</button>
-        <span class="field-add-panel" *ngIf="isAddingField">
-          <input type="text" class="field-filter-input" [(ngModel)]="fieldFilter" placeholder="項目名（選択 or 入力→Enter）" (keyup.enter)="confirmAddField()" (keyup.escape)="cancelAddField()">
-          <div class="field-candidates">
-            <button type="button" class="field-candidate" *ngFor="let c of filteredFieldCandidates()" (click)="confirmAddField(c)">{{c}}</button>
-            <div class="field-empty" *ngIf="filteredFieldCandidates().length === 0">候補なし（Enterで追加）</div>
-          </div>
+  @if (isCombatActive && isGm) {
+    <div class="field-tools">
+      <span>表示項目</span>
+      @if (isGm) {
+        <span class="col-field-add">
+          @if (!isAddingField) {
+            <button type="button" class="field-add-btn" (click)="startAddField()" title="コマのデータから項目を追加">＋項目</button>
+          }
+          @if (isAddingField) {
+            <span class="field-add-panel">
+              <input type="text" class="field-filter-input" [(ngModel)]="fieldFilter" placeholder="項目名（選択 or 入力→Enter）" (keyup.enter)="confirmAddField()" (keyup.escape)="cancelAddField()">
+              <div class="field-candidates">
+                @for (c of filteredFieldCandidates(); track c) {
+                  <button type="button" class="field-candidate" (click)="confirmAddField(c)">{{c}}</button>
+                }
+                @if (filteredFieldCandidates().length === 0) {
+                  <div class="field-empty">候補なし（Enterで追加）</div>
+                }
+              </div>
+            </span>
+          }
         </span>
-      </span>
-  </div>
+      }
+    </div>
+  }
 
   <!-- イニシアチブ表 -->
-  <div class="initiative-list" *ngIf="isCombatActive">
-    <div class="list-header">
-      <span class="col-portrait">コマ</span>
-      <span class="col-name">名前</span>
-      <span class="col-field" *ngFor="let f of combatCustomFields; trackBy: trackByField" (contextmenu)="onFieldContextMenu($event, f)">
-        <span class="field-heading" [title]="f">{{f}}</span>
-        <button type="button" class="field-remove-btn" *ngIf="isGm" (pointerdown)="$event.stopPropagation()" (click)="removeCustomField(f)" [attr.aria-label]="f + 'の表示を削除'" title="表示項目を削除（コマの値は残します）">×</button>
-      </span>
-      <span class="col-init">Init</span>
-      <span class="col-action"></span>
-    </div>
-    <div
-      *ngFor="let entry of getVisibleEntries(); let i = index; trackBy: trackById"
-      class="list-row"
-      [class.current-turn]="i === currentTurnIndex"
-      [class.hidden-char]="entry.isHidden"
-      [class.dragging]="dragIndex === i"
-      [class.drag-over]="dragOverIndex === i"
-      draggable="true"
-      (dragstart)="onDragStart($event, i)"
-      (dragover)="onDragOver($event, i)"
-      (dragleave)="onDragLeave($event)"
-      (drop)="onDrop($event, i)"
-      (dragend)="onDragEnd($event)"
-    >
-      <div class="col-portrait">
-        <img *ngIf="getCharacterIcon(entry.identifier)" [src]="getCharacterIcon(entry.identifier) | safe: 'resourceUrl'" [alt]="entry.name">
-        <div class="portrait-placeholder" *ngIf="!getCharacterIcon(entry.identifier)">{{ entry.name.charAt(0) }}</div>
-      </div>
-      <div class="col-name">
-        <span class="name-text">{{ entry.name }}</span>
-        <span class="gm-tag" *ngIf="entry.isHidden && isGm"> (GM)</span>
-      </div>
-      <div class="col-field" *ngFor="let f of combatCustomFields; trackBy: trackByField">
-        <span class="field-tag" [class.has-bar]="getFieldMax(entry.identifier, f) !== null">
-          <span class="field-name">{{f}}</span>
-          <input class="field-value" type="text" [value]="getFieldValue(entry.identifier, f)" (change)="setFieldValue(entry.identifier, f, $event.target.value)" [disabled]="!hasField(entry.identifier, f)" [placeholder]="hasField(entry.identifier, f) ? '' : '—'" [attr.aria-label]="entry.name + 'の' + f" [title]="hasField(entry.identifier, f) ? f + '（盤面のステータスと連動）' : 'このコマには項目がありません'">
-          <span class="field-bar" *ngIf="getFieldMax(entry.identifier, f) !== null">
-            <span class="field-bar-fill" [style.width.%]="getBarPercent(entry.identifier, f)"></span>
+  @if (isCombatActive) {
+    <div class="initiative-list">
+      <div class="list-header">
+        <span class="col-portrait">コマ</span>
+        <span class="col-name">名前</span>
+        @for (f of combatCustomFields; track trackByField($index, f)) {
+          <span class="col-field" (contextmenu)="onFieldContextMenu($event, f)">
+            <span class="field-heading" [title]="f">{{f}}</span>
+            @if (isGm) {
+              <button type="button" class="field-remove-btn" (pointerdown)="$event.stopPropagation()" (click)="removeCustomField(f)" [attr.aria-label]="f + 'の表示を削除'" title="表示項目を削除（コマの値は残します）">×</button>
+            }
           </span>
-        </span>
+        }
+        <span class="col-init">Init</span>
+        <span class="col-action"></span>
       </div>
-      <div class="col-init">
-        <input
-          type="number"
-          class="init-input"
-          [value]="getInitiativeValue(entry.identifier)"
-          (change)="setInitiative(entry.identifier, +$event.target.value)"
-        >
-      </div>
-      <div class="col-action">
-        <button class="remove-btn" (click)="removeEntry(entry.identifier)" title="戦闘から除外">✕</button>
-      </div>
+      @for (entry of getVisibleEntries(); track trackById(i, entry); let i = $index) {
+        <div
+          class="list-row"
+          [class.current-turn]="i === currentTurnIndex"
+          [class.hidden-char]="entry.isHidden"
+          [class.dragging]="dragIndex === i"
+          [class.drag-over]="dragOverIndex === i"
+          draggable="true"
+          (dragstart)="onDragStart($event, i)"
+          (dragover)="onDragOver($event, i)"
+          (dragleave)="onDragLeave($event)"
+          (drop)="onDrop($event, i)"
+          (dragend)="onDragEnd($event)"
+          >
+          <div class="col-portrait">
+            @if (getCharacterIcon(entry.identifier)) {
+              <img [src]="getCharacterIcon(entry.identifier) | safe: 'resourceUrl'" [alt]="entry.name">
+            }
+            @if (!getCharacterIcon(entry.identifier)) {
+              <div class="portrait-placeholder">{{ entry.name.charAt(0) }}</div>
+            }
+          </div>
+          <div class="col-name">
+            <span class="name-text">{{ entry.name }}</span>
+            @if (entry.isHidden && isGm) {
+              <span class="gm-tag"> (GM)</span>
+            }
+          </div>
+          @for (f of combatCustomFields; track trackByField($index, f)) {
+            <div class="col-field">
+              <span class="field-tag" [class.has-bar]="getFieldMax(entry.identifier, f) !== null">
+                <span class="field-name">{{f}}</span>
+                <input class="field-value" type="text" [value]="getFieldValue(entry.identifier, f)" (change)="setFieldValue(entry.identifier, f, $event.target.value)" [disabled]="!hasField(entry.identifier, f)" [placeholder]="hasField(entry.identifier, f) ? '' : '—'" [attr.aria-label]="entry.name + 'の' + f" [title]="hasField(entry.identifier, f) ? f + '（盤面のステータスと連動）' : 'このコマには項目がありません'">
+                @if (getFieldMax(entry.identifier, f) !== null) {
+                  <span class="field-bar">
+                    <span class="field-bar-fill" [style.width.%]="getBarPercent(entry.identifier, f)"></span>
+                  </span>
+                }
+              </span>
+            </div>
+          }
+          <div class="col-init">
+            <input
+              type="number"
+              class="init-input"
+              [value]="getInitiativeValue(entry.identifier)"
+              (change)="setInitiative(entry.identifier, +$event.target.value)"
+              >
+          </div>
+          <div class="col-action">
+            <button class="remove-btn" (click)="removeEntry(entry.identifier)" title="戦闘から除外">✕</button>
+          </div>
+        </div>
+      }
+      @if (getVisibleEntries().length === 0) {
+        <div class="empty-list">
+          テーブル上にキャラクターがいません
+        </div>
+      }
     </div>
-    <div class="empty-list" *ngIf="getVisibleEntries().length === 0">
-      テーブル上にキャラクターがいません
-    </div>
-  </div>
+  }
 
   <!-- 参加していないキャラクター -->
-  <div class="add-section" *ngIf="isCombatActive && isGm && getUnlistedCharacters().length > 0">
-    <button class="add-toggle-btn" (click)="showAddList = !showAddList">
-      ➕ 戦闘に追加 ({{ getUnlistedCharacters().length }})
-    </button>
-    <div class="add-list" *ngIf="showAddList">
-      <div
-        *ngFor="let char of getUnlistedCharacters(); trackBy: trackByCharId"
-        class="add-list-row"
-      >
-        <div class="col-portrait">
-          <img *ngIf="char.imageFile?.url" [src]="char.imageFile.url | safe: 'resourceUrl'" [alt]="char.name">
-          <div class="portrait-placeholder" *ngIf="!char.imageFile?.url">{{ char.name.charAt(0) }}</div>
+  @if (isCombatActive && isGm && getUnlistedCharacters().length > 0) {
+    <div class="add-section">
+      <button class="add-toggle-btn" (click)="showAddList = !showAddList">
+        ➕ 戦闘に追加 ({{ getUnlistedCharacters().length }})
+      </button>
+      @if (showAddList) {
+        <div class="add-list">
+          @for (char of getUnlistedCharacters(); track trackByCharId($index, char)) {
+            <div
+              class="add-list-row"
+              >
+              <div class="col-portrait">
+                @if (char.imageFile?.url) {
+                  <img [src]="char.imageFile.url | safe: 'resourceUrl'" [alt]="char.name">
+                }
+                @if (!char.imageFile?.url) {
+                  <div class="portrait-placeholder">{{ char.name.charAt(0) }}</div>
+                }
+              </div>
+              <div class="col-name">
+                <span class="name-text">{{ char.name }}</span>
+              </div>
+              <div class="col-init">
+                <input
+                  type="number"
+                  class="init-input"
+                  [value]="char.initiative || 0"
+                  (change)="char.initiative = +$event.target.value"
+                  >
+              </div>
+              <div class="col-action">
+                <button class="add-btn" (click)="addEntry(char.identifier)" title="戦闘に追加">＋</button>
+              </div>
+            </div>
+          }
         </div>
-        <div class="col-name">
-          <span class="name-text">{{ char.name }}</span>
-        </div>
-        <div class="col-init">
-          <input
-            type="number"
-            class="init-input"
-            [value]="char.initiative || 0"
-            (change)="char.initiative = +$event.target.value"
-          >
-        </div>
-        <div class="col-action">
-          <button class="add-btn" (click)="addEntry(char.identifier)" title="戦闘に追加">＋</button>
-        </div>
-      </div>
+      }
     </div>
-  </div>
+  }
 
   <!-- ダイスロール for イニシアチブ -->
-  <div class="dice-section" *ngIf="isCombatActive && isGm">
-    <button class="dice-toggle-btn" (click)="toggleDiceRoller()">
-      🎲 一括イニシアチブロール
-    </button>
-    <div class="dice-roller" *ngIf="showDiceRoller">
-      <div class="dice-types">
-        <button
-          *ngFor="let dt of diceTypes"
-          class="dice-type-btn"
-          [class.selected]="selectedDice === dt"
-          (click)="selectedDice = dt"
-        >{{ dt }}</button>
-      </div>
-      <div class="dice-modifier">
-        <label>修正値:</label>
-        <input type="number" class="modifier-input" [(ngModel)]="diceModifier">
-      </div>
-      <button class="roll-btn" (click)="rollInitiativeForAll()">
-        🎲 全コマのイニシアチブをロール
+  @if (isCombatActive && isGm) {
+    <div class="dice-section">
+      <button class="dice-toggle-btn" (click)="toggleDiceRoller()">
+        🎲 一括イニシアチブロール
       </button>
+      @if (showDiceRoller) {
+        <div class="dice-roller">
+          <div class="dice-types">
+            @for (dt of diceTypes; track dt) {
+              <button
+                class="dice-type-btn"
+                [class.selected]="selectedDice === dt"
+                (click)="selectedDice = dt"
+              >{{ dt }}</button>
+            }
+          </div>
+          <div class="dice-modifier">
+            <label>修正値:</label>
+            <input type="number" class="modifier-input" [(ngModel)]="diceModifier">
+          </div>
+          <button class="roll-btn" (click)="rollInitiativeForAll()">
+            🎲 全コマのイニシアチブをロール
+          </button>
+        </div>
+      }
     </div>
-  </div>
+  }
 
   <!-- エフェクトマネージャー（アドバンスモード限定） -->
-  <div class="effect-manager-section" *ngIf="isCombatActive && isAdvancedMode">
-    <button class="effect-manager-btn" (click)="openEffectManager()">
-      ⚔️ バフマネージャー(β)
-    </button>
-  </div>
+  @if (isCombatActive && isAdvancedMode) {
+    <div class="effect-manager-section">
+      <button class="effect-manager-btn" (click)="openEffectManager()">
+        ⚔️ バフマネージャー(β)
+      </button>
+    </div>
+  }
 
   <!-- 非戦闘時 -->
-  <div class="combat-inactive" *ngIf="!isCombatActive">
-    <p>戦闘管理パネルです。</p>
-    <p>「戦闘開始」を押すと、テーブル上のキャラクターを<br>イニシアチブ順に行動できます。</p>
-    <p class="hint">キャラクターの共通データの<br>「initiative」に値を入れてください。</p>
-  </div>
+  @if (!isCombatActive) {
+    <div class="combat-inactive">
+      <p>戦闘管理パネルです。</p>
+      <p>「戦闘開始」を押すと、テーブル上のキャラクターを<br>イニシアチブ順に行動できます。</p>
+      <p class="hint">キャラクターの共通データの<br>「initiative」に値を入れてください。</p>
+    </div>
+  }
 </div>

@@ -1,129 +1,146 @@
-<ng-container *ngIf="!isPopupWindow">
-<div id="app-table-layer" style="position: absolute; width: 100%; height: 100%; overflow: hidden;">
-  <game-table></game-table>
-</div>
-
-<!-- 初期ルーム同期・メディア一括ダウンロード中表示 -->
-<div *ngIf="isBundleLoading" class="bundle-loading-overlay" aria-busy="true">
-  <div class="bundle-loading-card" #bundleLoadingCard tabindex="-1"
-       role="dialog" aria-modal="true"
-       aria-labelledby="bundle-loading-title" aria-describedby="bundle-loading-detail bundle-loading-hint">
-    <div class="bundle-loading-spinner" aria-hidden="true"></div>
-    <div id="bundle-loading-title" class="bundle-loading-text"
-         role="status" aria-live="polite" aria-atomic="true">{{ bundleLoadingText }}</div>
-    <div id="bundle-loading-detail" class="bundle-loading-detail">{{ bundleLoadingDetail }}</div>
-    <div class="bundle-loading-progress" role="progressbar"
-         aria-label="同期の進捗" [attr.aria-valuetext]="bundleLoadingProgressText"
-         [class.is-indeterminate]="bundleProgressPercent == null"
-         [attr.aria-valuemin]="bundleProgressPercent == null ? null : 0"
-         [attr.aria-valuemax]="bundleProgressPercent == null ? null : 100"
-         [attr.aria-valuenow]="bundleProgressAriaValue">
-      <div class="bundle-loading-bar"
-           [style.width.%]="bundleProgressPercent == null ? 35 : bundleProgressPercent"></div>
-    </div>
-    <div class="bundle-loading-count">{{ bundleLoadingProgressText }}</div>
-    <div id="bundle-loading-hint" class="bundle-loading-hint">完了するまで、この画面を閉じずにお待ちください。</div>
+@if (!isPopupWindow) {
+  <div id="app-table-layer" style="position: absolute; width: 100%; height: 100%; overflow: hidden;">
+    <game-table></game-table>
   </div>
-</div>
-<div *ngIf="developerAnnouncementText" class="developer-announcement" [class.danger]="developerAnnouncementLevel === 'danger'">
-  <span>{{ developerAnnouncementText }}</span>
-  <button type="button" (click)="developerAnnouncementText = ''">×</button>
-</div>
-<vn-stage *ngIf="isVnStageVisible && vnStageReady"></vn-stage>
-<ui-panel [top]="0" [left]="0" [width]="105" [height]="470" [title]="'メニュー'" [showTitleButtons]="false">
-  <nav>
-    <div *ngIf="isAdvancedRoom" class="advanced-room-badge">ADVANCED</div>
-    <ul>
-      <li (click)="open('PeerMenuComponent')">
-        <a routerLink="/" routerLinkActive="active">
-          <div><i class="material-icons icon-size">people</i></div>
-          <div>接続</div>
-        </a>
-      </li>
-      <li (click)="open('ChatWindowComponent')">
-        <a routerLink="/" routerLinkActive="active">
-          <div><i class="material-icons icon-size">speaker_notes</i></div>
-          <div>チャット画面</div>
-        </a>
-      </li>
-      <li (click)="open('GameTableSettingComponent')">
-        <a routerLink="/" routerLinkActive="active">
-          <div><i class="material-icons icon-size">layers</i></div>
-          <div>テーブル設定</div>
-        </a>
-      </li>
-      <li (click)="open('DictionaryComponent')">
-        <a routerLink="/" routerLinkActive="active">
-          <div><i class="material-icons icon-size">auto_stories</i></div>
-          <div>辞書</div>
-        </a>
-      </li>
-      <li (click)="open('FileStorageComponent')">
-        <a routerLink="/" routerLinkActive="active">
-          <div><i class="material-icons icon-size">photo_library</i></div>
-          <div>画像</div>
-        </a>
-      </li>
-      <li (click)="open('JukeboxComponent')">
-        <a routerLink="/" routerLinkActive="active">
-          <div><i class="material-icons">queue_music</i></div>
-          <div>音楽</div>
-        </a>
-      </li>
-      <li (click)="open('GameObjectInventoryComponent')">
-        <a routerLink="/" routerLinkActive="active">
-          <div><i class="material-icons icon-size">folder_shared</i></div>
-          <div>インベントリ</div>
-        </a>
-      </li>
-      <li (click)="open('LightingPanelComponent')" [class.options-active]="isLightingPanelOpen">
-        <a routerLink="/" routerLinkActive="active">
-          <div><i class="material-icons">lightbulb</i></div>
-          <div>照明・視界</div>
-        </a>
-      </li>
-      <li (click)="open('InitiativePanelComponent')" [class.options-active]="isInitiativePanelOpen" *ngIf="isAdvancedRoom">
-        <a routerLink="/" routerLinkActive="active">
-          <div><i class="material-icons">sports_kabaddi</i></div>
-          <div>{{ isInitiativePanelOpen ? '戦闘管理中' : '戦闘管理' }}</div>
-        </a>
-      </li>
-      <li (click)="open('DataImportMenuComponent')">
-        <a routerLink="/" routerLinkActive="active">
-          <div><i class="material-icons">open_in_browser</i></div>
-          <div>データ読込</div>
-        </a>
-      </li>
-      <li (click)="open('OptionsPanelComponent')" [class.options-active]="isOptionsPanelOpen">
-        <a routerLink="/" routerLinkActive="active">
-          <div><i class="material-icons">settings</i></div>
-          <div>オプション</div>
-        </a>
-      </li>
-      <li *ngIf="!isSaveing" (click)="save()">
-        <a routerLink="/" routerLinkActive="active">
-          <div><i class="material-icons">sd_storage</i></div>
-          <div>卓をZIP保存</div>
-        </a>
-      </li>
-      <li *ngIf="isSaveing" style="pointer-events: none;">
-        <a>
-          <div><i class="material-icons vibration-amine">sd_storage</i></div>
-          <div>{{progresPercent}}%</div>
-        </a>
-      </li>
-    </ul>
-  </nav>
-</ui-panel>
-<dice-cutin></dice-cutin>
-<contested-roll-cutin></contested-roll-cutin>
-<initiative-tracker *ngIf="isAdvancedRoom"></initiative-tracker>
-<div #modalLayer></div>
-<macro-hotbar></macro-hotbar>
-<app-mini-player></app-mini-player>
-<network-indicator class="networkIndicator"></network-indicator>
-<media-integrity-badge></media-integrity-badge>
-</ng-container>
+  <!-- 初期ルーム同期・メディア一括ダウンロード中表示 -->
+  @if (isBundleLoading) {
+    <div class="bundle-loading-overlay" aria-busy="true">
+      <div class="bundle-loading-card" #bundleLoadingCard tabindex="-1"
+        role="dialog" aria-modal="true"
+        aria-labelledby="bundle-loading-title" aria-describedby="bundle-loading-detail bundle-loading-hint">
+        <div class="bundle-loading-spinner" aria-hidden="true"></div>
+        <div id="bundle-loading-title" class="bundle-loading-text"
+        role="status" aria-live="polite" aria-atomic="true">{{ bundleLoadingText }}</div>
+        <div id="bundle-loading-detail" class="bundle-loading-detail">{{ bundleLoadingDetail }}</div>
+        <div class="bundle-loading-progress" role="progressbar"
+          aria-label="同期の進捗" [attr.aria-valuetext]="bundleLoadingProgressText"
+          [class.is-indeterminate]="bundleProgressPercent == null"
+          [attr.aria-valuemin]="bundleProgressPercent == null ? null : 0"
+          [attr.aria-valuemax]="bundleProgressPercent == null ? null : 100"
+          [attr.aria-valuenow]="bundleProgressAriaValue">
+          <div class="bundle-loading-bar"
+          [style.width.%]="bundleProgressPercent == null ? 35 : bundleProgressPercent"></div>
+        </div>
+        <div class="bundle-loading-count">{{ bundleLoadingProgressText }}</div>
+        <div id="bundle-loading-hint" class="bundle-loading-hint">完了するまで、この画面を閉じずにお待ちください。</div>
+      </div>
+    </div>
+  }
+  @if (developerAnnouncementText) {
+    <div class="developer-announcement" [class.danger]="developerAnnouncementLevel === 'danger'">
+      <span>{{ developerAnnouncementText }}</span>
+      <button type="button" (click)="developerAnnouncementText = ''">×</button>
+    </div>
+  }
+  @if (isVnStageVisible && vnStageReady) {
+    <vn-stage></vn-stage>
+  }
+  <ui-panel [top]="0" [left]="0" [width]="105" [height]="470" [title]="'メニュー'" [showTitleButtons]="false">
+    <nav>
+      @if (isAdvancedRoom) {
+        <div class="advanced-room-badge">ADVANCED</div>
+      }
+      <ul>
+        <li (click)="open('PeerMenuComponent')">
+          <a routerLink="/" routerLinkActive="active">
+            <div><i class="material-icons icon-size">people</i></div>
+            <div>接続</div>
+          </a>
+        </li>
+        <li (click)="open('ChatWindowComponent')">
+          <a routerLink="/" routerLinkActive="active">
+            <div><i class="material-icons icon-size">speaker_notes</i></div>
+            <div>チャット画面</div>
+          </a>
+        </li>
+        <li (click)="open('GameTableSettingComponent')">
+          <a routerLink="/" routerLinkActive="active">
+            <div><i class="material-icons icon-size">layers</i></div>
+            <div>テーブル設定</div>
+          </a>
+        </li>
+        <li (click)="open('DictionaryComponent')">
+          <a routerLink="/" routerLinkActive="active">
+            <div><i class="material-icons icon-size">auto_stories</i></div>
+            <div>辞書</div>
+          </a>
+        </li>
+        <li (click)="open('FileStorageComponent')">
+          <a routerLink="/" routerLinkActive="active">
+            <div><i class="material-icons icon-size">photo_library</i></div>
+            <div>画像</div>
+          </a>
+        </li>
+        <li (click)="open('JukeboxComponent')">
+          <a routerLink="/" routerLinkActive="active">
+            <div><i class="material-icons">queue_music</i></div>
+            <div>音楽</div>
+          </a>
+        </li>
+        <li (click)="open('GameObjectInventoryComponent')">
+          <a routerLink="/" routerLinkActive="active">
+            <div><i class="material-icons icon-size">folder_shared</i></div>
+            <div>インベントリ</div>
+          </a>
+        </li>
+        <li (click)="open('LightingPanelComponent')" [class.options-active]="isLightingPanelOpen">
+          <a routerLink="/" routerLinkActive="active">
+            <div><i class="material-icons">lightbulb</i></div>
+            <div>照明・視界</div>
+          </a>
+        </li>
+        @if (isAdvancedRoom) {
+          <li (click)="open('InitiativePanelComponent')" [class.options-active]="isInitiativePanelOpen">
+            <a routerLink="/" routerLinkActive="active">
+              <div><i class="material-icons">sports_kabaddi</i></div>
+              <div>{{ isInitiativePanelOpen ? '戦闘管理中' : '戦闘管理' }}</div>
+            </a>
+          </li>
+        }
+        <li (click)="open('DataImportMenuComponent')">
+          <a routerLink="/" routerLinkActive="active">
+            <div><i class="material-icons">open_in_browser</i></div>
+            <div>データ読込</div>
+          </a>
+        </li>
+        <li (click)="open('OptionsPanelComponent')" [class.options-active]="isOptionsPanelOpen">
+          <a routerLink="/" routerLinkActive="active">
+            <div><i class="material-icons">settings</i></div>
+            <div>オプション</div>
+          </a>
+        </li>
+        @if (!isSaveing) {
+          <li (click)="save()">
+            <a routerLink="/" routerLinkActive="active">
+              <div><i class="material-icons">sd_storage</i></div>
+              <div>卓をZIP保存</div>
+            </a>
+          </li>
+        }
+        @if (isSaveing) {
+          <li style="pointer-events: none;">
+            <a>
+              <div><i class="material-icons vibration-amine">sd_storage</i></div>
+              <div>{{progresPercent}}%</div>
+            </a>
+          </li>
+        }
+      </ul>
+    </nav>
+  </ui-panel>
+  <dice-cutin></dice-cutin>
+  <contested-roll-cutin></contested-roll-cutin>
+  @if (isAdvancedRoom) {
+    <initiative-tracker></initiative-tracker>
+  }
+  <div #modalLayer></div>
+  <macro-hotbar></macro-hotbar>
+  <app-mini-player></app-mini-player>
+  <network-indicator class="networkIndicator"></network-indicator>
+  <media-integrity-badge></media-integrity-badge>
+}
 
 <!-- チャパレ専用サブウィンドウ（?popup=1）：部屋には接続せずメイン画面とBridgeで繋ぐ -->
-<popup-window *ngIf="isPopupWindow"></popup-window>
+@if (isPopupWindow) {
+  <popup-window></popup-window>
+}

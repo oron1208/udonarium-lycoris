@@ -1,15 +1,23 @@
-<div class="media-integrity" *ngIf="summary.total > 0">
-  <div class="integrity-summary" [class.has-issues]="hasIssues" (click)="toggle()">
-    <span class="icon">🖼</span>
-    <span class="count">{{ summary.ok }}/{{ summary.total }}</span>
-    <span class="warn" *ngIf="hasIssues">⚠</span>
-  </div>
-  <div class="integrity-detail" *ngIf="expanded">
-    <div class="detail-title">メディア整合（サーバー × この端末）</div>
-    <div class="detail-row" *ngFor="let item of summary.items">
-      <span class="dot" [class.dot-ok]="item.status === 'ok'" [class.dot-local]="item.status === 'local-only'" [class.dot-missing]="item.status === 'missing'"></span>
-      <span class="name" [title]="item.identifier">{{ item.name && item.name !== item.identifier ? item.name : item.identifier.slice(0, 10) }}</span>
-      <span class="state" [class.state-issue]="item.status !== 'ok'">{{ item.status === 'ok' ? 'OK' : (item.status === 'local-only' ? 'LOCAL_ONLY 再送候補' : 'MISSING') }}</span>
+@if (summary.total > 0) {
+  <div class="media-integrity">
+    <div class="integrity-summary" [class.has-issues]="hasIssues" (click)="toggle()">
+      <span class="icon">🖼</span>
+      <span class="count">{{ summary.ok }}/{{ summary.total }}</span>
+      @if (hasIssues) {
+        <span class="warn">⚠</span>
+      }
     </div>
+    @if (expanded) {
+      <div class="integrity-detail">
+        <div class="detail-title">メディア整合（サーバー × この端末）</div>
+        @for (item of summary.items; track item) {
+          <div class="detail-row">
+            <span class="dot" [class.dot-ok]="item.status === 'ok'" [class.dot-local]="item.status === 'local-only'" [class.dot-missing]="item.status === 'missing'"></span>
+            <span class="name" [title]="item.identifier">{{ item.name && item.name !== item.identifier ? item.name : item.identifier.slice(0, 10) }}</span>
+            <span class="state" [class.state-issue]="item.status !== 'ok'">{{ item.status === 'ok' ? 'OK' : (item.status === 'local-only' ? 'LOCAL_ONLY 再送候補' : 'MISSING') }}</span>
+          </div>
+        }
+      </div>
+    }
   </div>
-</div>
+}

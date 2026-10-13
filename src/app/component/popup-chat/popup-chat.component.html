@@ -1,45 +1,79 @@
 <div class="chat-pane" [class.vn]="vn">
-  <div class="tabs" *ngIf="tabs.length > 0">
-    <button *ngFor="let tab of tabs; trackBy: trackByTab" type="button" class="tab"
-      [class.active]="tab.id === currentTab" (click)="selectTab.emit(tab.id)"
-      [title]="tab.name">{{ tab.name }}</button>
-  </div>
-  <div #logContainer class="log" [class.empty]="messages.length === 0">
-    <p *ngIf="messages.length === 0" class="empty-note">まだメッセージはありません</p>
-    <div *ngFor="let entry of messages; trackBy: trackByMessage" class="entry"
-      [class.system]="entry.isSystem" [class.dicebot]="entry.isDicebot"
-      [class.mine]="entry.isMine" [class.other]="!entry.isSystem && !entry.isMine" [class.is-secret]="entry.isSecret">
-      <img *ngIf="vn && entry.avatarUrl" class="pc-avatar" [src]="entry.avatarUrl | safe: 'resourceUrl'" [title]="entry.name" />
-      <img *ngIf="!vn && entry.imageUrl && (!entry.isSecret || entry.secretVisible)" class="pc-image pc-image-lead"
-        [src]="entry.imageUrl | safe: 'resourceUrl'" (dblclick)="zoomUrl = entry.imageUrl" title="ダブルクリックで拡大" />
-      <div class="pc-bubble">
-        <div class="name" *ngIf="entry.name && !(vn && entry.isMine)"
-          [style.color]="entry.messColor || null">{{ entry.name }}<span class="badge" *ngIf="entry.isDicebot">ダイス</span><span class="badge" *ngIf="entry.isSecret && entry.secretVisible">シークレット</span></div>
-        <div class="text" *ngIf="!entry.isSecret || entry.secretVisible">{{ entry.text }}</div>
-        <div class="text secret-hidden" *ngIf="entry.isSecret && !entry.secretVisible">{{ secretLabel(entry) }}</div>
-        <img *ngIf="vn && entry.imageUrl && (!entry.isSecret || entry.secretVisible)" class="pc-image" [src]="entry.imageUrl | safe: 'resourceUrl'" (dblclick)="zoomUrl = entry.imageUrl" title="ダブルクリックで拡大" />
-      </div>
+  @if (tabs.length > 0) {
+    <div class="tabs">
+      @for (tab of tabs; track trackByTab($index, tab)) {
+        <button type="button" class="tab"
+          [class.active]="tab.id === currentTab" (click)="selectTab.emit(tab.id)"
+        [title]="tab.name">{{ tab.name }}</button>
+      }
     </div>
+  }
+  <div #logContainer class="log" [class.empty]="messages.length === 0">
+    @if (messages.length === 0) {
+      <p class="empty-note">まだメッセージはありません</p>
+    }
+    @for (entry of messages; track trackByMessage($index, entry)) {
+      <div class="entry"
+        [class.system]="entry.isSystem" [class.dicebot]="entry.isDicebot"
+        [class.mine]="entry.isMine" [class.other]="!entry.isSystem && !entry.isMine" [class.is-secret]="entry.isSecret">
+        @if (vn && entry.avatarUrl) {
+          <img class="pc-avatar" [src]="entry.avatarUrl | safe: 'resourceUrl'" [title]="entry.name" />
+        }
+        @if (!vn && entry.imageUrl && (!entry.isSecret || entry.secretVisible)) {
+          <img class="pc-image pc-image-lead"
+            [src]="entry.imageUrl | safe: 'resourceUrl'" (dblclick)="zoomUrl = entry.imageUrl" title="ダブルクリックで拡大" />
+        }
+        <div class="pc-bubble">
+          @if (entry.name && !(vn && entry.isMine)) {
+            <div class="name"
+              [style.color]="entry.messColor || null">{{ entry.name }}@if (entry.isDicebot) {
+              <span class="badge">ダイス</span>
+              }@if (entry.isSecret && entry.secretVisible) {
+              <span class="badge">シークレット</span>
+            }</div>
+          }
+          @if (!entry.isSecret || entry.secretVisible) {
+            <div class="text">{{ entry.text }}</div>
+          }
+          @if (entry.isSecret && !entry.secretVisible) {
+            <div class="text secret-hidden">{{ secretLabel(entry) }}</div>
+          }
+          @if (vn && entry.imageUrl && (!entry.isSecret || entry.secretVisible)) {
+            <img class="pc-image" [src]="entry.imageUrl | safe: 'resourceUrl'" (dblclick)="zoomUrl = entry.imageUrl" title="ダブルクリックで拡大" />
+          }
+        </div>
+      </div>
+    }
   </div>
   <div class="composer">
-    <div class="composer-row" *ngIf="!vn">
-      <select class="send-from" [ngModel]="sendFrom" (ngModelChange)="selectSendFrom.emit($event)" [disabled]="!connected" title="発言者">
-        <option [value]="sendFrom">{{ sendFromName }}</option>
-        <option *ngFor="let character of characters" [value]="character.identifier">{{ character.name }}</option>
-      </select>
-      <span class="game-type" [title]="'ダイスボット: ' + gameType">{{ gameType }}</span>
-    </div>
-    <div class="composer-row" *ngIf="vn">
-      <select class="send-from" [ngModel]="selectedCharacter" (ngModelChange)="selectCharacter.emit($event)" [disabled]="!connected" title="発言キャラ">
-        <option value="" disabled>キャラを選択</option>
-        <option *ngFor="let character of characters" [value]="character.identifier">{{ character.name }}</option>
-      </select>
-    </div>
+    @if (!vn) {
+      <div class="composer-row">
+        <select class="send-from" [ngModel]="sendFrom" (ngModelChange)="selectSendFrom.emit($event)" [disabled]="!connected" title="発言者">
+          <option [value]="sendFrom">{{ sendFromName }}</option>
+          @for (character of characters; track character) {
+            <option [value]="character.identifier">{{ character.name }}</option>
+          }
+        </select>
+        <span class="game-type" [title]="'ダイスボット: ' + gameType">{{ gameType }}</span>
+      </div>
+    }
+    @if (vn) {
+      <div class="composer-row">
+        <select class="send-from" [ngModel]="selectedCharacter" (ngModelChange)="selectCharacter.emit($event)" [disabled]="!connected" title="発言キャラ">
+          <option value="" disabled>キャラを選択</option>
+          @for (character of characters; track character) {
+            <option [value]="character.identifier">{{ character.name }}</option>
+          }
+        </select>
+      </div>
+    }
     <textarea class="input" [(ngModel)]="draft" rows="2" placeholder="メッセージを入力（Enterで送信 / Shift+Enterで改行）"
-      (keydown)="onKeydown($event)" [disabled]="!connected"></textarea>
+    (keydown)="onKeydown($event)" [disabled]="!connected"></textarea>
     <div class="composer-actions">
       <button type="button" class="send" (click)="submit()" [disabled]="!connected || !draft.trim()">送信</button>
     </div>
   </div>
-  <div class="pc-zoom-overlay" *ngIf="zoomUrl" (click)="zoomUrl = ''" title="クリックで閉じる"><img [src]="zoomUrl | safe: 'resourceUrl'" /></div>
+  @if (zoomUrl) {
+    <div class="pc-zoom-overlay" (click)="zoomUrl = ''" title="クリックで閉じる"><img [src]="zoomUrl | safe: 'resourceUrl'" /></div>
+  }
 </div>

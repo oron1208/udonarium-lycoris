@@ -1,43 +1,52 @@
-<div class="dice-cutin-overlay" *ngIf="active && data" [@cutinAnimation]>
-  <div class="cutin-card"
-       [class.critical]="data.isCritical"
-       [class.fumble]="data.isFumble"
-       [class.success]="data.isSuccess && !data.isCritical"
-       [class.failure]="data.isFailure && !data.isFumble">
-    <div class="character-section">
-      <img *ngIf="data.characterImage" [src]="data.characterImage | safe: 'resourceUrl'" class="character-image">
-      <div *ngIf="!data.characterImage" class="character-placeholder">{{data.characterName.charAt(0)}}</div>
-      <span class="character-name">{{data.characterName}}</span>
-    </div>
-    <div class="dice-section">
-      <div class="dice-expression">{{data.diceExpression}}</div>
-
-      <!-- ダイス表示 + 修正値 -->
-      <div class="dice-result-row">
-        <div class="dice-container">
-          <div *ngFor="let dice of data.diceResults; let i = index"
-               class="dice dice-{{dice.shape}}"
-               [class.discarded]="dice.discarded"
-               [style.animation-delay]="(i * 0.1) + 's'">
-            <div class="dice-body" [innerHTML]="getDiceSvgSafe(dice.shape)"></div>
-            <div class="dice-value-overlay">{{dice.value}}</div>
-          </div>
-        </div>
-
-        <!-- 修正値スライドイン -->
-        <div class="modifier-badge" *ngIf="data.modifierValue !== 0"
-             [class.positive]="data.modifierValue > 0"
-             [class.negative]="data.modifierValue < 0">
-          {{data.modifierBreakdown}}
-        </div>
+@if (active && data) {
+  <div class="dice-cutin-overlay" [@cutinAnimation]>
+    <div class="cutin-card"
+      [class.critical]="data.isCritical"
+      [class.fumble]="data.isFumble"
+      [class.success]="data.isSuccess && !data.isCritical"
+      [class.failure]="data.isFailure && !data.isFumble">
+      <div class="character-section">
+        @if (data.characterImage) {
+          <img [src]="data.characterImage | safe: 'resourceUrl'" class="character-image">
+        }
+        @if (!data.characterImage) {
+          <div class="character-placeholder">{{data.characterName.charAt(0)}}</div>
+        }
+        <span class="character-name">{{data.characterName}}</span>
       </div>
-
-      <!-- 最終結果 -->
-      <div class="total-section">
-        <span class="total-label">結果</span>
-        <span class="total-value" [class.crit]="data.isCritical" [class.fumb]="data.isFumble">{{data.total}}</span>
-        <span class="special-label" *ngIf="data.specialLabel" [class]="'special-label ' + data.specialLabelClass">{{data.specialLabel}}</span>
+      <div class="dice-section">
+        <div class="dice-expression">{{data.diceExpression}}</div>
+        <!-- ダイス表示 + 修正値 -->
+        <div class="dice-result-row">
+          <div class="dice-container">
+            @for (dice of data.diceResults; track dice; let i = $index) {
+              <div
+                class="dice dice-{{dice.shape}}"
+                [class.discarded]="dice.discarded"
+                [style.animation-delay]="(i * 0.1) + 's'">
+                <div class="dice-body" [innerHTML]="getDiceSvgSafe(dice.shape)"></div>
+                <div class="dice-value-overlay">{{dice.value}}</div>
+              </div>
+            }
+          </div>
+          <!-- 修正値スライドイン -->
+          @if (data.modifierValue !== 0) {
+            <div class="modifier-badge"
+              [class.positive]="data.modifierValue > 0"
+              [class.negative]="data.modifierValue < 0">
+              {{data.modifierBreakdown}}
+            </div>
+          }
+        </div>
+        <!-- 最終結果 -->
+        <div class="total-section">
+          <span class="total-label">結果</span>
+          <span class="total-value" [class.crit]="data.isCritical" [class.fumb]="data.isFumble">{{data.total}}</span>
+          @if (data.specialLabel) {
+            <span class="special-label" [class]="'special-label ' + data.specialLabelClass">{{data.specialLabel}}</span>
+          }
+        </div>
       </div>
     </div>
   </div>
-</div>
+}

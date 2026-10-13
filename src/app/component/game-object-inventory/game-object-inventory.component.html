@@ -2,58 +2,74 @@
   <ng-container *ngTemplateOutlet="inventoryTab"></ng-container>
   <ng-container *ngTemplateOutlet="inventoryViewSetting"></ng-container>
   <ng-container *ngTemplateOutlet="inventoryMultiMove"></ng-container>
-  <div *ngIf="getGameObjects(selectTab).length < 1">{{getTabTitle(selectTab)}}インベントリは空です</div>
-<!--    <ng-container *ngIf="!gameObject.hideInventory && gameObject.location.name == 'table'"> -->
-  <div (contextmenu)="onContextMenu($event, gameObject)" *ngFor="let gameObject of getGameObjects(selectTab); trackBy: trackByGameObject"
-     (click)="selectGameObject(gameObject)"  (dblclick)="focusToObject($event, gameObject)"
-     [ngClass]="{'box': true, 'selected': (selectedIdentifier === gameObject.identifier)}">
-    <ng-container *ngTemplateOutlet="gameObjectTags; context:{ gameObject: gameObject, secret: isSecretDetailsHidden(gameObject)}"></ng-container>
-  </div>
+  @if (getGameObjects(selectTab).length < 1) {
+    <div>{{getTabTitle(selectTab)}}インベントリは空です</div>
+  }
+  <!--    <ng-container *ngIf="!gameObject.hideInventory && gameObject.location.name == 'table'"> -->
+  @for (gameObject of getGameObjects(selectTab); track trackByGameObject($index, gameObject)) {
+    <div (contextmenu)="onContextMenu($event, gameObject)"
+      (click)="selectGameObject(gameObject)"  (dblclick)="focusToObject($event, gameObject)"
+      [ngClass]="{'box': true, 'selected': (selectedIdentifier === gameObject.identifier)}">
+      <ng-container *ngTemplateOutlet="gameObjectTags; context:{ gameObject: gameObject, secret: isSecretDetailsHidden(gameObject)}"></ng-container>
+    </div>
+  }
 
-  <div *ngIf="selectTab === 'graveyard'" style="padding-top: 6px;">
-    <button class="danger" (click)="cleanInventory()" [attr.disabled]="getGameObjects(selectTab).length < 1 ? '' : null">墓場を空にする</button>
-  </div>
+  @if (selectTab === 'graveyard') {
+    <div style="padding-top: 6px;">
+      <button class="danger" (click)="cleanInventory()" [attr.disabled]="getGameObjects(selectTab).length < 1 ? '' : null">墓場を空にする</button>
+    </div>
+  }
 </div>
 
 <ng-template #inventoryTab>
   <form class="is-sticky-top">
     <div class="tab">
-      <label *ngFor="let inventoryType of inventoryTypes">
-        <input name="tab" type="radio" value="{{inventoryType}}" ng-control="options" [(ngModel)]="selectTab">
-        <div>{{getTabTitle(inventoryType)}} ({{getInventory(inventoryType).length}})</div>
-      </label>
+      @for (inventoryType of inventoryTypes; track inventoryType) {
+        <label>
+          <input name="tab" type="radio" value="{{inventoryType}}" ng-control="options" [(ngModel)]="selectTab">
+          <div>{{getTabTitle(inventoryType)}} ({{getInventory(inventoryType).length}})</div>
+        </label>
+      }
     </div>
   </form>
 </ng-template>
 <ng-template #inventoryViewSetting>
-  <ng-container *ngIf="isEdit">
+  @if (isEdit) {
     <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:12px;">
       <label style="cursor:pointer;"><input type="checkbox" [(ngModel)]="sortEnabled"> このインベントリでソートする</label>
       <span style="color:#666;">({{getTabTitle(selectTab)}}専用)</span>
     </div>
-    <div *ngFor="let key of sortKeys; let i = index"
-      draggable="true"
-      (dragstart)="onSortKeyDragStart(i)"
-      (dragover)="onSortKeyDragOver($event, i)"
-      (dragleave)="onSortKeyDragLeave(i)"
-      (drop)="onSortKeyDrop(i)"
-      (dragend)="onSortKeyDragEnd()"
-      [style.background]="dragOverIndex === i ? '#e3f2fd' : ''"
-      style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px; padding: 2px 4px; border-radius: 4px; cursor: grab;"
-      [style.opacity]="!sortEnabled ? 0.45 : (dragSortKeyIndex === i ? 0.5 : 1)">
-      <span style="cursor: grab; font-size: 14px; color: #888;">⠿</span>
-      <div style="font-size: 12px; min-width: 28px;">第{{i + 1}}</div>
-      <select style="flex: 1;" [(ngModel)]="sortKeys[i].tag" (ngModelChange)="updateSortKeyTag(i, $event)" [disabled]="!sortEnabled">
-        <option value="">（未設定）</option>
-        <option *ngIf="key.tag && !availableTags.includes(key.tag)" [value]="key.tag">{{key.tag}}</option>
-        <option *ngFor="let tag of availableTags" [value]="tag">{{tag}}</option>
-      </select>
-      <select [(ngModel)]="sortKeys[i].order" (ngModelChange)="updateSortKeyOrder(i, $event)" [disabled]="!sortEnabled">
-        <option value="ASC">昇順</option>
-        <option value="DESC">降順</option>
-      </select>
-      <button *ngIf="sortKeys.length > 1" style="font-size: 0.8em; padding: 2px 5px;" (click)="removeSortKey(i)" [disabled]="!sortEnabled">✕</button>
-    </div>
+    @for (key of sortKeys; track key; let i = $index) {
+      <div
+        draggable="true"
+        (dragstart)="onSortKeyDragStart(i)"
+        (dragover)="onSortKeyDragOver($event, i)"
+        (dragleave)="onSortKeyDragLeave(i)"
+        (drop)="onSortKeyDrop(i)"
+        (dragend)="onSortKeyDragEnd()"
+        [style.background]="dragOverIndex === i ? '#e3f2fd' : ''"
+        style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px; padding: 2px 4px; border-radius: 4px; cursor: grab;"
+        [style.opacity]="!sortEnabled ? 0.45 : (dragSortKeyIndex === i ? 0.5 : 1)">
+        <span style="cursor: grab; font-size: 14px; color: #888;">⠿</span>
+        <div style="font-size: 12px; min-width: 28px;">第{{i + 1}}</div>
+        <select style="flex: 1;" [(ngModel)]="sortKeys[i].tag" (ngModelChange)="updateSortKeyTag(i, $event)" [disabled]="!sortEnabled">
+          <option value="">（未設定）</option>
+          @if (key.tag && !availableTags.includes(key.tag)) {
+            <option [value]="key.tag">{{key.tag}}</option>
+          }
+          @for (tag of availableTags; track tag) {
+            <option [value]="tag">{{tag}}</option>
+          }
+        </select>
+        <select [(ngModel)]="sortKeys[i].order" (ngModelChange)="updateSortKeyOrder(i, $event)" [disabled]="!sortEnabled">
+          <option value="ASC">昇順</option>
+          <option value="DESC">降順</option>
+        </select>
+        @if (sortKeys.length > 1) {
+          <button style="font-size: 0.8em; padding: 2px 5px;" (click)="removeSortKey(i)" [disabled]="!sortEnabled">✕</button>
+        }
+      </div>
+    }
     <div style="padding: 2px 0;">
       <button class="tab-setting small-font" (click)="addSortKey()" style="font-size: 0.8em;" [disabled]="!sortEnabled">＋ソートキー追加</button>
     </div>
@@ -62,118 +78,156 @@
     <div style="padding-top: 6px;">
       <button class="tab-setting small-font" (click)="toggleEdit()"><i class="material-icons small-font">settings</i>完了</button>
     </div>
-  </ng-container>
-  <ng-container *ngIf="!isEdit">
+  }
+  @if (!isEdit) {
     <table style="font-size: 0.8em;">
       <tr>
         <th style="vertical-align:middle;">ソート:</th>
         <td style="vertical-align:middle;">{{sortEnabled ? 'ON' : 'OFF'}}</td>
-        <ng-container *ngFor="let key of sortKeys; let i = index; let last = last">
+        @for (key of sortKeys; track key; let i = $index; let last = $last) {
           <th style="vertical-align:middle;"> {{getSortKeyName(i)}}:</th>
           <td style="vertical-align:middle;">
-            <ng-container *ngIf="key.tag && key.tag.length > 0">{{key.tag}} ({{getSortOrderName(key.order)}})</ng-container>
-            <ng-container *ngIf="!key.tag || key.tag.length < 1">-</ng-container>
+            @if (key.tag && key.tag.length > 0) {
+              {{key.tag}} ({{getSortOrderName(key.order)}})
+            }
+            @if (!key.tag || key.tag.length < 1) {
+              -
+            }
           </td>
-        </ng-container>
+        }
         <td><button class="tab-setting small-font" (click)="toggleEdit()"><i class="material-icons small-font">settings</i>設定</button></td>
       </tr>
     </table>
-  </ng-container>
+  }
 </ng-template>
 <ng-template #inventoryMultiMove>
-  <ng-container *ngIf="isMultiMove">
+  @if (isMultiMove) {
     <div style="font-size: 0.8em;">
       <span style="font-weight: bold">一括移動:</span>
       <button class="tab-setting small-font" (click)="allTabBoxCheck();">
-        <ng-container *ngIf="existsMultiMoveSelectedInTab(); else selectAll">全解除口↓</ng-container>
-        <ng-template #selectAll>全選択〆↓</ng-template>
+        @if (existsMultiMoveSelectedInTab()) {
+          全解除口↓
+        } @else {
+          全選択〆↓
+        }
       </button>
       <button class="tab-setting small-font" (click)="onMultiMoveContextMenu()"><i class="material-icons small-font">settings</i>実行</button>
       <button class="tab-setting small-font" (click)="toggleMultiMove()"><i class="material-icons small-font">settings</i>キャンセル</button>
     </div>
-  </ng-container>
-  <ng-container *ngIf="!isMultiMove">
+  }
+  @if (!isMultiMove) {
     <div>
       <button class="tab-setting small-font" (click)="toggleMultiMove()"><i class="material-icons small-font">settings</i>一括移動</button>
-      <ng-container *ngIf="isAdvancedRoom">
+      @if (isAdvancedRoom) {
         <input class="is-caret" style="font-size:0.8em;width:9em;margin-left:4px;" [(ngModel)]="newInventoryName" placeholder="追加インベントリ名" />
         <button class="tab-setting small-font" (click)="addCustomInventory()">＋追加</button>
-        <button *ngIf="isCustomInventory(selectTab)" class="tab-setting small-font danger" (click)="removeCurrentCustomInventory()">この追加インベントリを削除</button>
-      </ng-container>
+        @if (isCustomInventory(selectTab)) {
+          <button class="tab-setting small-font danger" (click)="removeCurrentCustomInventory()">この追加インベントリを削除</button>
+        }
+      }
     </div>
-  </ng-container>
+  }
 </ng-template>
 <ng-template #gameObjectTags let-gameObject="gameObject" let-secret="secret">
   <div class="inventory-object">
     <div class="object-name">{{displayName(gameObject)}}
-      <span *ngIf="isAdvancedRoom && isMyPiece(gameObject)" style="font-size:10px;background:#1976d2;color:#fff;border-radius:8px;padding:1px 5px;margin-left:4px;">MY</span>
-      <button style="font-size: 0.8em; padding: 2px 5px;" *ngIf="isAdvancedRoom" (click)="toggleMyPiece(gameObject, $event)">{{isMyPiece(gameObject) ? '自分解除' : '自分'}}</button>
-      <button style="font-size: 0.8em; padding: 2px 5px;" *ngIf="selectedIdentifier === gameObject.identifier" (click)="onContextMenu($event, gameObject)">
-        <i class="material-icons" style="font-size: 1em;">settings</i>
-      </button>
+      @if (isAdvancedRoom && isMyPiece(gameObject)) {
+        <span style="font-size:10px;background:#1976d2;color:#fff;border-radius:8px;padding:1px 5px;margin-left:4px;">MY</span>
+      }
+      @if (isAdvancedRoom) {
+        <button style="font-size: 0.8em; padding: 2px 5px;" (click)="toggleMyPiece(gameObject, $event)">{{isMyPiece(gameObject) ? '自分解除' : '自分'}}</button>
+      }
+      @if (selectedIdentifier === gameObject.identifier) {
+        <button style="font-size: 0.8em; padding: 2px 5px;" (click)="onContextMenu($event, gameObject)">
+          <i class="material-icons" style="font-size: 1em;">settings</i>
+        </button>
+      }
     </div>
     <div class="object-tags-box">
-      <div class="table-cell"  *ngIf="isMultiMove">
-        <input type="checkbox" [checked]="multiMoveTargets.has(gameObject.identifier)" (change)="toggleMultiMoveTarget($event, gameObject)" />
-      </div>
+      @if (isMultiMove) {
+        <div class="table-cell" >
+          <input type="checkbox" [checked]="multiMoveTargets.has(gameObject.identifier)" (change)="toggleMultiMoveTarget($event, gameObject)" />
+        </div>
+      }
       <div class="table-cell">
         <div class="image-box">
-          <img *ngIf="gameObject.imageFile.url" [src]="gameObject.imageFile.url | safe: 'resourceUrl'" />
+          @if (gameObject.imageFile.url) {
+            <img [src]="gameObject.imageFile.url | safe: 'resourceUrl'" />
+          }
         </div>
       </div>
       <div class="table-cell">
-        <div *ngIf="gameObject.rootDataElement">
-          <ng-container *ngFor="let dataElm of getInventoryTags(gameObject); trackBy: trackByGameObject">
-            <ng-container *ngTemplateOutlet="dataElmTag; context:{ dataElm: dataElm, secret: secret}"></ng-container>
-          </ng-container>
-        </div>
+        @if (gameObject.rootDataElement) {
+          <div>
+            @for (dataElm of getInventoryTags(gameObject); track trackByGameObject($index, dataElm)) {
+              <ng-container *ngTemplateOutlet="dataElmTag; context:{ dataElm: dataElm, secret: secret}"></ng-container>
+            }
+          </div>
+        }
       </div>
     </div>
   </div>
 </ng-template>
 <ng-template #dataElmTag let-dataElm="dataElm" let-secret="secret">
-  <ng-container *ngIf="dataElm?.name === newLineString"><br></ng-container>
-  <div *ngIf="dataElm && dataElm.name !== newLineString" class="object-tag">
-    <ng-container [ngSwitch]="dataElm.attributes['type']">
-      <ng-container *ngSwitchCase="'numberResource'">
-        <div class="resource-tag">
-          <div style="font-size: 0.8em; display: inline-block; margin-right: 0.5em;">{{dataElm.name}}</div>
-          <ng-container *ngIf="!secret; else secretResourceValue">
-            <input class="input resource-value is-caret" type="number" [style]="'color:' + dataElm.nowValueColor +';'" size="1" [(ngModel)]="dataElm.currentValue" placeholder="Value" />
-          </ng-container>
-          <ng-template #secretResourceValue><span class="secret-value">????</span></ng-template>
-        </div>
-        <div class="resource-tag">
-          <input *ngIf="!secret" type="range" [style]="'font-size: 0.8em; min-width: 1em; width:' + (dataElm.name.length + 4.5) + 'em; --min: 0; --max: ' + dataElm.value + '; --val:' + dataElm.currentValue +';' | safe: 'style'"
-            min="0" max="{{dataElm.value}}" [(ngModel)]="dataElm.currentValue" />
-          <span *ngIf="secret" class="secret-value">????</span>
-        </div>
-      </ng-container>
-      <ng-container *ngSwitchCase="'check'">
-        <div class="tag-name">{{dataElm.name}}</div>
-        <div style="text-align: center; margin: 2px 0px 0px 0px">
-          <div style="display: inline-block;">
-            <div class="tag-value-box">
-              <input *ngIf="dataElm.value != 0" type="checkbox" checked (click)="dataElm.value = 0"/>
-              <input *ngIf="dataElm.value == 0" type="checkbox" (click)="dataElm.value = 1"/>
+  @if (dataElm?.name === newLineString) {
+    <br>
+    }
+    @if (dataElm && dataElm.name !== newLineString) {
+      <div class="object-tag">
+        @switch (dataElm.attributes['type']) {
+          @case ('numberResource') {
+            <div class="resource-tag">
+              <div style="font-size: 0.8em; display: inline-block; margin-right: 0.5em;">{{dataElm.name}}</div>
+              @if (!secret) {
+                <input class="input resource-value is-caret" type="number" [style]="'color:' + dataElm.nowValueColor +';'" size="1" [(ngModel)]="dataElm.currentValue" placeholder="Value" />
+              } @else {
+                <span class="secret-value">????</span>
+              }
             </div>
-          </div>
-        </div>
-      </ng-container>
-      <ng-container *ngSwitchCase="'markdown'">
-      </ng-container>
-      <ng-container *ngSwitchDefault>
-        <div class="tag-name">{{dataElm.name}}</div>
-        <div style="text-align: center;">
-          <div style="display: inline-block;">
-            <div class="tag-value-box">
-              <div class="hidden-spacer" style="font-weight: bold;">{{secret ? '????' : displayValue(dataElm)}}</div>
-              <input *ngIf="!secret" class="input tag-value is-caret" size="1" [(ngModel)]="dataElm.value" placeholder="" />
-              <span *ngIf="secret" class="secret-value">????</span>
+            <div class="resource-tag">
+              @if (!secret) {
+                <input type="range" [style]="'font-size: 0.8em; min-width: 1em; width:' + (dataElm.name.length + 4.5) + 'em; --min: 0; --max: ' + dataElm.value + '; --val:' + dataElm.currentValue +';' | safe: 'style'"
+                  min="0" max="{{dataElm.value}}" [(ngModel)]="dataElm.currentValue" />
+              }
+              @if (secret) {
+                <span class="secret-value">????</span>
+              }
             </div>
-          </div>
-        </div>
-      </ng-container>
-    </ng-container>
-  </div>
-</ng-template>
+          }
+          @case ('check') {
+            <div class="tag-name">{{dataElm.name}}</div>
+            <div style="text-align: center; margin: 2px 0px 0px 0px">
+              <div style="display: inline-block;">
+                <div class="tag-value-box">
+                  @if (dataElm.value != 0) {
+                    <input type="checkbox" checked (click)="dataElm.value = 0"/>
+                  }
+                  @if (dataElm.value == 0) {
+                    <input type="checkbox" (click)="dataElm.value = 1"/>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+          @case ('markdown') {
+          }
+          @default {
+            <div class="tag-name">{{dataElm.name}}</div>
+            <div style="text-align: center;">
+              <div style="display: inline-block;">
+                <div class="tag-value-box">
+                  <div class="hidden-spacer" style="font-weight: bold;">{{secret ? '????' : displayValue(dataElm)}}</div>
+                  @if (!secret) {
+                    <input class="input tag-value is-caret" size="1" [(ngModel)]="dataElm.value" placeholder="" />
+                  }
+                  @if (secret) {
+                    <span class="secret-value">????</span>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+        }
+      </div>
+    }
+  </ng-template>

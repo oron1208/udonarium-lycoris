@@ -8,8 +8,12 @@
       </button>
       <input type="text" class="title-input" [(ngModel)]="title" (ngModelChange)="onTextChanged()" placeholder="タイトル" (pointerdown)="onBtnPointerDown($event)">
       <span class="handle-icon">≡</span>
-      <span class="lock-icon" *ngIf="isLock">🔒</span>
+      @if (isLock) {
+        <span class="lock-icon">🔒</span>
+      }
     </div>
-    <textarea class="sticky-text" *ngIf="!collapsed" [(ngModel)]="text" (ngModelChange)="onTextChanged()" placeholder="セッションメモ"></textarea>
+    @if (!collapsed) {
+      <textarea class="sticky-text" [(ngModel)]="text" (ngModelChange)="onTextChanged()" placeholder="セッションメモ"></textarea>
+    }
   </div>
 </div>

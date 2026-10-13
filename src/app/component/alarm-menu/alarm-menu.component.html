@@ -1,9 +1,13 @@
 <div class="component">
   <ng-container *ngTemplateOutlet="alarmTop"></ng-container>
-  <div *ngIf="peerList.length < 1">自分しか部屋にいません</div>
-  <div *ngFor="let peer of peerList" style="font-size: 15px;" [ngClass]="{'box': true}">
-    <ng-container *ngTemplateOutlet="alarmTargets; context:{ peer : peer }"></ng-container>
-  </div>
+  @if (peerList.length < 1) {
+    <div>自分しか部屋にいません</div>
+  }
+  @for (peer of peerList; track peer) {
+    <div style="font-size: 15px;" [ngClass]="{'box': true}">
+      <ng-container *ngTemplateOutlet="alarmTargets; context:{ peer : peer }"></ng-container>
+    </div>
+  }
 </div>
 
 <ng-template #alarmTop>
@@ -15,10 +19,10 @@
         </div>
         <div style = "display:table-cell;align:left">
           <div style = "text-align:left;">
-          <span style = "display:inline-block;width:5em;margin-left:0.5em;">タイトル:</span><input class="is-caret" [(ngModel)]="alarmTitle" placeholder="アラーム" 
-          name="alarmTitle"  style="width:15em;"/><br>
-          <span style = "display:inline-block;width:5em;margin-left:0.5em;">時間:</span><input class="is-caret" type="number" [(ngModel)]="alarmTime" placeholder="" (change)="changeAlarmTime()" 
-          name="alarmTime" style="width:5em;"/>秒
+            <span style = "display:inline-block;width:5em;margin-left:0.5em;">タイトル:</span><input class="is-caret" [(ngModel)]="alarmTitle" placeholder="アラーム"
+            name="alarmTitle"  style="width:15em;"/><br>
+            <span style = "display:inline-block;width:5em;margin-left:0.5em;">時間:</span><input class="is-caret" type="number" [(ngModel)]="alarmTime" placeholder="" (change)="changeAlarmTime()"
+            name="alarmTime" style="width:5em;"/>秒
           </div>
         </div>
         <div style = "display:table-cell;">
@@ -43,8 +47,8 @@
         </div>
         <div style="height:64px;" class="message">
           <div>
-            <input type="checkbox" 
-            id = {{peer.peerId}}_{{initTimestamp}} (change) ="onChange(peer.peerId)" name="vote_chk"/>
+            <input type="checkbox"
+              id = {{peer.peerId}}_{{initTimestamp}} (change) ="onChange(peer.peerId)" name="vote_chk"/>
           </div>
         </div>
       </div>
@@ -53,17 +57,27 @@
           {{findPeerName(peer.peerId)}}
         </div>
         <div class="image-box">
-          <div *ngIf="findPeerImage(peer.peerId)" class="image cover" [style.background-image]="'url(' + findPeerImage(peer.peerId).url + ')' | safe: 'style' "></div>
+          @if (findPeerImage(peer.peerId)) {
+            <div class="image cover" [style.background-image]="'url(' + findPeerImage(peer.peerId).url + ')' | safe: 'style' "></div>
+          }
         </div>
       </div>
       <div class="table-cell">
         <div class="object-name">
-          <ng-container *ngIf="findPeerLastControlName(peer.peerId)">{{findPeerLastControlName(peer.peerId)}}</ng-container>
-          <ng-container *ngIf="!findPeerLastControlName(peer.peerId)">操作キャラなし</ng-container>
+          @if (findPeerLastControlName(peer.peerId)) {
+            {{findPeerLastControlName(peer.peerId)}}
+          }
+          @if (!findPeerLastControlName(peer.peerId)) {
+            操作キャラなし
+          }
         </div>
         <div class="image-box">
-          <div *ngIf="findPeerLastControlImage(peer.peerId)" class="image cover" [style.background-image]="'url(' + findPeerLastControlImage(peer.peerId).url + ')' | safe: 'style' "></div>
-          <div *ngIf="!findPeerLastControlImage(peer.peerId)" class="image cover" [style.background-image]=""></div>
+          @if (findPeerLastControlImage(peer.peerId)) {
+            <div class="image cover" [style.background-image]="'url(' + findPeerLastControlImage(peer.peerId).url + ')' | safe: 'style' "></div>
+          }
+          @if (!findPeerLastControlImage(peer.peerId)) {
+            <div class="image cover" [style.background-image]=""></div>
+          }
         </div>
       </div>
       <div class="table-cell message">

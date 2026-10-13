@@ -1,9 +1,13 @@
 <div class="component">
   <ng-container *ngTemplateOutlet="voteTop"></ng-container>
-  <div *ngIf="peerList.length < 1">自分しか部屋にいません</div>
-  <div *ngFor="let peer of peerList" style="font-size: 15px;" [ngClass]="{'box': true}">
-    <ng-container *ngTemplateOutlet="voteTargets; context:{ peer : peer }"></ng-container>
-  </div>
+  @if (peerList.length < 1) {
+    <div>自分しか部屋にいません</div>
+  }
+  @for (peer of peerList; track peer) {
+    <div style="font-size: 15px;" [ngClass]="{'box': true}">
+      <ng-container *ngTemplateOutlet="voteTargets; context:{ peer : peer }"></ng-container>
+    </div>
+  }
 </div>
 
 <ng-template #voteTop>
@@ -16,18 +20,18 @@
           <input type="radio" name = "vote_rollcall" id = vote_{{initTimestamp}}  value="vote" (change) = "onChangeType()" ><span>投票</span>
         </div>
         <div style = "display:table-cell;">
-          <span style = "display:inline-block;width:5em;margin-left:0.5em;">タイトル:</span><input class="is-caret" [(ngModel)]="voteTitle" placeholder="" 
+          <span style = "display:inline-block;width:5em;margin-left:0.5em;">タイトル:</span><input class="is-caret" [(ngModel)]="voteTitle" placeholder=""
           name="voteTitle" [attr.disabled]="isRollCall ? '' : null" style="width:15em;"/><br>
-          <span style = "display:inline-block;width:5em;margin-left:0.5em;">選択肢:</span><input class="is-caret" [(ngModel)]="voteContentsText" placeholder="スペース区切 未入力で賛成/反対" 
+          <span style = "display:inline-block;width:5em;margin-left:0.5em;">選択肢:</span><input class="is-caret" [(ngModel)]="voteContentsText" placeholder="スペース区切 未入力で賛成/反対"
           name="voteContents" [attr.disabled]="isRollCall ? '' : null" style="width:15em;"/>
-        </div>
-        <div style = "display:table-cell;">
-          <button (click)="send()" [attr.disabled]="selectedNum()==0 ? '' : null">送信</button><br>
-          <span style = "display:inline-block;margin-left:0.5em;">人数:{{selectedNum()}}</span>
-        </div>
+      </div>
+      <div style = "display:table-cell;">
+        <button (click)="send()" [attr.disabled]="selectedNum()==0 ? '' : null">送信</button><br>
+        <span style = "display:inline-block;margin-left:0.5em;">人数:{{selectedNum()}}</span>
       </div>
     </div>
-  </form>
+  </div>
+</form>
 </ng-template>
 
 <ng-template #voteTargets let-peer="peer">
@@ -39,8 +43,8 @@
         </div>
         <div style="height:64px;" class="message">
           <div>
-            <input type="checkbox" 
-            id = {{peer.peerId}}_{{initTimestamp}} (change) ="onChange(peer.peerId)" name="vote_chk"/>
+            <input type="checkbox"
+              id = {{peer.peerId}}_{{initTimestamp}} (change) ="onChange(peer.peerId)" name="vote_chk"/>
           </div>
         </div>
       </div>
@@ -49,17 +53,27 @@
           {{findPeerName(peer.peerId)}}
         </div>
         <div class="image-box">
-          <div *ngIf="findPeerImage(peer.peerId)" class="image cover" [style.background-image]="'url(' + findPeerImage(peer.peerId).url + ')' | safe: 'style' "></div>
+          @if (findPeerImage(peer.peerId)) {
+            <div class="image cover" [style.background-image]="'url(' + findPeerImage(peer.peerId).url + ')' | safe: 'style' "></div>
+          }
         </div>
       </div>
       <div class="table-cell">
         <div class="object-name">
-          <ng-container *ngIf="findPeerLastControlName(peer.peerId)">{{findPeerLastControlName(peer.peerId)}}</ng-container>
-          <ng-container *ngIf="!findPeerLastControlName(peer.peerId)">操作キャラなし</ng-container>
+          @if (findPeerLastControlName(peer.peerId)) {
+            {{findPeerLastControlName(peer.peerId)}}
+          }
+          @if (!findPeerLastControlName(peer.peerId)) {
+            操作キャラなし
+          }
         </div>
         <div class="image-box">
-          <div *ngIf="findPeerLastControlImage(peer.peerId)" class="image cover" [style.background-image]="'url(' + findPeerLastControlImage(peer.peerId).url + ')' | safe: 'style' "></div>
-          <div *ngIf="!findPeerLastControlImage(peer.peerId)" class="image cover" [style.background-image]=""></div>
+          @if (findPeerLastControlImage(peer.peerId)) {
+            <div class="image cover" [style.background-image]="'url(' + findPeerLastControlImage(peer.peerId).url + ')' | safe: 'style' "></div>
+          }
+          @if (!findPeerLastControlImage(peer.peerId)) {
+            <div class="image cover" [style.background-image]=""></div>
+          }
         </div>
       </div>
       <div class="table-cell message">

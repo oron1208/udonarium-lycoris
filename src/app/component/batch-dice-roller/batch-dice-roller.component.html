@@ -3,15 +3,21 @@
   <div class="bdr-header">
     <span class="bdr-title">🎲 ダイス一括ロール</span>
     <span class="bdr-count">{{ characterCount }}体選択中</span>
-    <span class="bdr-target" *ngIf="targetName">🎯 対象: {{ targetName }}</span>
-    <span class="bdr-no-target" *ngIf="!targetName">🎯 対象なし（Alt+クリックで対象指定）</span>
+    @if (targetName) {
+      <span class="bdr-target">🎯 対象: {{ targetName }}</span>
+    }
+    @if (!targetName) {
+      <span class="bdr-no-target">🎯 対象なし（Alt+クリックで対象指定）</span>
+    }
   </div>
 
   <!-- 送信先タブ選択 -->
   <div class="bdr-tab-select">
     <label>送信先:</label>
     <select [(ngModel)]="selectedTabId">
-      <option *ngFor="let tab of chatTabs" [value]="tab.identifier">{{ tab.name }}</option>
+      @for (tab of chatTabs; track tab) {
+        <option [value]="tab.identifier">{{ tab.name }}</option>
+      }
     </select>
   </div>
 
@@ -22,8 +28,10 @@
       (keydown.enter)="rollAll()">
 
     <div class="bdr-dice-buttons">
-      <button *ngFor="let d of diceButtons" type="button" class="bdr-dice-btn"
+      @for (d of diceButtons; track d) {
+        <button type="button" class="bdr-dice-btn"
         (click)="addDice(d.sides)">{{ d.label }}</button>
+      }
       <button type="button" class="bdr-op-btn" (click)="addText('+')">+</button>
       <button type="button" class="bdr-op-btn" (click)="addText('-')">−</button>
       <button type="button" class="bdr-op-btn" (click)="addText('{')">&lbrace;</button>
@@ -41,7 +49,9 @@
       <input type="checkbox" [(ngModel)]="singleDiceRoll">
       <span>🎲 ダイス1回のみ</span>
     </label>
-    <span class="bdr-toggle-note" *ngIf="singleDiceRoll">⚠️ 全コマ共通のダイス出目を使用・テーブル設定のダイスボットを優先</span>
+    @if (singleDiceRoll) {
+<span class="bdr-toggle-note">⚠️ 全コマ共通のダイス出目を使用・テーブル設定のダイスボットを優先</span>
+}
     <span class="bdr-toggle-note" style="color:#888">💡 :HP+5 等のリソース編集コマンドは各コマに個別適用</span>
   </div>
 
@@ -52,18 +62,26 @@
   </button>
 
   <!-- 結果表示 -->
-  <div class="bdr-results" *ngIf="results.length > 0">
-    <!-- ダイス1回のみの結果サイマリー -->
-    <div class="bdr-dice-summary" *ngIf="diceSummary">
-      <span class="bdr-dice-summary-icon">🎲</span>
-      <span class="bdr-dice-summary-text">{{ diceSummary.detail }}</span>
+  @if (results.length > 0) {
+    <div class="bdr-results">
+      <!-- ダイス1回のみの結果サイマリー -->
+      @if (diceSummary) {
+        <div class="bdr-dice-summary">
+          <span class="bdr-dice-summary-icon">🎲</span>
+          <span class="bdr-dice-summary-text">{{ diceSummary.detail }}</span>
+        </div>
+      }
+      <div class="bdr-results-header">結果</div>
+      @for (r of results; track r; let i = $index) {
+        <div class="bdr-result-row"
+          [class.bdr-error]="r.error" [class.bdr-secret]="r.isGmOnly">
+          <span class="bdr-result-name">{{ r.name }}</span>
+          @if (r.isGmOnly) {
+            <span class="bdr-secret-tag">[GM]</span>
+          }
+          <span class="bdr-result-detail">{{ r.result }}</span>
+        </div>
+      }
     </div>
-    <div class="bdr-results-header">結果</div>
-    <div class="bdr-result-row" *ngFor="let r of results; let i = index"
-      [class.bdr-error]="r.error" [class.bdr-secret]="r.isGmOnly">
-      <span class="bdr-result-name">{{ r.name }}</span>
-      <span class="bdr-secret-tag" *ngIf="r.isGmOnly">[GM]</span>
-      <span class="bdr-result-detail">{{ r.result }}</span>
-    </div>
-  </div>
+  }
 </div>

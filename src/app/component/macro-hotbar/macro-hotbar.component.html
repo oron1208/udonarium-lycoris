@@ -1,118 +1,127 @@
-<ng-container *ngIf="isVisible">
+@if (isVisible) {
   <div class="macro-hotbar" [class.pointer-events-none]="isPointerDragging" [ngStyle]="panelStyle">
-  <div class="macro-hotbar-left-buttons">
-    <div class="macro-hotbar-drag-handle"
-      (pointerdown)="onPanelDragStart($event)"
-      (pointermove)="onPanelDragMove($event)"
-      (pointerup)="onPanelDragEnd($event)"
-      (pointercancel)="onPanelDragEnd($event)"
+    <div class="macro-hotbar-left-buttons">
+      <div class="macro-hotbar-drag-handle"
+        (pointerdown)="onPanelDragStart($event)"
+        (pointermove)="onPanelDragMove($event)"
+        (pointerup)="onPanelDragEnd($event)"
+        (pointercancel)="onPanelDragEnd($event)"
       title="ドラッグで移動">⋮⋮</div>
-  </div>
-  <div class="macro-hotbar-controls">
-    <div class="hotbar-top-row">
-      <div class="hotbar-tab-select" title="送信先チャットタブ">
-        <select [(ngModel)]="selectedChatTabId">
-          <option *ngFor="let tab of chatTabs" [value]="tab.identifier">{{ tab.name }}</option>
-        </select>
-      </div>
-      <div class="hotbar-top-actions">
-        <div class="macro-hotbar-scale" title="サイズ変更">
-          <button type="button" (click)="adjustScale(-10)">−</button>
-          <span class="scale-label">{{hotbarScale}}%</span>
-          <button type="button" (click)="adjustScale(10)">＋</button>
+    </div>
+    <div class="macro-hotbar-controls">
+      <div class="hotbar-top-row">
+        <div class="hotbar-tab-select" title="送信先チャットタブ">
+          <select [(ngModel)]="selectedChatTabId">
+            @for (tab of chatTabs; track tab) {
+              <option [value]="tab.identifier">{{ tab.name }}</option>
+            }
+          </select>
         </div>
-        <button type="button" class="macro-hotbar-pin-button" [attr.aria-pressed]="isPinned"
-          (click)="togglePin()"
-          [class.pinned]="isPinned"
+        <div class="hotbar-top-actions">
+          <div class="macro-hotbar-scale" title="サイズ変更">
+            <button type="button" (click)="adjustScale(-10)">−</button>
+            <span class="scale-label">{{hotbarScale}}%</span>
+            <button type="button" (click)="adjustScale(10)">＋</button>
+          </div>
+          <button type="button" class="macro-hotbar-pin-button" [attr.aria-pressed]="isPinned"
+            (click)="togglePin()"
+            [class.pinned]="isPinned"
           title="{{isPinned ? 'ピン止めON' : 'ピン止め'}}">{{isPinned ? '📌' : '📍'}}</button>
+        </div>
+      </div>
+      <div class="hotbar-controls-row">
+        <button type="button" class="self-character-button" (click)="setTargetedCharacterAsSelf()"
+          title="Altキーで対象にしたコマを自キャラにします">
+          <span>自キャラ</span><span>設定</span>
+        </button>
+        <div class="current-character-name" [title]="selectedCharacter ? selectedCharacter.name : 'プレイヤー'"
+          [class.has-character]="!!selectedCharacter"
+          [style.background-image]="selectedCharacterImageUrl ? 'url(' + selectedCharacterImageUrl + ')' : ''">
+          <span class="character-name-text">{{selectedCharacter ? (selectedCharacter.name || '名前なし') : 'プレイヤー'}}</span>
+        </div>
+        <button type="button" class="clear-character-button" (click)="clearSelectedCharacter()" title="自キャラ設定を解除">解除</button>
+        <button type="button" class="target-mode-button" [class.active]="targetMode" (click)="toggleTargetMode()"
+          title="ONにすると、ターゲット中のコマを対象としてマクロを実行します">
+          <span>対象</span><span>{{targetMode ? 'ON' : 'OFF'}}</span>
+        </button>
       </div>
     </div>
-    <div class="hotbar-controls-row">
-      <button type="button" class="self-character-button" (click)="setTargetedCharacterAsSelf()"
-        title="Altキーで対象にしたコマを自キャラにします">
-        <span>自キャラ</span><span>設定</span>
-      </button>
-      <div class="current-character-name" [title]="selectedCharacter ? selectedCharacter.name : 'プレイヤー'"
-        [class.has-character]="!!selectedCharacter"
-        [style.background-image]="selectedCharacterImageUrl ? 'url(' + selectedCharacterImageUrl + ')' : ''">
-        <span class="character-name-text">{{selectedCharacter ? (selectedCharacter.name || '名前なし') : 'プレイヤー'}}</span>
+    <div class="macro-hotbar-main">
+      @if (helpText) {
+        <div class="macro-help">{{helpText}}</div>
+      }
+      @if (hoverSlotText) {
+        <div class="macro-slot-popover">
+          <div class="popover-title">{{hoverSlotLabel}}</div>
+          <div class="popover-body">{{hoverSlotText}}</div>
+        </div>
+      }
+      <div class="small-font">空欄で登録・右クリックまたはF2で編集</div>
+      <div class="macro-hotbar-pages">
+        @for (page of pageNumbers; track page) {
+          <button type="button" [class.active]="activePage === page" (click)="setActivePage(page)">
+            {{page + 1}}
+          </button>
+        }
       </div>
-      <button type="button" class="clear-character-button" (click)="clearSelectedCharacter()" title="自キャラ設定を解除">解除</button>
-      <button type="button" class="target-mode-button" [class.active]="targetMode" (click)="toggleTargetMode()"
-        title="ONにすると、ターゲット中のコマを対象としてマクロを実行します">
-        <span>対象</span><span>{{targetMode ? 'ON' : 'OFF'}}</span>
-      </button>
-    </div>
-  </div>
-
-  <div class="macro-hotbar-main">
-    <div class="macro-help" *ngIf="helpText">{{helpText}}</div>
-    <div class="macro-slot-popover" *ngIf="hoverSlotText">
-      <div class="popover-title">{{hoverSlotLabel}}</div>
-      <div class="popover-body">{{hoverSlotText}}</div>
-    </div>
-
-    <div class="small-font">空欄で登録・右クリックまたはF2で編集</div>
-    <div class="macro-hotbar-pages">
-      <button *ngFor="let page of pageNumbers" type="button" [class.active]="activePage === page" (click)="setActivePage(page)">
-        {{page + 1}}
-      </button>
-    </div>
-
-    <div class="macro-hotbar-slots">
-      <button *ngFor="let slot of visibleSlots; let i = index" type="button" class="macro-slot"
-        [class.empty]="!slot.text.trim().length"
-        [attr.aria-label]="getSlotTooltip(slot)"
-        (mouseenter)="showSlotPopover(slot)"
-        (mouseleave)="hideSlotPopover()"
-        (keydown.f2)="onSlotContextMenu($event, i)" (click)="onSlotClick($event, i)" (contextmenu)="onSlotContextMenu($event, i)">
-        <span class="slot-number">{{activePage + 1}}-{{i + 1}}</span>
-        <span class="slot-icon" *ngIf="getIconUrl(slot); else noIcon">
-          <img [src]="getIconUrl(slot) | safe: 'resourceUrl'" />
-        </span>
-        <ng-template #noIcon>
-          <span class="slot-icon slot-icon-empty">＋</span>
-        </ng-template>
-        <span class="slot-label">{{slot.label || (slot.text ? slot.text : '登録')}}</span>
-      </button>
-    </div>
-  </div>
-
-  <div class="macro-hotbar-actions">
-    <button type="button" (click)="exportSlots()" title="ホットバー設定をJSONで保存">
-      <i class="material-icons">file_download</i><span>設定を保存</span>
-    </button>
-    <button type="button" (click)="openImportDialog()" title="ホットバー設定JSONを読み込み">
-      <i class="material-icons">file_upload</i><span>設定を読込</span>
-    </button>
-    <button type="button" (click)="clearAllSlots()" title="ホットバーを全てクリア" class="clear-all-button">
-      <i class="material-icons">delete_sweep</i><span>全削除</span>
-    </button>
-    <input #importFileInput type="file" accept="application/json,.json" style="display:none" (change)="importSlots($event)" />
-  </div>
-
-  <div class="macro-editor" *ngIf="0 <= editingIndex">
-    <div class="editor-title">ページ{{activePage + 1}} スロット{{(editingIndex % 12) + 1}} 編集</div>
-    <label>表示名<input class="is-caret" [(ngModel)]="editSlot.label" placeholder="例: 回避" /></label>
-    <div class="icon-editor">
-      <div class="editor-icon-preview" *ngIf="getIconUrl(editSlot); else editorNoIcon">
-        <img [src]="getIconUrl(editSlot) | safe: 'resourceUrl'" />
-      </div>
-      <ng-template #editorNoIcon>
-        <div class="editor-icon-preview no-image">画像なし</div>
-      </ng-template>
-      <div class="icon-editor-buttons">
-        <button type="button" (click)="selectIcon()">画像を選ぶ</button>
-        <button type="button" (click)="clearIcon()">画像なし</button>
+      <div class="macro-hotbar-slots">
+        @for (slot of visibleSlots; track slot; let i = $index) {
+          <button type="button" class="macro-slot"
+            [class.empty]="!slot.text.trim().length"
+            [attr.aria-label]="getSlotTooltip(slot)"
+            (mouseenter)="showSlotPopover(slot)"
+            (mouseleave)="hideSlotPopover()"
+            (keydown.f2)="onSlotContextMenu($event, i)" (click)="onSlotClick($event, i)" (contextmenu)="onSlotContextMenu($event, i)">
+            <span class="slot-number">{{activePage + 1}}-{{i + 1}}</span>
+            @if (getIconUrl(slot)) {
+              <span class="slot-icon">
+                <img [src]="getIconUrl(slot) | safe: 'resourceUrl'" />
+              </span>
+            } @else {
+              <span class="slot-icon slot-icon-empty">＋</span>
+            }
+            <span class="slot-label">{{slot.label || (slot.text ? slot.text : '登録')}}</span>
+          </button>
+        }
       </div>
     </div>
-    <label>マクロ<textarea class="is-caret" [(ngModel)]="editSlot.text" placeholder="例: 2d6+3 回避"></textarea></label>
-    <div class="editor-buttons">
-      <button type="button" (click)="saveEdit()">保存</button>
-      <button type="button" (click)="copyEditMacro()" title="マクロテキストをクリップボードにコピー">コピー</button>
-      <button type="button" (click)="clearEdit()">空にする</button>
-      <button type="button" (click)="cancelEdit()">キャンセル</button>
+    <div class="macro-hotbar-actions">
+      <button type="button" (click)="exportSlots()" title="ホットバー設定をJSONで保存">
+        <i class="material-icons">file_download</i><span>設定を保存</span>
+      </button>
+      <button type="button" (click)="openImportDialog()" title="ホットバー設定JSONを読み込み">
+        <i class="material-icons">file_upload</i><span>設定を読込</span>
+      </button>
+      <button type="button" (click)="clearAllSlots()" title="ホットバーを全てクリア" class="clear-all-button">
+        <i class="material-icons">delete_sweep</i><span>全削除</span>
+      </button>
+      <input #importFileInput type="file" accept="application/json,.json" style="display:none" (change)="importSlots($event)" />
     </div>
+    @if (0 <= editingIndex) {
+      <div class="macro-editor">
+        <div class="editor-title">ページ{{activePage + 1}} スロット{{(editingIndex % 12) + 1}} 編集</div>
+        <label>表示名<input class="is-caret" [(ngModel)]="editSlot.label" placeholder="例: 回避" /></label>
+        <div class="icon-editor">
+          @if (getIconUrl(editSlot)) {
+            <div class="editor-icon-preview">
+              <img [src]="getIconUrl(editSlot) | safe: 'resourceUrl'" />
+            </div>
+          } @else {
+            <div class="editor-icon-preview no-image">画像なし</div>
+          }
+          <div class="icon-editor-buttons">
+            <button type="button" (click)="selectIcon()">画像を選ぶ</button>
+            <button type="button" (click)="clearIcon()">画像なし</button>
+          </div>
+        </div>
+        <label>マクロ<textarea class="is-caret" [(ngModel)]="editSlot.text" placeholder="例: 2d6+3 回避"></textarea></label>
+        <div class="editor-buttons">
+          <button type="button" (click)="saveEdit()">保存</button>
+          <button type="button" (click)="copyEditMacro()" title="マクロテキストをクリップボードにコピー">コピー</button>
+          <button type="button" (click)="clearEdit()">空にする</button>
+          <button type="button" (click)="cancelEdit()">キャンセル</button>
+        </div>
+      </div>
+    }
   </div>
-  </div>
-</ng-container>
+}

@@ -6,7 +6,9 @@
 
   <!-- ダイスボタン -->
   <div class="dice-buttons">
-    <button *ngFor="let d of diceButtons" class="dice-btn" (click)="addDice(d.sides)">{{ d.label }}</button>
+    @for (d of diceButtons; track d) {
+      <button class="dice-btn" (click)="addDice(d.sides)">{{ d.label }}</button>
+    }
     <button class="util-btn" (click)="addText('+')" title="足す">+</button>
     <button class="util-btn" (click)="addText('-')" title="引く">−</button>
     <button class="util-btn backspace" (click)="backspace()" title="一文字削る">⌫</button>
@@ -21,7 +23,7 @@
       [(ngModel)]="diceExpression"
       (keydown.enter)="roll()"
       placeholder="ダイスボタンで式を組み立て or 直接入力"
-    >
+      >
   </div>
 
   <!-- アクションボタン -->
