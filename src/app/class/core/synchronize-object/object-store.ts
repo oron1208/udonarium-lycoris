@@ -21,7 +21,7 @@ export class ObjectStore {
   private aliasNameMap: Map<ObjectAliasName, Map<ObjectIdentifier, GameObject>> = new Map();
   private garbageMap: Map<ObjectIdentifier, TimeStamp> = new Map();
 
-  private queueMap: Map<ObjectIdentifier, ObjectContext> = new Map();
+  private queueMap: Map<ObjectIdentifier, { context: ObjectContext; merged: boolean }> = new Map();
   private updateInterval: number = null;
   private garbageCollectionInterval: NodeJS.Timer = null;
   private updateCallback = () => { this.updateQueue(); }
@@ -114,20 +114,30 @@ export class ObjectStore {
     if (this.queueMap.has(context.identifier)) {
       let queue = this.queueMap.get(context.identifier);
       for (let key in context) {
-        queue[key] = context[key];
+        queue.context[key] = context[key];
       }
+      // 同一ティック内の追い越し更新。flush時に再配信しないと最終状態が欠落する。
+      queue.merged = true;
       return;
     }
     EventSystem.call('UPDATE_GAME_OBJECT', context);
-    this.queueMap.set(context.identifier, context);
+    this.queueMap.set(context.identifier, { context: context, merged: false });
     if (this.updateInterval === null) {
       this.updateInterval = setZeroTimeout(this.updateCallback);
     }
   }
 
   private updateQueue() {
+    let mergedContexts: ObjectContext[] = [];
+    for (let entry of this.queueMap.values()) {
+      if (entry.merged) mergedContexts.push(entry.context);
+    }
     this.queueMap.clear();
     this.updateInterval = null;
+    for (let context of mergedContexts) {
+      // 初回配信後に上書きされた最新状態を送り直す（遠隔側はバージョン比較で冪等）
+      EventSystem.call('UPDATE_GAME_OBJECT', context);
+    }
   }
 
   isDeleted(identifier: string) {
@@ -168,21 +178,10 @@ export class ObjectStore {
 
   private _garbageCollection(ms: number) {
     let nowDate = performance.now();
-
-    let checkLength = this.garbageMap.size - 100000;
-    if (checkLength < 1) return;
-
-    let entries = this.garbageMap.entries();
-    while (checkLength < 1) {
-      checkLength--;
-      let item = entries.next();
-      if (item.done) break;
-
-      let identifier = item.value[0];
-      let timeStamp = item.value[1];
-
-      if (timeStamp + ms < nowDate) continue;
-      this.garbageMap.delete(identifier);
+    // 期限切れ（timeStamp + ms < now）の削除履歴を掃除する。
+    // 旧実装は while 条件と期限判定が逆転しており実質何も消していなかった（garbageMap が無制限に増える）。
+    for (let [identifier, timeStamp] of this.garbageMap) {
+      if (timeStamp + ms < nowDate) this.garbageMap.delete(identifier);
     }
   }
 }
