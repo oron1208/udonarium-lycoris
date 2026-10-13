@@ -5,6 +5,7 @@
     "strict": false,
     "skipLibCheck": true,
     "ignoreDeprecations": "6.0",
+    "esModuleInterop": true,
     "baseUrl": "./",
     "outDir": "./dist/out-tsc",
     "sourceMap": true,
@@ -13,7 +14,6 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "importHelpers": true,
-    "allowSyntheticDefaultImports": true,
     "target": "ES2022",
     "module": "es2020",
     "paths": {
