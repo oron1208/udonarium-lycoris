@@ -6,7 +6,7 @@ import { FileReaderUtil } from './file-reader-util';
 import { ImageContext, ImageFile, ImageState } from './image-file';
 import { CatalogItem, ImageStorage } from './image-storage';
 import { MimeType } from './mime-type';
-import { MediaLoadPriority } from './media-load-priority';
+import { MediaLoadPriority, MediaPriority } from './media-load-priority';
 import { MediaCache } from './media-cache';
 import { ServerMediaStorage } from './server-media-storage';
 import { Logger } from '../system/util/logger';
