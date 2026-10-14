@@ -74,13 +74,35 @@ if (hamburger && navLinks) {
   });
 }
 
+// ===== Update Timeline Archive =====
+const updateTimeline = document.querySelector('#updates .timeline');
+if (updateTimeline) {
+  const visibleCount = 4;
+  const items = Array.from(updateTimeline.querySelectorAll(':scope > .timeline-item'));
+  if (items.length > visibleCount) {
+    const archive = document.createElement('details');
+    archive.className = 'timeline-archive';
+    const summary = document.createElement('summary');
+    summary.textContent = `過去のアップデート履歴を表示（${items.length - visibleCount}件）`;
+    const archiveList = document.createElement('div');
+    archiveList.className = 'timeline timeline-archive-list';
+    items.slice(visibleCount).forEach(item => archiveList.appendChild(item));
+    archive.append(summary, archiveList);
+    updateTimeline.after(archive);
+    archive.addEventListener('toggle', () => {
+      summary.textContent = archive.open
+        ? '過去のアップデート履歴を閉じる'
+        : `過去のアップデート履歴を表示（${items.length - visibleCount}件）`;
+    });
+  }
+}
+
 // ===== Scroll Animations =====
-const observerOptions = { threshold: 0.1, rootMargin: '0px 0px -50px 0px' };
+const observerOptions = { threshold: 0.08, rootMargin: '0px 0px -10px 0px' };
 const observer = new IntersectionObserver((entries) => {
-  entries.forEach((entry, i) => {
+  entries.forEach((entry) => {
     if (entry.isIntersecting) {
-      // Stagger children
-      const delay = entry.target.dataset.delay || 0;
+      const delay = Number(entry.target.dataset.delay || 0);
       setTimeout(() => {
         entry.target.classList.add('visible');
       }, delay);
@@ -90,7 +112,7 @@ const observer = new IntersectionObserver((entries) => {
 }, observerOptions);
 
 document.querySelectorAll('.fade-in, .fade-up').forEach((el, i) => {
-  el.dataset.delay = i * 100;
+  el.dataset.delay = Math.min(i * 25, 160);
   observer.observe(el);
 });
 

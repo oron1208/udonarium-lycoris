@@ -464,12 +464,52 @@ a:hover { color: var(--accent-2); }
   font-size: 0.55rem;
   top: 11px;
 }
+.timeline-archive {
+  max-width: 750px;
+  margin: 4px auto 0;
+  padding-left: 40px;
+}
+.timeline-archive summary {
+  cursor: pointer;
+  list-style: none;
+  width: fit-content;
+  margin: 0 auto;
+  padding: 12px 18px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  background: var(--surface);
+  font-size: 0.9rem;
+  transition: border-color 0.2s, color 0.2s, transform 0.2s;
+}
+.timeline-archive summary::-webkit-details-marker {
+  display: none;
+}
+.timeline-archive summary::before {
+  content: '+';
+  color: var(--accent);
+  font-weight: 700;
+  margin-right: 8px;
+}
+.timeline-archive[open] summary::before {
+  content: '−';
+}
+.timeline-archive summary:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+.timeline-archive-list {
+  margin-top: 32px;
+}
 
 @media (max-width: 768px) {
   .timeline { padding-left: 30px; }
   .timeline::before { left: 12px; }
   .timeline-badge { left: -30px; width: 28px; height: 28px; font-size: 0.55rem; }
   .timeline-content { padding: 20px; }
+  .timeline-archive { padding-left: 30px; }
+  .timeline-archive summary { font-size: 0.85rem; }
 }
 
 /* ===== Credits ===== */
@@ -531,8 +571,8 @@ a:hover { color: var(--accent-2); }
 /* ===== Animations ===== */
 .fade-in {
   opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 0.8s ease, transform 0.8s ease;
+  transform: translateY(16px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
 }
 .fade-in.visible {
   opacity: 1;
@@ -541,8 +581,8 @@ a:hover { color: var(--accent-2); }
 
 .fade-up {
   opacity: 0;
-  transform: translateY(40px);
-  transition: opacity 0.8s ease, transform 0.8s ease;
+  transform: translateY(22px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
 }
 .fade-up.visible {
   opacity: 1;
