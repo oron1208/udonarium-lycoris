@@ -7,6 +7,7 @@ import { ChatMessage } from '@udonarium/chat-message';
 import { ChatTab } from '@udonarium/chat-tab';
 import { GameCharacter } from '@udonarium/game-character';
 import { GameTable } from '@udonarium/game-table';
+import { TableSelecter } from '@udonarium/table-selecter';
 import { PeerCursor } from '@udonarium/peer-cursor';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 
@@ -93,8 +94,7 @@ export class DiceCutinComponent implements OnInit, OnDestroy {
   }
 
   private get table(): GameTable {
-    return ObjectStore.instance.getObjects<GameTable>(GameTable).find(t => t.selected) ||
-      ObjectStore.instance.getObjects<GameTable>(GameTable)[0];
+    return TableSelecter.instance.viewTable;
   }
 
   getDiceSvgSafe(shape: DiceShape): SafeHtml {

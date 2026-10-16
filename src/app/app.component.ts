@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, NgZone, OnDestroy, ViewChild, ViewContainerRef, ChangeDetectionStrategy } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, NgZone, OnDestroy, ViewChild, ViewContainerRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { NgSelectConfig } from '@ng-select/ng-select';
 import * as lzbase62 from 'lzbase62';
 import { Logger } from './class/core/system/util/logger';
@@ -197,7 +197,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     private ngSelectConfig: NgSelectConfig,
     private ngZone: NgZone,
     private audioLibraryService: AudioLibraryService,
-    private hostElement: ElementRef<HTMLElement>
+    private hostElement: ElementRef<HTMLElement>,
+    private changeDetector: ChangeDetectorRef
   ) {
     AutoReconnect.instance.initialize();
 
@@ -1410,6 +1411,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     const inRoom = ts != null && ts.viewTableIdentifier.length > 0;
     const viewTable = inRoom ? ts.viewTable : null;
     const enabled = !!viewTable && viewTable.roomMode === 'advanced';
+    if (this.isAdvancedRoom !== enabled) this.changeDetector.markForCheck();
     this.isAdvancedRoom = enabled;
     document.body.classList.toggle('udonarium-advanced-room', enabled);
   }

@@ -13,6 +13,7 @@ import { DiceSymbol } from '@udonarium/dice-symbol';
 import { GameTableMask } from '@udonarium/game-table-mask';
 import { Terrain } from '@udonarium/terrain';
 import { TabletopObject } from '@udonarium/tabletop-object';
+import { TableSelecter } from '@udonarium/table-selecter';
 
 import { PasswordCheckComponent } from 'component/password-check/password-check.component';
 import { RoomSettingComponent } from 'component/room-setting/room-setting.component';
@@ -119,6 +120,7 @@ export class LobbyComponent implements OnInit, OnDestroy {
     // 部屋に入る前に、ロビー状態で作成されたコマ等をクリーンアップする
     // （ユドナリウム公式の「部屋未作成時にコマを作ると別の部屋に引き継がれる」現象の修正）
     this.cleanupTabletopObjectsBeforeJoin();
+    TableSelecter.instance.resetForRoomJoin();
 
     let userId = Network.peerContext ? Network.peerContext.userId : PeerContext.generateId();
     Network.open(userId, context.roomId, context.roomName, password);

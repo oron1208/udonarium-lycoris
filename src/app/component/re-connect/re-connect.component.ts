@@ -16,6 +16,7 @@ import { GameTableMask } from '@udonarium/game-table-mask';
 import { RangeArea } from '@udonarium/range';
 import { Terrain } from '@udonarium/terrain';
 import { TextNote } from '@udonarium/text-note';
+import { TableSelecter } from '@udonarium/table-selecter';
 
 import { PasswordCheckComponent } from 'component/password-check/password-check.component';
 import { RoomSettingComponent } from 'component/room-setting/room-setting.component';
@@ -254,6 +255,7 @@ export class ReConnectComponent implements OnInit, OnDestroy {
       this.deleteGameObject(obj);
     }
 
+    TableSelecter.instance.resetForRoomJoin();
     ObjectStore.instance.clearDeleteHistory();
   }
 

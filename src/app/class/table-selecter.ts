@@ -21,6 +21,22 @@ export class TableSelecter extends GameObject {
   gridShow: boolean = false; // true=常時グリッド表示
   gridSnap: boolean = true;
 
+  resetForRoomJoin(): void {
+    // Bootstrap tables reuse fixed IDs. Their local versions must not win
+    // against the destination room, and clearing them must not broadcast deletes.
+    for (const table of ObjectStore.instance.getObjects(GameTable)) {
+      ObjectStore.instance.remove(table);
+    }
+    for (const selecter of ObjectStore.instance.getObjects(TableSelecter)) {
+      if (selecter !== this) ObjectStore.instance.remove(selecter);
+    }
+    const context = this.toContext();
+    context.majorVersion = 0;
+    context.minorVersion = 0;
+    context.syncData = { ...context.syncData, viewTableIdentifier: '' };
+    this.apply(context);
+  }
+
   // GameObject Lifecycle
   onStoreAdded() {
     super.onStoreAdded();
