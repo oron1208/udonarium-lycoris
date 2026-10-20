@@ -57,6 +57,8 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
   isAutoSoundEnabled = true;
   hotbarScale = 100;
   isShowSideNameLabel = true;
+  isShowPieceTag = true;
+  isFlatCircleHidden = false;
   isShowTopDownNameLabel = true;
   isShowCharacterDirectionMarker = false;
   isBundleLoading = false;
@@ -69,6 +71,8 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
   private static readonly TOOLTIP_FOREGROUND_KEY = 'udonarium.tooltip.foreground.v1';
   private static readonly SHOW_SIDE_NAME_LABEL_KEY = 'udonarium.nameLabel.side.v1';
   private static readonly SHOW_TOPDOWN_NAME_LABEL_KEY = 'udonarium.nameLabel.topdown.v1';
+  private static readonly SHOW_PIECE_NAME_TAG_KEY = 'udonarium.nameLabel.pieceTag.v1';
+  private static readonly FLAT_CIRCLE_HIDDEN_KEY = 'udonarium.flatCircle.hidden.v1';
   private static readonly SHOW_CHARACTER_DIRECTION_MARKER_KEY = 'udonarium.character.directionMarker.visible.v1';
 
   constructor(
@@ -95,6 +99,8 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
     try { this.isCursorShareDisabled = localStorage.getItem(OptionsPanelComponent.CURSOR_SHARE_DISABLED_KEY) === '1'; } catch (_) { }
     try { this.isShowSideNameLabel = localStorage.getItem(OptionsPanelComponent.SHOW_SIDE_NAME_LABEL_KEY) !== '0'; } catch (_) { }
     try { this.isShowTopDownNameLabel = localStorage.getItem(OptionsPanelComponent.SHOW_TOPDOWN_NAME_LABEL_KEY) !== '0'; } catch (_) { }
+    try { this.isShowPieceTag = localStorage.getItem(OptionsPanelComponent.SHOW_PIECE_NAME_TAG_KEY) !== '0'; } catch (_) { }
+    try { this.isFlatCircleHidden = localStorage.getItem(OptionsPanelComponent.FLAT_CIRCLE_HIDDEN_KEY) === '1'; } catch (_) { }
     try { this.isShowCharacterDirectionMarker = localStorage.getItem(OptionsPanelComponent.SHOW_CHARACTER_DIRECTION_MARKER_KEY) === '1'; } catch (_) { }
 
     EventSystem.register(this)
@@ -117,10 +123,14 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
         this.ngZone.run(() => {
           if (event.data?.side !== undefined) this.isShowSideNameLabel = !!event.data.side;
           if (event.data?.topdown !== undefined) this.isShowTopDownNameLabel = !!event.data.topdown;
+          if (event.data?.pieceTag !== undefined) this.isShowPieceTag = !!event.data.pieceTag;
         });
       })
       .on('CHARACTER_DIRECTION_MARKER_VISIBILITY_CHANGED', event => {
         this.ngZone.run(() => { this.isShowCharacterDirectionMarker = !!event.data?.visible; });
+      })
+      .on('FLAT_CIRCLE_VISIBILITY_CHANGED', event => {
+        this.ngZone.run(() => { this.isFlatCircleHidden = !!event.data?.hidden; });
       });
   }
 
@@ -303,6 +313,18 @@ export class OptionsPanelComponent implements OnInit, OnDestroy {
 
   addSampleCharacters() {
     EventSystem.trigger('ADD_SAMPLE_CHARACTERS', {});
+  }
+
+  toggleShowPieceTag() {
+    this.isShowPieceTag = !this.isShowPieceTag;
+    try { localStorage.setItem(OptionsPanelComponent.SHOW_PIECE_NAME_TAG_KEY, this.isShowPieceTag ? '1' : '0'); } catch (_) { }
+    EventSystem.trigger('NAME_LABEL_VISIBILITY_CHANGED', { pieceTag: this.isShowPieceTag });
+  }
+
+  toggleFlatCircleHidden() {
+    this.isFlatCircleHidden = !this.isFlatCircleHidden;
+    try { localStorage.setItem(OptionsPanelComponent.FLAT_CIRCLE_HIDDEN_KEY, this.isFlatCircleHidden ? '1' : '0'); } catch (_) { }
+    EventSystem.trigger('FLAT_CIRCLE_VISIBILITY_CHANGED', { hidden: this.isFlatCircleHidden });
   }
 
   toggleShowSideNameLabel() {

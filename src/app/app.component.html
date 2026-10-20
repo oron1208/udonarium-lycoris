@@ -35,7 +35,7 @@
   @if (isVnStageVisible && vnStageReady) {
     <vn-stage></vn-stage>
   }
-  <ui-panel [top]="0" [left]="0" [width]="105" [height]="470" [title]="'メニュー'" [showTitleButtons]="false">
+  <ui-panel [top]="0" [left]="0" [width]="105" [height]="gmModeService.isGm ? 512 : 470" [title]="'メニュー'" [showTitleButtons]="false">
     <nav>
       @if (isAdvancedRoom) {
         <div class="advanced-room-badge">ADVANCED</div>
@@ -94,6 +94,14 @@
             <a routerLink="/" routerLinkActive="active">
               <div><i class="material-icons">sports_kabaddi</i></div>
               <div>{{ isInitiativePanelOpen ? '戦闘管理中' : '戦闘管理' }}</div>
+            </a>
+          </li>
+        }
+        @if (gmModeService.isGm) {
+          <li (click)="open('GmToolsComponent')">
+            <a routerLink="/" routerLinkActive="active">
+              <div><i class="material-icons">handyman</i></div>
+              <div>GMツール</div>
             </a>
           </li>
         }

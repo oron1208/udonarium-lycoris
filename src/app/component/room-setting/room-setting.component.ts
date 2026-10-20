@@ -26,6 +26,7 @@ export class RoomSettingComponent implements OnInit, OnDestroy {
   isPasswordVisible = false;
   isPrivate: boolean = false;
   roomMode: RoomMode = 'standard';
+  forceFlatView: boolean = false;
 
   get peerId(): string { return Network.peerId; }
   get isConnected(): boolean { return Network.peerIds.length <= 1 ? false : true; }
@@ -59,6 +60,7 @@ export class RoomSettingComponent implements OnInit, OnDestroy {
   createRoom() {
     let userId = Network.peerContext ? Network.peerContext.userId : PeerContext.generateId();
     this.savePendingRoomMode();
+    this.savePendingForceFlat();
     Network.open(userId, PeerContext.generateId('***'), this.roomName, this.password);
     this.applyRoomModeToCurrentTables();
     PeerCursor.myCursor.peerId = Network.peerId;
@@ -74,10 +76,20 @@ export class RoomSettingComponent implements OnInit, OnDestroy {
     }
   }
 
+  private savePendingForceFlat() {
+    try {
+      if (this.forceFlatView) localStorage.setItem('udonarium.pendingForceFlat.v1', '1');
+      else localStorage.removeItem('udonarium.pendingForceFlat.v1');
+    } catch (e) {
+      Logger.warn('force flat localStorage save failed', e);
+    }
+  }
+
   private applyRoomModeToCurrentTables() {
     const tables = ObjectStore.instance.getObjects(GameTable);
     tables.forEach(table => {
       table.roomMode = this.roomMode;
+      table.forceFlatView = this.forceFlatView;
       table.update();
     });
   }

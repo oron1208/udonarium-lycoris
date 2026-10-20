@@ -159,17 +159,32 @@
       </div>
       <div class="option-hint">2段以上のバフを簡易表示（畳む）にします</div>
       <div class="option-row">
+        <span class="option-label">コマの名前タグ</span>
+        <button type="button" class="option-toggle" [class.on]="isShowPieceTag" (click)="toggleShowPieceTag()">
+          {{ isShowPieceTag ? 'ON' : 'OFF' }}
+        </button>
+      </div>
+      <div class="option-hint">コマ本体の名前タグの表示を切り替えます。卓を横から見た時の一覧（次の設定）とは別です</div>
+      <div class="option-row">
         <span class="option-label">横から見た名前ラベル</span>
         <button type="button" class="option-toggle" [class.on]="isShowSideNameLabel" (click)="toggleShowSideNameLabel()">
           {{ isShowSideNameLabel ? 'ON' : 'OFF' }}
         </button>
       </div>
+      <div class="option-hint">卓を横から見た時に画面端に表示される名前一覧のON/OFFです。コマの名前タグは上の設定で切り替えます</div>
       <div class="option-row">
         <span class="option-label">真上から見た名前ラベル</span>
         <button type="button" class="option-toggle" [class.on]="isShowTopDownNameLabel" (click)="toggleShowTopDownNameLabel()">
           {{ isShowTopDownNameLabel ? 'ON' : 'OFF' }}
         </button>
       </div>
+      <div class="option-row">
+        <span class="option-label">平面コマの白円を隠す</span>
+        <button type="button" class="option-toggle" [class.on]="isFlatCircleHidden" (click)="toggleFlatCircleHidden()">
+          {{ isFlatCircleHidden ? 'ON' : 'OFF' }}
+        </button>
+      </div>
+      <div class="option-hint">平面モードでコマを囲む白い円の枠と背景を隠します（画像はそのまま表示）</div>
       <div class="option-row">
         <span class="option-label">コマ正面マーク</span>
         <button type="button" class="option-toggle" [class.on]="isShowCharacterDirectionMarker" (click)="toggleShowCharacterDirectionMarker()">

@@ -24,7 +24,7 @@
     }
     <div class="component-content is-3d" [@bounceInOut]="'in'">
       @if (shouldUseFlatIcon) {
-        <div class="flat-character-token is-pointer-events-auto" [class.is-locked]="isLock" [class.is-secret]="isSecretDetailsHidden" [class.is-targeted]="gameCharacter.targeted">
+        <div class="flat-character-token is-pointer-events-auto" [class.is-locked]="isLock" [class.is-secret]="isSecretDetailsHidden" [class.is-targeted]="gameCharacter.targeted" [class.is-circle-hidden]="hideFlatCircle">
           @if (0 < imageFile.url.length) {
             <img class="flat-character-image chrome-smooth-image-trick" [src]="komaDisplayImageUrl | safe: 'resourceUrl'" [ngStyle]="flatIconImageStyle" (load)="onFlatIconImageLoad($event)">
           }

@@ -14,6 +14,7 @@ export class PaletteBrowserComponent implements OnChanges, DoCheck, OnDestroy {
   @Output() chooseLine = new EventEmitter<string>();
   @Output() sendLine = new EventEmitter<string>();
   private static readonly dragMime = 'application/x-lycoris-palette-item';
+  private static readonly sectionPattern = /^\/\/\s*===+\s*(.+?)\s*===+\s*$/;
   private static drag: { id: string; owner: PaletteBrowserComponent; palette: ChatPalette; source: string; start: number; end: number; text: string } = null;
   dropHint: { key: string; position: number; source: string; placement: string; label: string } = null;
   insertInside = false;
@@ -34,6 +35,8 @@ export class PaletteBrowserComponent implements OnChanges, DoCheck, OnDestroy {
   active = -2; // all; -1 is the implicit common section
   selected = -1;
   collapsed = new Set<number>();
+  sectionCollapsed = new Set<number>();
+  reordering = false;
   managing = false;
   readOnly = false;
   form = '';
@@ -55,6 +58,7 @@ export class PaletteBrowserComponent implements OnChanges, DoCheck, OnDestroy {
       this.selected = -1;
       this.active = -2;
       this.collapsed.clear();
+      this.sectionCollapsed.clear();
     }
   }
   ngOnChanges() {
@@ -64,12 +68,14 @@ export class PaletteBrowserComponent implements OnChanges, DoCheck, OnDestroy {
     this.active = -2;
     this.selected = -1;
     this.collapsed.clear();
+    this.sectionCollapsed.clear();
     this.cancel();
     try {
       const state = JSON.parse(localStorage.getItem(key) || 'null');
       if (state && state.source === this.source) {
         this.active = state.active;
         this.collapsed = new Set(state.collapsed);
+        this.sectionCollapsed = new Set(state.sections || []);
       }
     } catch (_) { /* Storage unavailable: in-memory view still works. */ }
   }
@@ -114,12 +120,45 @@ export class PaletteBrowserComponent implements OnChanges, DoCheck, OnDestroy {
   send(node: PaletteNode) { if (Date.now() < this.suppressClickUntil) return; if (this.command(node.text)) this.sendLine.emit(node.text); }
   expandAll(collapse: boolean) {
     this.collapsed.clear();
-    const visit = (nodes: PaletteNode[]) => nodes.forEach(n => { if (collapse && n.kind === 'fold') this.collapsed.add(n.start); visit(n.children); });
+    this.sectionCollapsed.clear();
+    const visit = (nodes: PaletteNode[]) => nodes.forEach(n => {
+      if (collapse && n.kind === 'fold') this.collapsed.add(n.start);
+      if (collapse && this.sectionName(n.text) !== null) this.sectionCollapsed.add(n.start);
+      visit(n.children);
+    });
     this.document.tabs.forEach(t => visit(t.children));
     this.saveView();
   }
+
+  /** //=== xxx === 形式の区切りコメント行ならセクション名を返す */
+  sectionName(text: string): string | null {
+    const match = PaletteBrowserComponent.sectionPattern.exec(text || '');
+    return match ? match[1] : null;
+  }
+
+  toggleSection(node: PaletteNode) {
+    if (this.sectionCollapsed.has(node.start)) this.sectionCollapsed.delete(node.start);
+    else this.sectionCollapsed.add(node.start);
+    this.saveView();
+  }
+
+  /** 折りたたんだセクションの中身を一覧から除外する（検索中は全表示） */
+  sectionVisibleItems(items: PaletteNode[]): PaletteNode[] {
+    if (this.query.trim() || !this.sectionCollapsed.size) return items;
+    const result: PaletteNode[] = [];
+    let hiding = false;
+    for (const node of items) {
+      if (this.sectionName(node.text) !== null) {
+        hiding = this.sectionCollapsed.has(node.start);
+        result.push(node);
+        continue;
+      }
+      if (!hiding) result.push(node);
+    }
+    return result;
+  }
   private saveView() {
-    try { localStorage.setItem(this.stateKey, JSON.stringify({ source: this.source, active: this.active, collapsed: Array.from(this.collapsed) })); } catch (_) {}
+    try { localStorage.setItem(this.stateKey, JSON.stringify({ source: this.source, active: this.active, collapsed: Array.from(this.collapsed), sections: Array.from(this.sectionCollapsed) })); } catch (_) {}
   }
   jumpToLine(line: number) {
     this.query = '';

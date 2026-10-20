@@ -14,6 +14,7 @@
       <input class="search is-caret" type="search" aria-label="すべてのタブを検索" placeholder="すべてのタブを検索" [(ngModel)]="query">
       @if (!readOnly) {
         <button type="button" [attr.aria-pressed]="managing" (click)="managing = !managing">{{managing ? '編集操作を閉じる' : '追加・編集'}}</button>
+        <button type="button" [class.active]="reordering" [attr.aria-pressed]="reordering" [disabled]="!!form" (click)="reordering = !reordering">並べ替え</button>
       }
       <button type="button" (click)="expandAll(false)">全展開</button>
       <button type="button" (click)="expandAll(true)">全折りたたみ</button>
@@ -73,7 +74,7 @@
           @if (active === -2 || query.trim()) {
             <h4>{{tab.name}}</h4>
           }
-          <ng-container *ngTemplateOutlet="nodes; context: {$implicit: tab.children, depth: 0}"></ng-container>
+          <ng-container *ngTemplateOutlet="nodes; context: {$implicit: sectionVisibleItems(tab.children), depth: 0}"></ng-container>
           <div class="drop-end" (dragover)="dragOverTab($event, tab)" (dragleave)="leaveDrop($event)" (drop)="receiveDrop($event, 'tab:' + tab.start)" [class.drop-tab]="dropHint?.key === 'tab:' + tab.start">{{dropHint?.key === 'tab:' + tab.start ? dropHint.label : 'このタブの末尾へドロップ'}}</div>
           @if (!tab.children.length) {
             <small>まだ項目がありません。「追加・編集」から追加できます。</small>
@@ -94,7 +95,7 @@
           [class.drop-before]="dropHint?.key === 'node:' + node.start && dropHint?.placement === 'before'"
           [class.drop-after]="dropHint?.key === 'node:' + node.start && dropHint?.placement === 'after'"
           [class.drop-inside]="dropHint?.key === 'node:' + node.start && dropHint?.placement === 'inside'">
-          @if (!readOnly) {
+          @if (!readOnly && (reordering || managing)) {
             <button type="button" class="drag-handle" [disabled]="!!form" [draggable]="!form" (dragstart)="startDrag($event, node)" (dragend)="endDrag($event)"
               (pointerdown)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()" (click)="selected = node.start; $event.stopPropagation()"
             [attr.aria-label]="'ドラッグして移動・別チャパレへコピー：' + (node.text || '空行')" title="ドラッグで移動／別チャパレへコピー">⠿</button>
@@ -106,16 +107,24 @@
             </button>
           }
           @if (node.kind === 'line') {
-            <button type="button" class="line" [class.annotation]="!command(node.text)" [class.selected]="selected === node.start" [class.empty-line]="!node.text"
-              [attr.aria-label]="node.text || '空行'" [disabled]="!!form" (click)="choose(node)" (dblclick)="send(node)" (keydown.control.enter)="send(node); $event.preventDefault()"
-            [title]="!wrapLines ? node.text : command(node.text) ? 'クリックで入力／ダブルクリック・Ctrl+Enterで送信' : '見出し・定義・空行（送信しません）'">{{node.text || ' '}}</button>
+            @if (sectionName(node.text) !== null) {
+              <button type="button" class="line section-header" [class.selected]="selected === node.start" [disabled]="!!form"
+                [attr.aria-expanded]="query.trim() || !sectionCollapsed.has(node.start) ? 'true' : 'false'" (click)="toggleSection(node)"
+                [title]="'セクション「' + sectionName(node.text) + '」の開閉（編集・出力では元のテキストをそのまま使います）'">
+                {{query.trim() || !sectionCollapsed.has(node.start) ? '▼' : '▶'}} {{sectionName(node.text)}}
+              </button>
+            } @else {
+              <button type="button" class="line" [class.annotation]="!command(node.text)" [class.selected]="selected === node.start" [class.empty-line]="!node.text"
+                [attr.aria-label]="node.text || '空行'" [disabled]="!!form" (click)="choose(node)" (dblclick)="send(node)" (keydown.control.enter)="send(node); $event.preventDefault()"
+              [title]="!wrapLines ? node.text : command(node.text) ? 'クリックで入力／ダブルクリック・Ctrl+Enterで送信' : '見出し・定義・空行（送信しません）'">{{node.text || ' '}}</button>
+            }
           }
           @if (dropHint?.key === 'node:' + node.start) {
             <span class="drop-indicator">{{dropHint.label}}</span>
           }
         </div>
         @if (node.kind === 'fold' && (query.trim() || !collapsed.has(node.start))) {
-          <ng-container *ngTemplateOutlet="nodes; context: {$implicit: node.children, depth: depth + 1}"></ng-container>
+          <ng-container *ngTemplateOutlet="nodes; context: {$implicit: sectionVisibleItems(node.children), depth: depth + 1}"></ng-container>
         }
       </div>
     }

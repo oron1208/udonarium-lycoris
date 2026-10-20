@@ -163,6 +163,8 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   private viewRotateZ: number = 10;
   isFlatMode: boolean = false;
   isTableViewResetting: boolean = false;
+  private appliedForceFlatView: boolean | null = null;
+  private flatModeEnteredByForce = false;
   private saved3dViewRotate: { x: number, y: number, z: number } = null;
   flatViewScale: number = 1;
 
@@ -325,6 +327,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
           if (!(updated instanceof GameCharacter)) this.invalidateWallGrid();
         }
         if (event.data.identifier !== this.currentTable.identifier && event.data.identifier !== this.tableSelecter.identifier) return;
+        this.syncForcedFlatView();
         this.scheduleTableUpdate();
       })
       .on('DICTIONARY_OBJECT_SPAWNED', () => {
@@ -430,6 +433,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     this.tabletopActionService.makeDefaultTable();
     this.tabletopActionService.makeDefaultTabletopObjects();
     this.tabletopActionService.initAprilDiceImage();
+    this.syncForcedFlatView();
   }
 
   ngAfterViewInit() {
@@ -591,11 +595,14 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
 
     Array.prototype.push.apply(menuActions, this.tabletopActionService.makeDefaultContextMenuActions(objectPosition));
     menuActions.push(ContextMenuSeparator);
-    menuActions.push({
-      name: this.isFlatMode ? '立体モードに戻す' : '平面モードにする', action: () => {
-        this.toggleFlatMode();
-      }
-    });
+    // 強制平面中はPLに平面解除を出さない（GMのみ操作可。解除はGMツールパネルで強制をOFFにする）
+    if (!this.currentTable?.forceFlatView || this.gmModeService.isGm) {
+      menuActions.push({
+        name: this.isFlatMode ? '立体モードに戻す' : '平面モードにする', action: () => {
+          this.toggleFlatMode();
+        }
+      });
+    }
     menuActions.push({
       name: 'テーブル設定', action: () => {
         this.modalService.open(GameTableSettingComponent, { width: 1200 });
@@ -709,6 +716,29 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     this.applyTableTransform();
     if (!nextFlatMode) this.resetTabletopObjectViews();
     this.changeDetector.markForCheck();
+  }
+
+  /** 卓の共有設定 forceFlatView をローカル視点へ反映する。ONで全員平面固定、OFFで各自の3D視点へ復帰 */
+  private syncForcedFlatView() {
+    const forced = !!this.currentTable?.forceFlatView;
+    if (this.appliedForceFlatView === forced) return;
+    const firstApply = this.appliedForceFlatView === null;
+    this.appliedForceFlatView = forced;
+    if (forced) {
+      if (!this.isFlatMode) {
+        this.flatModeEnteredByForce = true;
+        this.ngZone.run(() => this.toggleFlatMode());
+      } else {
+        this.flatModeEnteredByForce = false;
+      }
+      return;
+    }
+    if (!firstApply && this.flatModeEnteredByForce && this.isFlatMode) {
+      this.flatModeEnteredByForce = false;
+      this.ngZone.run(() => this.toggleFlatMode());
+      return;
+    }
+    this.flatModeEnteredByForce = false;
   }
 
   private resetTabletopObjectViews() {

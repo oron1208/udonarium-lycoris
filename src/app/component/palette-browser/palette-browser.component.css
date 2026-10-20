@@ -52,9 +52,11 @@ small { font-size: 11px; color: var(--palette-muted); padding: 2px 5px; }
 .help { flex-shrink: 0; }
 .rows { background: var(--palette-rows); overflow: auto; flex: 1; min-height: 60px; padding: 4px; }
 h4 { margin: 8px 0 4px; padding: 3px; border-bottom: 1px solid var(--palette-border); }
-.line, .fold { display: block; width: 100%; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; margin: 1px 0; }
+.line, .fold { display: block; width: 100%; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; padding: 3px 6px; line-height: 18px; }
 .line { border-color: transparent; background: transparent; }
 .fold { font-weight: bold; background: var(--palette-fold); }
+.section-header { font-weight: bold; background: var(--palette-fold); }
+.tools button.active { background: var(--palette-selected); border-color: var(--palette-focus); }
 .annotation { color: var(--palette-muted); font-size: 12px; }
 .spacer { height: 8px; }
 .danger { color: var(--palette-danger); }

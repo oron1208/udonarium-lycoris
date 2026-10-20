@@ -307,6 +307,14 @@
   background: #f2f2f2;
 }
 
+/* 「平面コマの白円を隠す」ON時: 円形の枠・白背景・影を消し、画像をそのままの形で表示する */
+.flat-character-token.is-circle-hidden {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+}
+
 .simple-character-token.is-locked,
 .flat-character-token.is-locked {
   border-style: dashed;

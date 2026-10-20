@@ -67,6 +67,7 @@ import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
 import { SaveDataService } from 'service/save-data.service';
 import { GmModeService } from 'service/gm-mode.service';
+import { GmToolsComponent } from 'component/gm-tools/gm-tools.component';
 
 import { CutInWindowComponent } from 'component/cut-in-window/cut-in-window.component';
 import { DiceTableSettingComponent } from 'component/dice-table-setting/dice-table-setting.component';
@@ -1109,6 +1110,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       case 'OptionsPanelComponent':
         component = OptionsPanelComponent;
         option = { width: 400, height: 520, left: 120, title: 'オプション' };
+        break;
+      case 'GmToolsComponent':
+        component = GmToolsComponent;
+        option = { width: 380, height: 280, left: 120, title: 'GMツール' };
         break;
     }
     if (component) {

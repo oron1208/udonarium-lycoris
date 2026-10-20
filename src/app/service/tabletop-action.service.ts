@@ -251,6 +251,7 @@ export class TabletopActionService {
 
     gameTable.name = '最初のテーブル';
     gameTable.roomMode = this.consumePendingRoomMode();
+    gameTable.forceFlatView = this.consumePendingForceFlat();
     gameTable.imageIdentifier = testBgFile.identifier;
     gameTable.width = 20;
     gameTable.height = 15;
@@ -268,6 +269,18 @@ export class TabletopActionService {
       Logger.warn('room mode localStorage read failed', e);
     }
     return 'standard';
+  }
+
+  private consumePendingForceFlat(): boolean {
+    try {
+      if (localStorage.getItem('udonarium.pendingForceFlat.v1') === '1') {
+        localStorage.removeItem('udonarium.pendingForceFlat.v1');
+        return true;
+      }
+    } catch (e) {
+      Logger.warn('force flat localStorage read failed', e);
+    }
+    return false;
   }
 
   // バフ追加identifierを固定にするため初期キャラのバフはGameCharacterでやらずにここでやる

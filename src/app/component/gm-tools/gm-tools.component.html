@@ -1,0 +1,9 @@
+<div class="gm-tools">
+  <section class="gm-tools-section">
+    <h3>表示の強制</h3>
+    <button type="button" class="gm-tools-toggle" [class.on]="forceFlatView" (click)="toggleForceFlatView()">
+      {{ forceFlatView ? '強制平面モード：ON（全員）' : '強制平面モード：OFF' }}
+    </button>
+    <p class="gm-tools-note">全参加者の卓を平面モードに固定します。ONの間、参加者は3D視点へ切り替えられません。OFFにすると各自が元の3D視点に戻ります。</p>
+  </section>
+</div>

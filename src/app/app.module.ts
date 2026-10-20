@@ -93,6 +93,7 @@ import { LightingPanelComponent } from 'component/lighting-panel/lighting-panel.
 import { DiceCutinComponent } from 'component/dice-cutin/dice-cutin.component';
 import { ContestedRollCutinComponent } from 'component/contested-roll-cutin/contested-roll-cutin.component';
 import { OptionsPanelComponent } from 'component/options-panel/options-panel.component';
+import { GmToolsComponent } from 'component/gm-tools/gm-tools.component';
 import { InitiativeTrackerComponent } from 'component/initiative-tracker/initiative-tracker.component';
 import { InitiativePanelComponent } from 'component/initiative-panel/initiative-panel.component';
 import { InitiativeDiceRollerComponent } from 'component/initiative-dice-roller/initiative-dice-roller.component';
@@ -191,6 +192,7 @@ import { AppComponent } from './app.component';
     DiceCutinComponent,
     ContestedRollCutinComponent,
     OptionsPanelComponent,
+    GmToolsComponent,
     InitiativeTrackerComponent,
     InitiativePanelComponent,
     InitiativeDiceRollerComponent,

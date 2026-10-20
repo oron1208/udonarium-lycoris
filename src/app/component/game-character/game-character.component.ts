@@ -112,10 +112,14 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
   get roll(): number { return this.gameCharacter.roll; }
   set roll(roll: number) { this.gameCharacter.roll = roll; }
   get isDropShadow(): boolean { return this.gameCharacter.isDropShadow; }
-  _showSideNameLabel: boolean = true;
+  _showPieceTag: boolean = true;
+  _hideFlatCircle: boolean = false;
+  get hideFlatCircle(): boolean { return this._hideFlatCircle; }
   // 注意: 名前ラベルは game-character.component と game-table.component (side-name-label) の2箇所で描画されている。
   // gmOnlyコマのフィルタリングは両方で行うこと。詳細は game-table.component.ts の sideLabelCharacters を参照。
-  get showSideNameLabel(): boolean { return this._showSideNameLabel; }
+  // 「コマの名前タグ」(pieceTag) はコマ本体の3D名前タグのみを制御し、
+  // 「横から見た名前ラベル」(side.v1) は卓側の画面端名前一覧のみを制御する（以前は side.v1 が両方を消していたバグを分離）。
+  get showSideNameLabel(): boolean { return this._showPieceTag; }
   set isDropShadow(isDropShadow: boolean) { this.gameCharacter.isDropShadow = isDropShadow; }
   get isAltitudeIndicate(): boolean { return this.gameCharacter.isAltitudeIndicate; }
   set isAltitudeIndicate(isAltitudeIndicate: boolean) { this.gameCharacter.isAltitudeIndicate = isAltitudeIndicate; }
@@ -333,7 +337,8 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
   ngOnInit() {
     try { this.foldingBuffAutoCollapse = localStorage.getItem('udonarium.buffTower.collapsed.v1') !== 'false'; } catch (_) { }
     try { this.isVnBoardButtonVisible = localStorage.getItem('udonarium.vnStage.boardButton.visible.v1') === '1'; } catch (_) { }
-    try { this._showSideNameLabel = localStorage.getItem('udonarium.nameLabel.side.v1') !== '0'; } catch (_) { }
+    try { this._showPieceTag = localStorage.getItem('udonarium.nameLabel.pieceTag.v1') !== '0'; } catch (_) { }
+    try { this._hideFlatCircle = localStorage.getItem('udonarium.flatCircle.hidden.v1') === '1'; } catch (_) { }
     try { this._showTopDownNameLabel = localStorage.getItem('udonarium.nameLabel.topdown.v1') !== '0'; } catch (_) { }
     try { this._showDirectionMarker = localStorage.getItem('udonarium.character.directionMarker.visible.v1') === '1'; } catch (_) { }
     if (this.foldingBuffAutoCollapse) this.foldingBuff = true;
@@ -383,8 +388,14 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
       })
       .on('NAME_LABEL_VISIBILITY_CHANGED', event => {
         this.ngZone.run(() => {
-          if (event.data?.side !== undefined) this._showSideNameLabel = !!event.data.side;
+          if (event.data?.pieceTag !== undefined) this._showPieceTag = !!event.data.pieceTag;
           if (event.data?.topdown !== undefined) this._showTopDownNameLabel = !!event.data.topdown;
+          this.changeDetector.markForCheck();
+        });
+      })
+      .on('FLAT_CIRCLE_VISIBILITY_CHANGED', event => {
+        this.ngZone.run(() => {
+          this._hideFlatCircle = !!event.data?.hidden;
           this.changeDetector.markForCheck();
         });
       })
