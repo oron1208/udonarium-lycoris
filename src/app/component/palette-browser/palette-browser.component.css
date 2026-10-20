@@ -52,7 +52,7 @@ small { font-size: 11px; color: var(--palette-muted); padding: 2px 5px; }
 .help { flex-shrink: 0; }
 .rows { background: var(--palette-rows); overflow: auto; flex: 1; min-height: 60px; padding: 4px; }
 h4 { margin: 8px 0 4px; padding: 3px; border-bottom: 1px solid var(--palette-border); }
-.line, .fold { display: block; width: 100%; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; padding: 3px 6px; line-height: 18px; }
+.line, .fold { display: block; width: 100%; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; padding: 3px 6px; line-height: 18px; border-width: 0; box-sizing: border-box; min-height: 24px; }
 .line { border-color: transparent; background: transparent; }
 .fold { font-weight: bold; background: var(--palette-fold); }
 .section-header { font-weight: bold; background: var(--palette-fold); }
@@ -76,6 +76,8 @@ h4 { margin: 8px 0 4px; padding: 3px; border-bottom: 1px solid var(--palette-bor
 .drop-after { box-shadow: inset 0 -3px var(--palette-focus); }
 .drop-inside, .drop-tab { outline: 2px solid var(--palette-focus); outline-offset: -2px; background: var(--palette-selected); }
 .drop-indicator { position: absolute; right: 3px; top: -8px; z-index: 1; padding: 1px 5px; font-size: 11px; background: var(--palette-input); color: var(--palette-text); border: 1px solid var(--palette-focus); pointer-events: none; }
+/* ドラッグ中のみドロップ先の破線ボックスを表示（常時表示は縦スペースを浪費する） */
+.browser:not(.is-dragging) .drop-end { display: none; }
 .drop-end { padding: 5px; margin: 4px 0; border: 1px dashed var(--palette-border); color: var(--palette-muted); font-size: 11px; text-align: center; }
 .empty-line { min-height: 18px; }
 .editor .insert-option input { display: inline-block; width: auto; }

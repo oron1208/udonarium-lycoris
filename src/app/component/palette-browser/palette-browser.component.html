@@ -1,5 +1,5 @@
 @if (palette) {
-  <div class="browser" [class.has-form]="!!form" [class.no-wrap]="!wrapLines">
+  <div class="browser" [class.has-form]="!!form" [class.no-wrap]="!wrapLines" [class.is-dragging]="isDragging">
     <div class="tabs" role="group" aria-label="チャットパレットの分類">
       <button type="button" [class.active]="active === -2" [attr.aria-pressed]="active === -2" [disabled]="!!form" (click)="selectTab(-2)">すべて</button>
       @for (tab of tabs; track tab) {

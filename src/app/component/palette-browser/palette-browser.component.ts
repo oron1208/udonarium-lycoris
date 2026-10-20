@@ -27,6 +27,7 @@ export class PaletteBrowserComponent implements OnChanges, DoCheck, OnDestroy {
     }
     return PaletteBrowserComponent.wrapPreference;
   }
+  get isDragging(): boolean { return !!PaletteBrowserComponent.drag; }
   set wrapLines(value: boolean) {
     PaletteBrowserComponent.wrapPreference = value;
     try { localStorage.setItem('lycoris-palette-wrap-v1', String(value)); } catch (_) {}
