@@ -135,7 +135,9 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
     }
     return list;
   }
-  get shouldShowStatusBar(): boolean { return this.statusBarList.length > 0; }
+  get shouldShowStatusBar(): boolean {
+    return this.isAdvancedRoom && this.canDisplayByRole && !this.isSecretDetailsHidden && this.statusBarList.length > 0;
+  }
   // 注意: 名前ラベルは game-character.component と game-table.component (side-name-label) の2箇所で描画されている。
   // gmOnlyコマのフィルタリングは両方で行うこと。詳細は game-table.component.ts の sideLabelCharacters を参照。
   // 「コマの名前タグ」(pieceTag) はコマ本体の3D名前タグのみを制御し、
@@ -168,7 +170,9 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
   get isTopDownView(): boolean { return !this.isFlatMode && !this.shouldUseSimpleView && !this.shouldUseFlatIcon && this.viewRotateX <= 16; }
   _showTopDownNameLabel: boolean = true;
   _showDirectionMarker: boolean = false;
-  get shouldShowTopDownNameTag(): boolean { return this.canDisplayByRole && this.isTopDownView && 0 < this.name.length && this._showTopDownNameLabel; }
+  get shouldShowTopDownNameTag(): boolean {
+    return this.canDisplayByRole && this.isTopDownView && ((0 < this.name.length && this._showTopDownNameLabel) || this.shouldShowStatusBar);
+  }
   get shouldShowTopDownIcon(): boolean { return this.isTopDownView; }
   get shouldShowDirectionMarker(): boolean { return this._showDirectionMarker; }
   get canRotateByDirectionMarker(): boolean { return this.isFlatMode && !this.isLock; }

@@ -51,27 +51,34 @@
           @if (gameCharacter.targeted) {
             <div class="flat-target-crosshair"><span></span></div>
           }
-          @if (0 < name.length && showSideNameLabel) {
-            <div class="flat-character-name">
-              <span class="flat-character-name-text">{{name}}</span>@if (memo) {
-              <span class="memo-mark" title="メモあり">📝</span>
-            }
-            @if (canUseVnStageButton) {
-              <button type="button" class="vn-stage-select-button flat-vn-button" title="VNでこのコマを選択"
-              (mousedown)="selectForVnStage($event)" (click)="selectForVnStage($event)">VN</button>
-            }
-          </div>
-        }
-      </div>
+          @if ((0 < name.length && showSideNameLabel) || shouldShowStatusBar) {
+            <div class="flat-character-name" [class.has-status-bars]="shouldShowStatusBar">
+              @if (0 < name.length && showSideNameLabel) {
+                <div class="flat-name-heading">
+                  <span class="flat-character-name-text">{{name}}</span>
+                  @if (memo) { <span class="memo-mark" title="メモあり">📝</span> }
+                  @if (canUseVnStageButton) {
+                    <button type="button" class="vn-stage-select-button flat-vn-button" title="VNでこのコマを選択"
+                      (mousedown)="selectForVnStage($event)" (click)="selectForVnStage($event)">VN</button>
+                  }
+                </div>
+              }
+              @if (shouldShowStatusBar) { <ng-container *ngTemplateOutlet="statusBars"></ng-container> }
+            </div>
+          }
+        </div>
     } @else {
       @if (shouldUseSimpleView) {
         <div class="simple-character-token is-pointer-events-auto" [class.is-locked]="isLock" [class.is-secret]="isSecretDetailsHidden">
           <button type="button" class="simple-full-button" title="このコマだけ通常表示" (mousedown)="forceFullView($event)" (click)="forceFullView($event)">通常</button>
           <div class="simple-character-initial">{{simpleInitial}}</div>
-          @if (0 < name.length && showSideNameLabel) {
-            <div class="simple-character-name">{{name}}@if (memo) {
-              <span class="memo-mark" title="メモあり">📝</span>
-            }</div>
+          @if ((0 < name.length && showSideNameLabel) || shouldShowStatusBar) {
+            <div class="simple-character-name" [class.has-status-bars]="shouldShowStatusBar">
+              @if (0 < name.length && showSideNameLabel) {
+                <div class="has-length-limit">{{name}}@if (memo) { <span class="memo-mark" title="メモあり">📝</span> }</div>
+              }
+              @if (shouldShowStatusBar) { <ng-container *ngTemplateOutlet="statusBars"></ng-container> }
+            </div>
           }
         </div>
       } @else {
@@ -105,7 +112,7 @@
           <div class="upright-transform is-fit-width is-3d" [ngStyle]="{'transform': 'rotateY(90deg) rotateZ(-90deg) rotateY(-90deg) translateY(-50%) translateY(' + (-altitude) * gridSize +'px)'}">
             <div class="rotate-frame is-3d" [style.width.px]="size * gridSize" [style.height.px]="size * gridSize"
               appRotable [(rotable.value)]="roll" (rotable.ondragstart)="onMove()" (rotable.ondragend)="onMoved()">
-              <div class="rotate-inner is-3d">
+              <div class="rotate-inner is-3d" [style.--status-bars-space]="shouldShowStatusBar && !isTopDownView ? (statusBarList.length * 18 + 4) + 'px' : '0px'">
                 <!-- バフ表示 -->
                 <!-- クロームver102の描画問題に対処するため構成を修正している -->
                 @if (this.gameCharacter.buffDataElement) {
@@ -191,66 +198,31 @@
                       <img src="./assets/images/target/target.png">
                     </div>
                   </div>
-                  @if (this.gameCharacter.nonTalkFlag) {
-                    @if (0 < name.length && showSideNameLabel) {
+                  <!-- 名前/VNとバーを同じ直立座標系に配置。表裏は背面非表示。 -->
+                  @if ((0 < name.length && showSideNameLabel) || (shouldShowStatusBar && !isTopDownView)) {
+                    @for (back of [false, true]; track back) {
                       <div class="name-tag is-nowrap is-black-background is-3d will-change backface-off"
-                [ngStyle]="{'transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px)'
-                , 'background-color': 'rgba(255,255,255, 0.6)' , 'color' : '#333' ,  'border': 'solid 1px #555' }">
-                        <div class="has-length-limit is-3d" >{{name}}@if (memo) {
-                          <span class="memo-mark" title="メモあり">📝</span>
+                        [class.has-status-bars]="shouldShowStatusBar && !isTopDownView"
+                        [style.transform]="'translateX(-50%) translateX(' + size * gridSize / 2 + 'px)' + (back ? ' rotateY(180deg)' : '')"
+                        [style.background-color]="gameCharacter.nonTalkFlag ? 'rgba(255,255,255,0.6)' : null"
+                        [style.color]="gameCharacter.nonTalkFlag ? '#333' : null"
+                        [style.border]="gameCharacter.nonTalkFlag ? 'solid 1px #555' : null">
+                        @if (0 < name.length && showSideNameLabel) {
+                          <div class="has-length-limit is-3d">{{name}}
+                            @if (memo) { <span class="memo-mark" title="メモあり">📝</span> }
+                            @if (canUseVnStageButton) {
+                              <button type="button" class="vn-stage-select-button" title="VNでこのコマを選択"
+                                (mousedown)="selectForVnStage($event)" (click)="selectForVnStage($event)">VN</button>
+                            }
+                            @if (isLock) { <i class="material-icons lock-icon" style="display:inline">lock</i> }
+                          </div>
                         }
-                        @if (isLock) {
-                          <i class="material-icons lock-icon" style="display: inline;">lock</i>
+                        @if (shouldShowStatusBar && !isTopDownView) {
+                          <ng-container *ngTemplateOutlet="statusBars"></ng-container>
                         }
                       </div>
-                    </div>
+                    }
                   }
-                  @if (0 < name.length && showSideNameLabel) {
-                    <div class="name-tag is-nowrap is-black-background is-3d will-change backface-off"
-                [ngStyle]="{'transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px) rotateY(180deg)'
-                , 'background-color': 'rgba(255,255,255, 0.6)' , 'color' : '#333' ,  'border': 'solid 1px #555' }">
-                      <div class="has-length-limit is-3d" >{{name}}@if (memo) {
-                        <span class="memo-mark" title="メモあり">📝</span>
-                      }
-                      @if (isLock) {
-                        <i class="material-icons lock-icon" style="display: inline;">lock</i>
-                      }
-                    </div>
-                  </div>
-                }
-              }
-              @if (!this.gameCharacter.nonTalkFlag) {
-                @if (0 < name.length && showSideNameLabel) {
-                  <div class="name-tag is-nowrap is-black-background is-3d will-change backface-off"
-                    [ngStyle]="{'transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px)'}">
-                    <div class="has-length-limit is-3d">{{name}}@if (memo) {
-                      <span class="memo-mark" title="メモあり">📝</span>
-                    }
-                    @if (canUseVnStageButton) {
-                      <button type="button" class="vn-stage-select-button" title="VNでこのコマを選択"
-                      (mousedown)="selectForVnStage($event)" (click)="selectForVnStage($event)">VN</button>
-                    }
-                    @if (isLock) {
-                      <i class="material-icons lock-icon" style="display: inline;">lock</i>
-                    }
-                  </div>
-                </div>
-              }
-              @if (0 < name.length && showSideNameLabel) {
-                <div class="name-tag is-nowrap is-black-background is-3d will-change backface-off"
-                  [ngStyle]="{'transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px) rotateY(180deg)'}">
-                  <div class="has-length-limit is-3d">{{name}}
-                    @if (canUseVnStageButton) {
-                      <button type="button" class="vn-stage-select-button" title="VNでこのコマを選択"
-                      (mousedown)="selectForVnStage($event)" (click)="selectForVnStage($event)">VN</button>
-                    }
-                    @if (isLock) {
-                      <i class="material-icons lock-icon" style="display: inline;">lock</i>
-                    }
-                  </div>
-                </div>
-              }
-            }
             <!--回転部キャラ上-->
             @if (!isLock) {
               <div class="grab-group is-3d">
@@ -313,21 +285,17 @@
     }
   </div>
 }
-@if (shouldShowStatusBar) {
-  <ng-container *ngTemplateOutlet="statusBars"></ng-container>
-}
-@if (shouldShowStatusBar) {
-  <div class="status-bar-float" [style.transform]="perspectiveAssistNameTransform">
-    <ng-container *ngTemplateOutlet="statusBars"></ng-container>
-  </div>
-}
 @if (shouldShowTopDownNameTag) {
-  <div class="topdown-name-tag" [style.width.px]="math.max(size * gridSize + 28, 92)" [style.transform]="perspectiveAssistNameTransform">
-    {{name}}
-    @if (canUseVnStageButton) {
-      <button type="button" class="vn-stage-select-button flat-vn-button" title="VNでこのコマを選択"
-      (mousedown)="selectForVnStage($event)" (click)="selectForVnStage($event)">VN</button>
+  <div class="topdown-name-tag" [class.has-status-bars]="shouldShowStatusBar" [style.width.px]="math.max(size * gridSize + 28, shouldShowStatusBar ? 110 : 92)" [style.transform]="perspectiveAssistNameTransform">
+    @if (0 < name.length && _showTopDownNameLabel) {
+      <div class="has-length-limit">{{name}}
+        @if (canUseVnStageButton) {
+          <button type="button" class="vn-stage-select-button flat-vn-button" title="VNでこのコマを選択"
+          (mousedown)="selectForVnStage($event)" (click)="selectForVnStage($event)">VN</button>
+        }
+      </div>
     }
+    @if (shouldShowStatusBar) { <ng-container *ngTemplateOutlet="statusBars"></ng-container> }
   </div>
 }
 @if (!shouldUseSimpleView && isAltitudeIndicate && (altitude <= -0.5 || 0.5 <= altitude)) {
