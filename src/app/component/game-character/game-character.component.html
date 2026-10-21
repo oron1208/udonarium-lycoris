@@ -316,17 +316,17 @@
 @if (shouldShowStatusBar) {
   <ng-container *ngTemplateOutlet="statusBars"></ng-container>
 }
-@if (shouldShowTopDownNameTag || shouldShowStatusBar) {
+@if (shouldShowStatusBar) {
+  <div class="status-bar-float" [style.transform]="perspectiveAssistNameTransform">
+    <ng-container *ngTemplateOutlet="statusBars"></ng-container>
+  </div>
+}
+@if (shouldShowTopDownNameTag) {
   <div class="topdown-name-tag" [style.width.px]="math.max(size * gridSize + 28, 92)" [style.transform]="perspectiveAssistNameTransform">
-    @if (shouldShowTopDownNameTag) {
-      {{name}}
-      @if (canUseVnStageButton) {
-        <button type="button" class="vn-stage-select-button flat-vn-button" title="VNでこのコマを選択"
-        (mousedown)="selectForVnStage($event)" (click)="selectForVnStage($event)">VN</button>
-      }
-    }
-    @if (shouldShowStatusBar) {
-      <ng-container *ngTemplateOutlet="statusBars"></ng-container>
+    {{name}}
+    @if (canUseVnStageButton) {
+      <button type="button" class="vn-stage-select-button flat-vn-button" title="VNでこのコマを選択"
+      (mousedown)="selectForVnStage($event)" (click)="selectForVnStage($event)">VN</button>
     }
   </div>
 }

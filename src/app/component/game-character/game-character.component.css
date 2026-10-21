@@ -951,6 +951,22 @@
 }
 
 
+/* コマの上に浮かせるステータスバー枠（名前タグと同様の浮き・見た目） */
+.status-bar-float {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 4px);
+  z-index: 20;
+  box-sizing: border-box;
+  padding: 3px 7px;
+  border: 1px solid rgba(0, 0, 0, 0.65);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.72);
+  box-shadow: 0 1px 4px rgba(255, 255, 255, 0.35), 0 1px 5px rgba(0, 0, 0, 0.65);
+  pointer-events: none;
+  min-width: 92px;
+}
+
 /* ===== コマ上ステータスバー（アドバンス） ===== */
 .status-bar-stack {
   display: flex;
