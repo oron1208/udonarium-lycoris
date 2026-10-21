@@ -78,7 +78,7 @@ export class RoomSettingComponent implements OnInit, OnDestroy {
 
   private savePendingForceFlat() {
     try {
-      if (this.forceFlatView) localStorage.setItem('udonarium.pendingForceFlat.v1', '1');
+      if (this.roomMode === 'advanced' && this.forceFlatView) localStorage.setItem('udonarium.pendingForceFlat.v1', '1');
       else localStorage.removeItem('udonarium.pendingForceFlat.v1');
     } catch (e) {
       Logger.warn('force flat localStorage save failed', e);
@@ -89,7 +89,7 @@ export class RoomSettingComponent implements OnInit, OnDestroy {
     const tables = ObjectStore.instance.getObjects(GameTable);
     tables.forEach(table => {
       table.roomMode = this.roomMode;
-      table.forceFlatView = this.forceFlatView;
+      table.forceFlatView = this.roomMode === 'advanced' && this.forceFlatView;
       table.update();
     });
   }

@@ -1112,6 +1112,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         option = { width: 400, height: 520, left: 120, title: 'オプション' };
         break;
       case 'GmToolsComponent':
+        if (!this.isAdvancedRoom || !this.gmModeService.isGm) return;
         component = GmToolsComponent;
         option = { width: 380, height: 280, left: 120, title: 'GMツール' };
         break;

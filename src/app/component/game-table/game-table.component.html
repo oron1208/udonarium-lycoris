@@ -103,7 +103,7 @@
   @if (isRangeSelecting) {
     <div class="range-selection-box" [ngStyle]="rangeSelectionStyle"></div>
   }
-  @if (quickBarVisible && quickTargets.length > 0) {
+  @if (isAdvancedRoom && quickBarVisible && quickTargets.length > 0) {
     <div class="quick-damage-bar">
       <span class="qd-resource">{{ quickDamageResourceName }}</span>
       <input class="qd-amount" type="number" min="0" aria-label="ダメージ・回復量" [(ngModel)]="quickDamageAmount">

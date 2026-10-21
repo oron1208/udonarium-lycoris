@@ -1,8 +1,10 @@
 import { Component, ChangeDetectionStrategy, ChangeDetectorRef, NgZone, OnDestroy, OnInit } from '@angular/core';
 import { EventSystem } from '@udonarium/core/system';
 import { TabletopService } from 'service/tabletop.service';
+import { GmModeService } from 'service/gm-mode.service';
+import { PanelService } from 'service/panel.service';
 
-/** GM限定ツールパネル。GMだけが使える機能をここに集約する（強制平面など）。 */
+/** アドバンス部屋のGM限定ツールパネル。 */
 @Component({
     selector: 'gm-tools',
     templateUrl: './gm-tools.component.html',
@@ -16,6 +18,8 @@ export class GmToolsComponent implements OnInit, OnDestroy {
 
   constructor(
     private tabletopService: TabletopService,
+    private gmModeService: GmModeService,
+    private panelService: PanelService,
     private ngZone: NgZone,
     private changeDetector: ChangeDetectorRef
   ) { }
@@ -24,13 +28,26 @@ export class GmToolsComponent implements OnInit, OnDestroy {
     this.loadCounters();
     EventSystem.register(this)
       .on('UPDATE_GAME_OBJECT', event => {
-        if (event.data?.aliasName !== 'game-table') return;
-        this.ngZone.run(() => this.changeDetector.markForCheck());
-      });
+        if (event.data?.aliasName !== 'game-table' && event.data?.aliasName !== 'TableSelecter') return;
+        this.syncAvailability();
+      })
+      .on('SELECT_GAME_TABLE', () => this.syncAvailability())
+      .on('GM_MODE_CHANGED', () => this.syncAvailability());
   }
 
   ngOnDestroy() {
     EventSystem.unregister(this);
+  }
+
+  get isAvailable(): boolean {
+    return this.tabletopService.currentTable?.roomMode === 'advanced' && this.gmModeService.isGm;
+  }
+
+  private syncAvailability() {
+    this.ngZone.run(() => {
+      if (!this.isAvailable) this.panelService.close();
+      else this.changeDetector.markForCheck();
+    });
   }
 
   get forceFlatView(): boolean {
@@ -38,6 +55,7 @@ export class GmToolsComponent implements OnInit, OnDestroy {
   }
 
   toggleForceFlatView() {
+    if (!this.isAvailable) return;
     const table = this.tabletopService.currentTable;
     if (!table || table.identifier.length < 1) return;
     table.forceFlatView = !table.forceFlatView;
@@ -54,20 +72,24 @@ export class GmToolsComponent implements OnInit, OnDestroy {
   }
 
   saveCounters() {
+    if (!this.isAvailable) return;
     try { localStorage.setItem(GmToolsComponent.COUNTERS_KEY, JSON.stringify(this.counters)); } catch (_) { }
   }
 
   addCounter() {
+    if (!this.isAvailable) return;
     this.counters.push({ value: 0 });
     this.saveCounters();
   }
 
   removeCounter(index: number) {
+    if (!this.isAvailable) return;
     this.counters.splice(index, 1);
     this.saveCounters();
   }
 
   stepCounter(index: number, delta: number) {
+    if (!this.isAvailable) return;
     const counter = this.counters[index];
     if (!counter) return;
     counter.value = (Number(counter.value) || 0) + delta;
@@ -75,6 +97,7 @@ export class GmToolsComponent implements OnInit, OnDestroy {
   }
 
   onCounterInput(index: number, input: HTMLInputElement) {
+    if (!this.isAvailable) return;
     const counter = this.counters[index];
     if (!counter) return;
     counter.value = Number(input.value) || 0;
@@ -87,6 +110,7 @@ export class GmToolsComponent implements OnInit, OnDestroy {
   }
 
   commitQuickDamageResource(name: string) {
+    if (!this.isAvailable) return;
     const table = this.tabletopService.currentTable;
     if (!table || table.identifier.length < 1) return;
     table.quickDamageResource = name.trim() || 'HP';

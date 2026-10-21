@@ -251,7 +251,8 @@ export class TabletopActionService {
 
     gameTable.name = '最初のテーブル';
     gameTable.roomMode = this.consumePendingRoomMode();
-    gameTable.forceFlatView = this.consumePendingForceFlat();
+    const pendingForceFlat = this.consumePendingForceFlat();
+    gameTable.forceFlatView = gameTable.roomMode === 'advanced' && pendingForceFlat;
     gameTable.imageIdentifier = testBgFile.identifier;
     gameTable.width = 20;
     gameTable.height = 15;

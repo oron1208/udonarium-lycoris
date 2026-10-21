@@ -228,6 +228,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     return this.currentTable?.roomMode === 'advanced' && this.currentTable?.visionEnabled && this.getMySightCharacters().length > 0;
   }
   get isGmMode(): boolean { return this.gmModeService.isGm; }
+  get isAdvancedRoom(): boolean { return this.currentTable?.roomMode === 'advanced'; }
   rangeSelectionStyle: { [key: string]: string } = {};
   private rangeSelectionStart: { x: number, y: number } = null;
   private rangeSelectionCurrent: { x: number, y: number } = null;
@@ -336,7 +337,10 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
         }
         if (event.data.identifier !== this.currentTable.identifier && event.data.identifier !== this.tableSelecter.identifier) return;
         this.syncForcedFlatView();
-        if (this.currentTable.roomMode !== 'advanced') this.isRulerMode = false;
+        if (!this.isAdvancedRoom) {
+          this.isRulerMode = false;
+          this.quickBarVisible = false;
+        }
         this.scheduleTableUpdate();
       })
       .on('DICTIONARY_OBJECT_SPAWNED', () => {
@@ -608,7 +612,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     Array.prototype.push.apply(menuActions, this.tabletopActionService.makeDefaultContextMenuActions(objectPosition));
     menuActions.push(ContextMenuSeparator);
     // 強制平面中はPLに平面解除を出さない（GMのみ操作可。解除はGMツールパネルで強制をOFFにする）
-    if (!this.currentTable?.forceFlatView || this.gmModeService.isGm) {
+    if (!this.isAdvancedRoom || !this.currentTable?.forceFlatView || this.gmModeService.isGm) {
       menuActions.push({
         name: this.isFlatMode ? '立体モードに戻す' : '平面モードにする', action: () => {
           this.toggleFlatMode();
@@ -734,7 +738,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
 
   /** 卓の共有設定 forceFlatView をローカル視点へ反映する。ONで全員平面固定、OFFで各自の3D視点へ復帰 */
   private syncForcedFlatView() {
-    const forced = !!this.currentTable?.forceFlatView;
+    const forced = this.isAdvancedRoom && !!this.currentTable?.forceFlatView;
     if (this.appliedForceFlatView === forced) return;
     const firstApply = this.appliedForceFlatView === null;
     this.appliedForceFlatView = forced;
@@ -1060,6 +1064,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   applyQuickHealAll() { this.applyQuickResourceChange('full'); }
 
   private applyQuickResourceChange(delta: number | 'zero' | 'full') {
+    if (!this.isAdvancedRoom) return;
     if (typeof delta === 'number' && !Number.isFinite(delta)) return;
     const targets = this.quickTargets;
     if (!targets.length) { this.closeQuickBar(); return; }
@@ -1147,7 +1152,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
       if (this.isCharacterInScreenRect(character, rect)) nextSelection.add(character.identifier);
     }
     this.selectedCharacterIds = nextSelection;
-    this.ngZone.run(() => { this.quickBarVisible = nextSelection.size > 0; this.changeDetector.markForCheck(); });
+    this.ngZone.run(() => { this.quickBarVisible = this.isAdvancedRoom && nextSelection.size > 0; this.changeDetector.markForCheck(); });
     this.isRangeSelecting = false;
     this.rangeSelectionStart = null;
     this.rangeSelectionCurrent = null;
