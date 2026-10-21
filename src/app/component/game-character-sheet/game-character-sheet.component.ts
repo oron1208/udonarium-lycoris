@@ -127,6 +127,37 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
   }
   get isCharacter(): boolean { return this.tabletopObject instanceof GameCharacter; }
   get character(): GameCharacter { return this.tabletopObject as GameCharacter; }
+
+  /** コマ上ステータスバー（アドバンス）：キャラシートのアドバンスタブで設定 */
+  get statusBarEnabledValue(): boolean { return this.isCharacter && !!this.character.statusBarEnabled; }
+  get statusBarShowValuesValue(): boolean { return this.isCharacter ? this.character.statusBarShowValues !== false : true; }
+  availableNumberResources(): { name: string; value: any; current: any }[] {
+    if (!this.isCharacter) return [];
+    const out: { name: string; value: any; current: any }[] = [];
+    const walk = (element: DataElement) => {
+      for (const child of element.children) {
+        if (child instanceof DataElement) {
+          if (child.isNumberResource) out.push({ name: String(child.getAttribute('name') || ''), value: child.value, current: child.currentValue });
+          walk(child);
+        }
+      }
+    };
+    walk(this.character.detailDataElement);
+    return out;
+  }
+  statusBarResourceNames(): Set<string> {
+    if (!this.isCharacter) return new Set();
+    try { return new Set(JSON.parse(this.character.statusBarResources || '[]')); } catch (_) { return new Set(); }
+  }
+  commitStatusBarEnabled(checked: boolean) { if (!this.isCharacter) return; this.character.statusBarEnabled = checked; this.character.update(); }
+  commitStatusBarShowValues(checked: boolean) { if (!this.isCharacter) return; this.character.statusBarShowValues = checked; this.character.update(); }
+  toggleStatusBarResource(name: string, checked: boolean) {
+    if (!this.isCharacter) return;
+    const names = this.statusBarResourceNames();
+    if (checked) names.add(name); else names.delete(name);
+    this.character.statusBarResources = JSON.stringify([...names]);
+    this.character.update();
+  }
   get isRangeArea(): boolean { return this.tabletopObject instanceof RangeArea; }
   get rangeArea(): RangeArea { return this.tabletopObject as RangeArea; }
   get rangeBuffGroups(): string[] { return ['リソース', '能力値', '技能', '情報']; }

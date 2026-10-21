@@ -253,6 +253,23 @@
     <!-- ===== アドバンスタブ ===== -->
     @if (characterSheetTab === 'advanced' && isAdvancedRoom) {
       <div class="char-sheet-tab-content">
+        @if (isCharacter) {
+        <div class="extra-setting" style="border:1px solid #777;padding:8px;margin-bottom:8px;">
+          <b>コマ上ステータスバー</b>
+          <div style="font-size:12px;color:#666;margin-bottom:4px;">
+            コマの上にリソースのバーを表示します（アドバンス部屋の卓で表示）。
+          </div>
+          <label style="display:block;font-size:12px;"><input type="checkbox" [checked]="statusBarEnabledValue" (change)="commitStatusBarEnabled($event.target.checked)"> コマ上にステータスバーを表示する</label>
+          <label style="display:block;font-size:12px;"><input type="checkbox" [checked]="statusBarShowValuesValue" (change)="commitStatusBarShowValues($event.target.checked)"> 数値を表示する（OFFでバーのみ）</label>
+          <div style="font-size:12px;color:#666;margin-top:4px;">表示するリソース：</div>
+          @for (res of availableNumberResources(); track res.name) {
+            <label style="display:block;font-size:12px;"><input type="checkbox" [checked]="statusBarResourceNames().has(res.name)" (change)="toggleStatusBarResource(res.name, $event.target.checked)"> {{res.name}}（{{res.current}}/{{res.max}}）</label>
+          }
+          @if (!availableNumberResources().length) {
+            <div style="font-size:12px;color:#666;">numberResource型のリソースがありません。</div>
+          }
+        </div>
+        }
         <div class="extra-setting" style="border:1px solid #777;padding:8px;margin-bottom:8px;">
           <b>自動効果音・アニメーション</b>
           <div style="font-size:12px;color:#666;margin-bottom:4px;">

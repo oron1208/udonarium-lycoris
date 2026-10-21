@@ -23,6 +23,7 @@ import { Config } from '@udonarium/config';
 import { DiceBot } from '@udonarium/dice-bot';
 import { EventSystem, Network } from '@udonarium/core/system';
 import { GameCharacter, AutoBuffEntry, AutoBuffOperation } from '@udonarium/game-character';
+import { DataElement } from '@udonarium/data-element';
 import { GameTable } from '@udonarium/game-table';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
 import { ChatPaletteComponent } from 'component/chat-palette/chat-palette.component';
@@ -115,6 +116,26 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit,
   _showPieceTag: boolean = true;
   _hideFlatCircle: boolean = false;
   get hideFlatCircle(): boolean { return this._hideFlatCircle; }
+
+  /** コマ上ステータスバー（アドバンス）：キャラシートのアドバンスタブで設定したリソースのバーを表示 */
+  get statusBarShowValues(): boolean { return this.gameCharacter ? this.gameCharacter.statusBarShowValues !== false : true; }
+  get statusBarList(): { label: string; max: number; current: number; percent: number }[] {
+    if (!this.gameCharacter || !this.gameCharacter.statusBarEnabled) return [];
+    let names: string[] = [];
+    try { names = JSON.parse(this.gameCharacter.statusBarResources || '[]'); } catch (_) { names = []; }
+    if (!Array.isArray(names)) names = [];
+    const list: { label: string; max: number; current: number; percent: number }[] = [];
+    for (const name of names) {
+      const element = this.gameCharacter.detailDataElement?.getFirstElementByName(String(name));
+      if (!element || !element.isNumberResource) continue;
+      const max = Number(element.value) || 0;
+      const current = Number(element.currentValue) || 0;
+      const percent = max > 0 ? Math.max(0, Math.min(100, current / max * 100)) : 0;
+      list.push({ label: String(name).charAt(0), max, current, percent });
+    }
+    return list;
+  }
+  get shouldShowStatusBar(): boolean { return this.statusBarList.length > 0; }
   // 注意: 名前ラベルは game-character.component と game-table.component (side-name-label) の2箇所で描画されている。
   // gmOnlyコマのフィルタリングは両方で行うこと。詳細は game-table.component.ts の sideLabelCharacters を参照。
   // 「コマの名前タグ」(pieceTag) はコマ本体の3D名前タグのみを制御し、

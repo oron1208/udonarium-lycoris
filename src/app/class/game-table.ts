@@ -37,6 +37,7 @@ export class GameTable extends ObjectNode {
   @SyncVar() statusMarkerDictionary: string = '[]';
   @SyncVar() roomMode: RoomMode = 'standard';
   @SyncVar() forceFlatView: boolean = false; // GMが全員の視点を平面に固定（部屋設定の初期値＋GMツールパネルで随時切替）
+  @SyncVar() quickDamageResource: string = 'HP'; // シフトドラッグ選択へのクイックダメージ/回復の対象リソース名（GMツールで設定）
 
   // 照明設定
   @SyncVar() lightingEnabled: boolean = false;

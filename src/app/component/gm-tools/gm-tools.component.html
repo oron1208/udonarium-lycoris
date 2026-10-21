@@ -6,4 +6,21 @@
     </button>
     <p class="gm-tools-note">全参加者の卓を平面モードに固定します。ONの間、参加者は3D視点へ切り替えられません。OFFにすると各自が元の3D視点に戻ります。</p>
   </section>
+  <section class="gm-tools-section">
+    <h3>カウンター（GM個人メモ）</h3>
+    @for (counter of counters; track $index; let i = $index) {
+      <div class="gm-counter-row">
+        <button type="button" (click)="stepCounter(i, -1)">▼</button>
+        <input class="gm-counter-value" type="number" [value]="counter.value" (change)="onCounterInput(i, $event.target)">
+        <button type="button" (click)="stepCounter(i, 1)">▲</button>
+        <button type="button" class="gm-counter-remove" title="削除" (click)="removeCounter(i)">×</button>
+      </div>
+    }
+    <button type="button" class="gm-counter-add" (click)="addCounter()">＋ カウンターを追加</button>
+  </section>
+  <section class="gm-tools-section">
+    <h3>クイックダメージ対象</h3>
+    <label class="gm-resource-row">リソース名 <input class="gm-resource-input" [value]="quickDamageResource" (change)="commitQuickDamageResource($event.target.value)"></label>
+    <p class="gm-tools-note">シフトドラッグで選択したコマへのダメージ・回復が適用されるリソース名（例: HP, 体力）。卓で共有されます。</p>
+  </section>
 </div>

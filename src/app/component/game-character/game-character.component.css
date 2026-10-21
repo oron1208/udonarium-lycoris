@@ -950,3 +950,53 @@
   }
 }
 
+
+/* ===== コマ上ステータスバー（アドバンス） ===== */
+.status-bar-stack {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 2px);
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 21;
+  pointer-events: none;
+  width: max(100%, 92px);
+}
+.status-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(20, 20, 20, 0.55);
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+.status-bar-label {
+  font-size: 10px;
+  font-weight: bold;
+  color: #fff;
+  min-width: 10px;
+  text-align: center;
+  text-shadow: 0 1px 2px #000;
+}
+.status-bar-track {
+  flex: 1;
+  min-width: 40px;
+  height: 8px;
+  background: rgba(60, 60, 60, 0.8);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.status-bar-fill {
+  height: 100%;
+  background: linear-gradient(180deg, #7ddc6e, #3f9f38);
+  border-radius: 4px;
+  transition: width 200ms ease;
+}
+.status-bar-value {
+  font-size: 10px;
+  color: #fff;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px #000;
+}

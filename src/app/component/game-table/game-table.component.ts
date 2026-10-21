@@ -39,6 +39,8 @@ import { TableMouseGesture } from './table-mouse-gesture';
 import { TableTouchGesture } from './table-touch-gesture';
 
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
+import { ChatMessageService } from 'service/chat-message.service';
+import { ChatTabList } from '@udonarium/chat-tab-list';
 import { Config } from '@udonarium/config';
 
 type TableDrawingTool = 'pen' | 'line' | 'rect' | 'ellipse' | 'triangle';
@@ -165,6 +167,8 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   isTableViewResetting: boolean = false;
   private appliedForceFlatView: boolean | null = null;
   private flatModeEnteredByForce = false;
+  quickBarVisible = false;
+  quickDamageAmount = 1;
   private saved3dViewRotate: { x: number, y: number, z: number } = null;
   flatViewScale: number = 1;
 
@@ -274,6 +278,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     private gmModeService: GmModeService,
     private stickyNoteService: StickyNoteService,
     private dictionaryService: DictionaryService,
+    private chatMessageService: ChatMessageService,
   ) { }
 
   onDictDragOver(e: DragEvent) {
@@ -629,6 +634,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   onDocumentKeyDown(e: KeyboardEvent) {
     if (e.key === 'Escape' && this.selectedCharacterIds.size > 0) {
       this.clearRangeSelection();
+      this.ngZone.run(() => { this.quickBarVisible = false; this.changeDetector.markForCheck(); });
       e.preventDefault();
       e.stopPropagation();
       return;
@@ -1015,6 +1021,47 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     this.changeDetector.markForCheck();
   }
 
+  /** シフトドラッグ選択コマへのクイックダメージ/回復（対象リソースはGMツールで設定・卓共有） */
+  get quickDamageResourceName(): string { return this.currentTable?.quickDamageResource || 'HP'; }
+  get quickTargets(): GameCharacter[] {
+    return this.tabletopService.characters.filter(character => this.selectedCharacterIds.has(character.identifier) && character.location.name === 'table');
+  }
+
+  closeQuickBar() {
+    this.ngZone.run(() => { this.quickBarVisible = false; this.changeDetector.markForCheck(); });
+  }
+
+  applyQuickDamage(amount: number) { this.applyQuickResourceChange(-Math.abs(amount)); }
+  applyQuickHealAmount(amount: number) { this.applyQuickResourceChange(Math.abs(amount)); }
+  applyQuickHealAll() { this.applyQuickResourceChange(null); }
+
+  private applyQuickResourceChange(delta: number | null) {
+    const targets = this.quickTargets;
+    if (!targets.length) { this.closeQuickBar(); return; }
+    const resource = this.quickDamageResourceName;
+    const changedNames: string[] = [];
+    for (const character of targets) {
+      const element = character.detailDataElement?.getFirstElementByName(resource);
+      if (!element || !element.isNumberResource) continue;
+      const max = Number(element.value) || 0;
+      const current = Number(element.currentValue) || 0;
+      const next = delta === null ? max : Math.max(0, Math.min(max, current + delta));
+      if (next === current) continue;
+      element.currentValue = String(next);
+      character.update();
+      changedNames.push(character.name);
+    }
+    if (!changedNames.length) return;
+    const changeText = delta === null ? '全回復' : delta < 0 ? `${-delta}ダメージ` : `+${delta}回復`;
+    const icon = delta === null || delta > 0 ? '💖' : '⚔️';
+    const color = delta === null || delta > 0 ? '#2a8f3c' : '#b23a3a';
+    const namesText = changedNames.slice(0, 5).join('・') + (changedNames.length > 5 ? ` ほか${changedNames.length - 5}体` : '');
+    const chatTabList = ObjectStore.instance.get<ChatTabList>('ChatTabList');
+    const sysTab = chatTabList ? chatTabList.systemMessageTab : null;
+    if (sysTab) this.chatMessageService.sendSystemMessage(sysTab, `${icon} ${resource} ${changeText}：${namesText}`, color);
+    this.ngZone.run(() => this.changeDetector.markForCheck());
+  }
+
   clearRangeSelection() {
     this.selectedCharacterIds.clear();
     this.changeDetector.markForCheck();
@@ -1074,6 +1121,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
       if (this.isCharacterInScreenRect(character, rect)) nextSelection.add(character.identifier);
     }
     this.selectedCharacterIds = nextSelection;
+    this.ngZone.run(() => { this.quickBarVisible = nextSelection.size > 0; this.changeDetector.markForCheck(); });
     this.isRangeSelecting = false;
     this.rangeSelectionStart = null;
     this.rangeSelectionCurrent = null;

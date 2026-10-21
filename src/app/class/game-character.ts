@@ -41,6 +41,9 @@ export class GameCharacter extends TabletopObject {
   @SyncVar() flatIconZoom: number = 100;
   @SyncVar() flatIconOffsetX: number = 50;
   @SyncVar() flatIconOffsetY: number = 50;
+  @SyncVar() statusBarEnabled: boolean = false; // コマ上ステータスバー表示（キャラシートのアドバンスタブで設定・アドバンス部屋向け）
+  @SyncVar() statusBarResources: string = '[]'; // 表示するリソース名のJSON配列
+  @SyncVar() statusBarShowValues: boolean = true; // バーに数値も表示するか
 
   @SyncVar() chatColorCode: string[]  = ["#000000","#FF0000","#0099FF"];
   @SyncVar() syncDummyCounter: number = 0;

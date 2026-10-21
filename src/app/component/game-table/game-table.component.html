@@ -103,6 +103,17 @@
   @if (isRangeSelecting) {
     <div class="range-selection-box" [ngStyle]="rangeSelectionStyle"></div>
   }
+  @if (quickBarVisible && quickTargets.length > 0) {
+    <div class="quick-damage-bar">
+      <span class="qd-resource">{{ quickDamageResourceName }}</span>
+      <button type="button" class="qd-button qd-damage" title="入力値をダメージとして適用" (click)="applyQuickDamage(quickDamageAmount)">⚠</button>
+      <button type="button" class="qd-button qd-damage" title="-1" (click)="applyQuickDamage(1)">▼</button>
+      <input class="qd-amount" type="number" min="0" [(ngModel)]="quickDamageAmount">
+      <button type="button" class="qd-button qd-heal" title="+1" (click)="applyQuickHealAmount(1)">▲</button>
+      <button type="button" class="qd-button qd-heal" title="全回復" (click)="applyQuickHealAll()">♥</button>
+      <button type="button" class="qd-button qd-close" title="閉じる（Escでも閉じます）" (click)="closeQuickBar()">×</button>
+    </div>
+  }
   @if (selectedCharacterIds.size > 0) {
     <div class="selection-toolbar">
       <span>選択 {{selectedCharacterIds.size}}体</span>

@@ -1,3 +1,17 @@
+<!-- コマ上ステータスバー（アドバンス）：卓共有のSyncVar設定に従いリソースバーを表示 -->
+<ng-template #statusBars>
+  <div class="status-bar-stack">
+    @for (bar of statusBarList; track bar.label) {
+      <div class="status-bar-row">
+        <span class="status-bar-label">{{bar.label}}</span>
+        <div class="status-bar-track"><div class="status-bar-fill" [style.width.%]="bar.percent"></div></div>
+        @if (statusBarShowValues) {
+          <span class="status-bar-value">{{bar.current}}/{{bar.max}}</span>
+        }
+      </div>
+    }
+  </div>
+</ng-template>
 <!-- 下2行なぜこれで クロームver102 の重さが軽減できるのか検証が終わっていないが保留にして入れておく -->
 @if (canDisplayByRole) {
   <div class="dummy-will-change" appMovable [movable.option]="movableOption">
@@ -21,6 +35,9 @@
       <div class="direction-marker" [class.is-rotatable]="canRotateByDirectionMarker" [style.transform]="directionMarkerTransform" title="平面モード時はドラッグでコマを回転" (mousedown)="startDirectionMarkerRotate($event)" (touchstart)="startDirectionMarkerRotate($event)">
         <span>›</span>
       </div>
+    }
+    @if (shouldShowStatusBar) {
+      <ng-container *ngTemplateOutlet="statusBars"></ng-container>
     }
     <div class="component-content is-3d" [@bounceInOut]="'in'">
       @if (shouldUseFlatIcon) {
@@ -298,6 +315,9 @@
       <div class="flat-target-crosshair"><span></span></div>
     }
   </div>
+}
+@if (shouldShowStatusBar) {
+  <ng-container *ngTemplateOutlet="statusBars"></ng-container>
 }
 @if (shouldShowTopDownNameTag) {
   <div class="topdown-name-tag" [style.width.px]="math.max(size * gridSize + 28, 92)" [style.transform]="perspectiveAssistNameTransform">

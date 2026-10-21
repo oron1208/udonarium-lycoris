@@ -38,3 +38,35 @@
   line-height: 1.6;
   color: #999;
 }
+
+.gm-counter-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.gm-counter-row button {
+  width: 28px;
+  padding: 4px 0;
+}
+.gm-counter-value {
+  width: 70px;
+  text-align: center;
+}
+.gm-counter-add {
+  width: 100%;
+  margin-top: 4px;
+}
+.gm-counter-remove {
+  color: #f66;
+}
+.gm-resource-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #ddd;
+}
+.gm-resource-input {
+  flex: 1;
+}
