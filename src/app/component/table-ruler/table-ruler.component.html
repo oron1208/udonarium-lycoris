@@ -22,8 +22,26 @@
       <input #unitInput class="ruler-unit" aria-label="距離の単位" type="text" maxlength="12" list="ruler-units" [value]="unit" (change)="updateUnit($any($event.target).value, unitInput)">
       <datalist id="ruler-units"><option value="m"></option><option value="ft"></option><option value="km"></option><option value="マス"></option></datalist>
     </div>
-    <div class="ruler-hint">距離・単位は卓共有／測定線は自分だけ</div>
+    <div class="ruler-hint">距離・単位・測定線を参加者に共有</div>
     <p>ドラッグ、または始点 → 終点をクリック<br>Ctrl＋クリック：中間点を追加<br>右クリック：中間点を戻す／Esc：消去</p>
     <div class="ruler-footer"><span>斜めも直線距離で計測</span><button type="button" (click)="clear()" [disabled]="!points.length">消去</button></div>
   </section>
+}
+@if (remoteRulers.length) {
+  <svg class="ruler-lines remote-ruler-lines" aria-hidden="true">
+    @for (ruler of remoteRulers; track ruler.peerId) {
+      <polyline class="ruler-shadow" [attr.points]="ruler.polyline"></polyline>
+      <polyline class="ruler-path" [style.stroke]="ruler.color" [attr.points]="ruler.polyline"></polyline>
+      @for (point of ruler.projected; track $index) {
+        <circle [attr.cx]="point.x" [attr.cy]="point.y" r="4" [style.fill]="ruler.color"></circle>
+      }
+    }
+  </svg>
+  @for (ruler of remoteRulers; track ruler.peerId) {
+    @if (ruler.projected.length) {
+      <div class="ruler-distance remote-ruler-label" [ngStyle]="remoteLabelStyle(ruler)" [style.border-color]="ruler.color">
+        <span class="ruler-owner">{{remoteName(ruler.peerId)}}</span><span>📏 {{remoteDistance(ruler)}}</span>
+      </div>
+    }
+  }
 }

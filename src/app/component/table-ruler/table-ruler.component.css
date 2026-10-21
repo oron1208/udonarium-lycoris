@@ -17,3 +17,7 @@ circle { fill: #ff4b4b; stroke: #441414; stroke-width: 1; }
 .ruler-footer { color: #ccc; }
 .ruler-panel button { color: #eee; background: #555; border: 1px solid #777; border-radius: 4px; padding: 3px 9px; cursor: pointer; }
 .ruler-panel button:disabled { opacity: .4; cursor: default; }
+.remote-ruler-lines { inset: 0; }
+.remote-ruler-label { display: flex; align-items: center; gap: 6px; border-left: 4px solid; max-width: 225px; }
+.ruler-owner { max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
+.ruler-panel { z-index: 2; }
