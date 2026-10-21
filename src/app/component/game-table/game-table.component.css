@@ -409,6 +409,9 @@
   right: 8px;
   z-index: 9000;
   display: flex;
+  flex-wrap: wrap;
+  max-width: calc(100% - 16px);
+  box-sizing: border-box;
   align-items: center;
   gap: 6px;
   background: #1c1c1c;
@@ -424,17 +427,18 @@
   margin-right: 2px;
 }
 .qd-button {
-  width: 32px;
-  padding: 5px 0;
-  font-size: 14px;
+  min-width: 32px;
+  padding: 5px 8px;
+  font-size: 13px;
+  white-space: nowrap;
   border-radius: 4px;
   background: #333;
   border: 1px solid #555;
   color: #ddd;
   cursor: pointer;
 }
-.qd-damage { color: #ff6b6b; border-color: #b23a3a; }
-.qd-heal { color: #6bc5ff; border-color: #2a6f9f; }
+.qd-zero, .qd-damage { color: #ff6b6b; border-color: #b23a3a; }
+.qd-heal, .qd-heal-all { color: #6bc5ff; border-color: #2a6f9f; }
 .qd-close { color: #999; }
 .qd-amount {
   width: 70px;

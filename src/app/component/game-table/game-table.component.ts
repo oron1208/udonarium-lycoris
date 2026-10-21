@@ -1054,11 +1054,13 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     this.ngZone.run(() => { this.quickBarVisible = false; this.changeDetector.markForCheck(); });
   }
 
+  applyQuickZero() { this.applyQuickResourceChange('zero'); }
   applyQuickDamage(amount: number) { this.applyQuickResourceChange(-Math.abs(amount)); }
   applyQuickHealAmount(amount: number) { this.applyQuickResourceChange(Math.abs(amount)); }
-  applyQuickHealAll() { this.applyQuickResourceChange(null); }
+  applyQuickHealAll() { this.applyQuickResourceChange('full'); }
 
-  private applyQuickResourceChange(delta: number | null) {
+  private applyQuickResourceChange(delta: number | 'zero' | 'full') {
+    if (typeof delta === 'number' && !Number.isFinite(delta)) return;
     const targets = this.quickTargets;
     if (!targets.length) { this.closeQuickBar(); return; }
     const resource = this.quickDamageResourceName;
@@ -1068,16 +1070,17 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
       if (!element || !element.isNumberResource) continue;
       const max = Number(element.value) || 0;
       const current = Number(element.currentValue) || 0;
-      const next = delta === null ? max : Math.max(0, Math.min(max, current + delta));
+      const next = delta === 'zero' ? 0 : delta === 'full' ? max : Math.max(0, Math.min(max, current + delta));
       if (next === current) continue;
       element.currentValue = String(next);
       character.update();
       changedNames.push(character.name);
     }
     if (!changedNames.length) return;
-    const changeText = delta === null ? '全回復' : delta < 0 ? `${-delta}ダメージ` : `+${delta}回復`;
-    const icon = delta === null || delta > 0 ? '💖' : '⚔️';
-    const color = delta === null || delta > 0 ? '#2a8f3c' : '#b23a3a';
+    const changeText = delta === 'zero' ? '0に変更' : delta === 'full' ? '全回復' : delta < 0 ? `${-delta}ダメージ` : `+${delta}回復`;
+    const isHealing = delta === 'full' || (typeof delta === 'number' && delta > 0);
+    const icon = isHealing ? '💖' : '⚔️';
+    const color = isHealing ? '#2a8f3c' : '#b23a3a';
     const namesText = changedNames.slice(0, 5).join('・') + (changedNames.length > 5 ? ` ほか${changedNames.length - 5}体` : '');
     const chatTabList = ObjectStore.instance.get<ChatTabList>('ChatTabList');
     const sysTab = chatTabList ? chatTabList.systemMessageTab : null;

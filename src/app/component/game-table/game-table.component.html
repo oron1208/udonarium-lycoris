@@ -106,11 +106,11 @@
   @if (quickBarVisible && quickTargets.length > 0) {
     <div class="quick-damage-bar">
       <span class="qd-resource">{{ quickDamageResourceName }}</span>
-      <button type="button" class="qd-button qd-damage" title="入力値をダメージとして適用" (click)="applyQuickDamage(quickDamageAmount)">⚠</button>
-      <button type="button" class="qd-button qd-damage" title="-1" (click)="applyQuickDamage(1)">▼</button>
-      <input class="qd-amount" type="number" min="0" [(ngModel)]="quickDamageAmount">
-      <button type="button" class="qd-button qd-heal" title="+1" (click)="applyQuickHealAmount(1)">▲</button>
-      <button type="button" class="qd-button qd-heal" title="全回復" (click)="applyQuickHealAll()">♥</button>
+      <input class="qd-amount" type="number" min="0" aria-label="ダメージ・回復量" [(ngModel)]="quickDamageAmount">
+      <button type="button" class="qd-button qd-zero" [title]="quickDamageResourceName + 'を0にする'" (click)="applyQuickZero()">0にする</button>
+      <button type="button" class="qd-button qd-damage" title="入力値をダメージとして適用" (click)="applyQuickDamage(quickDamageAmount)">ダメージ</button>
+      <button type="button" class="qd-button qd-heal" title="入力値を回復として適用" (click)="applyQuickHealAmount(quickDamageAmount)">回復</button>
+      <button type="button" class="qd-button qd-heal-all" title="全回復" (click)="applyQuickHealAll()">全回復</button>
       <button type="button" class="qd-button qd-close" title="閉じる（Escでも閉じます）" (click)="closeQuickBar()">×</button>
     </div>
   }
