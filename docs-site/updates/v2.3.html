@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
+<title>v2.3 アップデートのお知らせ - ユドナリウムリコリス</title>
+<meta name="description" content="v2.3で追加したGMツール、ステータスバー、共有ものさし、チャットパレットと平面表示の改善をスクリーンショット付きで紹介します。">
+<link rel="canonical" href="https://udonarium-lycoris.ddns.net/docs/updates/v2.3.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="../guide/guide.css">
+<style>.release-shot{display:block;width:100%;height:auto;max-height:760px;object-fit:contain;background:#f5f5f5;border:1px solid #ffffff25;border-radius:10px;margin:20px 0}.release-meta{color:#aaa;font-size:14px}.guide-section p{line-height:1.9}.release-downloads{display:flex;flex-wrap:wrap;gap:16px;margin:24px 0}</style>
+</head>
+<body>
+
+<div class="bg-fixed">
+  <div class="bg-layer bg-layer-1"></div>
+  <div class="bg-layer bg-layer-2"></div>
+</div>
+
+<canvas id="particles"></canvas>
+
+<nav class="nav scrolled" id="nav">
+  <div class="nav-inner">
+    <a href="../" class="nav-logo"><span class="logo-icon">◈</span> ユドナリウムリコリス</a>
+    <div class="nav-links">
+      <a href="../#about">概要</a>
+      <a href="../#connect">接続先</a>
+      <a href="../#guide">操作説明</a>
+      <a href="../#updates">更新履歴</a>
+      <a href="https://github.com/oron1208/udonarium-lycoris" target="_blank" class="nav-link-github">GitHub</a>
+    </div>
+    <button class="nav-hamburger" id="hamburger" aria-label="メニュー"><span></span><span></span><span></span></button>
+  </div>
+</nav>
+
+<article class="section guide-article" style="padding-top:100px"><div class="container">
+<header class="guide-page-header"><span class="section-tag">UPDATE / v2.3</span><h1 class="section-title">卓の操作を、もっと快適に。</h1><p class="section-sub">GMツール・ステータスバー・みんなで見られるものさしを追加しました。</p><p class="release-meta">2026年10月21日公開</p></header>
+<p>チャットパレットの整理から、平面表示のそろえ方、複数コマのHP管理まで。v2.3の8つの変更を実際の画面でご紹介します。</p>
+<div class="guide-callout callout-info"><div class="callout-body">更新後はページを再読み込みしてご利用ください。ステータスバーとものさしはアドバンスルーム限定です。GMツールはGM宣言した方が利用できます。</div></div>
+<div class="release-downloads"><a href="https://udonarium-lycoris.ddns.net/">リコリスを開く →</a><a href="../guide/self-host.html">セルフホスト版 v2.3 →</a></div>
+<aside class="guide-toc" id="toc"><details open><summary>v2.3の変更点</summary><ol><li><a href="#01-palette">チャットパレットをコンパクトに</a></li><li><a href="#02-force-flat">全員の視点を平面にそろえる</a></li><li><a href="#03-name-labels">名前の表示を別々に設定</a></li><li><a href="#04-flat-circle">平面コマの白円を非表示に</a></li><li><a href="#05-gm-counters">GM専用の数値カウンター</a></li><li><a href="#06-quick-damage">選択コマへダメージ・回復を一括適用</a></li><li><a href="#07-status-bars">名前の浮き枠にステータスバー</a></li><li><a href="#08-shared-ruler">みんなで見られる距離測定</a></li></ol></details></aside>
+<section id="01-palette" class="guide-section"><div class="guide-section-header"><span class="guide-section-num">01</span><h2>チャットパレットをコンパクトに</h2></div><p>行は24px、並べ替えハンドルは必要な時だけ表示。区切りセクションの折りたたみに対応し、通常・VN両方のチャットパレットが見やすくなりました。</p><a href="../assets/updates/v2.3/01-palette.png"><img class="release-shot" src="../assets/updates/v2.3/01-palette.png" alt="チャットパレットをコンパクトにの実画面" loading="lazy"></a></section>
+<section id="02-force-flat" class="guide-section"><div class="guide-section-header"><span class="guide-section-num">02</span><h2>全員の視点を平面にそろえる</h2></div><p>部屋作成時の「入室時から強制的に平面」で、参加直後から全員を平面表示に。GMツールからセッション中のON/OFFも切り替えられます。</p><a href="../assets/updates/v2.3/02-force-flat.png"><img class="release-shot" src="../assets/updates/v2.3/02-force-flat.png" alt="全員の視点を平面にそろえるの実画面" loading="lazy"></a></section>
+<section id="03-name-labels" class="guide-section"><div class="guide-section-header"><span class="guide-section-num">03</span><h2>名前の表示を別々に設定</h2></div><p>コマ本体の名前タグと、横から見た時に画面端へ表示する名前一覧を分離。オプションからそれぞれ独立してON/OFFできます。</p><a href="../assets/updates/v2.3/03-name-labels.png"><img class="release-shot" src="../assets/updates/v2.3/03-name-labels.png" alt="名前の表示を別々に設定の実画面" loading="lazy"></a></section>
+<section id="04-flat-circle" class="guide-section"><div class="guide-section-header"><span class="guide-section-num">04</span><h2>平面コマの白円を非表示に</h2></div><p>オプションの「平面コマの白円を隠す」で、画像をそのままに白い背景と枠を非表示にできます。</p><a href="../assets/updates/v2.3/04-flat-circle.png"><img class="release-shot" src="../assets/updates/v2.3/04-flat-circle.png" alt="平面コマの白円を非表示にの実画面" loading="lazy"></a></section>
+<section id="05-gm-counters" class="guide-section"><div class="guide-section-header"><span class="guide-section-num">05</span><h2>GM専用の数値カウンター</h2></div><p>GMツールに複数のカウンターを追加。ボタン・直接入力で数値を管理でき、値はGMのブラウザ内に保存されます。参加者には共有されない個人メモです。</p><a href="../assets/updates/v2.3/05-gm-counters.png"><img class="release-shot" src="../assets/updates/v2.3/05-gm-counters.png" alt="GM専用の数値カウンターの実画面" loading="lazy"></a></section>
+<section id="06-quick-damage" class="guide-section"><div class="guide-section-header"><span class="guide-section-num">06</span><h2>選択コマへダメージ・回復を一括適用</h2></div><p>Shiftドラッグで複数コマを選択するとクイックバーを表示。入力ダメージ、1ずつの増減、全回復に対応します。GMツールで「HP」「体力」など対象リソース名を設定でき、結果はチャットに通知します。</p><a href="../assets/updates/v2.3/06-quick-damage.png"><img class="release-shot" src="../assets/updates/v2.3/06-quick-damage.png" alt="選択コマへダメージ・回復を一括適用の実画面" loading="lazy"></a></section>
+<section id="07-status-bars" class="guide-section"><div class="guide-section-header"><span class="guide-section-num">07</span><h2>名前の浮き枠にステータスバー</h2></div><p>【アドバンス限定】キャラシートのアドバンスタブでバーのON/OFF・表示するリソース・数値表示を設定。名前・VNボタンと同じ浮き枠の下段に表示し、参加者間で同期します。バーだけを見せる設定にも対応しています。</p><a href="../assets/updates/v2.3/07-status-bars.png"><img class="release-shot" src="../assets/updates/v2.3/07-status-bars.png" alt="名前の浮き枠にステータスバーの実画面" loading="lazy"></a></section>
+<section id="08-shared-ruler" class="guide-section"><div class="guide-section-header"><span class="guide-section-num">08</span><h2>みんなで見られる距離測定</h2></div><p>【アドバンス限定】右上の「ものさし」で1マスの距離・単位（5m、5ftなど）を設定。斜めは直線距離で計算し、Ctrlクリックで中間点、右クリックで直前の中間点を戻せます。測定線・測定者名・距離は参加者へリアルタイム共有。別々の視点、同時測定、途中参加にも対応します。</p><a href="../assets/updates/v2.3/08-shared-ruler.png"><img class="release-shot" src="../assets/updates/v2.3/08-shared-ruler.png" alt="みんなで見られる距離測定の実画面" loading="lazy"></a></section>
+<div class="guide-nav"><a href="../#updates" class="guide-nav-back">← 更新履歴に戻る</a></div></div></article>
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand"><span class="logo-icon">◈</span> ユドナリウムリコリス</div>
+      <div class="footer-links">
+        <a href="https://cylinder-lily.com" target="_blank">リリィ</a>
+        <a href="https://github.com/TK11235/udonarium" target="_blank">オリジナル版</a>
+        <a href="https://github.com/oron1208/udonarium-lycoris" target="_blank">GitHub</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 Udonarium Lycoris.</div>
+    </div>
+  </div>
+</footer>
+
+<script src="../main.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) entry.target.classList.add('visible');
+    });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+});
+</script>
+</body>
+</html>
