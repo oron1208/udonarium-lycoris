@@ -36,9 +36,6 @@
         <span>›</span>
       </div>
     }
-    @if (shouldShowStatusBar) {
-      <ng-container *ngTemplateOutlet="statusBars"></ng-container>
-    }
     <div class="component-content is-3d" [@bounceInOut]="'in'">
       @if (shouldUseFlatIcon) {
         <div class="flat-character-token is-pointer-events-auto" [class.is-locked]="isLock" [class.is-secret]="isSecretDetailsHidden" [class.is-targeted]="gameCharacter.targeted" [class.is-circle-hidden]="hideFlatCircle">
@@ -319,12 +316,17 @@
 @if (shouldShowStatusBar) {
   <ng-container *ngTemplateOutlet="statusBars"></ng-container>
 }
-@if (shouldShowTopDownNameTag) {
+@if (shouldShowTopDownNameTag || shouldShowStatusBar) {
   <div class="topdown-name-tag" [style.width.px]="math.max(size * gridSize + 28, 92)" [style.transform]="perspectiveAssistNameTransform">
-    {{name}}
-    @if (canUseVnStageButton) {
-      <button type="button" class="vn-stage-select-button flat-vn-button" title="VNでこのコマを選択"
-      (mousedown)="selectForVnStage($event)" (click)="selectForVnStage($event)">VN</button>
+    @if (shouldShowTopDownNameTag) {
+      {{name}}
+      @if (canUseVnStageButton) {
+        <button type="button" class="vn-stage-select-button flat-vn-button" title="VNでこのコマを選択"
+        (mousedown)="selectForVnStage($event)" (click)="selectForVnStage($event)">VN</button>
+      }
+    }
+    @if (shouldShowStatusBar) {
+      <ng-container *ngTemplateOutlet="statusBars"></ng-container>
     }
   </div>
 }

@@ -953,16 +953,12 @@
 
 /* ===== コマ上ステータスバー（アドバンス） ===== */
 .status-bar-stack {
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 2px);
-  transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   gap: 2px;
-  z-index: 21;
+  width: 100%;
+  margin-top: 4px;
   pointer-events: none;
-  width: max(100%, 92px);
 }
 .status-bar-row {
   display: flex;
