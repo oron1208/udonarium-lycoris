@@ -1,0 +1,29 @@
+@if (active) {
+  <div class="ruler-surface" (pointerdown)="onPointerDown($event)" (pointermove)="onPointerMove($event)"
+    (pointerup)="onPointerUp($event)" (pointercancel)="onPointerCancel($event)"
+    (mousedown)="$event.stopPropagation()" (touchstart)="$event.stopPropagation()"
+    (contextmenu)="onContextMenu($event)">
+    <svg class="ruler-lines" aria-hidden="true">
+      <polyline class="ruler-shadow" [attr.points]="polyline"></polyline>
+      <polyline class="ruler-path" [attr.points]="polyline"></polyline>
+      @for (point of projected; track $index) {
+        <circle [attr.cx]="point.x" [attr.cy]="point.y" r="4"></circle>
+      }
+    </svg>
+    @if (projected.length > 1) {
+      <div class="ruler-distance" [ngStyle]="labelStyle">📏 {{distanceLabel}}</div>
+    }
+  </div>
+  <section class="ruler-panel" aria-label="距離測定" (pointerdown)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()" (touchstart)="$event.stopPropagation()" (contextmenu)="$event.stopPropagation()">
+    <div class="ruler-heading"><strong>📏 距離測定</strong><button type="button" (click)="close()" title="ものさしを閉じる">×</button></div>
+    <div class="ruler-scale">
+      <label>1マス = <input #scaleInput aria-label="1マスの距離" type="number" min="0.001" step="any"
+        [value]="distancePerCell" (change)="updateScale(+$any($event.target).value, scaleInput)"></label>
+      <input #unitInput class="ruler-unit" aria-label="距離の単位" type="text" maxlength="12" list="ruler-units" [value]="unit" (change)="updateUnit($any($event.target).value, unitInput)">
+      <datalist id="ruler-units"><option value="m"></option><option value="ft"></option><option value="km"></option><option value="マス"></option></datalist>
+    </div>
+    <div class="ruler-hint">距離・単位は卓共有／測定線は自分だけ</div>
+    <p>ドラッグ、または始点 → 終点をクリック<br>Ctrl＋クリック：中間点を追加<br>右クリック：中間点を戻す／Esc：消去</p>
+    <div class="ruler-footer"><span>斜めも直線距離で計測</span><button type="button" (click)="clear()" [disabled]="!points.length">消去</button></div>
+  </section>
+}

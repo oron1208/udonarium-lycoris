@@ -1,0 +1,19 @@
+:host { position: absolute; inset: 0; pointer-events: none; z-index: 950; }
+.ruler-surface { position: absolute; inset: 0; pointer-events: auto; cursor: crosshair; touch-action: none; }
+.ruler-lines { position: absolute; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
+polyline { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.ruler-shadow { stroke: rgba(0,0,0,.75); stroke-width: 5; }
+.ruler-path { stroke: #ff4b4b; stroke-width: 3; }
+circle { fill: #ff4b4b; stroke: #441414; stroke-width: 1; }
+.ruler-distance { position: absolute; padding: 5px 9px; color: #222; background: rgba(255,255,255,.93); border-radius: 6px; box-shadow: 0 1px 5px #3338; font: bold 14px sans-serif; white-space: nowrap; pointer-events: none; }
+.ruler-panel { position: absolute; top: 58px; right: 8px; width: 276px; max-width: calc(100% - 32px); padding: 12px; border: 1px solid #666; border-radius: 8px; color: #eee; background: rgba(32,32,32,.95); box-shadow: 0 3px 12px #0008; font: 12px/1.6 sans-serif; pointer-events: auto; }
+.ruler-heading,.ruler-scale,.ruler-footer { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.ruler-heading { margin-bottom: 8px; font-size: 14px; }
+.ruler-scale { justify-content: flex-start; }
+.ruler-scale input { width: 70px; padding: 4px; }
+.ruler-scale .ruler-unit { width: 50px; }
+.ruler-hint { color: #bbb; font-size: 11px; margin-top: 5px; }
+.ruler-panel p { margin: 10px 0; }
+.ruler-footer { color: #ccc; }
+.ruler-panel button { color: #eee; background: #555; border: 1px solid #777; border-radius: 4px; padding: 3px 9px; cursor: pointer; }
+.ruler-panel button:disabled { opacity: .4; cursor: default; }

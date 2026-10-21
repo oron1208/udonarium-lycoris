@@ -25,6 +25,7 @@ import { DictionaryService } from 'service/dictionary.service';
 import { GameTableSettingComponent } from 'component/game-table-setting/game-table-setting.component';
 import { ContextMenuAction, ContextMenuSeparator, ContextMenuService } from 'service/context-menu.service';
 import { CoordinateService } from 'service/coordinate.service';
+import { TableRulerComponent } from 'component/table-ruler/table-ruler.component';
 import { ImageService } from 'service/image.service';
 import { ModalService } from 'service/modal.service';
 import { GmModeService } from 'service/gm-mode.service';
@@ -125,6 +126,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('gridCanvas', { static: true }) gridCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('drawingCanvas', { static: true }) drawingCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('lightingCanvas', { static: true }) lightingCanvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChild(TableRulerComponent) ruler?: TableRulerComponent;
 
   get tableSelecter(): TableSelecter { return this.tabletopService.tableSelecter; }
   get currentTable(): GameTable { return this.tabletopService.currentTable; }
@@ -177,6 +179,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
 
   isDrawingToolOpen: boolean = false;
   isDrawingMode: boolean = false;
+  isRulerMode: boolean = false;
   isDrawingEraser: boolean = false;
   drawingLayer: TableDrawingLayer = 'drawing';
   layerVisibility: TableLayerVisibility = GameTableComponent.loadLayerVisibility();
@@ -333,6 +336,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
         }
         if (event.data.identifier !== this.currentTable.identifier && event.data.identifier !== this.tableSelecter.identifier) return;
         this.syncForcedFlatView();
+        if (this.currentTable.roomMode !== 'advanced') this.isRulerMode = false;
         this.scheduleTableUpdate();
       })
       .on('DICTIONARY_OBJECT_SPAWNED', () => {
@@ -510,6 +514,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onTableTouchTransform(transformX: number, transformY: number, transformZ: number, rotateX: number, rotateY: number, rotateZ: number, event: string, srcEvent: TouchEvent | MouseEvent | PointerEvent) {
+    if (this.isRulerMode) return;
     if (!this.isTableTransformMode || document.body !== document.activeElement) return;
 
     if (!this.pointerDeviceService.isAllowedToOpenContextMenu && this.contextMenuService.isShow) {
@@ -531,6 +536,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onTableMouseStart(e: any) {
+    if (this.isRulerMode) { this.isTableTransformMode = false; return; }
     if (e.shiftKey && e.button !== 1 && e.button !== 2) {
       this.startRangeSelection(e);
       return;
@@ -551,6 +557,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onTableMouseEnd(e: any) {
+    if (this.isRulerMode) return;
     if (this.isRangeSelecting) return;
     this.cancelInput();
     EventSystem.trigger('DISP_TERRAIN_GRID_END', {});
@@ -632,6 +639,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
 
   @HostListener('document:keydown', ['$event'])
   onDocumentKeyDown(e: KeyboardEvent) {
+    if (this.isRulerMode) return; // ものさし側でEscを処理
     if (e.key === 'Escape' && this.selectedCharacterIds.size > 0) {
       this.clearRangeSelection();
       this.ngZone.run(() => { this.quickBarVisible = false; this.changeDetector.markForCheck(); });
@@ -777,6 +785,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   private applyTableTransform() {
     const scale = this.isFlatMode ? ` scale(${this.flatViewScale.toFixed(4)})` : '';
     this.gameTable.nativeElement.style.transform = `translateZ(${this.viewPotisonZ.toFixed(4)}px) translateY(${this.viewPotisonY.toFixed(4)}px) translateX(${this.viewPotisonX.toFixed(4)}px) rotateY(${this.viewRotateY.toFixed(4)}deg) rotateX(${this.viewRotateX.toFixed(4) + 'deg) rotateZ(' + this.viewRotateZ.toFixed(4)}deg)${scale}`;
+    this.ruler?.refreshProjection();
   }
 
   private setGameTableGrid(width: number, height: number, gridSize: number = 50, gridType: GridType = GridType.SQUARE, gridColor: string = '#000000e6') {
@@ -801,12 +810,26 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
 
   toggleDrawingTool() {
     this.isDrawingToolOpen = !this.isDrawingToolOpen;
+    if (this.isDrawingToolOpen) this.isRulerMode = false;
     if (!this.isDrawingToolOpen) this.isDrawingMode = false;
   }
 
   toggleDrawingMode() {
     this.isDrawingMode = !this.isDrawingMode;
+    if (this.isDrawingMode) this.isRulerMode = false;
     if (this.isDrawingMode) this.isTableTransformMode = false;
+  }
+
+  toggleRulerMode() {
+    if (this.currentTable.roomMode !== 'advanced') return;
+    this.isRulerMode = !this.isRulerMode;
+    if (this.isRulerMode) {
+      this.isDrawingMode = false;
+      this.isDrawingToolOpen = false;
+      this.isTableTransformMode = false;
+      this.mouseGesture.cancel();
+      this.contextMenuService.close();
+    }
   }
 
   clearDrawing() {

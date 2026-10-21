@@ -158,6 +158,9 @@
           <label><input type="checkbox" [checked]="layerVisibility.lighting" (change)="toggleLayerVisibility('lighting')">照明</label>
         </div>
       }
+      @if (currentTable.roomMode === 'advanced') {
+        <button type="button" class="toolbar-toggle ruler-toggle" [class.active]="isRulerMode" [attr.aria-pressed]="isRulerMode" (click)="toggleRulerMode()" title="距離を測定">📏 ものさし</button>
+      }
       <button type="button" class="toolbar-toggle" (click)="toggleDrawingTool()">ペン</button>
       @if (isDrawingToolOpen) {
         <button type="button" [class.active]="isDrawingMode" (click)="toggleDrawingMode()">{{isDrawingMode ? '描画ON' : '描画OFF'}}</button>
@@ -186,5 +189,8 @@
         <sticky-note [stickyNote]="note"></sticky-note>
       }
     </div>
+  }
+  @if (currentTable.roomMode === 'advanced') {
+    <table-ruler [table]="currentTable" [board]="gameObjects" [(active)]="isRulerMode"></table-ruler>
   }
 </div>
