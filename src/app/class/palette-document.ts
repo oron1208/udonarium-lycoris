@@ -53,6 +53,26 @@ export function parsePaletteDocument(source: string): { lines: string[]; tabs: P
 export function flattenPalette(source: string): string {
   return source.split(/\r?\n/).filter(line => !paletteDirective(line)).join('\n');
 }
+
+/** Replace only a tab's body, preserving its header and all outside bytes. */
+export function replacePaletteTabBody(source: string, tabStart: number, body: string): string | null {
+  const tab = parsePaletteDocument(source).tabs.find(tab => tab.start === tabStart);
+  if (!tab || body.split(/\r?\n/).some(line => paletteDirective(line)?.kind === 'tab')) return null;
+  const offsets = [0];
+  for (let i = 0; i < source.length; i++) if (source[i] === '\n') offsets.push(i + 1);
+  const first = tab.start < 0 ? 0 : tab.start + 1;
+  const start = offsets[first] ?? source.length;
+  const end = offsets[tab.end] ?? source.length;
+  const newline = source.match(/\r?\n/)?.[0] || '\n';
+  let prefix = source.slice(0, start);
+  const suffix = source.slice(end);
+  let replacement = body.replace(/\r?\n/g, newline);
+  // A last, empty tab can have a header without a terminating newline.
+  if (tab.start >= 0 && first >= offsets.length && replacement) prefix += newline;
+  // The delimiter before the next tab is not part of the editable body.
+  if (suffix && replacement) replacement += newline;
+  return prefix + replacement + suffix;
+}
 export function isPaletteCommand(line: string): boolean {
   return !!line.trim() && !paletteDirective(line) && !/^\s*[/／]{2}[^=＝{}｛｝\s]+\s*[=＝]/.test(line)
     && !/^(\/\/---|◆)/.test(line);

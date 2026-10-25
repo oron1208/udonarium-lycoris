@@ -1,6 +1,6 @@
 import { Component, DoCheck, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output, ChangeDetectionStrategy } from '@angular/core';
 import { ChatPalette } from '@udonarium/chat-palette';
-import { flattenPalette, isPaletteCommand, isPaletteDragItem, movePaletteItem, PaletteNode, PaletteSection, parsePaletteDocument } from '@udonarium/palette-document';
+import { flattenPalette, isPaletteCommand, isPaletteDragItem, movePaletteItem, PaletteNode, PaletteSection, parsePaletteDocument, replacePaletteTabBody } from '@udonarium/palette-document';
 
 @Component({
     selector: 'palette-browser',
@@ -170,6 +170,7 @@ export class PaletteBrowserComponent implements OnChanges, DoCheck, OnDestroy {
   }
   begin(action: string) {
     if (this.readOnly) return;
+    if (action === 'tab-source' && !this.activeTab) return;
     this.base = this.source;
     this.insertInside = false;
     this.form = action;
@@ -187,11 +188,17 @@ export class PaletteBrowserComponent implements OnChanges, DoCheck, OnDestroy {
       } else this.body = node.text;
     }
     if (action === 'source') this.body = this.base;
+    if (action === 'tab-source') {
+      const tab = this.target as PaletteSection;
+      this.body = this.document.lines.slice(tab.start < 0 ? 0 : tab.start + 1, tab.end).join('\n');
+    }
   }
   cancel() { this.form = ''; this.error = ''; }
   get needsName(): boolean { return ['add-tab', 'rename-tab', 'add-fold'].includes(this.form) || (this.form === 'edit-node' && (this.target as PaletteNode)?.kind === 'fold'); }
-  get needsBody(): boolean { return ['add-fold', 'add-lines', 'edit-node', 'source'].includes(this.form); }
+  get needsBody(): boolean { return ['add-fold', 'add-lines', 'edit-node', 'source', 'tab-source'].includes(this.form); }
+  get editingTabName(): string { return this.form === 'tab-source' ? (this.target as PaletteSection)?.name || '' : ''; }
   get formTitle(): string {
+    if (this.form === 'tab-source') return '「' + this.editingTabName + '」タブの全文を編集';
     return ({ 'add-tab': 'タブを追加', 'rename-tab': 'タブ名を変更', 'add-fold': '折りたたみを追加', 'add-lines': '行・説明文を追加', 'edit-node': '選択項目を編集', source: '全文テキストを編集', 'delete-tab': 'タブと中身を削除', 'delete-node': '選択項目と中身を削除' })[this.form] || '';
   }
   get canInsertInside(): boolean { return (this.form ? this.target as PaletteNode : this.selectedNode)?.kind === 'fold'; }
@@ -200,9 +207,9 @@ export class PaletteBrowserComponent implements OnChanges, DoCheck, OnDestroy {
     if (node) return this.insertInside && node.kind === 'fold' ? '「' + node.text + '」の中' : '選択項目「' + (node.text || '空行') + '」の直下（折りたたみは中身の後）';
     return this.activeTab ? '「' + this.activeTab.name + '」の末尾' : '共通欄の末尾（タブを選ぶとそのタブに追加）';
   }
-  private commit(lines: string[]): boolean {
+  private commit(lines: string[] | string): boolean {
     if (this.source !== this.base) { this.error = '編集中に本文が更新されました。入力内容を控えてから、キャンセルして開き直してください。'; return false; }
-    this.palette.setPalette(lines.join('\n'));
+    this.palette.setPalette(typeof lines === 'string' ? lines : lines.join('\n'));
     this.cachedSource = this.source;
     this.cachedDocument = parsePaletteDocument(this.source);
     this.collapsed.clear();
@@ -212,6 +219,21 @@ export class PaletteBrowserComponent implements OnChanges, DoCheck, OnDestroy {
     return true;
   }
   save() {
+    if (this.form === 'tab-source') {
+      const tab = this.target as PaletteSection;
+      if (!tab || this.readOnly) return;
+      const source = replacePaletteTabBody(this.base, tab.start, this.body);
+      if (source === null) {
+        this.error = 'タブ区切りは入力できません。タブを追加・変更する場合は「全文テキスト編集」を使ってください。';
+        return;
+      }
+      if (this.commit(source)) {
+        this.active = tab.start < 0 && !this.body.trim() ? -2 : tab.start;
+        this.query = '';
+        this.saveView();
+      }
+      return;
+    }
     if (this.needsName && (!this.name.trim() || /[\r\n]/.test(this.name))) { this.error = '名前を1行で入力してください。'; return; }
     const lines = this.base.split(/\r?\n/);
     const title = this.name.trim();

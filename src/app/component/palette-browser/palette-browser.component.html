@@ -30,6 +30,7 @@
         <button type="button" [disabled]="!activeTab || activeTab.start < 0" (click)="moveTab(1)" aria-label="タブを右へ移動">タブ →</button>
         <button type="button" [disabled]="selectedNode?.kind !== 'fold' && (!activeTab || activeTab.start < 0)" (click)="unwrap()">区切り解除（中身は残す）</button>
         <button type="button" (click)="begin('source')">全文テキスト編集</button>
+        <button type="button" [disabled]="!activeTab" (click)="begin('tab-source')" title="選択中のタブの本文だけをまとめて編集します">現タブ全文編集</button>
         <button type="button" (click)="exportPlain()">通常テキスト出力</button>
         <button type="button" class="danger" [disabled]="!selectedNode" (click)="begin('delete-node')">選択項目を削除…</button>
         <button type="button" class="danger" [disabled]="!activeTab || activeTab.start < 0" (click)="begin('delete-tab')">タブごと削除…</button>
@@ -42,7 +43,7 @@
           <label>名前<input class="is-caret" name="name" [(ngModel)]="name" required autocomplete="off"></label>
         }
         @if (needsBody) {
-          <label>本文（1行ごとに選択・送信できます）<textarea class="is-caret" name="body" [(ngModel)]="body" [attr.rows]="form === 'source' ? 8 : 6"></textarea></label>
+          <label>本文（1行ごとに選択・送信できます）<textarea class="is-caret" name="body" [(ngModel)]="body" [attr.rows]="form === 'source' || form === 'tab-source' ? 8 : 6"></textarea></label>
         }
         @if (form === 'delete-tab' || form === 'delete-node') {
           <p>中身も削除します。残したい場合はキャンセルし、「区切り解除」を使ってください。</p>
@@ -55,6 +56,9 @@
         }
         @if (form === 'source') {
           <small>区切りは // &#64;tab 名前、// &#64;fold 名前、// &#64;end。ボタンからの編集では入力不要です。</small>
+        }
+        @if (form === 'tab-source') {
+          <small>「{{editingTabName}}」タブの本文だけを変更します。タブ名とほかのタブは変更しません。</small>
         }
         @if (error) {
           <p role="alert">{{error}}</p>
