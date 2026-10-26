@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
+<title>チャットパレット・現タブ全文編集 - ユドナリウムリコリス</title>
+<meta name="description" content="チャットパレットをタブで分類し、現タブ全文編集で選んだタブの本文だけをまとめて編集する方法を画像付きで紹介します。">
+<link rel="canonical" href="https://udonarium-lycoris.ddns.net/docs/guide/chat-palette.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+<div class="bg-fixed"><div class="bg-layer bg-layer-1"></div><div class="bg-layer bg-layer-2"></div></div>
+<canvas id="particles"></canvas>
+<nav class="nav scrolled" id="nav">
+  <div class="nav-inner">
+    <a href="../" class="nav-logo"><span class="logo-icon">◈</span> ユドナリウムリコリス</a>
+    <div class="nav-links">
+      <a href="../#about">概要</a><a href="../#connect">接続</a>
+      <a href="index.html">操作説明</a><a href="../#updates">更新履歴</a>
+      <a href="https://github.com/oron1208/udonarium-lycoris" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+</nav>
+<article class="section guide-article" style="padding-top: 100px;">
+  <div class="container">
+    <div class="breadcrumb"><a href="index.html">操作説明</a><span class="breadcrumb-sep">›</span><span>チャットパレット</span></div>
+    <div class="guide-header">
+      <div class="guide-header-icon">📋</div>
+      <h1 class="guide-header-title">チャットパレット</h1>
+      <p class="guide-header-desc">戦闘・魔法・台詞をタブで整理。<br>選んだタブだけを、まとめてテキスト編集できます。</p>
+    </div>
+    <div class="guide-toc fade-up">
+      <h3>目次</h3>
+      <ol><li><a href="#tabs">分類タブを使う</a></li><li><a href="#current-tab">現タブ全文編集</a></li><li><a href="#whole-source">全体の編集との使い分け</a></li></ol>
+    </div>
+    <div class="guide-step fade-up" id="tabs">
+      <div class="step-number">1</div>
+      <div class="step-body">
+        <h2>分類タブを使う</h2>
+        <p>コマの右クリックメニューから<b>「チャットパレットを表示」</b>を選びます。パレット内の<b>「＋ タブ」</b>で「戦闘」「魔法」などの分類を作れます。</p>
+        <p><b>「すべて」</b>は全タブの一覧、<b>「共通」</b>は分類タブの外にある本文です。タブ名を押すと、そのタブの内容に切り替わります。</p>
+      </div>
+    </div>
+    <div class="guide-step fade-up" id="current-tab">
+      <div class="step-number">2</div>
+      <div class="step-body">
+        <h2>現タブ全文編集</h2>
+        <ol class="guide-steps">
+          <li>編集したい分類タブ（例：<b>戦闘</b>）を選びます。</li>
+          <li><b>「追加・編集」</b>を開き、<b>「現タブ全文編集」</b>を押します。</li>
+          <li>そのタブの本文だけがテキスト欄に入るので、まとめて編集します。</li>
+          <li><b>「保存」</b>で反映します。変更しない場合は<b>「キャンセル」</b>を押します。</li>
+        </ol>
+        <div class="step-image">
+          <a href="assets/palette-current-tab-editor.png" target="_blank" rel="noopener"><img src="assets/palette-current-tab-editor.png" alt="「戦闘」タブの本文だけを編集中。他のタブや共通欄は編集欄に含まれません。" loading="lazy" width="1440" height="1000"></a>
+        </div>
+        <p>画像を押すと大きく表示できます。<b>タブ名やほかのタブは変更されません。</b>空行や折りたたみの中も含めて編集でき、「共通」を選んだ場合は共通欄だけが対象になります。</p>
+        <p>本文を空にして保存しても、名前付きタブ自体は残ります。「すべて」表示中は対象が決まらないため、先に編集したいタブを選んでください。</p>
+      </div>
+    </div>
+    <div class="guide-step fade-up" id="whole-source">
+      <div class="step-number">3</div>
+      <div class="step-body">
+        <h2>全体の編集との使い分け</h2>
+        <ul>
+          <li><b>現タブ全文編集</b>：いま選んでいるタブの本文を、まとめて直したいとき。</li>
+          <li><b>全文テキスト編集</b>：タブの区切りも含め、パレット全体をまとめて直したいとき。</li>
+          <li><b>タブ名変更・タブごと削除</b>：タブ自体の名前や構成を変えたいとき。</li>
+        </ul>
+        <p>編集中に別の画面や参加者から本文が更新された場合は、上書きせずにお知らせします。入力中の内容を控えてから、キャンセルして開き直してください。</p>
+      </div>
+    </div>
+    <div class="guide-back fade-up"><a href="index.html">← 操作説明一覧に戻る</a></div>
+  </div>
+</article>
+<footer class="footer"><div class="container"><div class="footer-inner">
+  <div class="footer-brand"><span class="logo-icon">◈</span> ユドナリウムリコリス</div>
+  <div class="footer-links"><a href="https://github.com/oron1208/udonarium-lycoris" target="_blank" rel="noopener">GitHub</a></div>
+  <div class="footer-copy">&copy; 2026 Udonarium Lycoris.</div>
+</div></div></footer>
+<script src="../main.js"></script>
+</body>
+</html>
