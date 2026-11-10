@@ -258,8 +258,9 @@ export class WebSocketRelayConnection implements Connection {
       }
       if (snapshot && snapshot.data && snapshot.data.objects && (snapshotSeq > this.lastSeq || this.forceSnapshotApply)) {
         await this.applyObjectSnapshot(snapshot.data.objects, snapshot.from || 'server-snapshot');
+        // A forced restore must replay the journal following the included snapshot.
+        this.lastSeq = this.forceSnapshotApply ? snapshotSeq || 0 : Math.max(this.lastSeq, snapshotSeq || 0);
         this.forceSnapshotApply = false;
-        this.lastSeq = Math.max(this.lastSeq, snapshotSeq || 0);
       }
       let replayedEvents = 0;
       for (let event of events) {

@@ -9,6 +9,8 @@ const os = require('os');
 const v8 = require('v8');
 const lzbase62 = require('lzbase62');
 const archiver = require('archiver');
+const msgpack = require('msgpack-lite');
+const zlib = require('zlib');
 const { WebSocketServer } = require('./signaling-server/node_modules/ws');
 
 try { require('dotenv').config({ path: path.join(__dirname, '.env') }); } catch (_) {}
@@ -603,7 +605,9 @@ function sendRoomSnapshot(ws, sinceSeq = 0) {
   const snapshotSeq = room.snapshotSeq || 0;
   const includeSnapshot = !!room.snapshot && (!since || since < snapshotSeq);
   const baseSeq = Math.max(since, snapshotSeq);
-  const events = room.events.filter(event => event.seq > baseSeq && event.from !== ws.peerId && !event.to);
+  // Full restores also need this peer's own post-snapshot changes. Omitting
+  // them loses imported tabs/objects when an older snapshot is reapplied.
+  const events = room.events.filter(event => event.seq > baseSeq && (!since || event.from !== ws.peerId) && !event.to);
   if (!includeSnapshot && events.length < 1) return;
   stats.replayedDataMessages += events.length;
   console.log(`[relay] send snapshot room=${ws.roomKey} to=${ws.peerId} since=${sinceSeq} seq=${room.seq} snapshotSeq=${snapshotSeq} snapshot=${includeSnapshot ? 'yes' : 'no'} events=${events.length}`);
@@ -621,6 +625,51 @@ function broadcastRoomSnapshot(roomKey) {
   }
 }
 
+// Only persisted object updates/deletes change the projection. A client's small
+// snapshot is not proof of a deletion: the ordered room log must contain it.
+function projectSnapshotState(room) {
+  if (room._snapshotProjection?.seq === room.seq) return room._snapshotProjection.objects;
+  const objects = new Map(), children = new Map(), deleted = new Set();
+  const version = context => Number(context?.majorVersion || 0) + Number(context?.minorVersion || 0);
+  const put = context => {
+    if (!context || typeof context.identifier !== 'string' || !context.syncData || typeof context.aliasName !== 'string' || deleted.has(context.identifier)) return;
+    const previous = objects.get(context.identifier);
+    if (previous && version(previous) >= version(context)) return;
+    if (previous) children.get(previous.syncData?.parentIdentifier)?.delete(context.identifier);
+    objects.set(context.identifier, context);
+    const parent = context.syncData.parentIdentifier;
+    if (!children.has(parent)) children.set(parent, new Set());
+    children.get(parent).add(context.identifier);
+  };
+  const remove = identifier => {
+    const pending = [identifier];
+    while (pending.length) {
+      const id = pending.pop(); if (typeof id !== 'string' || deleted.has(id)) continue;
+      deleted.add(id);
+      for (const child of children.get(id) || []) pending.push(child);
+      const held = objects.get(id); if (held) children.get(held.syncData?.parentIdentifier)?.delete(id);
+      children.delete(id); objects.delete(id);
+    }
+  };
+  try {
+    for (const context of room.snapshot?.data?.objects || []) put(context);
+    for (const entry of room.events || []) {
+      if (entry.seq <= (room.snapshotSeq || 0)) continue;
+      let bytes = Buffer.from(entry.container?.data || '', 'base64');
+      if (entry.container?.isCompressed) bytes = zlib.gunzipSync(bytes, { maxOutputLength: MAX_SIGNAL_BYTES });
+      const events = msgpack.decode(bytes); if (!Array.isArray(events)) return null;
+      for (const event of events) {
+        if (event?.eventName === 'UPDATE_GAME_OBJECT') put(event.data);
+        else if (event?.eventName === 'DELETE_GAME_OBJECT') remove(event.data?.identifier);
+      }
+    }
+    room._snapshotProjection = { seq: room.seq, objects }; return objects;
+  } catch (error) {
+    console.warn('[relay] could not project snapshot log; retaining conservative snapshot guard');
+    return null;
+  }
+}
+
 function saveSnapshot(ws, message) {
   if (!ws.peerId || !ws.roomKey || ws.roomKey === 'lobby') {
     send(ws, { type: 'error', errorType: 'not-in-room', message: 'Join a room before snapshot-save' });
@@ -630,13 +679,24 @@ function saveSnapshot(ws, message) {
   const oldCount = room.snapshot && room.snapshot.data && Array.isArray(room.snapshot.data.objects) ? room.snapshot.data.objects.length : 0;
   const newCount = message.snapshot && Array.isArray(message.snapshot.objects) ? message.snapshot.objects.length : 0;
 
+  const projected = projectSnapshotState(room);
+  const expectedCount = projected ? projected.size : oldCount;
+  const candidates = new Map((Array.isArray(message.snapshot?.objects) ? message.snapshot.objects : []).map(context => [context?.identifier, context]));
+  // Stale reconciliation may remove imported chat tabs locally, without a wire
+  // deletion. Refuse to compact away their tabs/messages from the durable log.
+  const incompleteChat = projected && Array.from(projected.values()).some(context => {
+    if (!['chat-tab-list', 'chat-tab', 'chat'].includes(context.aliasName)) return false;
+    const held = candidates.get(context.identifier);
+    return !held || Number(held.majorVersion || 0) + Number(held.minorVersion || 0) < Number(context.majorVersion || 0) + Number(context.minorVersion || 0);
+  });
+
   // A partially-synced browser can otherwise overwrite the canonical room snapshot.
   // That is especially dangerous after a long session because old event history has
   // already been compacted into the snapshot. Reject obviously regressive snapshots
   // and keep the previous full snapshot + following events as the recovery base.
-  if (oldCount >= 50 && newCount > 0 && newCount < Math.floor(oldCount * 0.85)) {
+  if (incompleteChat || (expectedCount > 0 && newCount === 0) || (expectedCount >= 50 && newCount < Math.floor(expectedCount * 0.85))) {
     console.warn(`[relay] reject snapshot room=${ws.roomKey} from=${ws.peerId} objects=${newCount} previous=${oldCount} seq=${room.seq}`);
-    send(ws, { type: 'snapshot-rejected', seq: room.seq, snapshotSeq: room.snapshotSeq || 0, reason: 'object-count-regressed', objects: newCount, previousObjects: oldCount });
+    send(ws, { type: 'snapshot-rejected', seq: room.seq, snapshotSeq: room.snapshotSeq || 0, reason: incompleteChat ? 'chat-state-incomplete' : 'object-count-regressed', objects: newCount, previousObjects: expectedCount });
     return;
   }
 
