@@ -63,6 +63,25 @@ describe('SkyWay send flow control', () => {
       expect(stream.retryTimer).toBeNull();
     } finally { jasmine.clock().uninstall(); }
   });
+  it('uses the browser publication to send to native peers, keeping the receive channel separate', () => {
+    stream.skyWay.room = { members: [{ name: stream.peer.peerId, metadata: 'lycoris-native-v1' }] };
+    const receiver = { ...channel, send: jasmine.createSpy('receiver-send') };
+    stream.dataChannel = receiver;
+    stream.nativeSendChannel = channel;
+    stream.addSendQueue(new Uint8Array([17])); flush();
+    expect(channel.send).toHaveBeenCalledTimes(1);
+    expect(receiver.send).not.toHaveBeenCalled();
+    expect(stream.matchesPeerPublication(`udonarium-native-data:${stream.skyWay.peer.peerId}`)).toBeTrue();
+    expect(stream.matchesPeerPublication('udonarium-native-data:another-peer')).toBeFalse();
+  });
+  it('measures native send backpressure on the outgoing channel, not the receive channel', () => {
+    stream.skyWay.room = { members: [{ name: stream.peer.peerId, metadata: 'lycoris-native-v1' }] };
+    stream.nativeSendChannel = { ...channel, bufferedAmount: 256 * 1024 };
+    stream.addSendQueue(new Uint8Array([18])); flush();
+    expect(channel.send).not.toHaveBeenCalled(); expect(stream.sendQueue.size).toBe(1);
+    stream.nativeSendChannel.bufferedAmount = 0; stream.onbufferedamountlow(); flush();
+    expect(channel.send).toHaveBeenCalledTimes(1);
+  });
   it('cancels scheduled work on disconnect', () => {
     stream.addSendQueue(new Uint8Array([1]));
     stream.disconnect();

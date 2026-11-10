@@ -47,7 +47,9 @@ export class SkyWayFacade {
       this.isDestroyed = false;
 
       await this.createContext();
+      if (this.isDestroyed || !this.context || this.context.disposed) return;
       await this.joinRoom();
+      if (this.peer.isRoom && (!this.room || !this.roomPerson)) return;
       await this.joinLobby();
 
       this.peer.isOpen = true;
@@ -247,7 +249,8 @@ export class SkyWayFacade {
     if (this.isDestroyed || !this.peer.isRoom || !this.context || this.context?.disposed || this.room == null) return;
 
     let roomPerson = await this.room.join({
-      name: this.peer.peerId
+      name: this.peer.peerId,
+      metadata: 'lycoris-browser-native-v1'
     });
 
     Logger.debug(`roomPerson join <${this.room.name}>`);

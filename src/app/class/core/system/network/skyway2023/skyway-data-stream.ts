@@ -83,6 +83,10 @@ export class SkyWayDataStream extends EventEmitter implements WebRTCConnection {
   private state: TransportConnectionState = 'new';
   private subscription!: Subscription<RemoteDataStream>;
   private dataChannel!: RTCDataChannel;
+  private nativeSendChannel: RTCDataChannel | null = null;
+  private get isNativePeer(): boolean { return this.member?.metadata === 'lycoris-native-v1'; }
+  private get outgoingChannel(): RTCDataChannel { return this.isNativePeer ? this.nativeSendChannel : this.dataChannel; }
+  private matchesPeerPublication(metadata: string): boolean { return metadata === (this.isNativePeer ? `udonarium-native-data:${this.skyWay.peer.peerId}` : 'udonarium-data-stream'); }
 
   private onStreamAdded!: { removeListener: () => void };
   private onStreamPublished!: { removeListener: () => void };
@@ -191,7 +195,12 @@ export class SkyWayDataStream extends EventEmitter implements WebRTCConnection {
     this.dataChannel?.removeEventListener('message', this.onmessage);
     this.dataChannel?.removeEventListener('close', this.onclose);
     this.dataChannel?.removeEventListener('bufferedamountlow', this.onbufferedamountlow);
+    this.nativeSendChannel?.removeEventListener('open', this.onopen);
+    this.nativeSendChannel?.removeEventListener('close', this.onclose);
+    this.nativeSendChannel?.removeEventListener('bufferedamountlow', this.onbufferedamountlow);
     this.dataChannel?.close();
+    if (this.nativeSendChannel && this.nativeSendChannel !== this.dataChannel) this.nativeSendChannel.close();
+    this.nativeSendChannel = null;
     this.dataChannel = null;
   }
 
@@ -228,13 +237,13 @@ export class SkyWayDataStream extends EventEmitter implements WebRTCConnection {
     //
     let member = this.member;
     if (!member) { this.emit('close'); return; }
-    let publication = member.publications.find(publication => publication.contentType === 'data' && publication.metadata === 'udonarium-data-stream');
+    let publication = member.publications.find(publication => publication.contentType === 'data' && this.matchesPeerPublication(publication.metadata));
 
     //
     if (!publication) {
       this.onStreamPublished?.removeListener();
       this.onStreamPublished = this.skyWay.room.onStreamPublished.add(event => {
-        let isMatch = event.publication.contentType === 'data' && event.publication.metadata === 'udonarium-data-stream' && event.publication.publisher.name === this.peer.peerId;
+        let isMatch = event.publication.contentType === 'data' && this.matchesPeerPublication(event.publication.metadata) && event.publication.publisher.name === this.peer.peerId;
         if (!isMatch) return;
 
         Logger.debug(`onStreamPublished: ${event.publication.publisher.name} <${event.publication.metadata}>`);
@@ -294,20 +303,21 @@ export class SkyWayDataStream extends EventEmitter implements WebRTCConnection {
     this.state = state;
   }
 
-  private refresh() {
+  refresh() {
     if (this.isCanceled) return;
     // 現在のオブジェクトを取得
     let member = this.member;
 
     let p2pconnection = (member as any)?._getOrCreateConnection((this.skyWay.roomPerson as any)?._impl) as P2PConnection;
-    let publication = member?.publications.find(publication => publication.metadata === 'udonarium-data-stream');
+    let publication = member?.publications.find(publication => this.matchesPeerPublication(publication.metadata));
 
     let dataChannel = this.isPublication
       ? p2pconnection?.sender.datachannels[this.skyWay.publication?.id]
       : (p2pconnection?.receiver.streams[publication?.id] as RemoteDataStream)?._datachannel;
 
     // 接続状況確認
-    let isOpen = dataChannel?.readyState === 'open';
+    const outgoing = this.isNativePeer ? p2pconnection?.sender.datachannels[this.skyWay.publication?.id] : dataChannel;
+    let isOpen = dataChannel?.readyState === 'open' && outgoing?.readyState === 'open';
     Logger.debug(`refresh ${member?.name}, isPublication: ${this.isPublication}, isOpen: ${isOpen}, dataChannel: ${dataChannel?.readyState}`);
 
     // cancelまたはrejectされているときは接続解除
@@ -329,6 +339,9 @@ export class SkyWayDataStream extends EventEmitter implements WebRTCConnection {
     this.dataChannel?.removeEventListener('message', this.onmessage);
     this.dataChannel?.removeEventListener('close', this.onclose);
     this.dataChannel?.removeEventListener('bufferedamountlow', this.onbufferedamountlow);
+    this.nativeSendChannel?.removeEventListener('open', this.onopen);
+    this.nativeSendChannel?.removeEventListener('close', this.onclose);
+    this.nativeSendChannel?.removeEventListener('bufferedamountlow', this.onbufferedamountlow);
 
     if (dataChannel) dataChannel.binaryType = 'arraybuffer';
     dataChannel?.addEventListener('open', this.onopen);
@@ -338,6 +351,13 @@ export class SkyWayDataStream extends EventEmitter implements WebRTCConnection {
     if (dataChannel) dataChannel.bufferedAmountLowThreshold = SkyWayDataStream.BUFFER_LOW;
 
     this.dataChannel = dataChannel;
+    this.nativeSendChannel = this.isNativePeer ? outgoing : null;
+    if (this.nativeSendChannel) {
+      this.nativeSendChannel.bufferedAmountLowThreshold = SkyWayDataStream.BUFFER_LOW;
+      this.nativeSendChannel.addEventListener('open', this.onopen);
+      this.nativeSendChannel.addEventListener('close', this.onclose);
+      this.nativeSendChannel.addEventListener('bufferedamountlow', this.onbufferedamountlow);
+    }
 
     // P2PConnectionを更新
     Logger.debug(`p2pconnection: ${p2pconnection?.id}`);
@@ -412,13 +432,13 @@ export class SkyWayDataStream extends EventEmitter implements WebRTCConnection {
   private execQueue = () => {
     this.sendTask = null;
     this.isQueuing = false;
-    if (this.isCanceled || this.dataChannel?.readyState !== 'open') return;
+    if (this.isCanceled || this.outgoingChannel?.readyState !== 'open') return;
     let sent = 0;
     for (const data of this.sendQueue) {
       // Wait for bufferedamountlow instead of flooding the browser's SCTP queue.
-      if (this.dataChannel.bufferedAmount + data.byteLength > SkyWayDataStream.BUFFER_HIGH) return;
+      if (this.outgoingChannel.bufferedAmount + data.byteLength > SkyWayDataStream.BUFFER_HIGH) return;
       try {
-        this.dataChannel.send(data as any);
+        this.outgoingChannel.send(data as any);
         this.sendQueue.delete(data);
         this.sendFailures = 0;
         sent += data.byteLength;

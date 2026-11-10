@@ -235,6 +235,14 @@ export class SkyWayConnection implements Connection {
 
     this.skyWay.onSubscribed = (peer, subscription) => {
       Logger.debug(`skyWay onSubscribed ${peer.peerId}`);
+      // Native SDK data streams are unidirectional. Keep its inbound subscription
+      // and the browser's own publication instead of choosing one bidirectional channel.
+      const member = this.skyWay.room?.members.find(member => member.name === peer.peerId);
+      if (member?.metadata === 'lycoris-native-v1') {
+        const existing = this.streams.find(peer.peerId);
+        if (existing) existing.refresh(); else this.connect(peer.peerId);
+        return;
+      }
       let stream = SkyWayDataStream.createPublication(this.skyWay, peer);
 
       if (!this.peer.verifyPeer(stream.peer.peerId)) {
