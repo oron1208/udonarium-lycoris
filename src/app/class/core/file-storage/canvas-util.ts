@@ -63,6 +63,7 @@ export class CanvasUtil {
       ctx.imageSmoothingEnabled = true;
       (ctx as any).imageSmoothingQuality = 'high';
       ctx.drawImage(currentCanvas, 0, 0, nextWidth, nextHeight);
+      if (currentCanvas !== source && currentCanvas instanceof HTMLCanvasElement) currentCanvas.width = currentCanvas.height = 0;
 
       currentCanvas = stepCanvas;
       currentWidth = nextWidth;
@@ -77,6 +78,7 @@ export class CanvasUtil {
     finalCtx.imageSmoothingEnabled = true;
     (finalCtx as any).imageSmoothingQuality = 'high';
     finalCtx.drawImage(currentCanvas, 0, 0, targetWidth, targetHeight);
+    if (currentCanvas !== source && currentCanvas instanceof HTMLCanvasElement) currentCanvas.width = currentCanvas.height = 0;
 
     return finalCanvas;
   }

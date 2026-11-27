@@ -81,6 +81,7 @@ interface BundleLoadingState {
   phase: string;
   done: number;
   total: number;
+  background?: boolean;
 }
 
 @Component({
@@ -130,6 +131,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   private initialRoomLoadingState: BundleLoadingState | null = null;
   private mediaBundleLoadingStates: Map<string, BundleLoadingState> = new Map();
   private mediaBundleOperationSequence = 0;
+  backgroundMediaTotal = 0;
+  backgroundMediaDone = 0;
+  showBackgroundMediaProgress = false;
   private previousBundleFocusedElement: HTMLElement | null = null;
   private bundleModalBackground: Array<{ element: HTMLElement, inert: boolean, ariaHidden: string | null }> = [];
 
@@ -366,7 +370,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
               source: 'media',
               phase: data.status,
               total: this.toProgressNumber(data.total),
-              done: this.toProgressNumber(data.done)
+              done: this.toProgressNumber(data.done),
+              background: data.background === true
             };
             const previous = this.mediaBundleLoadingStates.get(operationId);
             if (!this.shouldUpdateMediaProgress(previous, next)) return;
@@ -526,7 +531,12 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     // Media starts immediately after the room objects are applied. Keeping the
     // states separate prevents the room-complete event from hiding media work.
     const mediaStates = Array.from(this.mediaBundleLoadingStates.values());
-    const state = mediaStates[mediaStates.length - 1] || this.initialRoomLoadingState;
+    const backgroundStates = mediaStates.filter(state => state.background);
+    this.backgroundMediaTotal = backgroundStates.reduce((total, state) => total + state.total, 0);
+    this.backgroundMediaDone = backgroundStates.reduce((total, state) => total + Math.min(state.done, state.total), 0);
+    this.showBackgroundMediaProgress = backgroundStates.length > 0;
+    const blockingMedia = mediaStates.filter(state => !state.background);
+    const state = this.initialRoomLoadingState || blockingMedia[blockingMedia.length - 1];
     const wasLoading = this.isBundleLoading;
     this.isBundleLoading = state != null;
     if (wasLoading !== this.isBundleLoading) this.setBundleModalActive(this.isBundleLoading);
@@ -603,6 +613,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     }
 
     setTimeout(() => {
+      if (active !== this.isBundleLoading) return;
       if (active) {
         this.restoreBundleModalBackground();
         this.bundleModalBackground = Array.from(host.children)

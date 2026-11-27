@@ -53,6 +53,7 @@ import { DictionaryService } from 'service/dictionary.service';
 
 @Component({
     selector: 'game-character',
+    host: { '[attr.data-identifier]': 'gameCharacter.identifier' },
     templateUrl: './game-character.component.html',
     styleUrls: ['./game-character.component.css'],
     changeDetection: ChangeDetectionStrategy.OnPush,

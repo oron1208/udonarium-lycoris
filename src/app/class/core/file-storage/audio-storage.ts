@@ -119,6 +119,8 @@ export class AudioStorage {
     return false;
   }
 
+  peek(identifier: string): AudioFile { return this.hash[identifier] || null; }
+
   get(identifier: string, autoFetch: boolean = true): AudioFile {
     let audio: AudioFile = this.hash[identifier];
     if (audio) return audio;

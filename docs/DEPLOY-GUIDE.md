@@ -116,6 +116,8 @@ curl -sk -X POST https://udonarium-lycoris.ddns.net/v1/skyway2023/token \
 
 ### ⚠️ よくある失敗と対策
 
+静的資産だけを`docker cp`する無停止更新では、新しく増えたサブディレクトリ（例: `assets/basis`、`assets/draco`）の親をコンテナ内で先に`mkdir -p`する。単一ファイルの`docker cp`は、存在しない親ディレクトリを作らず失敗する。旧indexを保持し、全資産投入・ハッシュ確認後に新indexを原子置換する。2026-11-10の初回投入はこの不足で停止したが、旧indexへ復帰後、親ディレクトリ準備を追加して正常公開した。
+
 | 失敗 | 原因 | 対策 |
 |---|---|---|
 | SkyWay token発行エラー | env-file未設定 | `--env-file /etc/udonarium-lily.env` を必ず指定 |

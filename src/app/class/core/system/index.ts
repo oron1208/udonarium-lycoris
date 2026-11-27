@@ -6,3 +6,5 @@ export { Listener } from './event/listener';
 
 export const EventSystem = _EventSystem.instance;
 export const Network = _Network.instance;
+export { transportLabel } from './network/network';
+export type { ListedPeer, RoomTransport } from './network/network';

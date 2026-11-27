@@ -28,6 +28,7 @@ import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 
 import { RangeArea } from '@udonarium/range';
 import { GameTableScratchMask } from '@udonarium/game-table-scratch-mask';
+import { MODEL3D_EXPERIMENT_ENABLED } from '@udonarium/experimental-features';
 
 @Component({
     selector: 'game-character-sheet',
@@ -60,6 +61,36 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
   get isAdvancedRoom(): boolean { return this.tabletopService.currentTable?.roomMode === 'advanced'; }
 
   characterSheetTab: 'basic' | 'display' | 'advanced' = 'basic';
+
+  // 3Dコマ情報（table-3d-spike試験機能。window.__spike3d APIを経由）
+  readonly model3dExperimentEnabled = MODEL3D_EXPERIMENT_ENABLED;
+  private get spike3dApi(): any { return (window as any).__spike3d; }
+
+  get isSpike3dAvailable(): boolean { return !!this.spike3dApi; }
+
+  spike3dModelOptions(): { id: string; name: string }[] {
+    return this.spike3dApi ? this.spike3dApi.listModels() : [];
+  }
+
+  spike3dSelectedModelId(): string {
+    if (!this.spike3dApi || !this.isCharacter) return '';
+    const models: { id: string; name: string }[] = this.spike3dApi.listModels();
+    const hit = this.character.model3dIdentifier
+      ? models.find(m => m.id === this.character.model3dIdentifier)
+      : models.find(m => m.name === this.character.model3dName);
+    return hit ? hit.id : '';
+  }
+
+  onModel3dSelect(modelId: string) {
+    if (!this.spike3dApi || !this.isCharacter) return;
+    if (!modelId) { this.removeModel3d(); return; }
+    this.spike3dApi.assignModel(modelId, this.character.identifier);
+  }
+
+  removeModel3d() {
+    if (!this.spike3dApi || !this.isCharacter) return;
+    this.spike3dApi.unbindModel(this.character.identifier);
+  }
 
   // ===== 自動効果音・アニメーショントリガー =====
   private _autoSoundTriggers: AutoSoundTrigger[] = [];

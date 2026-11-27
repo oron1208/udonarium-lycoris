@@ -24,6 +24,7 @@ const MEDIA_AUDIT_LOG = path.join(__dirname, 'data', 'media-audit.log');
 // typical room JSON size. Override with MAX_SIGNAL_BYTES when needed.
 const MAX_SIGNAL_BYTES = readPositiveSafeIntegerEnv('MAX_SIGNAL_BYTES', 64 * 1024 * 1024);
 const MAX_MEDIA_BYTES = Number(process.env.MAX_MEDIA_BYTES || 100 * 1024 * 1024);
+const MAX_MODEL_BYTES = readPositiveSafeIntegerEnv('MAX_MODEL_BYTES', 150 * 1024 * 1024);
 const MAX_MEDIA_BUNDLE_ITEMS = 4096;
 const MAX_MEDIA_BUNDLE_BODY_BYTES = 512 * 1024;
 const MAX_MEDIA_BUNDLE_TOTAL_BYTES = readPositiveSafeIntegerEnv('MEDIA_BUNDLE_MAX_TOTAL_BYTES', 192 * 1024 * 1024);
@@ -40,6 +41,9 @@ const MAX_ROOM_EVENTS = Number(process.env.MAX_ROOM_EVENTS || 5000);
 const EVENTS_SNAPSHOT_THRESHOLD = Number(process.env.EVENTS_SNAPSHOT_THRESHOLD || 200);
 const MIN_SNAPSHOT_SAVE_INTERVAL_MS = Number(process.env.MIN_SNAPSHOT_SAVE_INTERVAL_MS || 15000);
 const MIN_SNAPSHOT_EVENT_ADVANCE = Number(process.env.MIN_SNAPSHOT_EVENT_ADVANCE || 100);
+const MAX_ROOM_TOMBSTONES = Number(process.env.MAX_ROOM_TOMBSTONES || 100000);
+// Chat messages that a client makes for itself about its own connections.
+const PERSONAL_NOTICE_TAG = 'DiceBot to-pl-system-message';
 const DEV_ADMIN_TOKEN = process.env.DEV_ADMIN_TOKEN || '';
 // When events since last snapshot exceed this, server requests snapshot save from clients
 const ROOM_ID_PATTERN = /^(\w{6})(\w{3})(\w*)-(\w*)/i;
@@ -102,6 +106,7 @@ fs.mkdirSync(DATA_ROOT, { recursive: true });
 fs.mkdirSync(path.dirname(MEDIA_AUDIT_LOG), { recursive: true });
 fs.mkdirSync(path.join(MEDIA_ROOT, 'image'), { recursive: true });
 fs.mkdirSync(path.join(MEDIA_ROOT, 'audio'), { recursive: true });
+fs.mkdirSync(path.join(MEDIA_ROOT, 'model'), { recursive: true });
 loadRoomStates();
 stats.savedMedia = countSavedMedia();
 
@@ -144,7 +149,7 @@ function loadRoomStates() {
 
 function getRoomState(roomKey) {
   if (!roomStates.has(roomKey)) {
-    roomStates.set(roomKey, { roomKey, seq: 0, snapshotSeq: 0, snapshot: null, events: [], updatedAt: new Date().toISOString(), lastEmptyAt: null, saveTimer: null, firstDirtyAt: 0 });
+    roomStates.set(roomKey, { roomKey, seq: 0, snapshotSeq: 0, snapshot: null, events: [], updatedAt: new Date().toISOString(), lastEmptyAt: null, saveTimer: null, firstDirtyAt: 0, tombstones: {}, parentOf: {}, childrenOf: {} });
     stats.savedRooms = roomStates.size;
   }
   const room = roomStates.get(roomKey);
@@ -152,6 +157,11 @@ function getRoomState(roomKey) {
   if (!Array.isArray(room.events)) room.events = [];
   if (room.updatedAt == null) room.updatedAt = new Date().toISOString();
   if (room.lastEmptyAt === undefined) room.lastEmptyAt = null;
+  // Deletions that must outlive the event log (see noteRoomEvents) and the latest parent links seen in
+  // updates, to cascade a deletion to everything that was created under it.
+  if (!room.tombstones || typeof room.tombstones !== 'object' || Array.isArray(room.tombstones)) room.tombstones = {};
+  if (!room.parentOf || typeof room.parentOf !== 'object' || Array.isArray(room.parentOf)) room.parentOf = {};
+  if (!room.childrenOf || typeof room.childrenOf !== 'object' || Array.isArray(room.childrenOf)) room.childrenOf = {};
   return room;
 }
 
@@ -174,7 +184,7 @@ function saveRoomState(roomKey, touchUpdatedAt = true) {
   const room = roomStates.get(roomKey);
   if (!room || roomKey === 'lobby') return;
   if (touchUpdatedAt) room.updatedAt = new Date().toISOString();
-  const serializable = { roomKey: room.roomKey, seq: room.seq, snapshotSeq: room.snapshotSeq || 0, snapshot: room.snapshot || null, events: room.events, updatedAt: room.updatedAt, lastEmptyAt: room.lastEmptyAt || null };
+  const serializable = { roomKey: room.roomKey, seq: room.seq, snapshotSeq: room.snapshotSeq || 0, snapshot: room.snapshot || null, events: room.events, updatedAt: room.updatedAt, lastEmptyAt: room.lastEmptyAt || null, tombstones: room.tombstones || {} };
   const tmp = `${roomFile(roomKey)}.tmp`;
   fs.writeFileSync(tmp, JSON.stringify(serializable));
   fs.renameSync(tmp, roomFile(roomKey));
@@ -224,6 +234,8 @@ function roomKeyToPlaceholderPeerId(roomKey) {
   return `000000${match[1]}${match[2]}-${match[3] || ''}`;
 }
 
+const isServerCarried = ws => ws.readyState === ws.OPEN && ws.transport !== 'p2p';
+
 function requestSnapshotFromClients(roomKey) {
   // Throttle: only request once per 5 seconds per room
   const room = getRoomState(roomKey);
@@ -234,7 +246,7 @@ function requestSnapshotFromClients(roomKey) {
   // snapshot uploads and then repeated processing under load.
   let bestTarget = null;
   for (const target of peers.values()) {
-    if (target.roomKey !== roomKey || target.readyState !== target.OPEN) continue;
+    if (target.roomKey !== roomKey || !isServerCarried(target)) continue;
     if (!bestTarget || Number(target.lastSeq || 0) > Number(bestTarget.lastSeq || 0)) bestTarget = target;
   }
   if (bestTarget) send(bestTarget, { type: 'snapshot-save-request', roomKey, seq: room.seq });
@@ -289,7 +301,7 @@ function collectReferencedMediaHashes() {
 
 function countSavedMedia() {
   let count = 0;
-  for (const kind of ['image', 'audio']) {
+  for (const kind of ['image', 'audio', 'model']) {
     const dir = path.join(MEDIA_ROOT, kind);
     try {
       for (const name of fs.readdirSync(dir)) if (/^[a-f0-9]{64}$/i.test(name)) count++;
@@ -369,7 +381,7 @@ function readMediaAuditLogs(limit = 200, filter = {}) {
 function collectMediaEntries() {
   const entries = [];
   const references = collectMediaReferences();
-  for (const kind of ['image', 'audio']) {
+  for (const kind of ['image', 'audio', 'model']) {
     const dir = path.join(MEDIA_ROOT, kind);
     let names = [];
     try {
@@ -562,8 +574,8 @@ function broadcast(message, predicate = () => true) {
 }
 
 function broadcastPeerList() {
-  const list = allPeerIds();
-  for (const ws of peers.values()) send(ws, { type: 'peers', peers: list });
+  const message = peerListMessage();
+  for (const ws of peers.values()) send(ws, message);
 }
 
 function unregister(ws) {
@@ -572,15 +584,49 @@ function unregister(ws) {
     peers.delete(ws.peerId);
     ws.peerId = null;
     ws.roomKey = null;
-    markRoomEmptyIfNeeded(previousRoomKey);
+    if (ws.transport !== 'p2p') markRoomEmptyIfNeeded(previousRoomKey);
     broadcastPeerList();
   }
 }
 
-function register(ws, id, sinceSeq = 0) {
+// Server communication is the default way to carry a room. A room may be made as a P2P room instead;
+// its members then announce themselves here only, so that the lobby lists the room and says how it is carried.
+const skyWayConfigured = () =>
+  !!(process.env.SKYWAY_APP_ID || process.env.SKYWAY_APPLICATION_ID) && !!(process.env.SKYWAY_SECRET_KEY || process.env.SKYWAY_SECRET);
+
+// A room speaks one way at a time. The members already in it decide for whoever comes next; a room whose
+// state this server keeps is carried by server communication.
+function roomTransport(roomKey) {
+  for (const peer of peers.values()) {
+    if (peer.roomKey === roomKey && peer.readyState === peer.OPEN) return peer.transport === 'p2p' ? 'p2p' : 'relay';
+  }
+  return roomStates.has(roomKey) ? 'relay' : null;
+}
+
+function peerListMessage() {
+  const transports = {};
+  for (const [peerId, peer] of peers) if (peer.transport === 'p2p') transports[peerId] = 'p2p';
+  return { type: 'peers', peers: allPeerIds(), transports };
+}
+
+function register(ws, id, sinceSeq = 0, mode = 'relay') {
   if (!id || typeof id !== 'string' || id.length > 512) {
     send(ws, { type: 'error', errorType: 'invalid-id', message: 'Peer id is required' });
     return;
+  }
+
+  const transport = mode === 'p2p' ? 'p2p' : 'relay';
+  const roomKey = getRoomKey(id);
+  if (roomKey !== 'lobby') {
+    const carried = roomTransport(roomKey);
+    if (carried && carried !== transport) {
+      send(ws, {
+        type: 'error', errorType: 'transport-mismatch', transport: carried,
+        message: carried === 'p2p' ? 'このルームはP2P方式で開かれています。' : 'このルームはサーバー通信で開かれています。',
+      });
+      console.log('[relay] register refused peer=' + id + ' room=' + roomKey + ' asked=' + transport + ' room=' + carried);
+      return;
+    }
   }
 
   const existing = peers.get(id);
@@ -590,12 +636,90 @@ function register(ws, id, sinceSeq = 0) {
   ws.peerId = id;
   ws.roomKey = getRoomKey(id);
   ws.lastSeq = Number(sinceSeq || 0);
-  if (ws.roomKey && ws.roomKey !== 'lobby') getRoomState(ws.roomKey).lastEmptyAt = null;
+  ws.transport = transport;
+  if (transport !== 'p2p' && ws.roomKey && ws.roomKey !== 'lobby') getRoomState(ws.roomKey).lastEmptyAt = null;
   peers.set(id, ws);
-  console.log(`[relay] register peer=${id} room=${ws.roomKey} since=${ws.lastSeq} peers=${peers.size}`);
-  send(ws, { type: 'registered', id });
-  sendRoomSnapshot(ws, ws.lastSeq);
+  console.log(`[relay] register peer=${id} room=${ws.roomKey} transport=${transport} since=${ws.lastSeq} peers=${peers.size}`);
+  send(ws, { type: 'registered', id, transport, p2pAvailable: skyWayConfigured() });
+  if (transport !== 'p2p') sendRoomSnapshot(ws, ws.lastSeq);
   broadcastPeerList();
+}
+
+function isPersonalNotice(event) {
+  return event?.eventName === 'UPDATE_GAME_OBJECT' && event?.data?.syncData?.attributes?.tag === PERSONAL_NOTICE_TAG;
+}
+
+function decodeRelayContainer(container) {
+  try {
+    let bytes = Buffer.from(container?.data || '', 'base64');
+    if (container?.isCompressed) bytes = zlib.gunzipSync(bytes, { maxOutputSize: MAX_SIGNAL_BYTES });
+    const events = msgpack.decode(bytes);
+    return Array.isArray(events) ? events : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+// The latest parent link of every identifier the room has seen, taken from the snapshot when the
+// server starts and from updates afterwards.
+function indexParents(room, identifier, parent) {
+  const previous = room.parentOf[identifier];
+  if (previous != null && previous !== parent) room.childrenOf[previous] = (room.childrenOf[previous] || []).filter(id => id !== identifier);
+  if (typeof parent === 'string' && parent) {
+    const list = room.childrenOf[parent] || (room.childrenOf[parent] = []);
+    if (!list.includes(identifier)) list.push(identifier);
+    room.parentOf[identifier] = parent;
+  } else if (previous != null) {
+    delete room.parentOf[identifier];
+  }
+}
+
+function unindexParents(room, identifier) {
+  const parent = room.parentOf[identifier];
+  if (parent != null) room.childrenOf[parent] = (room.childrenOf[parent] || []).filter(id => id !== identifier);
+  delete room.parentOf[identifier];
+}
+
+function descendantsOf(room, identifier) {
+  if (!Object.keys(room.parentOf).length) {
+    for (const context of room.snapshot?.data?.objects || []) {
+      if (context?.identifier) indexParents(room, context.identifier, context.syncData?.parentIdentifier);
+    }
+  }
+  const found = [], pending = [identifier], seen = new Set([identifier]);
+  while (pending.length) {
+    for (const child of room.childrenOf[pending.pop()] || []) {
+      if (seen.has(child)) continue;
+      seen.add(child); found.push(child); pending.push(child);
+    }
+  }
+  return found;
+}
+
+// A deletion must outlive the event log. The log is compacted into a snapshot that only adds and
+// updates objects, so a client that was away across a compaction (or one that relies on the relay
+// alone, having no other member to hand over a room bundle) would keep the deleted objects for good.
+// Every broadcast deletion is therefore remembered with its sequence number and handed to such
+// clients. A later update of the same identifier is a deliberate re-creation and clears it.
+function noteRoomEvents(roomKey, container, seq) {
+  const room = getRoomState(roomKey);
+  for (const event of decodeRelayContainer(container)) {
+    const identifier = event?.data?.identifier;
+    if (typeof identifier !== 'string' || !identifier) continue;
+    if (event.eventName === 'DELETE_GAME_OBJECT') {
+      for (const id of [identifier, ...descendantsOf(room, identifier)]) {
+        room.tombstones[id] = seq;
+        unindexParents(room, id);
+      }
+    } else if (event.eventName === 'UPDATE_GAME_OBJECT') {
+      delete room.tombstones[identifier];
+      indexParents(room, identifier, event.data.syncData?.parentIdentifier);
+    }
+  }
+  const excess = Object.keys(room.tombstones).length - MAX_ROOM_TOMBSTONES;
+  if (excess > 0) {
+    for (const [identifier, at] of Object.entries(room.tombstones).sort((a, b) => a[1] - b[1]).slice(0, excess)) delete room.tombstones[identifier];
+  }
 }
 
 function sendRoomSnapshot(ws, sinceSeq = 0) {
@@ -603,15 +727,25 @@ function sendRoomSnapshot(ws, sinceSeq = 0) {
   const room = getRoomState(ws.roomKey);
   const since = Number(sinceSeq || 0);
   const snapshotSeq = room.snapshotSeq || 0;
-  const includeSnapshot = !!room.snapshot && (!since || since < snapshotSeq);
-  const baseSeq = Math.max(since, snapshotSeq);
+  // Events older than the log limit are dropped. A cursor that reaches into the dropped range belongs
+  // to a client that never received them, so the snapshot, which is older than its cursor, is the base again.
+  const oldestKept = room.events.length ? room.events[0].seq : room.seq + 1;
+  const gap = since > snapshotSeq && since + 1 < oldestKept;
+  const includeSnapshot = !!room.snapshot && (!since || since < snapshotSeq || gap);
+  const baseSeq = gap ? snapshotSeq : Math.max(since, snapshotSeq);
   // Full restores also need this peer's own post-snapshot changes. Omitting
   // them loses imported tabs/objects when an older snapshot is reapplied.
-  const events = room.events.filter(event => event.seq > baseSeq && (!since || event.from !== ws.peerId) && !event.to);
-  if (!includeSnapshot && events.length < 1) return;
+  const events = room.events.filter(event => event.seq > baseSeq && (!since || gap || event.from !== ws.peerId) && !event.to);
+  // Deletions after what the client has seen. A snapshot only adds and updates, so without them the
+  // objects deleted while this client was away would stay on it for good.
+  const deleted = Object.entries(room.tombstones || {})
+    .filter(([, seq]) => seq > (since > 0 ? since : snapshotSeq))
+    .sort((a, b) => a[1] - b[1])
+    .map(([identifier]) => identifier);
+  if (!includeSnapshot && events.length < 1 && deleted.length < 1) return;
   stats.replayedDataMessages += events.length;
-  console.log(`[relay] send snapshot room=${ws.roomKey} to=${ws.peerId} since=${sinceSeq} seq=${room.seq} snapshotSeq=${snapshotSeq} snapshot=${includeSnapshot ? 'yes' : 'no'} events=${events.length}`);
-  send(ws, { type: 'room-snapshot', roomKey: ws.roomKey, seq: room.seq, snapshotSeq, snapshot: includeSnapshot ? room.snapshot : null, events });
+  console.log(`[relay] send snapshot room=${ws.roomKey} to=${ws.peerId} since=${sinceSeq} seq=${room.seq} snapshotSeq=${snapshotSeq} snapshot=${includeSnapshot ? 'yes' : 'no'} events=${events.length} deleted=${deleted.length}${gap ? ' gap' : ''}`);
+  send(ws, { type: 'room-snapshot', roomKey: ws.roomKey, seq: room.seq, snapshotSeq, snapshot: includeSnapshot ? room.snapshot : null, events, deleted, ...(gap ? { resync: 'gap' } : {}) });
 }
 
 function broadcastRoomSnapshot(roomKey) {
@@ -619,7 +753,7 @@ function broadcastRoomSnapshot(roomKey) {
   const room = roomStates.get(roomKey);
   if (!room || !room.snapshot) return;
   for (const target of peers.values()) {
-    if (target.readyState === target.OPEN && target.roomKey === roomKey) {
+    if (isServerCarried(target) && target.roomKey === roomKey) {
       send(target, { type: 'room-snapshot', roomKey, seq: room.seq, snapshotSeq: room.snapshotSeq || 0, snapshot: room.snapshot, events: [] });
     }
   }
@@ -671,11 +805,21 @@ function projectSnapshotState(room) {
 }
 
 function saveSnapshot(ws, message) {
+  if (ws.transport === 'p2p') return;
   if (!ws.peerId || !ws.roomKey || ws.roomKey === 'lobby') {
     send(ws, { type: 'error', errorType: 'not-in-room', message: 'Join a room before snapshot-save' });
     return;
   }
   const room = getRoomState(ws.roomKey);
+  // An object whose deletion is on record cannot return through a client's snapshot: the client that
+  // still holds it was away when the deletion happened.
+  if (message.snapshot && Array.isArray(message.snapshot.objects)) {
+    const objects = message.snapshot.objects.filter(context => !(context?.identifier in room.tombstones) && context?.syncData?.attributes?.tag !== PERSONAL_NOTICE_TAG);
+    if (objects.length !== message.snapshot.objects.length) {
+      console.log('[relay] snapshot from=' + ws.peerId + ' leaves out ' + (message.snapshot.objects.length - objects.length) + ' deleted objects room=' + ws.roomKey);
+      message = { ...message, snapshot: { ...message.snapshot, objects } };
+    }
+  }
   const oldCount = room.snapshot && room.snapshot.data && Array.isArray(room.snapshot.data.objects) ? room.snapshot.data.objects.length : 0;
   const newCount = message.snapshot && Array.isArray(message.snapshot.objects) ? message.snapshot.objects.length : 0;
 
@@ -686,6 +830,7 @@ function saveSnapshot(ws, message) {
   // deletion. Refuse to compact away their tabs/messages from the durable log.
   const incompleteChat = projected && Array.from(projected.values()).some(context => {
     if (!['chat-tab-list', 'chat-tab', 'chat'].includes(context.aliasName)) return false;
+    if (context.syncData?.attributes?.tag === PERSONAL_NOTICE_TAG) return false;
     const held = candidates.get(context.identifier);
     return !held || Number(held.majorVersion || 0) + Number(held.minorVersion || 0) < Number(context.majorVersion || 0) + Number(context.minorVersion || 0);
   });
@@ -738,6 +883,8 @@ function relay(ws, message) {
 }
 
 function relayData(ws, message) {
+  // A P2P room is carried by SkyWay. Its members are here to be found, nothing more.
+  if (ws.transport === 'p2p') return;
   if (!ws.peerId || !ws.roomKey || ws.roomKey === 'lobby') {
     send(ws, { type: 'error', errorType: 'not-in-room', message: 'Join a room before relay-data' });
     return;
@@ -761,13 +908,21 @@ function relayData(ws, message) {
     return;
   }
 
-  const stored = appendRoomEvent(ws.roomKey, { type: 'relay-data', from: ws.peerId, container: message.container });
-  const outbound = { type: 'relay-data', seq: stored.seq, from: ws.peerId, container: message.container };
+  // A personal notice (see PERSONAL_NOTICE_TAG) is made by a client about its own connections and is shown
+  // to it alone. It is neither kept in the room log nor handed to the other members, who each make their own.
+  const events = decodeRelayContainer(message.container).filter(event => !isPersonalNotice(event));
+  if (events.length < 1) return;
+  const container = events.length === decodeRelayContainer(message.container).length
+    ? message.container
+    : { data: Buffer.from(msgpack.encode(events)).toString('base64'), isCompressed: false };
+  const stored = appendRoomEvent(ws.roomKey, { type: 'relay-data', from: ws.peerId, container });
+  noteRoomEvents(ws.roomKey, container, stored.seq);
+  const outbound = { type: 'relay-data', seq: stored.seq, from: ws.peerId, container };
   ws.lastSeq = stored.seq;
   send(ws, { type: 'ack', seq: stored.seq });
 
   for (const target of peers.values()) {
-    if (target !== ws && target.readyState === target.OPEN && target.roomKey === ws.roomKey) {
+    if (target !== ws && isServerCarried(target) && target.roomKey === ws.roomKey) {
       stats.relayedDataMessages++;
       send(target, outbound);
     }
@@ -775,10 +930,11 @@ function relayData(ws, message) {
 }
 
 function relayResyncRequest(ws) {
+  if (ws.transport === 'p2p') return;
   if (!ws.peerId || !ws.roomKey || ws.roomKey === 'lobby') return;
   console.log(`[relay] resync request room=${ws.roomKey} from=${ws.peerId}`);
   for (const target of peers.values()) {
-    if (target !== ws && target.readyState === target.OPEN && target.roomKey === ws.roomKey) {
+    if (target !== ws && isServerCarried(target) && target.roomKey === ws.roomKey) {
       send(target, { type: 'resync-request', from: ws.peerId });
     }
   }
@@ -850,7 +1006,7 @@ function mediaMetaPath(kind, hash) {
 }
 
 function isValidMediaRequest(kind, hash) {
-  return (kind === 'image' || kind === 'audio') && /^[a-f0-9]{64}$/i.test(hash || '');
+  return (kind === 'image' || kind === 'audio' || kind === 'model') && /^[a-f0-9]{64}$/i.test(hash || '');
 }
 
 function handleMediaGet(req, res, kind, hash) {
@@ -875,7 +1031,7 @@ function handleMediaGet(req, res, kind, hash) {
   }
   let meta = {};
   try { meta = JSON.parse(fs.readFileSync(metaFile, 'utf8')); } catch (_) { }
-  const contentType = meta.type || (kind === 'image' ? 'image/*' : 'audio/*');
+  const contentType = meta.type || (kind === 'image' ? 'image/*' : kind === 'audio' ? 'audio/*' : 'application/octet-stream');
   const fileName = meta.name || hash;
   res.writeHead(200, {
     'Content-Type': contentType,
@@ -1243,6 +1399,7 @@ function getPeerDetails() {
     source: 'websocket',
     peerId: ws.peerId || null,
     roomKey: ws.roomKey || null,
+    transport: ws.transport || null,
     ip: getWebSocketIp(ws),
     lastSeq: ws.lastSeq || 0,
     readyState: ws.readyState,
@@ -1412,7 +1569,7 @@ async function handleDeveloperApi(req, res, requestPath) {
       const q = String(url.searchParams.get('q') || '').trim().toLowerCase();
       const limit = Math.max(1, Math.min(Number(url.searchParams.get('limit') || 500), 2000));
       let media = collectMediaEntries();
-      if (kind === 'image' || kind === 'audio') media = media.filter(entry => entry.kind === kind);
+      if (kind === 'image' || kind === 'audio' || kind === 'model') media = media.filter(entry => entry.kind === kind);
       if (referenced === 'yes') media = media.filter(entry => entry.referenced);
       if (referenced === 'no') media = media.filter(entry => !entry.referenced);
       if (q) media = media.filter(entry => entry.hash.includes(q) || String(entry.name || '').toLowerCase().includes(q) || String(entry.type || '').toLowerCase().includes(q));
@@ -1652,7 +1809,10 @@ function handleMediaPut(req, res, kind, hash) {
   }
 
   const contentType = String(req.headers['content-type'] || 'application/octet-stream').split(';')[0].trim();
-  if (!contentType.startsWith(`${kind}/`)) {
+  const validType = kind === 'model'
+    ? ['application/octet-stream', 'model/gltf-binary', 'model/gltf+json'].includes(contentType)
+    : contentType.startsWith(`${kind}/`);
+  if (!validType) {
     res.writeHead(415, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end(`Expected ${kind}/*`);
     req.resume();
@@ -1679,7 +1839,7 @@ function handleMediaPut(req, res, kind, hash) {
 
   req.on('data', chunk => {
     bytes += chunk.length;
-    if (bytes > MAX_MEDIA_BYTES && !rejected) {
+    if (bytes > (kind === 'model' ? MAX_MODEL_BYTES : MAX_MEDIA_BYTES) && !rejected) {
       rejected = true;
       req.destroy();
       out.destroy();
@@ -1771,7 +1931,7 @@ function createAppHandler() {
     return;
   }
 
-  const mediaMatch = requestPath.match(/^\/api\/media\/(image|audio)\/([a-f0-9]{64})$/i);
+  const mediaMatch = requestPath.match(/^\/api\/media\/(image|audio|model)\/([a-f0-9]{64})$/i);
   if (mediaMatch) {
     const [, kind, hash] = mediaMatch;
     if (req.method === 'GET' || req.method === 'HEAD') {
@@ -1863,7 +2023,7 @@ function createAppHandler() {
     // 存在するメディアファイルを収集
     const entries = [];
     for (const hash of hashes) {
-      for (const kind of ['image', 'audio']) {
+      for (const kind of ['image', 'audio', 'model']) {
         const filePath = path.join(MEDIA_ROOT, kind, hash);
         try {
           const stat = fs.statSync(filePath);
@@ -2012,6 +2172,7 @@ wss.on('connection', (ws, req) => {
   ws.peerId = null;
   ws.roomKey = null;
   ws.lastSeq = 0;
+  ws.transport = null;
   ws.isAlive = true;
   ws.clientIp = getClientIp(req);
   stats.connectionsTotal++;
@@ -2028,8 +2189,8 @@ wss.on('connection', (ws, req) => {
     }
 
     switch (message.type) {
-      case 'register': register(ws, message.id, message.sinceSeq); break;
-      case 'list': send(ws, { type: 'peers', peers: allPeerIds() }); break;
+      case 'register': register(ws, message.id, message.sinceSeq, message.mode); break;
+      case 'list': send(ws, peerListMessage()); break;
       case 'sync-request': sendRoomSnapshot(ws, Number(message.sinceSeq || 0)); break;
       case 'resync-request': relayResyncRequest(ws); break;
       case 'snapshot-save': saveSnapshot(ws, message); break;
@@ -2037,6 +2198,7 @@ wss.on('connection', (ws, req) => {
       case 'answer':
       case 'ice': relay(ws, message); break;
       case 'relay-data': relayData(ws, message); break;
+      case 'ping': send(ws, { type: 'pong', t: message.t }); break;
       default:
         stats.rejectedSignals++;
         send(ws, { type: 'error', errorType: 'unknown-type', message: `Unknown type: ${message.type}` });

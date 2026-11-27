@@ -1,7 +1,8 @@
 backend:
-  # P2P mode (SkyWay 2023). Stable and battle-tested, same as official Udonarium.
-  # Available modes: skyway2023 (default), websocket-relay, websocket-signaling
-  mode: skyway2023
+  # Server communication carries a room by default. A room may be made as a P2P room (SkyWay 2023) on purpose.
+  # Available modes: websocket-relay (default), skyway2023 (every room is P2P, as in the official Udonarium),
+  #   websocket-signaling
+  mode: websocket-relay
   # Empty means current origin.
   url: ''
 webrtc:

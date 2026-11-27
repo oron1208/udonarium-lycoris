@@ -3,6 +3,11 @@
     <game-table></game-table>
   </div>
   <!-- 初期ルーム同期・メディア一括ダウンロード中表示 -->
+  @if (showBackgroundMediaProgress && !isBundleLoading) {
+    <div class="background-media-progress" role="status" aria-live="polite">
+      素材を取得中：{{ backgroundMediaDone }} / {{ backgroundMediaTotal }} 件
+    </div>
+  }
   @if (isBundleLoading) {
     <div class="bundle-loading-overlay" aria-busy="true">
       <div class="bundle-loading-card" #bundleLoadingCard tabindex="-1"

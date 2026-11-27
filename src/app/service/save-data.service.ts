@@ -11,6 +11,7 @@ import { ImageFile, ImageState } from '@udonarium/core/file-storage/image-file';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 import { MimeType } from '@udonarium/core/file-storage/mime-type';
 import { ServerMediaStorage } from '@udonarium/core/file-storage/server-media-storage';
+import { ModelStorage } from '@udonarium/core/file-storage/model-storage';
 import { GameObject } from '@udonarium/core/synchronize-object/game-object';
 import { PromiseQueue } from '@udonarium/core/system/util/promise-queue';
 import { XmlUtil } from '@udonarium/core/system/util/xml-util';
@@ -58,6 +59,9 @@ export class SaveDataService {
 
     files.push(new File([summarySetting], 'summary.xml', { type: 'text/plain' }));
     files.push(new File([this.createMediaManifestJson()], 'media-manifest.json', { type: 'application/json' }));
+    const modelFiles = await this.modelFilesForXml(roomXml);
+    if (modelFiles === null) return;
+    files.push(...modelFiles);
 //本家PR #92より
 //    files = files.concat(this.searchImageFiles(roomXml));
 //    files = files.concat(this.searchImageFiles(chatXml));
@@ -91,6 +95,9 @@ export class SaveDataService {
     let xml: string = this.convertToXml(gameObject);
 
     files.push(new File([xml], 'data.xml', { type: 'text/plain' }));
+    const modelFiles = await this.modelFilesForXml(xml);
+    if (modelFiles === null) return;
+    files.push(...modelFiles);
 //本家PR #92より
 //    files = files.concat(this.searchImageFiles(xml));
     let images: ImageFile[] = [];
@@ -120,6 +127,34 @@ export class SaveDataService {
       progresPercent = percent;
       this.ngZone.run(() => updateCallback(progresPercent));
     });
+  }
+
+  /** Include actual bytes, not just names: room/character ZIPs stay portable offline. */
+  private async modelFilesForXml(xml: string): Promise<File[] | null> {
+    const root = XmlUtil.xml2element(xml);
+    if (!root) return [];
+    const files: File[] = [];
+    const seen = new Set<string>();
+    const missing: string[] = [];
+    for (const element of Array.from(root.ownerDocument.querySelectorAll('[model3dIdentifier]'))) {
+      const identifier = element.getAttribute('model3dIdentifier') || '';
+      if (!/^[a-f0-9]{64}$/.test(identifier) || seen.has(identifier)) continue;
+      seen.add(identifier);
+      const name = element.getAttribute('model3dName') || '';
+      const model = await ModelStorage.instance.ensure(identifier, name);
+      if (!model?.blob) { missing.push(name || identifier); continue; }
+      const filename = model.name.split(/[\\/]/).pop().replace(/[\x00-\x1f]/g, '_');
+      files.push(new File([model.blob], 'models/' + identifier + '/' + filename, { type: 'application/octet-stream' }));
+    }
+    // Do not silently produce a backup that cannot restore the assigned models.
+    if (missing.length) {
+      this.modalService.open(TextViewComponent, {
+        title: '3Dモデルを保存できません',
+        text: '3Dモデル本体を取得できないため保存を中止しました。\n' + missing.join('、') + '\nモデルを取り込むか、割り当てを解除してから保存してください。',
+      });
+      return null;
+    }
+    return files;
   }
 
   /**

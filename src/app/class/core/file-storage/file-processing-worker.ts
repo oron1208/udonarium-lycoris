@@ -1,4 +1,5 @@
 import { Logger } from '../system/util/logger';
+import { AsyncWorkQueue } from '../system/util/async-work-queue';
 
 type TaskType = 'sha256' | 'compressImage' | 'createThumbnail';
 
@@ -13,6 +14,15 @@ export namespace FileProcessingWorker {
   let workerFailed = false; // Worker生成失敗フラグ（1回検出したら以降は試さない）
   let nextId = 1;
   const pending = new Map<number, PendingTask>();
+  const workQueue = new AsyncWorkQueue(2);
+
+  function failWorker(reason: any) {
+    workerFailed = true;
+    worker?.terminate();
+    worker = null;
+    for (const task of pending.values()) { clearTimeout(task.timer); task.reject(reason); }
+    pending.clear();
+  }
 
   export function isAvailable(): boolean {
     return !workerFailed && !!getWorker();
@@ -50,7 +60,9 @@ export namespace FileProcessingWorker {
       };
       worker.onerror = error => {
         Logger.warn('[FileProcessingWorker] worker error', error);
+        failWorker(new Error('File processing worker failed'));
       };
+      worker.onmessageerror = () => failWorker(new Error('File processing worker message failed'));
     } catch (error) {
       // Angular 13等、Workerバンドル未対応環境では1回だけ警告して以降は黙ってフォールバック
       Logger.info('[FileProcessingWorker] Worker unavailable, using main-thread fallback', error);
@@ -61,14 +73,17 @@ export namespace FileProcessingWorker {
   }
 
   function request<T>(type: TaskType, payload: any, timeoutMs = 60_000): Promise<T> {
+    return workQueue.run(() => requestNow<T>(type, payload, timeoutMs));
+  }
+
+  function requestNow<T>(type: TaskType, payload: any, timeoutMs: number): Promise<T> {
     const w = getWorker();
     if (!w) return Promise.reject(new Error('Worker is unavailable'));
 
     const id = nextId++;
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
-        pending.delete(id);
-        reject(new Error(`Worker task timeout: ${type}`));
+        failWorker(new Error(`Worker task timeout: ${type}`));
       }, timeoutMs);
       pending.set(id, { resolve, reject, timer });
       try {

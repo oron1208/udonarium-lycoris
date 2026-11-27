@@ -12,6 +12,8 @@ import { FileProcessingWorker } from './file-processing-worker';
 import { ImageFile } from './image-file';
 import { ImageStorage } from './image-storage';
 import { MimeType } from './mime-type';
+import { ModelStorage } from './model-storage';
+import { MODEL3D_EXPERIMENT_ENABLED } from '@udonarium/experimental-features';
 import { chooseZipImageImport, ZIP_IMAGE_LIMIT, remapZipImageReferences } from './zip-image-import-options';
 
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
@@ -90,9 +92,9 @@ export class FileArchiver {
     this.load(files);
   };
 
-  async load(files: File[], preserveImageBytes?: boolean, archivedImageIdentifier?: string): Promise<void>
-  async load(files: FileList, preserveImageBytes?: boolean, archivedImageIdentifier?: string): Promise<void>
-  async load(files: any, preserveImageBytes: boolean = false, archivedImageIdentifier: string = ''): Promise<void> {
+  async load(files: File[], preserveImageBytes?: boolean, archivedImageIdentifier?: string, fromArchive?: boolean): Promise<void>
+  async load(files: FileList, preserveImageBytes?: boolean, archivedImageIdentifier?: string, fromArchive?: boolean): Promise<void>
+  async load(files: any, preserveImageBytes: boolean = false, archivedImageIdentifier: string = '', fromArchive: boolean = false): Promise<void> {
     if (!files) return;
     let loadFiles: File[] = files instanceof FileList ? toArrayOfFileList(files) : files;
 
@@ -120,6 +122,13 @@ export class FileArchiver {
     for (let i = 0; i < loadFiles.length; i++) {
       const file = loadFiles[i];
       try {
+        if (/\.(glb|gltf|vrm|fbx)$/i.test(file.name)) {
+          // Hidden standalone intake; keep model bytes in existing room/character ZIPs intact.
+          if (!MODEL3D_EXPERIMENT_ENABLED && !fromArchive) continue;
+          await ModelStorage.instance.add(file.name.split(/[\\/]/).pop(), file);
+          EventSystem.trigger('FILE_LOADED', { file });
+          continue;
+        }
         await this.handleImage(file, true, archivedImageIdentifier);
         await this.handleAudio(file);
         await this.handleMediaManifest(file);
@@ -318,6 +327,16 @@ export class FileArchiver {
     if (options === null) return;
     const prepared = new Map<string, File>();
     const replacements = new Map<string, string>();
+    // The server keeps images under their SHA-256 alone, so an image that the archive names by anything else
+    // cannot be fetched by the other members, unless the name is one of the images every client has in
+    // its assets. Such an image is given its content hash, and the references in the archive's XML follow.
+    for (const entry of zipEntries) {
+      if (entry.dir || !MimeType.type(entry.name).startsWith('image/')) continue;
+      const archivedIdentifier = archivedImageIdentifiers.get(this.archiveImageStem(entry.name)) || '';
+      if (!archivedIdentifier || replacements.has(archivedIdentifier) || isSharedImageIdentifier(archivedIdentifier)) continue;
+      const importedFile = prepared.get(entry.name) || await entry.async('blob');
+      replacements.set(archivedIdentifier, await FileReaderUtil.calcSHA256Async(importedFile));
+    }
     if (options) {
       for (const entry of largeImages) {
         const type = MimeType.type(entry.name);
@@ -337,9 +356,14 @@ export class FileArchiver {
     for (let zipEntry of zipEntries) {
       if (zipEntry.dir) continue;
       try {
+        if (/\.(glb|gltf|vrm|fbx)$/i.test(zipEntry.name)
+          && Number((zipEntry as any)._data?.uncompressedSize) > ModelStorage.MAX_BYTES) {
+          throw new Error('3Dモデルは150MB以下のファイルを選んでください: ' + zipEntry.name);
+        }
         let arraybuffer = await zipEntry.async('arraybuffer');
         Logger.debug(zipEntry.name + ' 解凍...');
         let archivedImageIdentifier = archivedImageIdentifiers.get(this.archiveImageStem(zipEntry.name)) || '';
+        if (archivedImageIdentifier && replacements.has(archivedImageIdentifier)) archivedImageIdentifier = '';
         let importedFile = prepared.get(zipEntry.name) || new File([arraybuffer], zipEntry.name, { type: MimeType.type(zipEntry.name) });
         if (prepared.has(zipEntry.name)) {
           archivedImageIdentifier = await FileReaderUtil.calcSHA256Async(importedFile);
@@ -350,6 +374,7 @@ export class FileArchiver {
           [importedFile],
           true,
           archivedImageIdentifier,
+          true,
         );
       } catch (reason) {
         Logger.warn(reason);
@@ -421,6 +446,13 @@ export class FileArchiver {
     }, updateCallback);
     saveAs(blob, zipName + '.zip');
   }
+}
+
+// A name every client can resolve itself: a content hash on the server, or an image in its assets.
+function isSharedImageIdentifier(identifier: string): boolean {
+  if (/^[a-f0-9]{64}$/i.test(identifier || '')) return true;
+  const url = ImageStorage.instance.peek(identifier)?.url || '';
+  return /^(?:\.?\/?assets\/|https?:\/\/)/.test(url);
 }
 
 function toArrayOfFileList(fileList: FileList): File[] {

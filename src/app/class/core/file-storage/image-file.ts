@@ -2,6 +2,7 @@ import { CanvasUtil } from './canvas-util';
 import { FileReaderUtil } from './file-reader-util';
 import { FileProcessingWorker } from './file-processing-worker';
 import { Logger } from '../system/util/logger';
+import { AsyncWorkQueue } from '../system/util/async-work-queue';
 
 export enum ImageState {
   NULL = 0,
@@ -26,6 +27,7 @@ export interface ThumbnailContext {
 }
 
 export class ImageFile {
+  private static readonly thumbnailFallbackQueue = new AsyncWorkQueue(1);
   context: ImageContext = {
     identifier: '',
     name: '',
@@ -203,18 +205,27 @@ export class ImageFile {
   }
 
   private static createThumbnailOnMainThreadAsync(context: ImageContext): Promise<ThumbnailContext> {
-    return new Promise((resolve, reject) => {
-      let image: HTMLImageElement = new Image();
-      image.onload = (event) => {
+    return this.thumbnailFallbackQueue.run(() => new Promise((resolve, reject) => {
+      const image: HTMLImageElement = new Image();
+      let canvas: HTMLCanvasElement | null = null;
+      const cleanup = () => {
+        image.onload = image.onabort = image.onerror = null;
+        image.src = '';
+        if (canvas) canvas.width = canvas.height = 0;
+      };
+      image.onload = () => {
+        try {
         const maxDim = 128;
         const scale: number = Math.min(maxDim / Math.max(image.naturalWidth, image.naturalHeight), 1.0);
         const dstWidth = Math.max(1, Math.round(image.naturalWidth * scale));
         const dstHeight = Math.max(1, Math.round(image.naturalHeight * scale));
 
         // 多段階縮小で高品質なサムネイルを生成
-        const canvas = CanvasUtil.resizeCanvas(image, dstWidth, dstHeight);
+        canvas = CanvasUtil.resizeCanvas(image, dstWidth, dstHeight);
 
         canvas.toBlob(blob => {
+          cleanup();
+          if (!blob) { reject(new Error('Thumbnail encoding failed')); return; }
           let thumbnail: ThumbnailContext = {
             type: blob.type,
             blob: blob,
@@ -222,12 +233,17 @@ export class ImageFile {
           };
           resolve(thumbnail);
         }, context.blob.type);
+        } catch (error) {
+          cleanup();
+          reject(error);
+        }
       };
       image.onabort = image.onerror = () => {
-        reject();
+        cleanup();
+        reject(new Error('Thumbnail image decoding failed'));
       }
       image.src = context.url;
-    });
+    }));
   }
 
   static Empty: ImageFile = ImageFile.createEmpty('null');

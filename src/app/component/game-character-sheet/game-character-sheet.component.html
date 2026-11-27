@@ -248,6 +248,34 @@
             </div>
           </div>
         </div>
+        @if (model3dExperimentEnabled) {
+        <div class="extra-setting" style="border-top:1px solid #888;margin-top:8px;padding-top:8px;">
+          <b>3Dコマ情報</b>
+          @if (isSpike3dAvailable) {
+            <div>
+              3Dモデル
+              <select [ngModel]="spike3dSelectedModelId()" (change)="onModel3dSelect($event.target.value)" name="model3dSelect">
+                <option value="">（未割り当て）</option>
+                @for (m of spike3dModelOptions(); track m.id) {
+                  <option [value]="m.id">{{m.name}}</option>
+                }
+              </select>
+              <button type="button" (click)="removeModel3d()">解除</button>
+            </div>
+            <div>3D表示 <input type="checkbox" [(ngModel)]="tabletopObject.model3dEnabled" name="model3dEnabled" /></div>
+            <div>大きさ
+              <input type="range" min="20" max="300" [(ngModel)]="tabletopObject.model3dScale" name="model3dScale" />
+              <input class="is-caret" [(ngModel)]="tabletopObject.model3dScale" type="number" min="20" max="300" style="width:5em;color:#555;" name="model3dScaleNum" />%
+            </div>
+            <div>正面方向
+              <input type="range" min="-180" max="180" [(ngModel)]="tabletopObject.model3dYaw" name="model3dYaw" />
+              <input class="is-caret" [(ngModel)]="tabletopObject.model3dYaw" type="number" min="-180" max="180" style="width:5em;color:#555;" name="model3dYawNum" />度
+            </div>
+          } @else {
+            <div style="font-size:12px;color:#666;">卓を3D表示で開くと3Dモデルの設定が反映されます</div>
+          }
+        </div>
+        }
       </div>
     }
     <!-- ===== アドバンスタブ ===== -->

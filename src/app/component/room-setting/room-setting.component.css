@@ -100,3 +100,12 @@
 .force-flat-option input[type='checkbox'] {
   margin: 0;
 }
+
+.transport-select {
+  margin-top: 10px;
+}
+
+.transport-select label {
+  margin-right: 14px;
+  white-space: nowrap;
+}

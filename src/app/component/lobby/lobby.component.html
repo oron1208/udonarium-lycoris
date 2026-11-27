@@ -16,6 +16,7 @@
           <th>ルームID</th>
           <th class="room-name">ルーム名</th>
           <th>パスワード</th>
+          <th>方式</th>
           <th>参加者</th>
           <th></th>
         </tr>
@@ -31,6 +32,7 @@
             @if (!room.peerContexts[0].hasPassword) {
               <td>-</td>
             }
+            <td><span class="transport-badge" [class.p2p]="room.transport === 'p2p'">{{transportLabel(room.transport)}}</span></td>
             <td>{{room.isSavedEmptyRoom ? '0人（復帰可）' : room.peerContexts.length + '人'}}</td>
             <td>
               @if (0 < room.alias.length) {
@@ -46,5 +48,6 @@
     }
   </div>
 } @else {
+  <div style="font-size: 12px; margin-bottom: 6px;">この部屋の通信方式: <span class="transport-badge" [class.p2p]="currentTransport === 'p2p'">{{currentTransportLabel}}</span></div>
   <span style="font-size: 12px;">別のルームに接続したい場合は、他の参加者との接続を切ってください。<br>（※ページリロードで切断できます。）</span>
 }

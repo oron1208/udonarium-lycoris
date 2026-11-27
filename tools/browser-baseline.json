@@ -1,0 +1,6 @@
+[
+  {
+    "label": "ERROR",
+    "value": "Error: Not ready: http://127.0.0.1:14319/health\n    at ready (/home/maco/.openclaw/workspace/projects/udonarium-lycoris/tools/verify-extended-dicebot.cjs:13:9)\n    at async /home/maco/.openclaw/workspace/projects/udonarium-lycoris/tools/verify-extended-dicebot.cjs:37:3"
+  }
+]

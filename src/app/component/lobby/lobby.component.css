@@ -45,3 +45,17 @@
 .is-small-font {
   font-size: 10px;
 }
+
+.transport-badge {
+  background: rgba(62, 39, 35, 0.08);
+  border-radius: 3px;
+  color: #3e2723;
+  font-size: 11px;
+  padding: 1px 5px;
+  white-space: nowrap;
+}
+
+.transport-badge.p2p {
+  background: rgba(21, 101, 192, 0.12);
+  color: #0d47a1;
+}

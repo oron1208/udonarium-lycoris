@@ -79,7 +79,8 @@ async function resizeImage(
 
     const inputType = blob.type || 'image/png';
     const isPng = inputType === 'image/png';
-    const type = preservePng && isPng ? 'image/png' : 'image/jpeg';
+    // Keep alpha in display previews; original bytes are never replaced here.
+    const type = isPng || inputType === 'image/webp' ? 'image/png' : 'image/jpeg';
     const out = await canvas.convertToBlob({ type, quality: isPng ? undefined : quality });
     return { blob: out, type: out.type || type, width, height };
   } finally {
@@ -123,6 +124,7 @@ function multiStepDownscale(
     if (!ctx) throw new Error('2D canvas context is not available');
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(currentSource, 0, 0, nextWidth, nextHeight);
+    if (currentSource !== source && currentSource instanceof OffscreenCanvas) currentSource.width = currentSource.height = 0;
 
     currentSource = stepCanvas;
     currentWidth = nextWidth;
@@ -135,6 +137,7 @@ function multiStepDownscale(
   if (!finalCtx) throw new Error('2D canvas context is not available');
   finalCtx.imageSmoothingEnabled = true;
   finalCtx.drawImage(currentSource, 0, 0, targetWidth, targetHeight);
+  if (currentSource !== source && currentSource instanceof OffscreenCanvas) currentSource.width = currentSource.height = 0;
 
   return finalCanvas;
 }

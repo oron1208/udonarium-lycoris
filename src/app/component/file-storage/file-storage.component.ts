@@ -9,6 +9,7 @@ import { EventSystem, Network } from '@udonarium/core/system';
 import { PanelService } from 'service/panel.service';
 
 import { ImageTag } from '@udonarium/image-tag';//本家PR #92より
+import { MODEL3D_EXPERIMENT_ENABLED } from '@udonarium/experimental-features';
 
 @Component({
     selector: 'file-storage',
@@ -20,6 +21,12 @@ import { ImageTag } from '@udonarium/image-tag';//本家PR #92より
 export class FileStorageComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private initTimestamp : number = 0;
+
+  // 3Dモデル管理タブ（table-3d-spike試験機能のUI。window.__spike3d APIを経由）
+  activeTab: 'image' | '3d' = 'image';
+  readonly model3dExperimentEnabled = MODEL3D_EXPERIMENT_ENABLED;
+  spikeModelList: { id: string; name: string; size: number; kind: string; thumb: string }[] = [];
+  spikeSelected: string = null;
 
 //本家PR #92より
   searchWord: string = '';
@@ -154,6 +161,7 @@ export class FileStorageComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngAfterViewInit() {
     EventSystem.register(this).on('IMAGE_FILE_CHANGED', () => this.changeDetector.markForCheck())
+      .on('MODEL3D_CHANGED', () => { if (this.activeTab === '3d') this.refreshSpikeModels(); })
       .on('SYNCHRONIZE_FILE_LIST', event => {
       if (event.isSendFromSelf) {
         this.changeDetector.markForCheck();
@@ -163,6 +171,61 @@ export class FileStorageComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnDestroy() {
     EventSystem.unregister(this);
+  }
+
+  switch3d() {
+    if (!this.model3dExperimentEnabled) return;
+    this.activeTab = '3d';
+    this.refreshSpikeModels();
+  }
+
+  refreshSpikeModels() {
+    const api = (window as any).__spike3d;
+    this.spikeModelList = api ? api.listModels() : [];
+    this.spikeSelected = (api && api.selectedModel()) || null;
+    this.changeDetector.markForCheck();
+  }
+
+  async onSpikeFileSelect(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const api = (window as any).__spike3d;
+    if (!api) {
+      alert('3D機能が初期化されていません。卓を3D表示モードで開いてください。');
+      input.value = '';
+      return;
+    }
+    for (const f of Array.from(input.files || [])) {
+      try {
+        if (f.size > 150 * 1024 * 1024) throw new Error('150MB以下のモデルを選んでください');
+        const buf = await f.arrayBuffer();
+        const id = await api.registerModel(f.name, buf, f.size);
+        this.refreshSpikeModels(); // 一覧に先出し（サムネイルは生成後に差し替え）
+        await api.buildThumb(id);
+      } catch (error) { alert('3Dモデルを取り込めませんでした: ' + f.name + '\n' + String(error)); }
+    }
+    input.value = '';
+    this.refreshSpikeModels();
+  }
+
+  onSpikeModelClick(id: string) {
+    const api = (window as any).__spike3d;
+    if (!api) return;
+    if (this.spikeSelected === id) { api.clearSelection(); this.spikeSelected = null; }
+    else { api.selectModel(id); this.spikeSelected = id; }
+    this.changeDetector.markForCheck();
+  }
+
+  async onSpikeModelDelete(event: Event, id: string) {
+    event.stopPropagation();
+    const api = (window as any).__spike3d;
+    if (!api) return;
+    await api.removeModel(id);
+    if (this.spikeSelected === id) { api.clearSelection(); this.spikeSelected = null; }
+    this.refreshSpikeModels();
+  }
+
+  spikeSizeLabel(size: number): string {
+    return size > 1024 * 1024 ? (size / 1024 / 1024).toFixed(1) + 'MB' : Math.round(size / 1024) + 'KB';
   }
 
   handleFileSelect(event: Event) {

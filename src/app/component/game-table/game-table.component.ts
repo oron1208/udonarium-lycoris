@@ -8,6 +8,7 @@ import { GameObject } from '@udonarium/core/synchronize-object/game-object';
 import { EventSystem, Network } from '@udonarium/core/system';
 import { DiceSymbol } from '@udonarium/dice-symbol';
 import { GameCharacter } from '@udonarium/game-character';
+import { DataElement } from '@udonarium/data-element';
 import { GameCharacterGroup } from '@udonarium/game-character-group';
 import { FilterType, GameTable, GridType } from '@udonarium/game-table';
 import { GameTableMask } from '@udonarium/game-table-mask';
@@ -26,6 +27,9 @@ import { GameTableSettingComponent } from 'component/game-table-setting/game-tab
 import { ContextMenuAction, ContextMenuSeparator, ContextMenuService } from 'service/context-menu.service';
 import { CoordinateService } from 'service/coordinate.service';
 import { TableRulerComponent } from 'component/table-ruler/table-ruler.component';
+
+import type { Table3dSpike } from './table-3d-spike';
+import { MODEL3D_EXPERIMENT_ENABLED } from '@udonarium/experimental-features';
 import { ImageService } from 'service/image.service';
 import { ModalService } from 'service/modal.service';
 import { GmModeService } from 'service/gm-mode.service';
@@ -127,6 +131,8 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('drawingCanvas', { static: true }) drawingCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('lightingCanvas', { static: true }) lightingCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild(TableRulerComponent) ruler?: TableRulerComponent;
+  private table3dSpike: Table3dSpike = null;
+  private model3dHostDestroyed = false;
 
   get tableSelecter(): TableSelecter { return this.tabletopService.tableSelecter; }
   get currentTable(): GameTable { return this.tabletopService.currentTable; }
@@ -196,6 +202,13 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // 照明
   private lightingAnimFrame: number = 0;
+  private lightingAnimationTimer: ReturnType<typeof setTimeout> | null = null;
+  private lightingLoopStarted = false;
+  private readonly onLightingVisibilityChange = () => {
+    this.cancelLightingFrame();
+    this.lastLightingRender = 0;
+    if (!document.hidden) this.invalidateLighting();
+  };
   private flickerPhase: number = 0;
   private cachedWallGrid: WallGrid | null = null;
   private wallGridDirty: boolean = true;
@@ -330,6 +343,18 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
       .on('IMAGE_FILE_CHANGED', () => this.changeDetector.markForCheck())
       .on('UPDATE_GAME_OBJECT', event => {
         const updated = ObjectStore.instance.get(event.data.identifier);
+        // Size/altitude live in child DataElements; their changes must also wake a resting light layer.
+        if (updated instanceof DataElement && (updated.name === 'size' || updated.name === 'altitude')) {
+          let owner = updated.parent;
+          for (let depth = 0; owner && depth < 16; depth++, owner = owner.parent) {
+            if (owner instanceof GameCharacter || owner instanceof Terrain) {
+              this.objectGeneration++;
+              this.invalidateLighting();
+              if (owner instanceof Terrain) this.invalidateWallGrid();
+              break;
+            }
+          }
+        }
         if (updated instanceof GameCharacter || updated instanceof Terrain || updated instanceof GameTableMask) {
           this.objectGeneration++;
           this.invalidateLighting();
@@ -390,7 +415,6 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
           this.redrawDrawingCanvas();
           this.invalidateWallGrid();
           this.invalidateLighting();
-          this.renderLighting();
           this.changeDetector.markForCheck();
         });
       })
@@ -461,6 +485,23 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     this.setTransform(0, 0, 0, 0, 0, 0);
     this.coordinateService.tabletopOriginElement = this.gameObjects.nativeElement;
     this.ngZone.runOutsideAngular(() => this.startLightingLoop());
+
+    // Hidden experiment: do not load Three.js or create a WebGL context in normal sessions.
+    if (MODEL3D_EXPERIMENT_ENABLED) this.ngZone.runOutsideAngular(() => {
+      void import('./table-3d-spike').then(({ Table3dSpike }) => {
+        if (this.model3dHostDestroyed) return;
+        this.table3dSpike = new Table3dSpike(
+          this.rootElementRef.nativeElement,
+          this.gameTable.nativeElement,
+          () => ({
+            posX: this.viewPotisonX, posY: this.viewPotisonY, posZ: this.viewPotisonZ,
+            rotX: this.viewRotateX, rotY: this.viewRotateY, rotZ: this.viewRotateZ,
+            flat: this.isFlatMode,
+          })
+        );
+        this.table3dSpike.start();
+      }).catch(error => Logger.warn('3D model experiment could not start', error));
+    });
   }
 
   private static loadLayerVisibility(): TableLayerVisibility {
@@ -479,15 +520,20 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     this.layerVisibility[key] = !this.layerVisibility[key];
     try { localStorage.setItem(GameTableComponent.LAYER_VISIBILITY_KEY, JSON.stringify(this.layerVisibility)); } catch (_) {}
     this.redrawDrawingCanvas();
-    this.renderLighting();
     this.changeDetector.markForCheck();
   }
 
   ngOnDestroy() {
+    this.model3dHostDestroyed = true;
     EventSystem.unregister(this);
     this.mouseGesture.destroy();
     this.touchGesture.destroy();
-    if (this.lightingAnimFrame) cancelAnimationFrame(this.lightingAnimFrame);
+    this.lightingLoopStarted = false;
+    this.cancelLightingFrame();
+    document.removeEventListener('visibilitychange', this.onLightingVisibilityChange);
+    if (this.tableUpdateTimer !== null) clearTimeout(this.tableUpdateTimer);
+    this.table3dSpike?.dispose();
+    this.table3dSpike = null;
   }
 
   initializeTableTouchGesture() {
@@ -1321,22 +1367,47 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   // ===== 照明 =====
 
   private startLightingLoop() {
-    const render = (ts: number) => {
-      this.renderLighting(ts);
-      this.lightingAnimFrame = requestAnimationFrame(render);
-    };
-    this.lightingAnimFrame = requestAnimationFrame(render);
+    this.lightingLoopStarted = true;
+    document.addEventListener('visibilitychange', this.onLightingVisibilityChange);
+    this.invalidateLighting();
+  }
+
+  private cancelLightingFrame() {
+    if (this.lightingAnimFrame) cancelAnimationFrame(this.lightingAnimFrame);
+    this.lightingAnimFrame = 0;
+    if (this.lightingAnimationTimer !== null) clearTimeout(this.lightingAnimationTimer);
+    this.lightingAnimationTimer = null;
+  }
+
+  private requestLightingFrame() {
+    if (!this.lightingLoopStarted || document.hidden || this.lightingAnimFrame) return;
+    this.ngZone.runOutsideAngular(() => {
+      this.lightingAnimFrame = requestAnimationFrame(ts => {
+        this.lightingAnimFrame = 0;
+        this.renderLighting(ts);
+        if (this.lightingNeedsAnimation && this.lightingLoopStarted && !document.hidden) {
+          this.lightingAnimationTimer = setTimeout(() => {
+            this.lightingAnimationTimer = null;
+            this.requestLightingFrame();
+          }, GameTableComponent.LIGHTING_MIN_INTERVAL);
+        }
+      });
+    });
   }
 
   private invalidateLighting() {
     this.lightingDirty = true;
+    if (this.lightingAnimationTimer !== null) clearTimeout(this.lightingAnimationTimer);
+    this.lightingAnimationTimer = null;
+    this.requestLightingFrame();
   }
 
   /** 光源ゆらぎ（松明・焚き火・魔法のソナー）などアニメが必要な光源が卓にあるか */
   private detectLightingAnimation(): boolean {
     if (this.lightingAnimFlagCache.gen === this.objectGeneration) return this.lightingAnimFlagCache.value;
-    const scan = (objects: { lightType?: string }[]) => {
+    const scan = (objects: { lightType?: string; lightSourceEnabled?: boolean; location?: { name: string } }[]) => {
       for (const o of objects) {
+        if (!o.lightSourceEnabled || o.location?.name !== 'table') continue;
         const t = o.lightType;
         if (t === 'torch' || t === 'campfire' || t === 'magic') return true;
       }
@@ -1432,6 +1503,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private renderLighting(now: number = performance.now()) {
+    if (document.hidden) return;
     const canvas = this.lightingCanvas?.nativeElement;
     if (!canvas) return;
 
@@ -1440,6 +1512,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
 
     const active = this.layerVisibility.lighting && ((table.lightingEnabled && table.lightingNightMode) || this.isAdvancedVisionActive);
     if (!active) {
+      this.lightingNeedsAnimation = false;
       if (!this.lightingInactiveClean) {
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);

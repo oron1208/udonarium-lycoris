@@ -3,7 +3,7 @@ import { Logger } from '../../class/core/system/util/logger';
 
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { PeerContext } from '@udonarium/core/system/network/peer-context';
-import { EventSystem, Network } from '@udonarium/core/system';
+import { EventSystem, Network, RoomTransport } from '@udonarium/core/system';
 import { PeerCursor } from '@udonarium/peer-cursor';
 
 import { Card } from '@udonarium/card';
@@ -31,7 +31,7 @@ import { PanelService } from 'service/panel.service';
     standalone: false
 })
 export class ReConnectComponent implements OnInit, OnDestroy {
-  rooms: { alias: string, roomName: string, peerContexts: PeerContext[] }[] = [];
+  rooms: { alias: string, roomName: string, peerContexts: PeerContext[], transport: RoomTransport }[] = [];
 
   isReloading: boolean = false;
 
@@ -86,7 +86,7 @@ export class ReConnectComponent implements OnInit, OnDestroy {
 
     for ( let room of this.rooms){
       if (room.alias == ( this.roomId + this.roomName) ){
-        this.connect(room.peerContexts);
+        this.connect(room.peerContexts, room.transport);
         Logger.debug("再接続成功");
         return;
       }
@@ -99,20 +99,17 @@ export class ReConnectComponent implements OnInit, OnDestroy {
 
     this.isReloading = true;
     this.rooms = [];
-    let peersOfroom: { [room: string]: PeerContext[] } = {};
-    let peerIds = await Network.listAllPeers();
-    for (let peerId of peerIds) {
-      let context = PeerContext.parse(peerId);
-      if (context.isRoom) {
-        let alias = context.roomId + context.roomName;
-        if (!(alias in peersOfroom)) {
-          peersOfroom[alias] = [];
-        }
-        peersOfroom[alias].push(context);
+    let peersOfroom: { [room: string]: { peerContexts: PeerContext[], transport: RoomTransport } } = {};
+    for (let listed of await Network.listLobby()) {
+      let context = PeerContext.parse(listed.peerId);
+      let alias = context.roomId + context.roomName;
+      if (!(alias in peersOfroom)) {
+        peersOfroom[alias] = { peerContexts: [], transport: listed.transport };
       }
+      peersOfroom[alias].peerContexts.push(context);
     }
     for (let alias in peersOfroom) {
-      this.rooms.push({ alias: alias, roomName: peersOfroom[alias][0].roomName, peerContexts: peersOfroom[alias] });
+      this.rooms.push({ alias: alias, roomName: peersOfroom[alias].peerContexts[0].roomName, peerContexts: peersOfroom[alias].peerContexts, transport: peersOfroom[alias].transport });
     }
     this.rooms.sort((a, b) => {
       if (a.alias < b.alias) return -1;
@@ -122,7 +119,7 @@ export class ReConnectComponent implements OnInit, OnDestroy {
     this.isReloading = false;
   }
 
-  async connect(peerContexts: PeerContext[]) {
+  async connect(peerContexts: PeerContext[], transport: RoomTransport = 'relay') {
     let context = peerContexts[0];
     let password = '';
 
@@ -134,7 +131,7 @@ export class ReConnectComponent implements OnInit, OnDestroy {
     if (!context.verifyPassword(password)) return;
 
     let userId = Network.peerContext ? Network.peerContext.userId : PeerContext.generateId();
-    Network.open(userId, context.roomId, context.roomName, password);
+    Network.open(userId, context.roomId, context.roomName, password, transport);
     PeerCursor.myCursor.peerId = Network.peerId;
 
     let triedPeer: string[] = [];

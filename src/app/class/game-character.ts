@@ -22,6 +22,13 @@ export class GameCharacter extends TabletopObject {
 
   @SyncVar() rotate: number = 0;
   @SyncVar() roll: number = 0;
+  // 3Dコマ（table-3d-spike試験）: 詳細設定はネットワーク同期される
+  @SyncVar() model3dEnabled: boolean = true;   // 3Dモデル表示の有効/無効
+  @SyncVar() model3dName: string = '';          // 割り当てた3Dモデル名
+  @SyncVar() model3dIdentifier: string = '';    // モデル本体のSHA-256（同名ファイルを区別）
+  @SyncVar() model3dScale: number = 100;        // 3Dモデルの大きさ(%)
+  @SyncVar() model3dYaw: number = 0;            // 3Dモデルの正面方向補正(度)
+  @SyncVar() model3dFrontVersion: number = 0;   // 正面基準の移行済みバージョン
   @SyncVar() isDropShadow: boolean = false;
 
   @SyncVar() hideInventory: boolean = false;

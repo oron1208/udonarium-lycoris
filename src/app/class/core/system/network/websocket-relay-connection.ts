@@ -7,8 +7,12 @@ import { ObjectStore } from '../../synchronize-object/object-store';
 import { reconcileChatTabsFromSnapshot } from '../../synchronize-object/room-snapshot-reconciler';
 import { Connection, ConnectionCallback } from './connection';
 import { PeerContext } from './peer-context';
+import { defaultSignalingUrl } from './room-beacon';
 import { PeerSessionGrade } from './peer-session-state';
 import { Logger } from '../util/logger';
+
+// How often a relay client asks the server for an answer.
+const RELAY_HEARTBEAT_MS = 20000;
 
 interface RelayDataContainer {
   data: Uint8Array;
@@ -19,10 +23,11 @@ type EncodedContainer = { data: string, isCompressed?: boolean };
 type StoredRelayEvent = { seq: number, from: string, to?: string, container: EncodedContainer };
 type RoomSnapshot = { at?: number, from?: string, data?: { objects: ObjectContext[] } };
 type RelayMessage =
-  | { type: 'registered', id: string }
+  | { type: 'registered', id: string, transport?: string, p2pAvailable?: boolean }
   | { type: 'ack', seq: number }
-  | { type: 'peers', peers: string[] }
-  | { type: 'room-snapshot', roomKey: string, seq: number, snapshotSeq?: number, snapshot?: RoomSnapshot, events: StoredRelayEvent[] }
+  | { type: 'pong', t?: number }
+  | { type: 'peers', peers: string[], transports?: { [peerId: string]: string } }
+  | { type: 'room-snapshot', roomKey: string, seq: number, snapshotSeq?: number, snapshot?: RoomSnapshot, events: StoredRelayEvent[], deleted?: string[], resync?: string }
   | { type: 'snapshot-ack', seq: number, snapshotSeq: number }
   | { type: 'snapshot-rejected', seq: number, snapshotSeq: number, reason?: string, objects?: number, previousObjects?: number }
   | { type: 'relay-data', seq?: number, from: string, to?: string, container: EncodedContainer }
@@ -31,7 +36,7 @@ type RelayMessage =
   | { type: 'snapshot-save-request', roomKey: string, seq: number }
   | { type: 'resync-request', from?: string }
   | { type: 'unavailable', id: string }
-  | { type: 'error', errorType?: string, message: string };
+  | { type: 'error', errorType?: string, message: string, transport?: string };
 
 /**
  * Central-server mode.
@@ -52,6 +57,12 @@ export class WebSocketRelayConnection implements Connection {
   private signalingUrl = defaultSignalingUrl();
   private socket: WebSocket = null;
   private _peerIds: string[] = [];
+  /** How the server registered this socket: 'relay', or 'p2p' for a member that only announces a P2P room. */
+  transport = 'relay';
+  /** Whether the server issues SkyWay tokens, which a new room needs in order to choose P2P. */
+  p2pAvailable = false;
+  /** The listed members of rooms that are carried by P2P. */
+  p2pPeerIds: string[] = [];
   private outboundQueue: Promise<any> = Promise.resolve();
   private inboundQueue: Promise<any> = Promise.resolve();
   private intentionalClose = false;
@@ -64,9 +75,18 @@ export class WebSocketRelayConnection implements Connection {
   private snapshotDirtyAt = 0;
   private forceSnapshotApply = false;
   private bundleDownloaded = false;
+  private roomEpoch = 0;
+  private snapshotApplying = false;
+  private heartbeatTimer: any = null;
+  private lastPongAt = 0;
+  private pongSeen = false;
+  private callbackOnline = () => this.reconnectNow();
   open(peerId: string)
   open(userId: string, roomId: string, roomName: string, password: string)
   open(...args: any[]) {
+    this.roomEpoch++;
+    this.bundleDownloaded = false;
+    this.snapshotApplying = false;
     this.intentionalClose = false;
     this.clearReconnectTimer();
     if (args.length === 0) {
@@ -77,13 +97,18 @@ export class WebSocketRelayConnection implements Connection {
       this.peerContext = PeerContext.create(args[0], args[1], args[2], args[3]);
     }
     this.lastSeq = 0;
+    window.addEventListener('online', this.callbackOnline, false);
     this.openSocket();
   }
 
   close() {
+    this.roomEpoch++;
+    this.snapshotApplying = false;
     this.intentionalClose = true;
     this.clearReconnectTimer();
     this.stopSnapshotTimer();
+    this.stopHeartbeat();
+    window.removeEventListener('online', this.callbackOnline, false);
     if (this.socket) this.socket.close();
     this.socket = null;
     this.setPeers([]);
@@ -167,7 +192,11 @@ export class WebSocketRelayConnection implements Connection {
     });
     socket.addEventListener('message', event => {
       if (this.socket !== socket) return;
-      this.onMessage(JSON.parse(event.data));
+      try {
+        this.onMessage(JSON.parse(event.data));
+      } catch (error) {
+        Logger.warn('Relay message could not be processed', error);
+      }
     });
     socket.addEventListener('close', () => {
       if (this.socket !== socket) return;
@@ -199,17 +228,23 @@ export class WebSocketRelayConnection implements Connection {
   }
 
   private onMessage(message: RelayMessage) {
+    // Anything the server still sends proves the socket is alive; a pong also proves it answers pings.
+    this.lastPongAt = Date.now();
+    if (message.type === 'pong') this.pongSeen = true;
     switch (message.type) {
       case 'registered':
+        this.transport = message.transport || 'relay';
+        this.p2pAvailable = !!message.p2pAvailable;
         this.peerContext.isOpen = true;
         if (this.callback.onOpen) this.callback.onOpen(this.peerId);
         this.startSnapshotTimer();
+        this.startHeartbeat();
         break;
       case 'ack':
-        this.lastSeq = Math.max(this.lastSeq, message.seq || 0);
+        this.advanceCursorAfterInbound(message.seq || 0);
         break;
       case 'snapshot-ack':
-        this.lastSeq = Math.max(this.lastSeq, message.snapshotSeq || message.seq || 0);
+        this.advanceCursorAfterInbound(message.snapshotSeq || message.seq || 0);
         break;
       case 'snapshot-rejected':
         Logger.warn(`snapshot rejected: ${message.reason || 'unknown'} objects=${message.objects || 0} previous=${message.previousObjects || 0}`);
@@ -222,10 +257,13 @@ export class WebSocketRelayConnection implements Connection {
         this.scheduleSnapshotSave(1000);
         break;
       case 'peers':
-        this.setPeers(message.peers.filter(peerId => peerId !== this.peerId && this.isSameRoomPeer(peerId)));
+        this.p2pPeerIds = Object.keys(message.transports || {});
+        this.setPeers(message.peers.filter(peerId => peerId !== this.peerId && this.isSameRoomPeer(peerId) && !message.transports?.[peerId]));
         break;
       case 'room-snapshot':
-        this.receiveSnapshot(message.events || [], message.seq || 0, message.snapshot, message.snapshotSeq || 0, message.roomKey);
+        // A cursor inside the trimmed log: the snapshot is older than this client's cursor but is its base again.
+        if (message.resync === 'gap') this.forceSnapshotApply = true;
+        this.receiveSnapshot(message.events || [], message.seq || 0, message.snapshot, message.snapshotSeq || 0, message.roomKey, message.deleted || []);
         break;
       case 'relay-data':
         this.receiveRelayData(message.from, message.container, message.seq || 0);
@@ -242,98 +280,177 @@ export class WebSocketRelayConnection implements Connection {
       case 'unavailable':
         this.emitError(message.id, 'peer-unavailable', `Peer ${message.id} は利用できません。`, message);
         break;
+      case 'pong': break;
       case 'error':
         this.emitError(this.peerId, message.errorType || 'server-error', message.message, message);
         break;
     }
   }
 
-  private async receiveSnapshot(events: StoredRelayEvent[], serverSeq: number, snapshot?: RoomSnapshot, snapshotSeq: number = 0, roomKey?: string) {
-    this.inboundQueue = this.inboundQueue.then(async () => {
-      // 入室時の初回スナップショットの場合、メディアを一括ダウンロードしてから適用する
-      Logger.info(`[bundle-check] snapshot=${!!snapshot} hasData=${!!(snapshot && snapshot.data)} hasObjects=${!!(snapshot && snapshot.data && snapshot.data.objects)} roomKey=${roomKey} bundleDownloaded=${this.bundleDownloaded}`);
-      if (snapshot && snapshot.data && snapshot.data.objects && roomKey && !this.bundleDownloaded) {
-        this.bundleDownloaded = true;
-        await this.downloadMediaBundle(snapshot.data.objects, roomKey);
+  private async receiveSnapshot(events: StoredRelayEvent[], serverSeq: number, snapshot?: RoomSnapshot, snapshotSeq: number = 0, roomKey?: string, deleted: string[] = []) {
+    const epoch = this.roomEpoch;
+    const current = () => this.roomEpoch === epoch;
+    const syncId = `relay-state-${epoch}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    this.inboundQueue = this.inboundQueue.catch(error => Logger.warn('Previous relay receive failed', error)).then(async () => {
+      if (!current()) return;
+      this.snapshotApplying = true;
+      try {
+        if (snapshot?.data?.objects && (snapshotSeq > this.lastSeq || this.forceSnapshotApply)) {
+          await this.applyObjectSnapshot(snapshot.data.objects, snapshot.from || 'server-snapshot', syncId, current);
+          if (!current()) return;
+          // Forced restores must replay from the included snapshot, not our old cursor.
+          // Otherwise imported tabs/messages removed by reconciliation never return.
+          this.lastSeq = this.forceSnapshotApply ? snapshotSeq || 0 : Math.max(this.lastSeq, snapshotSeq || 0);
+          this.forceSnapshotApply = false;
+        }
+        let replayedEvents = 0;
+        for (const event of events) {
+          if (!current()) return;
+          if (event.seq <= this.lastSeq) continue;
+          await this.decodeAndDispatch(event.from, event.container, event.seq, current);
+          replayedEvents++;
+        }
+        if (!current()) return;
+        this.forgetDeleted(deleted);
+        this.lastSeq = Math.max(this.lastSeq, serverSeq || 0);
+        if (replayedEvents > 0) this.scheduleSnapshotSave(5000);
+        // Metadata and ordered replay are the interaction barrier; media is not.
+        EventSystem.trigger('INITIAL_ROOM_SYNC_PROGRESS', { syncId, phase: 'complete', total: 0, done: 0 });
+        if (snapshot?.data?.objects && roomKey && !this.bundleDownloaded) {
+          this.bundleDownloaded = true;
+          void this.downloadMediaBundle(snapshot.data.objects, roomKey, current);
+        }
+      } catch (error) {
+        EventSystem.trigger('INITIAL_ROOM_SYNC_PROGRESS', { syncId, phase: 'failed', total: 0, done: 0 });
+        this.emitError(this.peerId, 'snapshot-apply-failed', '部屋データを反映できませんでした。再同期してください。', error);
+      } finally {
+        if (current()) this.snapshotApplying = false;
+        else EventSystem.trigger('INITIAL_ROOM_SYNC_PROGRESS', { syncId, phase: 'fallback', total: 0, done: 0 });
       }
-      if (snapshot && snapshot.data && snapshot.data.objects && (snapshotSeq > this.lastSeq || this.forceSnapshotApply)) {
-        await this.applyObjectSnapshot(snapshot.data.objects, snapshot.from || 'server-snapshot');
-        // A forced restore must replay the journal following the included snapshot.
-        this.lastSeq = this.forceSnapshotApply ? snapshotSeq || 0 : Math.max(this.lastSeq, snapshotSeq || 0);
-        this.forceSnapshotApply = false;
-      }
-      let replayedEvents = 0;
-      for (let event of events) {
-        if (event.seq <= this.lastSeq) continue;
-        await this.decodeAndDispatch(event.from, event.container, event.seq);
-        replayedEvents++;
-      }
-      this.lastSeq = Math.max(this.lastSeq, serverSeq || 0);
-      if (replayedEvents > 0) this.scheduleSnapshotSave(5000);
     });
   }
 
-  private createObjectSnapshot(): { objects: ObjectContext[] } {
-    return { objects: ObjectStore.instance.getObjects().map(object => object.toContext()) };
+  // Objects deleted while this client was away, after the deletion had left the event log. The snapshot
+  // only adds and updates, so a client that resumes on the relay alone (no other member hands over a room
+  // bundle) would keep them for good. Nothing is sent: the deletion is already on record.
+  private forgetDeleted(identifiers: string[]) {
+    if (!Array.isArray(identifiers) || identifiers.length < 1) return;
+    let forgotten = 0;
+    const forget = (object: any) => {
+      if (!object) return;
+      for (const child of Array.from(object.children || [])) forget(child);
+      ObjectStore.instance.remove(object);
+      forgotten++;
+    };
+    for (const identifier of identifiers) forget(ObjectStore.instance.get(identifier));
+    if (0 < forgotten) Logger.debug(`[relay] removed ${forgotten} object(s) deleted while this client was away`);
   }
 
-  /**
-   * 入室時にルームの全メディアをZIPで一括ダウンロードする。
-   * /api/media/bundle に識別子リストを指定して取得し、1バッチあたりのZIPサイズを
-   * 小さく保つことで低メモリ端末（iOS Safariなど）でも展開できるようにしている。
-   */
-  private async downloadMediaBundle(objects: ObjectContext[], _roomKey: string): Promise<void> {
+  // The socket can stay "open" while nothing passes any more, after sleep or a change of network. Every
+  // message proves it alive and the server answers pings; silence for two and a half intervals closes the
+  // socket, and the usual reconnect brings the room back. A server that has not answered a single ping (an
+  // older one) is not judged by silence.
+  private startHeartbeat() {
+    this.stopHeartbeat();
+    if (!this.peerContext || !this.peerContext.isRoom) return;
+    this.lastPongAt = Date.now();
+    this.heartbeatTimer = setInterval(() => this.checkHeartbeat(), RELAY_HEARTBEAT_MS);
+  }
+
+  private stopHeartbeat() {
+    if (this.heartbeatTimer != null) clearInterval(this.heartbeatTimer);
+    this.heartbeatTimer = null;
+  }
+
+  private checkHeartbeat() {
+    const socket = this.socket;
+    if (!socket || socket.readyState !== WebSocket.OPEN) return;
+    if (!this.pongSeen || Date.now() - this.lastPongAt <= RELAY_HEARTBEAT_MS * 2.5) {
+      this.sendSignal({ type: 'ping', t: Date.now() });
+      return;
+    }
+    Logger.warn('[relay] no answer from the server for a while; reconnecting');
+    this.socket = null;
+    this.stopHeartbeat();
+    try { socket.close(); } catch (error) { /* already dead */ }
+    if (this.peerContext && this.peerContext.isOpen) {
+      this.peerContext.isOpen = false;
+      if (this.callback.onClose) this.callback.onClose(this.peerId);
+    }
+    this.setPeers([]);
+    if (!this.intentionalClose) this.scheduleReconnect();
+  }
+
+  // The network is back and the socket is gone: do not wait for the reconnect timer.
+  private reconnectNow() {
+    if (this.intentionalClose || !this.peerContext || this.peerId === '???') return;
+    if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) return;
+    this.clearReconnectTimer();
+    this.openSocket();
+  }
+
+  private createObjectSnapshot(): { objects: ObjectContext[] } {
+    // Personal notices ('your connection with X was confirmed', 'X logged out') are made by each client
+    // for itself and shown to it alone. They belong to no room state: leaving them out keeps them from
+    // reaching other members and whoever joins next through a snapshot.
+    return {
+      objects: ObjectStore.instance.getObjects()
+        .filter(object => !(object as any).tags?.includes?.('to-pl-system-message'))
+        .map(object => object.toContext())
+    };
+  }
+
+  /** Background, cache-first individual media reads share the normal bounded fetch queue. */
+  private async downloadMediaBundle(objects: ObjectContext[], _roomKey: string, current: () => boolean): Promise<void> {
     const operationId = `relay-room-media-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-    let total = 0;
+    let total = 0, done = 0;
+    const progress = (status: string) => EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', {
+      operationId, status, total, done, background: true,
+    });
     try {
-      const { ServerMediaStorage } = await import('../../file-storage/server-media-storage');
-      const { MediaLoadPriority } = await import('../../file-storage/media-load-priority');
+      const [{ MediaCache }, { MediaLoadPriority }, { ImageStorage }, { AudioStorage }, { ImageState }] = await Promise.all([
+        import('../../file-storage/media-cache'), import('../../file-storage/media-load-priority'),
+        import('../../file-storage/image-storage'), import('../../file-storage/audio-storage'), import('../../file-storage/image-file'),
+      ]);
+      if (!current()) return;
       const { images, audios } = this.collectRoomMediaIdentifiers(objects);
       const unheld = await this.filterUnheldMediaIdentifiers(images, audios);
-      total = unheld.images.length + unheld.audios.length;
-      if (total < 1) {
-        Logger.info('[bundle] all media already held locally');
-        return;
-      }
-
-      // 優先度順に並べてからバッチ化する（卓上アセットが最初のバッチに来る）
-      const orderedImages = MediaLoadPriority.sortByScore(unheld.images.map(identifier => ({ identifier })), MediaLoadPriority.getImageScoreMap()).map(item => item.identifier);
-      const orderedAudios = MediaLoadPriority.sortByScore(unheld.audios.map(identifier => ({ identifier })), MediaLoadPriority.getAudioScoreMap()).map(item => item.identifier);
-
-      // 1バッチのZIPを数MB〜十数MB程度に保つ。大きいZIPの一括展開は
-      // iOS Safariのタブメモリ上限を超えてタブごと落ちる（170MBで再現）。
-      const BATCH_ITEMS = 24;
-      const batches: Array<{ images: string[]; audios: string[] }> = [];
-      for (let i = 0; i < orderedImages.length; i += BATCH_ITEMS) batches.push({ images: orderedImages.slice(i, i + BATCH_ITEMS), audios: [] });
-      for (let i = 0; i < orderedAudios.length; i += BATCH_ITEMS) batches.push({ images: [], audios: orderedAudios.slice(i, i + BATCH_ITEMS) });
-
-      Logger.info(`[bundle] batched download: ${orderedImages.length} images, ${orderedAudios.length} audios, ${batches.length} batches`);
-      EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'downloading', total, done: 0 });
-
-      let done = 0;
-      let loaded = 0;
-      for (const batch of batches) {
-        const batchTotal = batch.images.length + batch.audios.length;
-        try {
-          const result = await ServerMediaStorage.fetchBundle(batch.images, batch.audios, progress => {
-            EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'extracting', total, done: done + progress.done });
-          });
-          loaded += result.loaded;
-        } catch (error) {
-          Logger.warn('[bundle] batch failed', error);
+      if (!current()) return;
+      const imageScores = MediaLoadPriority.getImageScoreMap(), audioScores = MediaLoadPriority.getAudioScoreMap();
+      const work = [
+        ...unheld.images.map(identifier => ({ kind: 'image', identifier, score: imageScores.get(identifier) || 0 })),
+        ...unheld.audios.map(identifier => ({ kind: 'audio', identifier, score: audioScores.get(identifier) || 0 })),
+      ].sort((a, b) => b.score - a.score);
+      total = work.length;
+      if (!total) return;
+      progress('downloading');
+      let next = 0;
+      const consume = async () => {
+        while (current() && next < work.length) {
+          const item = work[next++];
+          const priority = MediaLoadPriority.fetchPriority(item.score, 80);
+          try {
+            if (item.kind === 'image') {
+              const held = ImageStorage.instance.peek(item.identifier);
+              if (!held?.blob || held.state < ImageState.COMPLETE) {
+                const result = await MediaCache.fetchImageWithCache(item.identifier, priority);
+                if (current() && result.status === 'ok') ImageStorage.instance.add(result.file);
+              }
+            } else {
+              if (!AudioStorage.instance.peek(item.identifier)?.blob) {
+                const result = await MediaCache.fetchAudioWithCache(item.identifier, priority);
+                if (current() && result.status === 'ok') AudioStorage.instance.add(result.file);
+              }
+            }
+          } catch (error) { Logger.warn('Background media unavailable', item.identifier, error); }
+          done++;
+          if (current()) progress('downloading');
         }
-        done += batchTotal;
-        EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'extracting', total, done });
-        // バッチ間でUIに譲る（メモリ解放とペイントの機会）
-        await new Promise<void>(resolve => setTimeout(resolve, 50));
-      }
-
-      EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'done', total, done });
-      Logger.info(`[bundle] batched download complete: ${loaded}/${total}`);
-    } catch (e) {
-      Logger.warn('[bundle] download failed', e);
-      EventSystem.trigger('MEDIA_BUNDLE_PROGRESS', { operationId, status: 'done', total, done: 0 });
-    }
+      };
+      // Two background consumers leave room for directly requested foreground assets.
+      await Promise.all([consume(), consume()]);
+    } catch (error) { Logger.warn('Background room media unavailable', error); }
+    finally { progress('done'); }
   }
 
   /** 部屋オブジェクトから参照されているメディア（SHA-256識別子）を収集する */
@@ -350,8 +467,17 @@ export class WebSocketRelayConnection implements Connection {
       if (typeof value !== 'object') return;
       const imageId = (value as any).imageIdentifier;
       if (typeof imageId === 'string' && hashPattern.test(imageId)) images.add(imageId);
+      const backgroundId = (value as any).backgroundImageIdentifier;
+      if (typeof backgroundId === 'string' && hashPattern.test(backgroundId)) images.add(backgroundId);
       const audioId = (value as any).audioIdentifier;
       if (typeof audioId === 'string' && hashPattern.test(audioId)) audios.add(audioId);
+      // Character portraits are child DataElements, not a field on the character itself.
+      const type = (value as any).type || (value as any).attributes?.type;
+      const resource = (value as any).value;
+      if (typeof resource === 'string' && hashPattern.test(resource)) {
+        if (type === 'image') images.add(resource);
+        if (type === 'audio') audios.add(resource);
+      }
       for (const key in value) {
         try {
           visit((value as any)[key], depth + 1);
@@ -380,8 +506,7 @@ export class WebSocketRelayConnection implements Connection {
     return { images: images.filter(identifier => !heldImages.has(identifier)), audios: audios.filter(identifier => !heldAudios.has(identifier)) };
   }
 
-  private async applyObjectSnapshot(objects: ObjectContext[], sendFrom: string) {
-    const syncId = `relay-snapshot-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  private async applyObjectSnapshot(objects: ObjectContext[], sendFrom: string, syncId: string, current: () => boolean) {
     // Prioritize chat logs and core table objects so players see conversation
     // history and the game board first when joining a large room.
     const priorityOrder: Record<string, number> = {
@@ -409,6 +534,7 @@ export class WebSocketRelayConnection implements Connection {
     });
     try {
       for (let context of sorted) {
+        if (!current()) return;
         processed++;
         if (context && context.identifier && !ObjectStore.instance.isDeleted(context.identifier)) {
           EventSystem.trigger({ eventName: 'UPDATE_GAME_OBJECT', data: context, sendFrom });
@@ -426,12 +552,6 @@ export class WebSocketRelayConnection implements Connection {
         }
       }
       reconcileChatTabsFromSnapshot(sorted);
-      EventSystem.trigger('INITIAL_ROOM_SYNC_PROGRESS', {
-        syncId,
-        phase: 'complete',
-        total: sorted.length,
-        done: processed
-      });
     } catch (error) {
       EventSystem.trigger('INITIAL_ROOM_SYNC_PROGRESS', {
         syncId,
@@ -472,13 +592,19 @@ export class WebSocketRelayConnection implements Connection {
 
   /** 手動スナップショット保存（UIボタンから呼び出し可能） */
   manualSaveSnapshot(): boolean {
-    if (!this.socket || this.socket.readyState !== WebSocket.OPEN || !this.peerContext.isRoom) return false;
+    if (this.snapshotApplying || !this.socket || this.socket.readyState !== WebSocket.OPEN || !this.peerContext.isRoom) return false;
     this.saveSnapshot();
     return true;
   }
 
   private saveSnapshot() {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN || !this.peerContext.isRoom) return;
+    if (this.snapshotApplying) {
+      this.snapshotSaveTimer = null;
+      this.snapshotSaveDueAt = 0;
+      this.scheduleSnapshotSave(1000);
+      return;
+    }
     this.snapshotSaveTimer = null;
     this.snapshotSaveDueAt = 0;
     this.snapshotDirtyAt = 0;
@@ -513,20 +639,35 @@ export class WebSocketRelayConnection implements Connection {
 
   private receiveRelayData(from: string, encoded: EncodedContainer, seq: number) {
     if (seq && seq <= this.lastSeq) return;
-    this.inboundQueue = this.inboundQueue.then(() => this.decodeAndDispatch(from, encoded, seq));
+    const epoch = this.roomEpoch;
+    const current = () => this.roomEpoch === epoch;
+    this.inboundQueue = this.inboundQueue.then(() => {
+      if (current() && (!seq || seq > this.lastSeq)) return this.decodeAndDispatch(from, encoded, seq, current);
+    }).catch(error => this.emitError(this.peerId, 'relay-data-invalid', '受信データを処理できませんでした。', error));
   }
 
-  private decodeAndDispatch(from: string, encoded: EncodedContainer, seq: number): Promise<void> {
-    return new Promise<void>((resolve) => {
+  private advanceCursorAfterInbound(seq: number) {
+    const epoch = this.roomEpoch;
+    this.inboundQueue = this.inboundQueue.then(() => {
+      if (this.roomEpoch === epoch) this.lastSeq = Math.max(this.lastSeq, seq);
+    }).catch(error => Logger.warn('Relay acknowledgement failed', error));
+  }
+
+  private decodeAndDispatch(from: string, encoded: EncodedContainer, seq: number, current: () => boolean = () => true): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
       let bytes = base64ToBytes(encoded.data);
       let byteLength = bytes.byteLength;
       this.bandwidthUsage += byteLength;
       setZeroTimeout(async () => {
-        let data = encoded.isCompressed ? await decompressAsync(bytes) : bytes;
-        if (this.callback.onData) this.callback.onData(from, MessagePack.decode(data));
-        if (seq) this.lastSeq = Math.max(this.lastSeq, seq);
-        this.bandwidthUsage -= byteLength;
-        resolve();
+        try {
+          const data = encoded.isCompressed ? await decompressAsync(bytes) : bytes;
+          if (current()) {
+            if (this.callback.onData) this.callback.onData(from, MessagePack.decode(data));
+            if (seq) this.lastSeq = Math.max(this.lastSeq, seq);
+          }
+          resolve();
+        } catch (error) { reject(error); }
+        finally { this.bandwidthUsage -= byteLength; }
       });
     });
   }
@@ -558,11 +699,6 @@ export class WebSocketRelayConnection implements Connection {
   private emitError(peerId: string, errorType: string, errorMessage: string, errorObject: any) {
     if (this.callback.onError) this.callback.onError(peerId, errorType, errorMessage, errorObject);
   }
-}
-
-function defaultSignalingUrl(): string {
-  let protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${protocol}//${location.host}/signaling`;
 }
 
 function bytesToBase64(bytes: Uint8Array): string {

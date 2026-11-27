@@ -4,6 +4,7 @@ import { BlobIntegrity } from './blob-integrity';
 import { ImageFile } from './image-file';
 import { Logger } from '../system/util/logger';
 import { MediaLoadPriority, MediaPriority } from './media-load-priority';
+import { AsyncWorkQueue } from '../system/util/async-work-queue';
 
 /**
  * サーバー fetch の結果を「本当に無い」「サーバー障害」「取得成功」で区別する。
@@ -46,6 +47,9 @@ export class ServerMediaStorage {
   private static knownOnServer: Set<string> = new Set();
   /** in-flight fetch を Promise 共有で dedup する(同ID並行fetchの2個目が即失敗扱いになるバグ防止) */
   private static fetching: Map<string, Promise<RawFetchResult>> = new Map();
+  private static readonly downloadQueue = new AsyncWorkQueue(4);
+  private static imageFetching = new Map<string, Promise<FetchResult<ImageFile>>>();
+  private static audioFetching = new Map<string, Promise<FetchResult<AudioFile>>>();
   private static missingNotified: Set<string> = new Set();
 
   /** サーバー生死キャッシュ(/health)。連続fetchのたびに叩かないため */
@@ -106,23 +110,31 @@ export class ServerMediaStorage {
   }
 
   /** 画像を取得。戻り値で「成功/不在/サーバー障害」を区別する。in-flight なら同じ Promise を待つ。 */
-  static async fetchImage(identifier: string, priority: MediaPriority = 'auto'): Promise<FetchResult<ImageFile>> {
-    const raw = await this.fetchBlob('image', identifier, priority);
-    return this.toFetchResult<ImageFile>(raw, async blob => this.createServerImage(
-      identifier,
-      blob,
-      raw.status === 'ok' ? raw.name : undefined,
-    ));
+  static fetchImage(identifier: string, priority: MediaPriority = 'auto'): Promise<FetchResult<ImageFile>> {
+    const existing = this.imageFetching.get(identifier);
+    if (existing) return existing;
+    const promise = (async () => {
+      const raw = await this.fetchBlob('image', identifier, priority);
+      return this.toFetchResult<ImageFile>(raw, async blob => this.createServerImage(
+        identifier, blob, raw.status === 'ok' ? raw.name : undefined,
+      ));
+    })().finally(() => this.imageFetching.delete(identifier));
+    this.imageFetching.set(identifier, promise);
+    return promise;
   }
 
   /** 音声を取得。戻り値で「成功/不在/サーバー障害」を区別する。in-flight なら同じ Promise を待つ。 */
-  static async fetchAudio(identifier: string, priority: MediaPriority = 'auto'): Promise<FetchResult<AudioFile>> {
-    const raw = await this.fetchBlob('audio', identifier, priority);
-    return this.toFetchResult<AudioFile>(raw, async blob => this.createServerAudio(
-      identifier,
-      blob,
-      raw.status === 'ok' ? raw.name : undefined,
-    ));
+  static fetchAudio(identifier: string, priority: MediaPriority = 'auto'): Promise<FetchResult<AudioFile>> {
+    const existing = this.audioFetching.get(identifier);
+    if (existing) return existing;
+    const promise = (async () => {
+      const raw = await this.fetchBlob('audio', identifier, priority);
+      return this.toFetchResult<AudioFile>(raw, async blob => this.createServerAudio(
+        identifier, blob, raw.status === 'ok' ? raw.name : undefined,
+      ));
+    })().finally(() => this.audioFetching.delete(identifier));
+    this.audioFetching.set(identifier, promise);
+    return promise;
   }
 
   /**
@@ -422,7 +434,7 @@ export class ServerMediaStorage {
     const inflight = this.fetching.get(key);
     if (inflight) return inflight;
 
-    const promise = (async(): Promise<RawFetchResult> => {
+    const promise = this.downloadQueue.run(async (): Promise<RawFetchResult> => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.FETCH_TIMEOUT_MS);
       try {
@@ -467,7 +479,7 @@ export class ServerMediaStorage {
         clearTimeout(timeoutId);
         this.fetching.delete(key);
       }
-    })();
+    }, priority === 'high' ? 1 : priority === 'low' ? -1 : 0);
 
     this.fetching.set(key, promise);
     return promise;

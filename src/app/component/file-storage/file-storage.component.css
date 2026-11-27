@@ -114,3 +114,17 @@
 .is-caret {
   caret-color: rgba(0,0,0,0.95);
 }
+
+/* 3Dモデル管理タブ（table-3d-spike試験機能） */
+.spike3d-tabs { display: flex; gap: 4px; padding: 6px 8px; border-bottom: 1px solid #666; }
+.spike3d-tab { flex: 1; padding: 4px 8px; background: #2b2f36; color: #ccc; border: 1px solid #555; border-radius: 4px 4px 0 0; cursor: pointer; }
+.spike3d-tab.is-active { background: #3a4150; color: #fff; font-weight: bold; }
+.spike3d-drop { margin: 8px; padding: 12px; text-align: center; border: 2px dashed #888; border-radius: 8px; cursor: pointer; }
+.spike3d-hint { padding: 4px 10px; }
+.spike3d-model-item { display: flex; align-items: center; gap: 6px; margin: 4px 8px; padding: 6px 8px; background: #2b2f36; border: 1px solid #555; border-radius: 6px; cursor: pointer; }
+.spike3d-model-item.is-selected { border-color: #7ec8ff; background: #24384a; box-shadow: 0 0 4px rgba(126, 200, 255, 0.4); }
+.spike3d-model-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spike3d-model-delete { background: transparent; color: #f66; border: none; font-size: 16px; cursor: pointer; padding: 0 4px; }
+
+/* 3Dモデルサムネイル */
+.spike3d-thumb { width: 44px; height: 44px; object-fit: contain; flex: none; border-radius: 4px; background: #e8eaed; border: 1px solid #ccc; }

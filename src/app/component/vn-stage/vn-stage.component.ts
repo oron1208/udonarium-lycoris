@@ -1,6 +1,6 @@
 import { PaletteBrowserComponent } from 'component/palette-browser/palette-browser.component';
 import { isPaletteCommand } from '@udonarium/palette-document';
-import { Component, ElementRef, HostBinding, NgZone, OnDestroy, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ElementRef, HostBinding, NgZone, OnDestroy, OnInit, ViewChild, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { Logger } from '../../class/core/system/util/logger';
 
 import { ChatMessage, ChatMessageTargetContext } from '@udonarium/chat-message';
@@ -162,7 +162,14 @@ export class VnStageComponent implements OnInit, OnDestroy {
   private resizeStartMouseY = 0;
 
   private loadingImages: Set<string> = new Set();
-  private clockTimer: NodeJS.Timer = null;
+  private clockTimer: ReturnType<typeof setTimeout> = null;
+  private readonly onClockVisibilityChange = () => {
+    if (document.hidden) for (const actor of this.actors) {
+      if (actor.typewriterTimer) { clearTimeout(actor.typewriterTimer); clearInterval(actor.typewriterTimer); actor.typewriterTimer = null; }
+      actor.displayedText = actor.text;
+    }
+    this.refreshSpeakingClock();
+  };
   private enterCounter = 0;
   private diceBuffer: string = '';
   private diceCounters: Map<string, number> = new Map();
@@ -180,10 +187,12 @@ export class VnStageComponent implements OnInit, OnDestroy {
     private gmModeService: GmModeService,
     private pointerDeviceService: PointerDeviceService,
     private tabletopService: TabletopService,
-    private popupBridge: PopupBridgeService
+    private popupBridge: PopupBridgeService,
+    private changeDetector: ChangeDetectorRef
   ) { }
 
   ngOnInit() {
+    document.addEventListener('visibilitychange', this.onClockVisibilityChange);
     this.selectedCharacterId = this.loadSelectedCharacterId();
     this.ensureSelectedCharacter();
     // initialize imageId for selected character
@@ -229,9 +238,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
 
     this.syncGraceTimer = setTimeout(() => {
       this.registerEventHandlers();
-      this.clockTimer = setInterval(() => {
-        this.ngZone.run(() => { this.now = Date.now(); });
-      }, 100);
+      this.refreshSpeakingClock();
     }, 1000);
   }
 
@@ -249,7 +256,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
       })
       .on('VN_STAGE_CLEAR', event => {
         if (event.isSendFromSelf) return;
-        this.ngZone.run(() => { this.actors = []; });
+        this.ngZone.run(() => this.clearActors());
       })
       .on('VN_STAGE_FULL', event => {
         if (event.isSendFromSelf) return;
@@ -417,7 +424,8 @@ export class VnStageComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     EventSystem.unregister(this);
     if (this.syncGraceTimer) clearTimeout(this.syncGraceTimer);
-    if (this.clockTimer) clearInterval(this.clockTimer);
+    document.removeEventListener('visibilitychange', this.onClockVisibilityChange);
+    if (this.clockTimer) clearTimeout(this.clockTimer);
     if (this.chatLogFadeTimer) clearTimeout(this.chatLogFadeTimer);
     if (this.paletteFadeTimer) clearTimeout(this.paletteFadeTimer);
     if (this.indexFadeTimer) clearTimeout(this.indexFadeTimer);
@@ -425,6 +433,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
     this.releasePopupServe();
     for (const a of this.actors) {
       if (a.typewriterTimer) { clearTimeout(a.typewriterTimer); clearInterval(a.typewriterTimer); }
+      if (a.portraitFadeTimer) clearTimeout(a.portraitFadeTimer);
     }
   }
 
@@ -1418,6 +1427,22 @@ export class VnStageComponent implements OnInit, OnDestroy {
     return index <= (n - 1) / 2 ? 'right' : 'left';
   }
 
+  private refreshSpeakingClock() {
+    if (this.clockTimer) clearTimeout(this.clockTimer);
+    this.clockTimer = null;
+    this.now = Date.now();
+    this.changeDetector.markForCheck();
+    if (document.hidden) return;
+    let next = Infinity;
+    for (const actor of this.actors) {
+      if (actor.speakingUntil > this.now) next = Math.min(next, actor.speakingUntil);
+      if (actor.text && actor.bubbleUntil > this.now) next = Math.min(next, actor.bubbleUntil);
+    }
+    if (Number.isFinite(next)) this.ngZone.runOutsideAngular(() => {
+      this.clockTimer = setTimeout(() => this.ngZone.run(() => this.refreshSpeakingClock()), next - this.now + 1);
+    });
+  }
+
   isSpeaking(actor: VnActor): boolean { return actor && this.now < actor.speakingUntil; }
   showBubble(actor: VnActor): boolean { return actor && actor.text && this.now < actor.bubbleUntil; }
 
@@ -1432,6 +1457,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
       clearTimeout(actor.typewriterTimer);
       clearInterval(actor.typewriterTimer);
     }
+    if (document.hidden) { actor.displayedText = text; actor.typewriterTimer = null; return; }
     // Show bubble first with empty text, then start typewriter after a short delay
     actor.displayedText = '';
     actor.typewriterIndex = 0;
@@ -1691,7 +1717,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
       actor.speakingUntil = Date.now() + SPEAKING_MS;
       actor.bubbleUntil = Date.now() + BUBBLE_MS;
       actor.bubbleKey++;
-      this.now = Date.now();
+      this.refreshSpeakingClock();
       this.startActorTypewriter(actor, evaluatedText);
     }
 
@@ -1784,7 +1810,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
   }
 
   clearStage() {
-    this.actors = [];
+    this.clearActors();
     EventSystem.call('VN_STAGE_CLEAR', {});
   }
 
@@ -2156,7 +2182,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
       actor.speakingUntil = Date.now() + SPEAKING_MS;
       actor.bubbleUntil = Date.now() + BUBBLE_MS;
       actor.bubbleKey++;
-      this.now = Date.now();
+      this.refreshSpeakingClock();
       this.startActorTypewriter(actor, evaluated);
     }
 
@@ -2246,7 +2272,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
     actor.speakingUntil = Date.now() + SPEAKING_MS;
     actor.bubbleUntil = Date.now() + BUBBLE_MS;
     actor.bubbleKey++;
-    this.now = Date.now(); // immediate update to prevent race
+    this.refreshSpeakingClock(); // immediate update to prevent race
     this.startActorTypewriter(actor, actor.text);
     if (imageIdentifier) this.setActorImage(actor, imageIdentifier);
     actor.tachieIndex = tachieIndex;
@@ -2295,6 +2321,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
     if (isNew) actor.enterKey = ++this.enterCounter;
 
     if (actor.imageIdentifier) this.ensureImageLoaded(actor.imageIdentifier);
+    this.refreshSpeakingClock();
 
     // Don't reorder — keep manual order from drag-and-drop
     if (isNew) {
@@ -2305,7 +2332,18 @@ export class VnStageComponent implements OnInit, OnDestroy {
   private removeActorInternal(characterId: string) {
     const actor = this.findActor(characterId);
     if (actor?.portraitFadeTimer) clearTimeout(actor.portraitFadeTimer);
+    if (actor?.typewriterTimer) { clearTimeout(actor.typewriterTimer); clearInterval(actor.typewriterTimer); }
     this.actors = this.actors.filter(a => a.characterId !== characterId);
+    this.refreshSpeakingClock();
+  }
+
+  private clearActors() {
+    for (const actor of this.actors) {
+      if (actor.typewriterTimer) { clearTimeout(actor.typewriterTimer); clearInterval(actor.typewriterTimer); }
+      if (actor.portraitFadeTimer) clearTimeout(actor.portraitFadeTimer);
+    }
+    this.actors = [];
+    this.refreshSpeakingClock();
   }
 
   private setActorImage(actor: VnActor, imageIdentifier: string, immediate: boolean = false) {
@@ -2396,7 +2434,7 @@ export class VnStageComponent implements OnInit, OnDestroy {
       .then(image => {
         if (image) {
           ImageStorage.instance.add(image);
-          this.ngZone.run(() => { this.now = Date.now(); });
+          this.ngZone.run(() => { this.refreshSpeakingClock(); });
         }
       })
       .catch(err => Logger.warn('VN image fetch fail', identifier, err))

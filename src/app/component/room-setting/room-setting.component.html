@@ -27,6 +27,14 @@
           <label class="force-flat-option"><input type="checkbox" name="forceFlatView" [(ngModel)]="forceFlatView">入室時から強制的に平面（参加者の視点も平面に固定します）</label>
         }
       </div>
+      @if (canChooseTransport) {
+        <div class="transport-select">
+          <span class="room-mode-title">通信方式</span>
+          <label><input type="radio" name="roomTransport" value="relay" [(ngModel)]="transport">サーバー通信（推奨）</label>
+          <label><input type="radio" name="roomTransport" value="p2p" [(ngModel)]="transport">P2P（SkyWay）</label>
+          <div class="room-mode-note">P2Pは、P2Pでしか入れない参加者（Unity版など）と遊ぶときに選びます。</div>
+        </div>
+      }
       <hr/>
       @if (roomNameValidation.errors && (roomNameValidation.dirty || roomNameValidation.touched)) {
         <div>

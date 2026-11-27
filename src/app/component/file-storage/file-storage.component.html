@@ -1,50 +1,83 @@
-<form>
-  <div class="image-chg">
-    @for (tag of tagList; track tag) {
-      <label >
-        <input name="image-chg"  type="radio" value="{{tag}}"  [(ngModel)]="selectTag" (change) ="resetBtn()" >
-        @if (tag.length == 0) {
-          <div >未設定</div>
+@if (model3dExperimentEnabled) {
+<div class="spike3d-tabs">
+  <button type="button" class="spike3d-tab" [class.is-active]="activeTab !== '3d'" (click)="activeTab = 'image'">画像</button>
+  <button type="button" class="spike3d-tab" [class.is-active]="activeTab === '3d'" (click)="switch3d()">3D</button>
+</div>
+}
+@if (model3dExperimentEnabled && activeTab === '3d') {
+  <div class="spike3d-drop drop-zone" (click)="spikeFileInput.click()">
+    <div>
+      <i class="material-icons large-font">view_in_ar</i>
+    </div>
+    <div>ここに3Dモデルを取り込む</div>
+    <div class="small-font">クリックして選択（.glb .gltf .vrm .fbx・150MBまで）</div>
+    <input #spikeFileInput type="file" style="display:none" multiple accept=".glb,.gltf,.vrm,.fbx" (change)="onSpikeFileSelect($event)">
+  </div>
+  <div class="small-font spike3d-hint">モデルを選んでから割り当てたいコマを卓上でクリックすると、そのコマが3Dになります</div>
+  <div id="spike3d-model-list">
+    @for (m of spikeModelList; track m.id) {
+      <div class="spike3d-model-item" [class.is-selected]="spikeSelected === m.id" (click)="onSpikeModelClick(m.id)">
+        @if (m.thumb.length > 0) {
+          <img class="spike3d-thumb" [src]="m.thumb | safe: 'resourceUrl'" [alt]="m.name">
+        } @else {
+          <i class="material-icons">view_in_ar</i>
         }
-        @if (tag.length > 0) {
-          <div >{{tag}}</div>
-        }
-      </label>
+        <span class="spike3d-model-name">{{m.name}}（{{spikeSizeLabel(m.size)}}）</span>
+        <button type="button" class="spike3d-model-delete" (click)="onSpikeModelDelete($event, m.id)">×</button>
+      </div>
+    } @empty {
+      <div class="small-font spike3d-hint">3Dモデルはまだ登録されていません</div>
     }
   </div>
-</form>
-<label>
-  <div class="drop-zone">
-    <div>
-      <i class="material-icons large-font">add_photo_alternate</i>
-    </div>
-    <div>ここに画像をドロップ</div>
-    <div class="small-font">またはここをクリックして選択</div>
-    <input type="file" style="display: none;" (change)="handleFileSelect($event)" multiple accept="image/*"/>
-    <div class="small-font">
-      <br>2MiBを超える画像は、原画のまま取り込むか圧縮するか選べます</div>
-    </div>
-  </label>
-  <div class="sticky-top">
-    <div>
-      <button (click)="changeTag()">タグを変更</button>
-      <input class="input is-caret" maxlength="12" (input)="inputNewTag($event.target.value)" placeholder="新タグ名">
-    </div>
-  </div>
-  <div id="file-list">
-    @for (file of images; track file) {
-      <span class="image_">
-        <div class="img-box" style="float:left" (click)="imgBlockClick(file.identifier)">
-          @if (0 < previewUrl(file).length) {
-            <img [src]="previewUrl(file) | safe: 'resourceUrl'" [alt]="file.name" height="120" (click)="onSelectedFile(file)">
+} @else {
+  <form>
+    <div class="image-chg">
+      @for (tag of tagList; track tag) {
+        <label >
+          <input name="image-chg"  type="radio" value="{{tag}}"  [(ngModel)]="selectTag" (change) ="resetBtn()" >
+          @if (tag.length == 0) {
+            <div >未設定</div>
           }
-          @if (previewUrl(file).length <= 0) {
-            <img src="assets/images/loading.gif" alt="{{file.name}}">
+          @if (tag.length > 0) {
+            <div >{{tag}}</div>
           }
-          @if (0 < previewUrl(file).length) {
-            <input class="img-chk" id = {{file.identifier}}_{{initTimestamp}} name="tag_chg_chk" type="checkbox" (change) ="onChange(file.identifier)" >
-          }
-        </div>
-      </span>
-    }
-  </div>
+        </label>
+      }
+    </div>
+  </form>
+  <label>
+    <div class="drop-zone">
+      <div>
+        <i class="material-icons large-font">add_photo_alternate</i>
+      </div>
+      <div>ここに画像をドロップ</div>
+      <div class="small-font">またはここをクリックして選択</div>
+      <input type="file" style="display: none;" (change)="handleFileSelect($event)" multiple accept="image/*"/>
+      <div class="small-font">
+        <br>2MiBを超える画像は、原画のまま取り込むか圧縮するか選べます</div>
+      </div>
+    </label>
+    <div class="sticky-top">
+      <div>
+        <button (click)="changeTag()">タグを変更</button>
+        <input class="input is-caret" maxlength="12" (input)="inputNewTag($event.target.value)" placeholder="新タグ名">
+      </div>
+    </div>
+    <div id="file-list">
+      @for (file of images; track file.identifier) {
+        <span class="image_">
+          <div class="img-box" style="float:left" (click)="imgBlockClick(file.identifier)">
+            @if (0 < previewUrl(file).length) {
+              <img [src]="previewUrl(file) | safe: 'resourceUrl'" [alt]="file.name" height="120" loading="lazy" decoding="async" (click)="onSelectedFile(file)">
+            }
+            @if (previewUrl(file).length <= 0) {
+              <img src="assets/images/loading.gif" alt="{{file.name}}">
+            }
+            @if (0 < previewUrl(file).length) {
+              <input class="img-chk" id = {{file.identifier}}_{{initTimestamp}} name="tag_chg_chk" type="checkbox" (change) ="onChange(file.identifier)" >
+            }
+          </div>
+        </span>
+      }
+    </div>
+}

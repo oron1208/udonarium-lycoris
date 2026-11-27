@@ -3,7 +3,7 @@ import { Logger } from '../../class/core/system/util/logger';
 
 import { PeerContext } from '@udonarium/core/system/network/peer-context';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
-import { EventSystem, Network } from '@udonarium/core/system';
+import { EventSystem, Network, RoomTransport } from '@udonarium/core/system';
 import { GameTable, RoomMode } from '@udonarium/game-table';
 import { PeerCursor } from '@udonarium/peer-cursor';
 
@@ -27,9 +27,13 @@ export class RoomSettingComponent implements OnInit, OnDestroy {
   isPrivate: boolean = false;
   roomMode: RoomMode = 'standard';
   forceFlatView: boolean = false;
+  // Server communication, unless the room is made as a P2P room on purpose.
+  transport: RoomTransport = 'relay';
 
   get peerId(): string { return Network.peerId; }
   get isConnected(): boolean { return Network.peerIds.length <= 1 ? false : true; }
+  // A room may choose P2P where server communication is the default and the server issues SkyWay tokens.
+  get canChooseTransport(): boolean { return Network.roomTransportIsOptional && Network.peerToPeerAvailable; }
   validateLength: boolean = false;
 
   get myPeer(): PeerCursor { return PeerCursor.myCursor; }
@@ -61,7 +65,7 @@ export class RoomSettingComponent implements OnInit, OnDestroy {
     let userId = Network.peerContext ? Network.peerContext.userId : PeerContext.generateId();
     this.savePendingRoomMode();
     this.savePendingForceFlat();
-    Network.open(userId, PeerContext.generateId('***'), this.roomName, this.password);
+    Network.open(userId, PeerContext.generateId('***'), this.roomName, this.password, this.transport);
     this.applyRoomModeToCurrentTables();
     PeerCursor.myCursor.peerId = Network.peerId;
     this.myPeer.reConnectPass = this.password;

@@ -294,3 +294,16 @@ nav ul a, nav ul a:hover, nav ul a:active, nav ul a:visited {
     transition: none;
   }
 }
+.background-media-progress {
+  position: fixed;
+  right: 12px;
+  top: 52px;
+  z-index: 9999;
+  max-width: calc(100vw - 24px);
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(20, 20, 20, .82);
+  color: #fff;
+  font-size: 12px;
+  pointer-events: none;
+}

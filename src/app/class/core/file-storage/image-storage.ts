@@ -164,6 +164,8 @@ export class ImageStorage {
     return false;
   }
 
+  peek(identifier: string): ImageFile { return this.imageHash[identifier] || null; }
+
   get(identifier: string, autoFetch: boolean = true): ImageFile {
     let image: ImageFile = this.imageHash[identifier];
     if (image) return image;

@@ -68,7 +68,9 @@ export class ObjectSynchronizer {
           if (!event.isSendFromSelf) object = this.updateObject(object, context);
           markForChanged(object, event.sendFrom);
         } else if (ObjectStore.instance.isDeleted(context.identifier)) {
-          EventSystem.call('DELETE_GAME_OBJECT', { aliasName: context.aliasName, identifier: context.identifier }, event.sendFrom);
+          // To every member, not only to the sender: an update of an object whose deletion this client still
+ // remembers must end in the same deletion everywhere, or the other members keep the object for good.
+        EventSystem.call('DELETE_GAME_OBJECT', { aliasName: context.aliasName, identifier: context.identifier });
         } else {
           object = this.createObject(context);
           markForChanged(object, event.sendFrom);
