@@ -174,7 +174,7 @@
         <div class="guide-card-icon">🚀</div>
         <div class="guide-card-body">
           <h3>自分のサーバーに設置する</h3>
-          <p>セルフホスト完全ガイド。通信方式（SkyWay等）の選び方、ZIPでの最短起動、Docker、トラブル対処。</p>
+          <p>セルフホスト完全ガイド。通信方式（サーバー通信・P2P）の選び方、ZIPでの最短起動、Docker、トラブル対処。</p>
         </div>
         <div class="guide-card-arrow">›</div>
       </a>
@@ -238,6 +238,19 @@
       <h2 class="section-title">アップデート履歴</h2>
     </div>
     <div class="timeline">
+      <div class="timeline-item fade-up">
+        <div class="timeline-badge">v2.3</div>
+        <div class="timeline-content">
+          <div class="timeline-date">2026-11-27</div>
+          <h3>既定の通信方式をサーバー通信に。P2Pは部屋を作るときに選べます</h3>
+          <ul>
+            <li><b>サーバー通信が既定に</b> — 新しく作る部屋は、サーバーを経由して同期する方式になります。切断してから戻ったときは、抜けた分をサーバーが補います。特別な設定は不要です。</li>
+            <li><b>P2P（SkyWay）は部屋ごとに選択</b> — ルーム作成画面の「通信方式」で「P2P」を選ぶと、その部屋だけが従来のP2P方式になります。P2Pで接続する参加者（Unity版など）と遊ぶときに使います。ロビーの一覧には各部屋の方式が表示され、入室するときはその部屋の方式で接続します。</li>
+            <li><b>同期のズレを修正</b> — 部屋のデータがまとめ直されたあとに再接続すると、削除したはずのコマが残ったり、他の人の変更が届かなかったりする問題を修正しました。</li>
+            <li><b>ZIPのキャラクター画像が他の人に見えない問題を修正</b> — 画像ファイルの名前がハッシュ形式になっていないZIPでも、全員に画像が届くようになりました。</li>
+          </ul>
+        </div>
+      </div>
       <div class="timeline-item fade-up">
         <div class="timeline-badge">v2.3</div>
         <div class="timeline-content">

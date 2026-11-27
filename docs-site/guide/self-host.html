@@ -45,7 +45,7 @@
       <li><a href="#choose">どれを選べばいい？</a></li>
       <li><a href="#quick-start">かんたん設置（ZIPで起動）</a></li>
       <li><a href="#docker">Docker で設置</a></li>
-      <li><a href="#skyway">SkyWay を使って公開</a></li>
+      <li><a href="#skyway">SkyWay を使う（P2Pの部屋）</a></li>
       <li><a href="#build">ソースからビルド（開発者向け）</a></li>
       <li><a href="#trouble">トラブルシューティング</a></li>
       <li><a href="#glossary">用語ミニ集</a></li>
@@ -104,21 +104,26 @@
       </div>
       <p>リコリスは、プレイヤー同士が「どうやって会話（データ）をやり取りするか」を3つの方式から選べます。設定は <code>dist/udonarium-lycoris/assets/config.yaml</code> の <code>mode:</code> 1行で切り替えます。</p>
 
-      <h4>🔶 websocket-relay（リレー方式）— 登録不要でいちばん簡単</h4>
-      <p>プレイヤー間の<b>すべての通信を、あなたのサーバーが中継</b>します。SkyWayなどの外部サービスに登録する必要はありません。サーバーを立てたら、それだけで動きます。</p>
+      <p>2026年11月27日から、<b>既定は websocket-relay（サーバー通信）</b> になりました。公開サーバーも同じです。</p>
+
+      <h4>🔶 websocket-relay（サーバー通信）— 登録不要でいちばん簡単【既定】</h4>
+      <p>プレイヤー間の<b>すべての通信を、あなたのサーバーが中継</b>します。SkyWayなどの外部サービスに登録する必要はありません。サーバーを立てたら、それだけで動きます。部屋のデータはサーバーが持つので、切断してから戻っても、抜けた分をサーバーが補います。</p>
       <p class="guide-note">「relay（リレー）」＝駅伝の「中継」。全員のメッセージをサーバーが受け取って、全員に配るイメージです。</p>
 
       <h4>🔶 websocket-signaling（P2P方式）— サーバーは呼び出し役だけ</h4>
       <p>サーバーは「誰がどこにいるか」の連絡（シグナリング）だけを担当し、実際のゲームデータは<b>プレイヤー同士が直接やり取り</b>します。サーバーの負荷は最も軽いですが、通信環境によってはプレイヤー同士が直接つながれず、接続に失敗することがあります。</p>
 
-      <h4>🔶 skyway2023（SkyWay方式）— インターネット越しの本命</h4>
-      <p>NTTコミュニケーションズが提供するWebRTCサービス「<b>SkyWay</b>」を利用する方式です。SkyWayがプレイヤー同士の直接接続を確立してくれるので、<b>インターネット越しでも安定して通信</b>できます。公式サーバーもこの方式で動いています。</p>
+      <h4>🔶 skyway2023（SkyWay方式）— すべての部屋をP2Pでつなぐ</h4>
+      <p>NTTコミュニケーションズが提供するWebRTCサービス「<b>SkyWay</b>」を利用する方式です。SkyWayがプレイヤー同士の直接接続を確立してくれます。この設定にすると、<b>すべての部屋がP2P方式</b>になります（2026年11月26日までの公開サーバーの動きです）。</p>
       <div class="guide-callout callout-warning">
         <div class="callout-icon">⚠️</div>
         <div class="callout-body">
           <p>SkyWayを使うには<b>無料のアカウント登録</b>と、サーバーへの「アプリケーションID・シークレットキー」の設定が必要です。ここがつまずきやすいポイントですが、このガイドの手順07で順番に解説します。</p>
         </div>
       </div>
+
+      <h4>🔶 部屋ごとに選ぶ（websocket-relay が既定のとき）</h4>
+      <p>サーバーにSkyWayのキーを設定しておくと（手順07）、<b>部屋を作るときに「通信方式」を選べる</b>ようになります。「サーバー通信」で作った部屋はサーバー経由、「P2P」で作った部屋はSkyWay経由になります。ロビーの一覧に各部屋の方式が表示され、入室するときはその部屋の方式で接続します。P2Pで接続する参加者（Unity版など）と遊ぶ部屋だけをP2Pに、という使い方ができます。</p>
 
       <h4>比較表</h4>
       <table class="guide-table">
@@ -130,7 +135,7 @@
           <tr><td>設定の手間</td><td><b>ほぼゼロ</b></td><td>少ない</td><td>ややある</td></tr>
           <tr><td>インターネット越し</td><td>◎ 安定</td><td>△ 環境により不可</td><td>◎ 快適</td></tr>
           <tr><td>サーバーの通信量</td><td>多め（中継するため）</td><td>少ない</td><td>少ない</td></tr>
-          <tr><td>向いている場面</td><td>初めて／LAN内／小規模</td><td>上級者</td><td>常用・公開サーバー</td></tr>
+          <tr><td>向いている場面</td><td><b>既定</b>／初めて／公開サーバー</td><td>上級者</td><td>すべての部屋をP2Pにしたいとき</td></tr>
         </tbody>
       </table>
     </section>
@@ -144,10 +149,10 @@
       <p>迷ったら、次の順番で考えればOKです。</p>
       <ul class="guide-feature-list">
         <li><span class="guide-feature-icon">🏠</span><b>まず動かしてみたい（自宅のPC、家族・同じWi-Fi内で遊ぶ）</b><br>→ <b>websocket-relay</b>。このあとの手順05で5分で起動できます。</li>
-        <li><span class="guide-feature-icon">🌍</span><b>遠くの友達とインターネット越しに遊びたい</b><br>→ まずは <b>websocket-relay</b> でも動きます（サーバーの回線が通信量を引き受けます）。卓の規模が大きくなってきたら <b>skyway2023</b> へ切り替えましょう。</li>
-        <li><span class="guide-feature-icon">🏛️</span><b>常時公開のサーバーを運用したい</b><br>→ <b>skyway2023</b> 推奨。サーバー負荷が軽く、接続も安定します。</li>
+        <li><span class="guide-feature-icon">🌍</span><b>遠くの友達とインターネット越しに遊びたい</b><br>→ <b>websocket-relay</b>（既定）のままで動きます（サーバーの回線が通信量を引き受けます）。公開サーバーもこの方式が既定です。</li>
+        <li><span class="guide-feature-icon">🏛️</span><b>常時公開のサーバーを運用したい</b><br>→ <b>websocket-relay</b> を既定にして、SkyWayのキーを設定しておく（手順07）。P2Pが必要な部屋だけ、部屋を作るときにP2Pを選べます。すべての部屋をP2Pにしたいときは <b>skyway2023</b> です。</li>
       </ul>
-      <p class="guide-note">設定は config.yaml の1行を書き換えるだけ。後からいつでも切り替えられます。まずは relay で始めて、必要になったら SkyWay に乗り換えるのがおすすめです。</p>
+      <p class="guide-note">設定は config.yaml の1行で、後からいつでも切り替えられます。まずは既定の relay で始めて、P2Pの部屋が必要になったら SkyWay のキーを設定する、がおすすめです。</p>
     </section>
 
     <!-- 05 かんたん設置 -->
@@ -177,8 +182,8 @@ cd signaling-server
 npm ci --omit=dev
 cd ..</pre>
 
-      <h4>手順2：通信モードを relay に変更</h4>
-      <p><code>dist/udonarium-lycoris/assets/config.yaml</code> をテキストエディタで開き、<code>mode:</code> の行を書き換えます。</p>
+      <h4>手順2：通信モードを relay にする</h4>
+      <p><code>dist/udonarium-lycoris/assets/config.yaml</code> をテキストエディタで開き、<code>mode:</code> の行を書き換えます。現在ダウンロードできるZIP（v2.3）は初期状態が <code>skyway2023</code> です。公開サーバーと同じサーバー通信を使うには、次のようにします。</p>
       <pre class="guide-code">backend:
   mode: websocket-relay   # skyway2023 → websocket-relay に変更</pre>
 
@@ -223,9 +228,9 @@ docker run -d --name udonarium-lycoris \
     <section id="skyway" class="guide-section fade-up">
       <div class="guide-section-header">
         <span class="guide-section-num">07</span>
-        <h3>SkyWay を使って公開する</h3>
+        <h3>SkyWay を使う（P2Pの部屋を作れるようにする）</h3>
       </div>
-      <p>インターネット越しに安定して遊びたい場合は、SkyWay方式（<code>skyway2023</code>）がおすすめです。「Webサーバーを置いただけでは動かない」と言われる原因の多くが、この設定です。順番にやっていけば大丈夫。</p>
+      <p>サーバー通信（<code>websocket-relay</code>）だけでもインターネット越しで遊べます。ここでは、<b>P2P（SkyWay）の部屋</b>を作れるようにするための設定を説明します。SkyWayを使うには無料のアカウント登録と、サーバーへのキーの設定が必要です。ここがつまずきやすいポイントですが、順番にやっていけば大丈夫。</p>
 
       <h4>Step 1：SkyWay のアカウント登録</h4>
       <p><a href="https://webrtc.ecl.ntt.com/" target="_blank" rel="noopener">SkyWay公式サイト</a>で無料のアカウントを作成します。開発者登録後、ダッシュボードから<b>新しいアプリケーションを作成</b>してください。</p>
@@ -244,7 +249,7 @@ SKYWAY_SECRET_KEY=ここにシークレットキー</pre>
       <p class="guide-note">このキーはサーバーだけが使います。リコリスのサーバーは、このキーでプレイヤー1人1人に「入室許可証（トークン）」を発行する仕組みです。だからこそ「SkyWayの認証トークンを発行するサーバが必要」というエラー表示になるのです。</p>
 
       <h4>Step 4：通信モードの確認</h4>
-      <p><code>dist/udonarium-lycoris/assets/config.yaml</code> の <code>mode:</code> を <code>skyway2023</code> にします（初期状態でそうなっています）。変更していた場合は戻してください。</p>
+      <p>キーを設定するだけで、<code>mode:</code> が <code>websocket-relay</code> のままでも、部屋を作るときに「通信方式」でP2Pが選べるようになります。<b>すべての部屋をP2P方式にしたい場合</b>は、<code>dist/udonarium-lycoris/assets/config.yaml</code> の <code>mode:</code> を <code>skyway2023</code> にします（現在ダウンロードできるZIP v2.3 は初期状態がそうなっています）。</p>
 
       <h4>Step 5：動作確認</h4>
       <p>サーバーを起動し、次のコマンドでトークンが発行されれば成功です。</p>
@@ -289,7 +294,7 @@ npx ng build --configuration production</pre>
           <tr>
             <td>「APIバックエンド＜URL＞にアクセスできませんでした。SkyWayの認証トークンを発行するサーバが必要です」</td>
             <td>モードが <code>skyway2023</code> なのに、SkyWayのキー設定がされていない</td>
-            <td>手順07の <code>.env</code> 設定を行う。または <code>mode:</code> を <code>websocket-relay</code> に変更</td>
+            <td>手順07の <code>.env</code> 設定を行う。または <code>mode:</code> を <code>websocket-relay</code> にして、サーバー通信を使う</td>
           </tr>
           <tr>
             <td>自分は入室できるが、他の人が部屋に入れない・相手の卓が見えない</td>
