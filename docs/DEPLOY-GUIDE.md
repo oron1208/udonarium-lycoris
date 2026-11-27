@@ -51,7 +51,9 @@
 
 ```bash
 cd ~/.openclaw/workspace/projects/udonarium-lycoris
+# VPS の assets/config.yaml は上書きしない: アーカイブに入れない
 tar czf /tmp/udonarium-lycoris-deploy.tar.gz \
+  --exclude='dist/udonarium-lycoris/assets/config.yaml' \
   unified-server.js \
   dev-admin.html \
   dist/udonarium-lycoris/ \
@@ -81,13 +83,18 @@ tar xzf /tmp/udonarium-lycoris-deploy.tar.gz
 docker build -t udonarium-lycoris:latest .
 
 # コンテナ再作成（env-file必須！）
-docker stop udonarium-lycoris
-docker rm udonarium-lycoris
+# まず稼働中のコンテナの設定を写す。落とすと音楽ライブラリと再起動後の自動起動が失われる:
+#   docker inspect udonarium-lycoris --format '{{json .HostConfig.Binds}} {{json .HostConfig.PortBindings}} {{.HostConfig.RestartPolicy.Name}}'
+# 古いコンテナは消さずに名前を変えて止めておく。元に戻すのは rename して start するだけ。
+old=udonarium-lycoris-before-$(date +%Y%m%d-%H%M%S)
+docker rename udonarium-lycoris "$old" && docker stop "$old"
 docker create \
   --name udonarium-lycoris \
+  --restart unless-stopped \
   --env-file /etc/udonarium-lily.env \
   -p 127.0.0.1:12081:12081 \
   -v udonarium-lycoris-data:/app/data \
+  -v /opt/udonarium-lycoris/audio-library:/app/audio-library \
   udonarium-lycoris:latest
 docker start udonarium-lycoris
 
