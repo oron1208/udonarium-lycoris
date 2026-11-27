@@ -953,11 +953,14 @@ function serveStatic(req, res) {
   if (!urlPath) urlPath = 'index.html';
   const safePath = path.normalize(urlPath).replace(/^(\.\.[/\\])+/, '');
   const filePath = path.join(WEB_ROOT, safePath);
+  if (answered(res)) return;
 
   fs.readFile(filePath, (err, data) => {
+    if (answered(res)) return;
     if (err) {
       if (err.code === 'ENOENT' || err.code === 'EISDIR') {
         fs.readFile(path.join(WEB_ROOT, 'index.html'), (indexErr, indexData) => {
+          if (answered(res)) return;
           if (indexErr) {
             res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
             res.end('Not found');
@@ -1329,9 +1332,15 @@ function requireDeveloper(req, res) {
   return true;
 }
 
+// A response is written once. Answers that come too late are dropped: writing again would throw, and nothing
+// that a request asks for may take the whole server down with it.
+const answered = res => res.headersSent || res.writableEnded || res.destroyed;
+
 function sendJson(res, status, body) {
+  if (answered(res)) return true;
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache' });
   res.end(JSON.stringify(body));
+  return true;
 }
 
 function getRoomDetails() {
@@ -1457,7 +1466,7 @@ async function handleDeveloperClientApi(req, res, requestPath) {
     try {
       const body = JSON.parse(await readRequestBody(req, 64 * 1024) || '{}');
       const sessionId = String(body.sessionId || '').slice(0, 128);
-      if (!sessionId) return sendJson(res, 400, { ok: false, error: 'session-id-required' });
+      if (!sessionId) { sendJson(res, 400, { ok: false, error: 'session-id-required' }); return true; }
       const peerId = String(body.peerId || '').slice(0, 512);
       const roomId = String(body.roomId || '').slice(0, 64);
       const roomName = String(body.roomName || '').slice(0, 256);
@@ -1593,9 +1602,9 @@ async function handleDeveloperApi(req, res, requestPath) {
       const kind = String(body.kind || '');
       const hash = String(body.hash || '').toLowerCase();
       const reason = String(body.reason || 'admin-delete').slice(0, 256) || 'admin-delete';
-      if (!isValidMediaRequest(kind, hash)) return sendJson(res, 400, { ok: false, error: 'invalid-media' });
+      if (!isValidMediaRequest(kind, hash)) { sendJson(res, 400, { ok: false, error: 'invalid-media' }); return true; }
       const file = mediaPath(kind, hash);
-      if (!fs.existsSync(file)) return sendJson(res, 404, { ok: false, error: 'media-not-found' });
+      if (!fs.existsSync(file)) { sendJson(res, 404, { ok: false, error: 'media-not-found' }); return true; }
       const stat = fs.statSync(file);
       const entry = { kind, hash, file, metaFile: mediaMetaPath(kind, hash), size: stat.size };
       const deleted = deleteMediaEntry(entry, reason);
@@ -1632,7 +1641,7 @@ async function handleDeveloperApi(req, res, requestPath) {
     if (req.method === 'POST' && requestPath === '/api/dev/announce') {
       const body = JSON.parse(await readRequestBody(req, 64 * 1024) || '{}');
       const text = String(body.text || '').trim();
-      if (!text) return sendJson(res, 400, { ok: false, error: 'text-required' });
+      if (!text) { sendJson(res, 400, { ok: false, error: 'text-required' }); return true; }
       const announcement = publishDeveloperMessage({
         type: 'developer-announcement',
         text,
@@ -1688,7 +1697,7 @@ async function handleDeveloperApi(req, res, requestPath) {
     if (req.method === 'POST' && requestPath === '/api/dev/delete-room') {
       const body = JSON.parse(await readRequestBody(req, 64 * 1024) || '{}');
       const roomKey = String(body.roomKey || '');
-      if (!roomKey || roomKey === 'lobby') return sendJson(res, 400, { ok: false, error: 'invalid-room-key' });
+      if (!roomKey || roomKey === 'lobby') { sendJson(res, 400, { ok: false, error: 'invalid-room-key' }); return true; }
       let kicked = 0;
       for (const ws of peers.values()) {
         if (ws.roomKey === roomKey) {
@@ -1713,7 +1722,7 @@ async function handleDeveloperApi(req, res, requestPath) {
       const ip = String(body.ip || '').trim();
       const peerId = String(body.peerId || '').trim();
       const roomKey = String(body.roomKey || '').trim();
-      if (!ip && !peerId && !roomKey) return sendJson(res, 400, { ok: false, error: 'target-required' });
+      if (!ip && !peerId && !roomKey) { sendJson(res, 400, { ok: false, error: 'target-required' }); return true; }
       let kicked = 0;
       for (const ws of peers.values()) {
         const matchesIp = ip && getWebSocketIp(ws) === ip;
@@ -1902,7 +1911,7 @@ function handleMediaPut(req, res, kind, hash) {
 }
 
 function createAppHandler() {
-  return async (req, res) => {
+  const route = async (req, res) => {
   const requestPath = req.url.split('?')[0];
   if (await handleDeveloperClientApi(req, res, requestPath)) return;
   if (await handleDeveloperApi(req, res, requestPath)) return;
@@ -2135,9 +2144,31 @@ function createAppHandler() {
 
   serveStatic(req, res);
 };
+
+  return async (req, res) => {
+    try {
+      await route(req, res);
+    } catch (error) {
+      console.error('[http] request failed', req.method, req.url, error);
+      if (!answered(res)) {
+        res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end('Server error');
+      }
+    }
+  };
 }
 
 const appHandler = createAppHandler();
+
+// A write to a response that was already answered is a fault of one request, not of the server.
+process.on('uncaughtException', error => {
+  if (error && error.code === 'ERR_HTTP_HEADERS_SENT') {
+    console.error('[http] a response was already answered', error.message);
+    return;
+  }
+  console.error('[fatal]', error);
+  process.exit(1);
+});
 
 // Try HTTPS with self-signed cert (SkyWay 2023 requires secure context for WebRTC)
 const certPath = path.join(DATA_ROOT, '..', 'server-cert.pem');
